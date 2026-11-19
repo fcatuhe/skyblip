@@ -116,3 +116,5 @@ ADS-B's identification charset is A to Z, 0 to 9 and blank, so a transponder set
 ## The conformance suite
 
 The draft is read clause by clause in two halves, as ADS-L is. `test/conformance/` holds the cases this component satisfies on its own: the message formats, the reception and parity rules, the reports a `Track` carries, report assembly and CPR. `firmware/test/adsb/` holds the cases that need Bravo around it: the LR2021, the clock that dates a frame and the driver that decides which formats reach the decoder. `firmware/test/adsb/clauses.txt` lists the 282 receive-side clauses the two halves read, `scripts/check_do260b_clauses.py` holds them to it, and `firmware/test/adsb/README.md` says which clauses are in, how a gap is written and which gaps the suite found.
+
+[`docs/ADSB_CONFORMANCE.md`](../../../docs/ADSB_CONFORMANCE.md) lists the cases from both halves under their clause headings. Each case names its file. Each skip states its reason.

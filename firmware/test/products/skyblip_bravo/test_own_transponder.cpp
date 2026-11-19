@@ -48,7 +48,8 @@ struct Cockpit {
 
 }  // namespace
 
-TEST_CASE("own transponder: the loudest by a clear lead, held, is named with what it identifies") {
+TEST_CASE("own transponder: the loudest by a clear lead, held, is named with what it identifies" *
+          doctest::test_suite("main")) {
     Cockpit cockpit;
     cockpit.own.hear(
         heard(adsb::identification(kOwn, 0, kSetA, kFirstEmitter, "FJABC"), kCockpitDbm),

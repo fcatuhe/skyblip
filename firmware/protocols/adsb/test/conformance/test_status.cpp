@@ -41,7 +41,8 @@ TEST_CASE(
     FAIL("not implemented: TYPE 29 comes back Unsupported");
 }
 
-TEST_CASE("DO-260B 2.2.3.2.7.2: the operational status reads its subtype, version and GVA") {
+TEST_CASE("DO-260B 2.2.3.2.7.2: the operational status reads its subtype, version and GVA" *
+          doctest::test_suite("main")) {
     const OperationalStatus read = heard_status(status(0, 2, 1));
     CHECK(read.subtype == 0);
     CHECK(read.version == 2);

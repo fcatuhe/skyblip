@@ -107,7 +107,8 @@ TEST_CASE("bravo scenario: a scenario that names no product flies a Go") {
     CHECK(scenario.product == simulator::Product::Go);
 }
 
-TEST_CASE("bravo scenario: Bravo alone sends a phone its ADS-B traffic as Source 1") {
+TEST_CASE("bravo scenario: Bravo alone sends a phone its ADS-B traffic as Source 1" *
+          doctest::test_suite("main")) {
     simulator::BravoSimulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/bravo_alone.json"));
@@ -214,7 +215,8 @@ TEST_CASE("bravo scenario: Bravo without a fix keeps folding and sends the phone
     CHECK_FALSE(newest(simulator, "$PFLAA").empty());
 }
 
-TEST_CASE("bravo scenario: a dense sky of thirty aircraft is heard and held whole") {
+TEST_CASE("bravo scenario: a dense sky of thirty aircraft is heard and held whole" *
+          doctest::test_suite("main")) {
     simulator::BravoSimulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/bravo_dense_sky.json"));

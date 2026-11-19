@@ -82,7 +82,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2.3: the preamble is at most twelve 01s and then two
 }
 
 // skyBlip's reading: within a flight state, every transmission the schedule makes alternates.
-TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency") {
+TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency" *
+          doctest::test_suite("main")) {
     uint32_t previous = 0;
     for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {
         const int slot = timing::Transmitter::slot_in(utc_s);
@@ -154,9 +155,9 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: a Status flies on the channel the second's posi
     CHECK(checked >= 3);
 }
 
-// C.5 lists Traffic, Status and Remote ID for the direct slot, and every ADS-L burst of ours is
-// there.
-TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and nowhere else") {
+// Payload 66 goes out after the direct slot, which docs/ADSL_EASA_QUESTIONS.md asks EASA about.
+TEST_CASE("ADS-L.4.SRD860.C.5: own-ship's Traffic and Status go out inside the Direct slot" *
+          doctest::test_suite("main")) {
     CHECK(adsl::kDirectStartMs == 450);
     CHECK(adsl::kDirectEndMs == 1000);
 

@@ -120,7 +120,8 @@ TEST_CASE("screen policy: the loudest alarm standing still gets the page its bla
 }
 
 // A pilot reading the sixpack is a pilot who cannot see the bearing the alarm is about.
-TEST_CASE("screen policy: converging traffic takes a flying page back to the radar") {
+TEST_CASE("screen policy: converging traffic takes a flying page back to the radar" *
+          doctest::test_suite("main")) {
     ScreenRig rig;
     uint32_t now_ms = 0;
     rig.run_seconds(now_ms, 3);
@@ -170,7 +171,8 @@ TEST_CASE("screen policy: converging traffic leaves the diagnostics menu standin
 }
 
 // The settings mode keeps the button to itself, so it has to give it back unasked.
-TEST_CASE("screen policy: converging traffic takes the settings mode back off the glass") {
+TEST_CASE("screen policy: converging traffic takes the settings mode back off the glass" *
+          doctest::test_suite("main")) {
     ScreenRig rig;
     uint32_t now_ms = 0;
     rig.run_seconds(now_ms, 3);
@@ -229,7 +231,8 @@ TEST_CASE("screen policy: the long touch that silences an alarm costs no wipe an
 }
 
 // Nothing may hide a page a board can draw: the radar is home and the nearby menu opens the rest.
-TEST_CASE("screen policy: the walk is every picture the board can draw, and every tap changes it") {
+TEST_CASE("screen policy: the walk is every picture the board can draw, and every tap changes it" *
+          doctest::test_suite("main")) {
     ScreenRig rig;
     uint32_t now_ms = 0;
     rig.run_seconds(now_ms, 3);
@@ -243,7 +246,8 @@ TEST_CASE("screen policy: the walk is every picture the board can draw, and ever
 }
 
 // A plain T-Echo has no inertial sensor, so the g-meter is not one of its pictures.
-TEST_CASE("screen policy: the g-meter is on the walk only where the sensor is fitted") {
+TEST_CASE("screen policy: the g-meter is on the walk only where the sensor is fitted" *
+          doctest::test_suite("main")) {
     ScreenRig rig;
     rig.roles.capabilities = rig.roles.capabilities | ports::Capability::Inclinometer;
     uint32_t now_ms = 0;
@@ -290,7 +294,8 @@ TEST_CASE("screen policy: the long touch on the radar takes the picture through 
 }
 
 // The wedge flips once per frame presented, so the present floor is the blink rate.
-TEST_CASE("screen policy: an alarm flashes the wedge at a flip a second") {
+TEST_CASE("screen policy: an alarm flashes the wedge at a flip a second" *
+          doctest::test_suite("main")) {
     ScreenRig rig;
     uint32_t now_ms = 0;
     rig.run_seconds(now_ms, 3);

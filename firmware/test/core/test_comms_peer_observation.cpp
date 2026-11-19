@@ -70,7 +70,8 @@ TEST_CASE("peer frames: an observation carries each valid field with its age, an
 }
 
 // The Go reads Bravo's observation field by field, each with the age it was sent with (#193).
-TEST_CASE("peer frames: an observation reads back every field, its validity and its age") {
+TEST_CASE("peer frames: an observation reads back every field, its validity and its age" *
+          doctest::test_suite("main")) {
     const Result<comms::PeerObservation> read = observation_of(
         "\"at_s\":1785628800,\"into_ms\":250,\"latitude_1e7\":485000000,"
         "\"longitude_1e7\":85000000,\"altitude_m\":1500,\"altitude_age_ms\":400,"

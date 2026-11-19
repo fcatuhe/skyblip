@@ -112,7 +112,8 @@ TEST_CASE("rf: on a clear channel nothing is deferred and every burst keys at it
     }
 }
 
-TEST_CASE("rf: a busy channel defers the burst, which keys later inside its own window") {
+TEST_CASE("rf: a busy channel defers the burst, which keys later inside its own window" *
+          doctest::test_suite("main")) {
     Listening run(50);
     run.run_for(2000);
     run.hold(true);
@@ -178,7 +179,8 @@ TEST_CASE("rf: a ground burst busy its whole window is missed, and goes 2 s on, 
 }
 
 // An airborne position's next second covers it: one held off is neither retried nor forced.
-TEST_CASE("rf: an airborne position is never retried and never forced, however long it waits") {
+TEST_CASE("rf: an airborne position is never retried and never forced, however long it waits" *
+          doctest::test_suite("main")) {
     Listening run(50);
     run.to_cycle_second(timing::Transmitter::kStatusOffsetsS[0] + 1);
     const uint64_t held_from_us = ms_to_us(run.now_ms);
@@ -203,7 +205,8 @@ TEST_CASE("rf: an airborne position is never retried and never forced, however l
     for (size_t i = 1; i < seconds.size(); i++) CHECK(seconds[i] == seconds[i - 1] + 1);
 }
 
-TEST_CASE("rf: on the ground a burst busy for 3000 ms is forced, then 2000 ms of nothing ours") {
+TEST_CASE("rf: on the ground a burst busy for 3000 ms is forced, then 2000 ms of nothing ours" *
+          doctest::test_suite("main")) {
     Listening run(0, "D-KXYZ");
     run.to_cycle_second(timing::Transmitter::kPositionOffsetsS[0]);
     const uint64_t held_from_us = ms_to_us(run.now_ms);

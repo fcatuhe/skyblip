@@ -135,7 +135,8 @@ TEST_CASE("radio log page: a transmission that worked prints no verdict at all")
 
 // §G.1.16: one burst a second in the air and one in ten on the ground, so rows either side of a
 // takeoff read differently.
-TEST_CASE("radio log page: a sent burst names the schedule it went out on") {
+TEST_CASE("radio log page: a sent burst names the schedule it went out on" *
+          doctest::test_suite("main")) {
     radio::Log log;
     log.record(entry_of(radio::Verdict::Transmitted));
     radio::Entry flying = entry_of(radio::Verdict::Transmitted);

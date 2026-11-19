@@ -76,7 +76,8 @@ TEST_CASE("radar page: a live Bravo's B stands over TRAFFIC, or over the digits 
 }
 
 // White while Bravo comes up by itself, reversed once the pilot counts on it.
-TEST_CASE("radar page: a Bravo not live says BRAVO and why in the corner, reversed when lost") {
+TEST_CASE("radar page: a Bravo not live says BRAVO and why in the corner, reversed when lost" *
+          doctest::test_suite("main")) {
     struct Case {
         BravoState state;
         bool heard;

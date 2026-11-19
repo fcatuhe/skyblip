@@ -120,7 +120,8 @@ TEST_CASE("browser register: trust skips the press, never the nonce or the serve
     CHECK(bench.register_with(bench.vectors.text("register_signature")) == refusal("small_mtu"));
 }
 
-TEST_CASE("browser register: the press that allows an untrusted browser's register trusts it") {
+TEST_CASE("browser register: the press that allows an untrusted browser's register trusts it" *
+          doctest::test_suite("main")) {
     Bench bench;
     REQUIRE(bench.prove(/*trusted=*/false).find("\"untrusted\"") != std::string::npos);
     bench.challenge();

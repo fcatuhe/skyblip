@@ -76,7 +76,8 @@ TEST_CASE("bravo: in flight status names no transponder, however loud") {
 }
 
 // Most light aircraft carry Mode S with no ADS-B out, so all Bravo hears of its own is replies.
-TEST_CASE("bravo: a transponder without ADS-B out is named from its replies alone") {
+TEST_CASE("bravo: a transponder without ADS-B out is named from its replies alone" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(5, kTaxiMmS);

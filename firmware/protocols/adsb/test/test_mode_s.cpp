@@ -44,7 +44,8 @@ void flip_bit(Squitter& frame, uint8_t bit) {
 
 }
 
-TEST_CASE("adsb: an all-call reply carries its address in clear, verified when the parity is 0") {
+TEST_CASE("adsb: an all-call reply carries its address in clear, verified when the parity is 0" *
+          doctest::test_suite("main")) {
     const Heard squitter = hear(all_call(kAddress, 5));
     REQUIRE(squitter.status == Status::Ok);
     CHECK(squitter.message.kind == Kind::AllCall);
@@ -66,7 +67,8 @@ TEST_CASE("adsb: an all-call reply whose parity is no interrogator code is refus
     CHECK(hear(frame).status == Status::Crc);
 }
 
-TEST_CASE("adsb: the Riddle's DF4 reads 36000 ft, and its address only through its parity") {
+TEST_CASE("adsb: the Riddle's DF4 reads 36000 ft, and its address only through its parity" *
+          doctest::test_suite("main")) {
     const Heard heard = hear(short_frame_of("2000171806A983"));
     REQUIRE(heard.status == Status::Ok);
     CHECK(heard.message.kind == Kind::Reply);

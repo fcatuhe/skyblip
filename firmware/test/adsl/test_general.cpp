@@ -11,17 +11,19 @@ using namespace skyblip;
 // TODO: fc 18sep26 a manufacturer's duty: the DoC template in the appendix, and the CE file
 TEST_CASE("ADS-L.4.SRD860.A.4: the manufacturer declares conformity and CE marks the product" *
           doctest::skip()) {
-    FAIL("paperwork: no declaration of conformity is filed for this firmware yet");
+    FAIL("paperwork: the declaration is drafted on skyblip.eu/ads-l/conformity and not signed yet");
 }
 
 // TODO: fc 18sep26 a manufacturer's duty: installation and user manuals shipped with the product
 TEST_CASE("ADS-L.4.SRD860.A.5: the product ships with an installation and a user manual" *
           doctest::skip()) {
-    FAIL("paperwork: neither manual exists yet");
+    FAIL("paperwork: the manuals are the guides on skyblip.eu, which no host case can read");
 }
 
-// The appendix's airborne transmitter: 12 to 14 dBm e.r.p., and half a second of latency.
-TEST_CASE("ADS-L.4.SRD860.APPENDIX: the transmitter sits inside the nominal power and latency") {
+// The e.r.p. comes from datasheet figures and the fix age from the top of the second: neither is
+// measured.
+TEST_CASE(
+    "ADS-L.4.SRD860.APPENDIX: the computed e.r.p. and the fix age bound sit in the nominal range") {
     CHECK(parts::sx1262::kResultingErpCentiDb >= 1200);
     CHECK(parts::sx1262::kResultingErpCentiDb <= 1400);
     CHECK(timing::Transmitter::kFixMaxAgeMs <= 500);

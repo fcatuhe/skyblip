@@ -44,7 +44,8 @@ TEST_CASE("trusted browsers: a ninth browser replaces the one stored first") {
     CHECK(browsers.at(TrustedBrowsers::kCapacity - 1).id() == id_numbered(9));
 }
 
-TEST_CASE("trusted browsers: forgetting one keeps the others in their order") {
+TEST_CASE("trusted browsers: forgetting one keeps the others in their order" *
+          doctest::test_suite("main")) {
     TrustedBrowsers browsers;
     for (uint8_t number = 1; number <= 3; number++) browsers.store(key_numbered(number), "");
 

@@ -197,7 +197,8 @@ TEST_CASE("flight log: a no-track neighbour close enough to alarm is never writt
     CHECK(first_of(walk, flight::LogKind::Status) != nullptr);
 }
 
-TEST_CASE("flight log: the tablet lists a flight and reads it back nine records at a time") {
+TEST_CASE("flight log: the tablet lists a flight and reads it back nine records at a time" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -428,7 +429,8 @@ TEST_CASE("flight log: a unit with no fix since boot lists its flights") {
     CHECK(link_text(listed->bytes).find("in_flight") == std::string::npos);
 }
 
-TEST_CASE("flight log: erasing every flight takes the button, not just the phone") {
+TEST_CASE("flight log: erasing every flight takes the button, not just the phone" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

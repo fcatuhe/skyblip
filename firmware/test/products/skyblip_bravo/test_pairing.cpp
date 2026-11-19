@@ -79,7 +79,8 @@ uint32_t pairing_arms_at_ms() {
 
 }  // namespace
 
-TEST_CASE("bravo pairing: a Go's request blinks the lamp, and one press pairs both sides") {
+TEST_CASE("bravo pairing: a Go's request blinks the lamp, and one press pairs both sides" *
+          doctest::test_suite("main")) {
     PairedProducts tango;
     tango.ask();
     CHECK(tango.service().step() == go::BravoStep::Waiting);
@@ -309,7 +310,8 @@ TEST_CASE("bravo pairing: a press that began before the gesture armed never pair
 }
 
 // Bravo's writer into the Go's reader: no case ran the two apart from #193's stub.
-TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's time and callsign") {
+TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's time and callsign" *
+          doctest::test_suite("main")) {
     constexpr uint32_t kAircraft = 0x3C6586;
     PairedProducts tango;
     tango.pair_and_store();
@@ -395,7 +397,8 @@ TEST_CASE("bravo pairing: the pin survives Bravo's reboot, with its connection k
 }
 
 // GPT's review: a Go that unpaired left Bravo pinned, its connection kept from phones.
-TEST_CASE("bravo pairing: a Go that unpairs tells Bravo, which drops its pin and frees the slot") {
+TEST_CASE("bravo pairing: a Go that unpairs tells Bravo, which drops its pin and frees the slot" *
+          doctest::test_suite("main")) {
     PairedProducts tango;
     tango.pair_and_store();
     REQUIRE(tango.peer().paired());

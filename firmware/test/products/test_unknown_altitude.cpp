@@ -174,7 +174,8 @@ TEST_CASE("unknown altitude: an advisory on distance, a PFLAU with no vertical, 
     CHECK(count_of(rig, "$PFLAA,") == 0);
 }
 
-TEST_CASE("unknown altitude: a ring on the radar and two dashes on nearby") {
+TEST_CASE("unknown altitude: a ring on the radar and two dashes on nearby" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

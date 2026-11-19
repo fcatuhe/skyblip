@@ -437,7 +437,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "bravo peer: the pinned Go's aircraft address drops its transponder, else Bravo's setting") {
+    "bravo peer: the pinned Go's aircraft address drops its transponder, else Bravo's setting" *
+    doctest::test_suite("main")) {
     Served served;
     served.rig.product.settings().aircraft_address = kOtherAircraft;
     served.seconds(2, true, nullptr);

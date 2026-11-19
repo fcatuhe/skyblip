@@ -122,7 +122,8 @@ TEST_CASE("DO-260B A.1.7.8: a surface pair decodes globally into the reference's
     }
 }
 
-TEST_CASE("DO-260B A.1.7.9: positions come from a global pair first, then single frames") {
+TEST_CASE("DO-260B A.1.7.9: positions come from a global pair first, then single frames" *
+          doctest::test_suite("main")) {
     receiver::Bravo bravo;
     bravo.fly(receiver::kLatitude, receiver::kLongitude, 0, false);
     CHECK_FALSE(bravo.heard.position_valid);
@@ -179,7 +180,8 @@ TEST_CASE(
     CHECK(bravo.assembly.implausible() == 0);
 }
 
-TEST_CASE("DO-260B A.1.7.10.3: a local decode moves 6, 2.5 or 0.75 NM at most in 30 s") {
+TEST_CASE("DO-260B A.1.7.10.3: a local decode moves 6, 2.5 or 0.75 NM at most in 30 s" *
+          doctest::test_suite("main")) {
     CHECK(kAirborneJumpCeilingM == 6 * 1852);
     CHECK(kTransitionJumpCeilingM == 5 * 1852 / 2);
     CHECK(kSurfaceJumpCeilingM == 3 * 1852 / 4);

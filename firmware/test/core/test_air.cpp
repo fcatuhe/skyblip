@@ -67,7 +67,8 @@ TEST_CASE("air: the two sync words share the window the detector matches") {
     CHECK(protocol::sync_tail(alptas::kSyncWord) == 0x31FAB6u);
 }
 
-TEST_CASE("air: an ADS-L burst frames as ADS-L, byte-aligned on its data") {
+TEST_CASE("air: an ADS-L burst frames as ADS-L, byte-aligned on its data" *
+          doctest::test_suite("main")) {
     uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 7);
 
@@ -79,7 +80,8 @@ TEST_CASE("air: an ADS-L burst frames as ADS-L, byte-aligned on its data") {
     CHECK(frame.bad_chips == 0);
 }
 
-TEST_CASE("air: an ALP-TAS burst frames as ALP-TAS through the same window") {
+TEST_CASE("air: an ALP-TAS burst frames as ALP-TAS through the same window" *
+          doctest::test_suite("main")) {
     uint8_t payload[alptas::kFrameBytes];
     fill(payload, sizeof(payload), 19);
 

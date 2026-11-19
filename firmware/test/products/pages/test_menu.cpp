@@ -73,7 +73,8 @@ Drawn aircraft_of(const MenuValues& values, MenuRow focus) {
 
 }  // namespace
 
-TEST_CASE("radar menu: every row names what it holds, and the focused one is reversed out") {
+TEST_CASE("radar menu: every row names what it holds, and the focused one is reversed out" *
+          doctest::test_suite("main")) {
     MenuValues values = default_menu_values();
     std::strcpy(values.settings.callsign, "F-JABCDEF");
     values.settings.alarm = go::Alarm::Soft;
@@ -142,7 +143,8 @@ TEST_CASE("radar menu: the seven rows fit the glass, and a longer menu slides up
     CHECK(menu_first_row(eight, MenuRow::Status) == 1);
 }
 
-TEST_CASE("menu page: the button's key names what a press does to the focused row") {
+TEST_CASE("menu page: the button's key names what a press does to the focused row" *
+          doctest::test_suite("main")) {
     const MenuValues values = default_menu_values();
     CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Units).canvas, "CHANGE"));
     CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Bravo).canvas, "OPEN"));
@@ -281,7 +283,8 @@ TEST_CASE("callsign page: the characters stand at a size a thumb can check, with
     CHECK(reads_button_key(canvas, kFieldNextVerb));
 }
 
-TEST_CASE("callsign page: on the last character the button's key says it saves") {
+TEST_CASE("callsign page: on the last character the button's key says it saves" *
+          doctest::test_suite("main")) {
     CallsignSnapshot field;
     field.text = "F-JABC   ";
     field.cursor = 8;
@@ -335,7 +338,8 @@ TEST_CASE(
 }
 
 // Without the aircraft address the aircraft's own transponder can alarm, so a clear is asked twice.
-TEST_CASE("aircraft address page: a clear shows the address it throws away and what that costs") {
+TEST_CASE("aircraft address page: a clear shows the address it throws away and what that costs" *
+          doctest::test_suite("main")) {
     ClearSnapshot clear;
     clear.title = menu_row_label(MenuRow::AircraftAddress);
     clear.text = "3C6586";

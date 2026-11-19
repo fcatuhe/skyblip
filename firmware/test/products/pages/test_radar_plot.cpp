@@ -46,7 +46,8 @@ RadarSnapshot one_target(RadarTarget* target) {
 }
 
 // One blip, three ways up: a diamond at your level, pointing up above you, down below.
-TEST_CASE("radar page: traffic is a blip, and the advisory fills it") {
+TEST_CASE("radar page: traffic is a blip, and the advisory fills it" *
+          doctest::test_suite("main")) {
     RadarTarget level[1] = {{2 * kMetresPerNm, 0, 0, Level::None}};
     const Glass diamond = radar(one_target(level));
     CHECK_FALSE(diamond.get_pixel(kPlotX, kPlotY));
@@ -113,7 +114,8 @@ TEST_CASE("radar page: past the advisory's own altitude window the blip is the s
     CHECK_FALSE(far.get_pixel(kPlotX - 8, kPlotY + 1));
 }
 
-TEST_CASE("radar page: a leader line runs the minute ahead of the target, out to the glass") {
+TEST_CASE("radar page: a leader line runs the minute ahead of the target, out to the glass" *
+          doctest::test_suite("main")) {
     // 30 m/s for 60 s is 1800 m, which is 22 px on the 4 NM ring.
     RadarTarget north[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0}};
     const Glass ahead = radar(one_target(north));
@@ -138,7 +140,8 @@ TEST_CASE("radar page: a leader line runs the minute ahead of the target, out to
 
 // Own ship becomes the formation: one 28 px square, one digit per quadrant, and the airframe
 // untouched.
-TEST_CASE("radar page: a formation is own-ship, counted by quadrant") {
+TEST_CASE("radar page: a formation is own-ship, counted by quadrant" *
+          doctest::test_suite("main")) {
     RadarTarget flight[4] = {
         {900, 400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
         {700, 600, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},

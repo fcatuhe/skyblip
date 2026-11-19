@@ -32,6 +32,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `alarm_level`, `alarm_undismissed`, `alarm_call` | `alarm` |
 | `bravo` | `bravo` |
 | `own_transponder` | `bravo` on a paired Go, `adsb` on Bravo: the transponder Bravo names on the ground, which `status` carries to a page. On the Go an aircraft address typed or `set` must match it (`../settings/README.md`, The ICAO address) |
+| `aircraft_transponder` | `bravo` on a paired Go: the transponder confirmed at the entered address, kept until that address changes. Never written on Bravo |
 | `followed_call` | `peer` on Bravo, while it plays its Go's call. Never written on the Go |
 | `panel_presented` | `screen` |
 | `started` | the product |

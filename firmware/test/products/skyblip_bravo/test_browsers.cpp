@@ -47,7 +47,8 @@ std::string say(BravoRig& rig, const std::string& json) {
 }  // namespace
 
 TEST_CASE(
-    "bravo: a browser one press trusted lists itself, sets with no press, and forgets itself") {
+    "bravo: a browser one press trusted lists itself, sets with no press, and forgets itself" *
+    doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.random().queue(kNonce);

@@ -51,7 +51,8 @@ TEST_CASE("acquisition: sentences with no date are a receiver that is blind") {
 }
 
 // A date can only be read off a satellite, so it is the rung that says the antenna sees sky.
-TEST_CASE("acquisition: a decoded date is a satellite read, and outranks the blind rung") {
+TEST_CASE("acquisition: a decoded date is a satellite read, and outranks the blind rung" *
+          doctest::test_suite("main")) {
     Acquisition acquisition;
     acquisition.observe(blind(), 1000);
     acquisition.observe(timed(), 2000);

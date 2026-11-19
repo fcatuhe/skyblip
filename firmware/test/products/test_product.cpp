@@ -144,7 +144,7 @@ TEST_CASE("product: a board with no battery sense says so instead of reporting e
     CHECK(rig.state().power.battery.percent == 0);
 }
 
-TEST_CASE("product: settings changed over the link are persisted") {
+TEST_CASE("product: settings changed over the link are persisted" * doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().alarm = go::Alarm::Soft;
@@ -208,7 +208,8 @@ TEST_CASE("product: the link is told at boot why the device came up") {
 // brings the DEVICE up: a unit that charges itself awake in a flight bag arrives
 // flat, and the e-paper holds its last image with the rails down, so nothing about
 // it would look wrong until a pilot needed it.
-TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
+TEST_CASE("product: a charger plugged into a sleeping device is not a boot" *
+          doctest::test_suite("main")) {
     Rig rig;
     rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     CHECK(rig.setup() == Status::Ok);

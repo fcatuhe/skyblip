@@ -88,7 +88,8 @@ constexpr uint32_t kMinuteStartS = 2000;
 
 // skyblip.eu hands out serials densely from 1, so ten consecutive serials start ten cycles 2 s
 // apart.
-TEST_CASE("transmit cycle: a unit's cycle starts on an even second, 2 * (serial % 10)") {
+TEST_CASE("transmit cycle: a unit's cycle starts on an even second, 2 * (serial % 10)" *
+          doctest::test_suite("main")) {
     for (uint32_t first = 1; first <= 1024; first += 10) {
         bool taken[Transmitter::kCycleS] = {};
         for (uint32_t serial = first; serial < first + 10; serial++) {
@@ -102,7 +103,8 @@ TEST_CASE("transmit cycle: a unit's cycle starts on an even second, 2 * (serial 
 }
 
 // A at 0 and 11, B at 2 and 9, and the names in the tails of 4 and 14, 1000-1190 ms on.
-TEST_CASE("transmit cycle: on the ground six bursts go at +0, +2, +4, +9, +11 and +14") {
+TEST_CASE("transmit cycle: on the ground six bursts go at +0, +2, +4, +9, +11 and +14" *
+          doctest::test_suite("main")) {
     const struct {
         uint32_t offset;
         Payload payload;
@@ -154,7 +156,8 @@ TEST_CASE("transmit cycle: on the ground A hears 11 and 9 s apart, B 3, 4, 6 and
 }
 
 // C.2.5 asks it of Traffic and Status: within a flight state, every transmission changes channel.
-TEST_CASE("transmit cycle: positions and Status alternate channel, names keep to B every 10 s") {
+TEST_CASE("transmit cycle: positions and Status alternate channel, names keep to B every 10 s" *
+          doctest::test_suite("main")) {
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         for (const bool airborne : {true, false}) {
             CAPTURE(serial);
@@ -214,7 +217,8 @@ TEST_CASE(
 }
 
 // EN 300 220-1's off-time, and the executor's dwell: 100 ms apart on one frequency, one a dwell.
-TEST_CASE("transmit cycle: no dwell owes two bursts, and one frequency's bursts are 100 ms apart") {
+TEST_CASE("transmit cycle: no dwell owes two bursts, and one frequency's bursts are 100 ms apart" *
+          doctest::test_suite("main")) {
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         for (const bool airborne : {true, false}) {
             CAPTURE(serial);
@@ -291,7 +295,8 @@ TEST_CASE("transmit cycle: a takeoff or a landing mid-cycle keeps every dwell to
 }
 
 // +0 is retried at +2, +4, +6 and +8, +9 at +11 to +19, each time on the channel it missed.
-TEST_CASE("transmit cycle: a missed ground position is retried 2 s on, on the same channel") {
+TEST_CASE("transmit cycle: a missed ground position is retried 2 s on, on the same channel" *
+          doctest::test_suite("main")) {
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         CAPTURE(serial);
         for (const uint32_t missed : {uint32_t{0}, uint32_t{9}}) {

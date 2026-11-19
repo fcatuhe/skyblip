@@ -10,7 +10,8 @@
 using namespace skyblip;
 using namespace skyblip::go;
 
-TEST_CASE("recovery page: it names the drive, the file and the way back, unclipped") {
+TEST_CASE("recovery page: it names the drive, the file and the way back, unclipped" *
+          doctest::test_suite("main")) {
     for (const ports::RecoveryPath path :
          {ports::RecoveryPath::Rebooted, ports::RecoveryPath::PowerOffToFinish}) {
         Glass canvas;

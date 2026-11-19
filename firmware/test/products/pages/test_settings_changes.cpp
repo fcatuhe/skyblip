@@ -18,7 +18,8 @@ std::string described(const Settings& from, const Settings& to, bool sounds = tr
 
 }  // namespace
 
-TEST_CASE("settings changes page: each change is a row in the menu's words, and nothing else is") {
+TEST_CASE("settings changes page: each change is a row in the menu's words, and nothing else is" *
+          doctest::test_suite("main")) {
     const Settings from = defaults();
     Settings to = from;
     std::strcpy(to.callsign, "F-JXYZ");

@@ -18,7 +18,8 @@ constexpr Call kQuiet{Level::None, Level::None, 0};
 
 }  // namespace
 
-TEST_CASE("annunciation call: a follower plays the leader's level, and calls only a new number") {
+TEST_CASE("annunciation call: a follower plays the leader's level, and calls only a new number" *
+          doctest::test_suite("main")) {
     Follower follower;
     const Follower::Heard first = follower.follow(advisory(4));
     CHECK(first.level == Level::Advisory);

@@ -93,7 +93,8 @@ TEST_CASE("pair: a trusted browser starts the Go's pairing at once, and hands it
     CHECK_FALSE(desk.config.take_pair_request());
 }
 
-TEST_CASE("pair: an untrusted browser's pair asks on the Go's glass, and the press trusts it") {
+TEST_CASE("pair: an untrusted browser's pair asks on the Go's glass, and the press trusts it" *
+          doctest::test_suite("main")) {
     Desk desk(comms::PairingSide::Go);
     const crypto::Ed25519::PublicKey key = crypto::Ed25519::public_key_of(kBrowserSeed);
     desk.random.queue(kNonce);

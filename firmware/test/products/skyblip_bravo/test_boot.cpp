@@ -103,7 +103,8 @@ TEST_CASE("bravo: a new image confirms itself once the receiver is up and the GN
 
 // Opus's review: a refused Bravo stayed awake and dark, so it looked switched off.
 TEST_CASE(
-    "bravo: a unit that refuses to fly blinks the critical row, and a hold still switches it off") {
+    "bravo: a unit that refuses to fly blinks the critical row, and a hold still switches it off" *
+    doctest::test_suite("main")) {
     BravoRig rig(ports::without(platform::host::MeshtrackerX1::kFullyFitted,
                                 ports::Capability::AdsbReceiver));
     REQUIRE(rig.setup() == Status::Down);

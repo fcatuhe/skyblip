@@ -87,7 +87,8 @@ TEST_CASE("link sessions: a disconnect for a session that was never up is ignore
 }
 
 // The whole point of the table: a yoke tablet and a pocket phone, neither closing the other.
-TEST_CASE("link sessions: a second central joins, and the first one stays up") {
+TEST_CASE("link sessions: a second central joins, and the first one stays up" *
+          doctest::test_suite("main")) {
     LinkSessions sessions;
     sessions.connected(1, 244);
     sessions.connected(2, 182);
@@ -233,7 +234,8 @@ TEST_CASE("link sessions: a session id used again names a new connection, its ow
 }
 
 // A paired Go keeps one connection for its Bravo, which phones must never take (#178).
-TEST_CASE("link sessions: a reserved peer connection leaves phones one fewer, Bravo away or not") {
+TEST_CASE("link sessions: a reserved peer connection leaves phones one fewer, Bravo away or not" *
+          doctest::test_suite("main")) {
     LinkSessions sessions;
     REQUIRE(sessions.reserve_peer(true) == Status::Ok);
     CHECK(sessions.phone_ceiling() == static_cast<int>(LinkSessions::kMaxSessions) - 1);

@@ -41,7 +41,8 @@ TEST_CASE("gmeter page: level flight puts the marker in the middle of the field"
     CHECK(reads_in(canvas, "+1.0", 40, 138, 120, 156, 2));
 }
 
-TEST_CASE("gmeter page: the three axes each read their own now, most and least") {
+TEST_CASE("gmeter page: the three axes each read their own now, most and least" *
+          doctest::test_suite("main")) {
     GMeterSnapshot snapshot = flying();
     snapshot.now = flight::GLoad{2300, -400, 300};
     snapshot.most = flight::GLoad{4200, 700, 300};
