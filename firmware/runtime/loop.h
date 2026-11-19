@@ -15,7 +15,10 @@ class Loop {
         diagnostics::LoopService code;
     };
 
-    Loop(const Entry* entries, int count) : entries_(entries), count_(count) {
+    template <int N>
+    explicit Loop(const Entry (&entries)[N]) : entries_(entries), count_(N) {
+        static_assert(N <= FeedDecision::kMaxServices,
+                      "the feed decision supervises every service");
         for (int i = 0; i < count_; i++) feed_decision_.add(kServiceSilenceCeilingMs);
     }
 

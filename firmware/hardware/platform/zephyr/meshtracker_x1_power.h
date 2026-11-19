@@ -11,7 +11,6 @@
 #include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/poweroff.h>
-#include <zephyr/sys/reboot.h>
 
 #include "boards/seeed/meshtracker_x1/pins.h"
 #include "core/power/shutdown.h"
@@ -65,8 +64,6 @@ class MeshtrackerX1Power : public ports::SystemPower, private power::PowerDownSi
         clear_stale_latches();
         sys_poweroff();
     }
-
-    void reboot() override { sys_reboot(SYS_REBOOT_WARM); }
 
    private:
     void perform(power::PowerDownStep step) override {

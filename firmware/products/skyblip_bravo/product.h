@@ -195,7 +195,7 @@ class Product {
         {&flight_log_, diagnostics::LoopService::FlightLog},
         {&capture_, diagnostics::LoopService::Capture},
         {&peer_, diagnostics::LoopService::Peer}};
-    runtime::Loop loop_{services_, kServiceCount};
+    runtime::Loop loop_{services_};
     common::Shell<Product> shell_{*this, kReceiverParkCeilingMs};
 
     power::ButtonRelease refusal_release_{};

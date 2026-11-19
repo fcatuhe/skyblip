@@ -11,7 +11,6 @@
 #include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/poweroff.h>
-#include <zephyr/sys/reboot.h>
 
 #include "boards/lilygo/t_echo_plus/pins.h"
 #include "core/power/shutdown.h"
@@ -139,8 +138,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         // state
         sys_poweroff();
     }
-
-    void reboot() override { sys_reboot(SYS_REBOOT_WARM); }
 
     power::CellOnGlass cell_on_glass() const override {
         if (retained(kFlatOnGlassBit)) return power::CellOnGlass::Flat;

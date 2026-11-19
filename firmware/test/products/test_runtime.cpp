@@ -71,7 +71,7 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     Spy second(context, 2, order, Status::Ok);
     const runtime::Loop::Entry services[] = {{&first, diagnostics::LoopService::Config},
                                              {&second, diagnostics::LoopService::Ownship}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
 
     CHECK(loop.setup() == Status::Ok);
     CHECK(first.setups == 1);
@@ -123,7 +123,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     Slow render(context, clock, 2000);
     const runtime::Loop::Entry services[] = {{&quick, diagnostics::LoopService::Config},
                                              {&render, diagnostics::LoopService::Screen}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
     runtime::LoopMeter meter(clock);
 
     const uint16_t phases[] = {10, 22, 230, 242};
@@ -206,7 +206,7 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
     Spy ok(context, 2, order, Status::Ok);
     const runtime::Loop::Entry services[] = {{&failing, diagnostics::LoopService::Config},
                                              {&ok, diagnostics::LoopService::Ownship}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
 
     CHECK(loop.setup() == Status::Down);
     CHECK(ok.setups == 1);
@@ -311,7 +311,7 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     Spy wedged(context, 2, order, Status::Ok);
     const runtime::Loop::Entry services[] = {{&healthy, diagnostics::LoopService::Config},
                                              {&wedged, diagnostics::LoopService::Ownship}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
 
     // order[0] is the Spy's write cursor: rewound every pass, because this case
     // runs a thousand of them and the ordering is pinned above.

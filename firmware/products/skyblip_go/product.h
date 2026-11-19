@@ -326,7 +326,7 @@ class Product {
         {&capture_, diagnostics::LoopService::Capture},
         {&screen_, diagnostics::LoopService::Screen},
         {&bravo_, diagnostics::LoopService::Bravo}};
-    runtime::Loop loop_{services_, kServiceCount};
+    runtime::Loop loop_{services_};
     common::Shell<Product> shell_{*this, kRadioParkCeilingMs};
 
     SelfTestPart self_test_parts_[kSelfTestPartCount]{};
