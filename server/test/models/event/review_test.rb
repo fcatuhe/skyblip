@@ -44,6 +44,18 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal({ "timeout" => 1 }, devices[:drop_reasons])
   end
 
+  # A unit repeats its report on every connection until the next install, which counted one failure three times.
+  test "a failed install is counted once however often its unit reports it, and a second try of the same image counts again" do
+    report = { cause: "slot_damaged", from: "0.1.0+1677", to: "0.1.0+1693" }
+    journey "BROWSER0", "device.install_reported", 40.minutes.ago, **report, tried: "0.1.0+1693"
+    journey "BROWSER0", "device.install_reported", 38.minutes.ago, **report
+    journey "BROWSER0", "device.install_reported", 20.minutes.ago, **report
+    journey "BROWSER0", "device.install_reported", 10.minutes.ago, **report, tried: "0.1.0+1693"
+    journey "BROWSER0", "device.install_reported", 5.minutes.ago, cause: "bootloader_refused", from: "0.1.0+1677", to: "0.1.0+1701"
+
+    assert_equal({ "slot_damaged" => 2, "bootloader_refused" => 1 }, Event::Review.new.installs[:failed_by_cause])
+  end
+
   test "browsers are counted once, and those without Bluetooth by browser and system" do
     journey "IPHONE00", "browser.opened", 2.days.ago, bluetooth: false, browser_name: "Safari", os_name: "iOS"
     journey "IPHONE00", "browser.opened", 1.day.ago, bluetooth: false, browser_name: "Safari", os_name: "iOS"

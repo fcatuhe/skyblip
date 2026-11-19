@@ -78,7 +78,7 @@ class Event::Review
 
       { started: tasks.dig("install", :started).to_i, installed: installed.size,
         minutes: spread(installed.map { it["payload.lasted_ms"]&.fdiv(60_000)&.round(1) }),
-        failed_by_cause: top(rows("device.install_reported", "payload.cause").map { it["payload.cause"] || "image_failed" }) }
+        failed_by_cause: top(failed_installs.map { it["payload.cause"] || "image_failed" }) }
     end
   end
 
@@ -143,6 +143,15 @@ class Event::Review
     def rows(name, *fields)
       (@rows ||= {})[[ name, fields ]] ||= within(name).order(:occurred_at, :id).pluck(*fields.map { Event.field(it) })
         .map { |values| fields.zip(Array.wrap(values)).to_h }
+    end
+
+    # INFO: fc 19nov26 a unit repeats its install report on every connection until the next install, and only the page that sent the image knows it tried
+    def failed_installs
+      seen = Set.new
+      rows("device.install_reported", "device", "payload.cause", "payload.from", "payload.to", "payload.tried").select do |report|
+        first = seen.add?(report.values_at("device", "payload.from", "payload.to"))
+        first || report["payload.tried"]
+      end
     end
 
     def failure?(event)
