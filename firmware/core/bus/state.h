@@ -260,8 +260,10 @@ struct State {
         uint32_t tx_deferred{0};
         uint32_t tx_forced{0};
         uint32_t tx_busy_missed{0};
-        // INFO: fc 18nov26 seconds a position was held for a fix too old or off a quarter
+        // INFO: fc 19nov26 positions lost for want of a fresh fix on a quarter, and positions
+        // redrawn
         uint32_t tx_held_for_fix{0};
+        uint32_t tx_redrawn_for_fix{0};
         uint32_t tx_ok{0};
         uint32_t tx_lost{0};
         uint32_t tx_named{0};

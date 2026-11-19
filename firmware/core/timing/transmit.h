@@ -2,6 +2,8 @@
 #ifndef SKYBLIP_CORE_TIMING_TRANSMIT_H
 #define SKYBLIP_CORE_TIMING_TRANSMIT_H
 
+#include <optional>
+
 #include "core/flight/state.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
@@ -45,7 +47,14 @@ class Transmitter {
         bool over_budget{false};
         // INFO: fc 18nov26 a position owed here whose solution would be too old on air, at at_ms
         bool stale{false};
+        // INFO: fc 19nov26 drawn again because its fix came after the instant first drawn
+        bool redrawn{false};
     };
+
+    // INFO: fc 19nov26 a fix in hand before every instant, for a caller that names no arrival
+    static constexpr int32_t kFixInHandEarlyMs = -1000000;
+    // INFO: fc 19nov26 a redrawn instant leaves the channel check its listen before it
+    static constexpr int kRedrawLeadMs = static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000);
 
     void configure(uint32_t address) { address_ = address; }
 
@@ -53,8 +62,10 @@ class Transmitter {
     // calling it twice with the same arguments gives the same answer. fix_lag_ms
     // is how far the solution lags the top of that second, negative when it was
     // solved inside it.
+    // fix_in_hand_ms is when own-ship had that solution, from the same top of the second.
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
-                    int32_t fix_lag_ms, Payload payload) const;
+                    int32_t fix_lag_ms, Payload payload,
+                    int32_t fix_in_hand_ms = kFixInHandEarlyMs) const;
     // INFO: fc 13nov26 the first burst the dwell owes, in Payload order
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms) const;
@@ -100,6 +111,9 @@ class Transmitter {
     // two aircraft with different addresses do not collide every second, and
     // one aircraft's instant is reproducible in a test.
     int instant_in(Payload payload, int slot, uint32_t utc_s) const;
+    // INFO: fc 19nov26 drawn like instant_in over what of the window the late fix leaves, or none
+    std::optional<int> redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,
+                                  int32_t fix_in_hand_ms) const;
 
     AirTime air_time_{};
     uint32_t address_{0};

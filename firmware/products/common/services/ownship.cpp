@@ -93,6 +93,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.utc_ms = solution.utc_ms;
     const Dated dated = solution_instant(solution, now_ms);
     own.fix_at_ms = dated.at_ms;
+    own.fix_in_hand_ms = now_ms;
     own.fix_dated = dated.trusted;
     own.satellites = solution.satellites;
     own.aircraft_category = settings_.aircraft_type;

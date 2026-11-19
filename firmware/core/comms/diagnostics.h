@@ -60,6 +60,7 @@ struct Diagnostics {
     uint32_t tx_forced{0};
     uint32_t tx_busy_missed{0};
     uint32_t tx_held_for_fix{0};
+    uint32_t tx_redrawn_for_fix{0};
     uint16_t tx_keyed_us{0};
     uint16_t tx_span_us{0};
     bool dio1_armed{false};
@@ -173,7 +174,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 85;
+    static constexpr int kMaxFields = 96;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_capture(const Diagnostics& diagnostics);

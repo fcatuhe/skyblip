@@ -33,13 +33,13 @@ void RadioService::tick(uint32_t now_ms) {
     collect_busy(now_ms);
 
     if (next_armed_ && pass_us_ >= next_dwell_.from_us) promote();
+    const int64_t origin_us = dwell_origin_us();
+    count_held_for_fix(plan, origin_us, now_ms);
     // INFO: fc 17nov26 a retune plans the dwell it leads to, which is the queued one
     if (next_armed_ && holds(next_dwell_, plan)) {
         publish_dwell(now_ms);
         return;
     }
-    const int64_t origin_us = dwell_origin_us();
-    count_held_for_fix(plan, origin_us, now_ms);
     if (!holds(current_dwell_, plan)) {
         if (current_dwell_.mode != ports::RfMode::Idle) context_.roles.rf.abort();
         next_armed_ = false;
@@ -245,8 +245,9 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
         return timing::Transmitter::Attempt{};
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
-    timing::Transmitter::Attempt owed = transmitter_.attempt(
-        plan, slot_utc_s(now_ms), now_ms, full_rate(), fix_lag_ms(origin_us), payload);
+    timing::Transmitter::Attempt owed =
+        transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate(), fix_lag_ms(origin_us),
+                             payload, fix_in_hand_ms(origin_us));
     // INFO: fc 18nov26 a fix no timely fix anchored has no age a position can be judged by
     if (payload == Payload::Position && owed.go && !own.fix_dated) {
         owed.go = false;
@@ -268,13 +269,25 @@ void RadioService::count_given_up(uint32_t now_ms) {
         transmitter_.give_up(slot_utc_s(now_ms), full_rate(), settings_.callsign[0] != 0);
 }
 
-// INFO: fc 18nov26 a position counts as held once its instant passed with its solution too old
+// INFO: fc 19nov26 a position seen waiting for its fix is lost once its second ends unarmed
 void RadioService::count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us,
                                       uint32_t now_ms) {
-    const timing::Transmitter::Attempt position =
-        attempt(plan, origin_us, now_ms, Payload::Position);
-    if (position.stale && instant_us(position, origin_us) <= pass_us_)
-        hold_for_fix(slot_utc_s(now_ms));
+    const uint32_t utc_s = slot_utc_s(now_ms);
+    if (fix_wanted_ && fix_wanted_s_ != utc_s) {
+        fix_wanted_ = false;
+        hold_for_fix(fix_wanted_s_);
+    }
+    if (!attempt(plan, origin_us, now_ms, Payload::Position).stale) return;
+    fix_wanted_ = true;
+    fix_wanted_s_ = utc_s;
+}
+
+void RadioService::carry_position(const timing::Transmitter::Attempt& position, uint32_t utc_s) {
+    if (fix_wanted_ && fix_wanted_s_ == utc_s) fix_wanted_ = false;
+    if (!position.redrawn || (redrawn_ && redrawn_s_ == utc_s)) return;
+    context_.state.air.tx_redrawn_for_fix++;
+    redrawn_ = true;
+    redrawn_s_ = utc_s;
 }
 
 void RadioService::hold_for_fix(uint32_t utc_s) {
@@ -288,6 +301,11 @@ void RadioService::hold_for_fix(uint32_t utc_s) {
 int32_t RadioService::fix_lag_ms(int64_t origin_us) const {
     const uint32_t second_ms = static_cast<uint32_t>(at_us(origin_us, 0) / 1000);
     return static_cast<int32_t>(second_ms - context_.state.own.fix_at_ms);
+}
+
+int32_t RadioService::fix_in_hand_ms(int64_t origin_us) const {
+    const uint32_t second_ms = static_cast<uint32_t>(at_us(origin_us, 0) / 1000);
+    return static_cast<int32_t>(context_.state.own.fix_in_hand_ms - second_ms);
 }
 
 void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, uint32_t now_ms,
@@ -374,6 +392,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         dwell_armed = true;
         carried_now = true;
         armed.carry(payload, tx_at_us);
+        if (payload == Payload::Position) carry_position(payload_attempt, armed.utc_s);
         if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
         if (payload == Payload::Status) context_.state.rf.status_at_us = tx_at_us;
     }

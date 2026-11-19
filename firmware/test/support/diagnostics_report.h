@@ -47,6 +47,7 @@ inline Diagnostics busy_device() {
     diagnostics.tx_forced = 1;
     diagnostics.tx_busy_missed = 2;
     diagnostics.tx_held_for_fix = 4;
+    diagnostics.tx_redrawn_for_fix = 9;
     diagnostics.tx_keyed_us = 609;
     diagnostics.tx_span_us = 5919;
     diagnostics.range_refused = 5;
@@ -141,6 +142,7 @@ inline Diagnostics widest_device() {
     diagnostics.tx_forced = 0xFFFFFFFFu;
     diagnostics.tx_busy_missed = 0xFFFFFFFFu;
     diagnostics.tx_held_for_fix = 0xFFFFFFFFu;
+    diagnostics.tx_redrawn_for_fix = 0xFFFFFFFFu;
     diagnostics.tx_keyed_us = 65535;
     diagnostics.tx_span_us = 65535;
     diagnostics.range_refused = 0xFFFFFFFFu;

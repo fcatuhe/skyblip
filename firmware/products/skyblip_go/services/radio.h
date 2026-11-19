@@ -120,10 +120,12 @@ class RadioService : public runtime::Service {
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
     uint32_t slot_utc_s(uint32_t now_ms) const;
     int32_t fix_lag_ms(int64_t origin_us) const;
+    int32_t fix_in_hand_ms(int64_t origin_us) const;
     bool full_rate() const;
     void count_given_up(uint32_t now_ms);
     void count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
     void hold_for_fix(uint32_t utc_s);
+    void carry_position(const timing::Transmitter::Attempt& position, uint32_t utc_s);
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
     static void listen_for(timing::Band band, ports::RfPlan& plan);
     timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, int64_t origin_us,
@@ -186,6 +188,12 @@ class RadioService : public runtime::Service {
     bool held_for_b5_{false};
     uint32_t held_for_fix_s_{0};
     bool held_for_fix_{false};
+    // INFO: fc 19nov26 a position seen waiting for its fix, lost unless armed before its second
+    // ends
+    uint32_t fix_wanted_s_{0};
+    bool fix_wanted_{false};
+    uint32_t redrawn_s_{0};
+    bool redrawn_{false};
     // INFO: fc 27sep26 per dwell and payload: queued bursts are built while the current dwell keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed current_dwell_{};

@@ -284,6 +284,7 @@ enum : uint32_t {
     kModeSAltitude = 88,
     kUnmatched = 89,
     kTxHeldForFix = 90,
+    kTxRedrawnForFix = 91,
 };
 }
 

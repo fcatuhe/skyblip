@@ -992,6 +992,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "tx_held_for_fix",
           "number": 90,
           "type": "unsigned"
+        },
+        {
+          "name": "tx_redrawn_for_fix",
+          "number": 91,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1461,6 +1466,11 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "tx_held_for_fix",
           "number": 90,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_redrawn_for_fix",
+          "number": 91,
           "type": "unsigned"
         }
       ]

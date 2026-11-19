@@ -36,6 +36,17 @@ int Transmitter::instant_in(Payload payload, int slot, uint32_t utc_s) const {
     return first + static_cast<int>(drawn % static_cast<uint32_t>(last - first + 1));
 }
 
+std::optional<int> Transmitter::redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,
+                                           int32_t fix_in_hand_ms) const {
+    const int first = std::max(window_of(Payload::Position, slot).start_ms,
+                               static_cast<int>(fix_in_hand_ms) + kRedrawLeadMs);
+    const int last = std::min(last_instant(Payload::Position, slot),
+                              static_cast<int>(kFixMaxAgeMs - kFixAgeAllowanceMs - fix_lag_ms));
+    if (first > last) return std::nullopt;
+    const uint32_t drawn = hash(hash(hash(hash(address_ ^ hash(utc_s)))));
+    return first + static_cast<int>(drawn % static_cast<uint32_t>(last - first + 1));
+}
+
 uint32_t Transmitter::deferral_draw(uint64_t busy_at_us) const {
     return hash(address_ ^ hash(static_cast<uint32_t>(busy_at_us ^ (busy_at_us >> 32))));
 }
@@ -144,20 +155,26 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
 }
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,
-                                          bool airborne, int32_t fix_lag_ms,
-                                          Payload payload) const {
+                                          bool airborne, int32_t fix_lag_ms, Payload payload,
+                                          int32_t fix_in_hand_ms) const {
     Attempt attempt{};
     attempt.payload = payload;
     if (!plan.tx_allowed) return attempt;
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
 
     if (sent_in(utc_s, payload) || !due(payload, plan, utc_s, airborne)) return attempt;
-    if (payload == Payload::Position &&
-        !fresh(fix_lag_ms + instant_in(payload, dwell_slot, utc_s))) {
+    const int drawn_ms = instant_in(payload, dwell_slot, utc_s);
+    // INFO: fc 19nov26 a fix that came after the drawn instant, and its listen, gets a new draw
+    const bool late = payload == Payload::Position && fix_in_hand_ms + kRedrawLeadMs > drawn_ms;
+    const std::optional<int> instant =
+        late ? redrawn_in(dwell_slot, utc_s, fix_lag_ms, fix_in_hand_ms) : drawn_ms;
+    if (payload == Payload::Position && !(instant && fresh(fix_lag_ms + *instant))) {
         attempt.stale = true;
-        attempt.at_ms = instant_in(payload, dwell_slot, utc_s);
+        attempt.at_ms = drawn_ms;
         return attempt;
     }
+    const int at_ms = instant.value_or(drawn_ms);
+    attempt.redrawn = late;
 
     if (!air_time_.may_spend(now_ms, kAirTimeMs)) {
         attempt.over_budget = true;
@@ -166,7 +183,7 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
 
     attempt.go = true;
     attempt.frequency_hz = Scheduler::slot_frequency_hz(dwell_slot);
-    attempt.at_ms = instant_in(payload, dwell_slot, utc_s);
+    attempt.at_ms = at_ms;
     return attempt;
 }
 
