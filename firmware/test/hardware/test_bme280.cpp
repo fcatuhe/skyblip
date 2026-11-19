@@ -125,7 +125,8 @@ TEST_CASE("bme280: a part strapped to the alternate address is found there") {
     bench.convert();
 }
 
-TEST_CASE("bme280: an address that names another chip is not a barometer") {
+TEST_CASE("bme280: an address that names another chip is not a barometer" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.chip.chip_id = 0x58;
     bench.chip.power_on_reset();

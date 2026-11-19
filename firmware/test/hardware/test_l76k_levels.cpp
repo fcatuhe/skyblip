@@ -55,8 +55,7 @@ uint8_t in_view(const models::L76k& chip) {
 }  // namespace
 
 // The levels cost a set of sentences, so only the page that draws them asks for them.
-TEST_CASE("l76k: satellites in view are asked for every solution until a set lands, then paced" *
-          doctest::test_suite("main")) {
+TEST_CASE("l76k: satellites in view are asked for every solution until a set lands, then paced") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
     run(gnss, chip, 0, kBringUpLeadMs + 4000);

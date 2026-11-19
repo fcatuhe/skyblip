@@ -173,7 +173,8 @@ TEST_CASE("lr2021: receive is continuous, with RxDone alone on the IRQ line" *
     CHECK(part.refused.empty());
 }
 
-TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decoder reads") {
+TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decoder reads" *
+          doctest::test_suite("main")) {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     REQUIRE(radio.mode() == Lr2021Mode::Receive);
@@ -192,8 +193,7 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
 }
 
 // With no sync word, every downlink format lands, and the decoder tells them apart.
-TEST_CASE("lr2021: a frame of every downlink format goes up, an all-call reply among them" *
-          doctest::test_suite("main")) {
+TEST_CASE("lr2021: a frame of every downlink format goes up, an all-call reply among them") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     const AdsbAir reply = mode_s_air(adsb::all_call(kAddress, 5));

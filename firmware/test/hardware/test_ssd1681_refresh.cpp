@@ -342,8 +342,7 @@ TEST_CASE("ssd1681: power_off() sleeps the panel whatever waveform ran last") {
 }
 
 // The path the shutdown actually takes: a full park frame, and then it may sleep.
-TEST_CASE("ssd1681: power_off() after the full park frame leaves nothing powered" *
-          doctest::test_suite("main")) {
+TEST_CASE("ssd1681: power_off() after the full park frame leaves nothing powered") {
     models::Ssd1681 chip;
     parts::Ssd1681 driver = driver_for(chip);
     driver.begin();

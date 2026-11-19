@@ -225,7 +225,8 @@ TEST_CASE("sx1262: SetTx carries a timeout past the frame's air time at the conf
 
 // A8. BUSY going low proves a rail and a pull-down, which an empty footprint
 // and an unsoldered MISO pad manage too. Only a value out of the part proves it.
-TEST_CASE("sx1262: presence is a register round-trip, and a dead MISO is an absent radio") {
+TEST_CASE("sx1262: presence is a register round-trip, and a dead MISO is an absent radio" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     CHECK(radio.probe() == Status::Ok);

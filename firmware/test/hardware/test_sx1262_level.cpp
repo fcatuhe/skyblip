@@ -198,7 +198,8 @@ TEST_CASE("sx1262: a frequency trim moves the programmed carrier by its own ppm,
     CHECK(chip.frequency_hz <= 869533695u);
 }
 
-TEST_CASE("sx1262: a trim past the band's own limit is clamped, not programmed") {
+TEST_CASE("sx1262: a trim past the band's own limit is clamped, not programmed" *
+          doctest::test_suite("main")) {
     // The two bounds are the same number in two layers: what the flash blob
     // accepts and what the PLL word is allowed to carry. If they ever part, a
     // stored value would be silently altered on its way to the synthesiser.
