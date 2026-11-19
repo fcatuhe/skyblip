@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # pages - the Go's glass, one page at a time, from a snapshot to pixels
 
 280 host test cases over 29 subjects in 23 files, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. No case here is marked main, so every claim is listed.

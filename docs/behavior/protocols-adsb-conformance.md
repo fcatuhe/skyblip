@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # protocols/adsb conformance - DO-260B draft 4.2, the component read clause by clause
 
 189 host test cases over 189 subjects in 7 files, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. No case here is marked main, so every claim is listed.
