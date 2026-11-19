@@ -153,6 +153,8 @@ class DiagnosticsReport {
     // a frame is never longer than the negotiated payload, this only bounds the
     // buffer the caller lends.
     static constexpr int kFrameBytes = 384;
+    // INFO: fc 19nov26 add() drops a field past this, so a frames test keeps the widest under it
+    static constexpr int kMaxFields = 96;
 
     // INFO: fc 20oct26 command is what the reply answers under: radio asks for one group
     DiagnosticsReport(const Diagnostics& diagnostics, link::Command command);
@@ -174,8 +176,6 @@ class DiagnosticsReport {
         Kind kind;
         Group group;
     };
-
-    static constexpr int kMaxFields = 96;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_capture(const Diagnostics& diagnostics);

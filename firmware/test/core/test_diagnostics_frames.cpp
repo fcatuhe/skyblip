@@ -110,3 +110,16 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
     CHECK_FALSE(has(body, "uptime_s"));
     CHECK_FALSE(has(body, "firmware"));
 }
+
+// The pinned case: the 86th field fell off the report without a word, keeps_power_run_s with it.
+TEST_CASE("diagnostics: the widest dump keeps every field, and stays under the report's cap") {
+    const Frames wide = frames(widest_device(), 512);
+    int keys = 0;
+    for (size_t at = wide.joined.find("\":"); at != std::string::npos;
+         at = wide.joined.find("\":", at + 2))
+        keys++;
+    // Each frame also names its command, group, part and whether more follow.
+    const int fields = keys - 4 * wide.count;
+    CHECK(has(wide.joined, "\"keeps_power_run_s\""));
+    CHECK(fields < DiagnosticsReport::kMaxFields);
+}
