@@ -123,6 +123,25 @@ Each word below names one thing, in code and in prose. A word that names two thi
 | park | stop a part and release its lines, ready for the rails to drop | `show(Colour::None)`, which only darkens |
 | pass | one run of the service loop over every service | |
 
+## Naming a test case
+
+A test case states a claim, and [`docs/BEHAVIOR.md`](../docs/BEHAVIOR.md) and the pages under `docs/behavior/` are generated from the claims (`scripts/behavior_index.py`). Name a case `subject: what holds`, as in `button: a stable press emits exactly one event`, because the subject groups the cases on their area's page. Open every test file with a comment that says what it pins down. A comment above a case is quoted under its claim.
+
+A claim is main or it is an edge case. Mark a main case with the `main` test suite, the only one the suite uses, and leave every other case unmarked:
+
+```cpp
+TEST_CASE("button: a stable press emits exactly one event" * doctest::test_suite("main")) {
+```
+
+| Tier | What it covers |
+|---|---|
+| main | what the device does when used as intended, which a pilot, a reviewer or a declaration of conformity relies on: what goes on air and when, what is received and shown, what an alarm means, what the screen and the controls do, what activation, update, pairing and settings do, and the rules a standard imposes on what the device sends. State it as a user or a reviewer would recognize it |
+| edge case or detail | refusals of malformed input that a pilot never sees, that change nothing on air and that no standard requires, boundaries and saturation, clock and counter wraps, recovery mechanics, regressions found by fuzzing, internal mechanics, formatting details and harness checks |
+
+A failure, a refusal or a guard is main when a pilot sees it or relies on it for safety, when it changes what goes on air, or when a standard requires it. How the firmware recovers from it is a detail. When in doubt, leave the case unmarked.
+
+Keep main small, about 10 to 15% of an area's cases. Give a subject a user would recognize at least one main case when one qualifies, and give a purely internal subject none. That rule does not hold on the pages whose cases are named after a clause of a standard: `adsl`, `adsb`, `en300220` and the `protocols-*-conformance` pages, where nearly every subject is a clause. There a case is main when it states a rule of the clause on what the device puts on air or reads off it, and the 10 to 15% still holds. Each area's page lists its main claims first and folds the rest below them, and `docs/BEHAVIOR.md` lists every main claim. `build/skyblip_tests -ts=main` runs the main cases alone. `scripts/behavior_index.py` refuses a name without a subject and a claim on either side of `: `, a file with no opening comment, a test suite other than `main`, and a skipped case marked main, because a skipped case claims nothing.
+
 ## License
 
 MIT, like the rest of the repository: see [`LICENSE`](../LICENSE). [`NOTICE.md`](../NOTICE.md) lists what an image is built from that is not ours, each with its license: Zephyr and its modules, the toolchain's libraries, Monocypher and the Bosch hub image.
