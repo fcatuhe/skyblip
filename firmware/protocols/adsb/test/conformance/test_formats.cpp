@@ -158,8 +158,8 @@ TEST_CASE(
         CHECK(hear(squitter(type_code)).status == Status::Unsupported);
 }
 
-TEST_CASE("DO-260B 2.2.3.2.3: an airborne position is TYPE, status, NIC-B, altitude, T, F and CPR" *
-          doctest::test_suite("main")) {
+TEST_CASE(
+    "DO-260B 2.2.3.2.3: an airborne position is TYPE, status, NIC-B, altitude, T, F and CPR") {
     const Message message = heard_ok(airborne(11, q_field(1440)));
     CHECK(message.airborne_position.pressure_altitude_valid);
     CHECK(message.airborne_position.pressure_altitude_ft == 35000);
@@ -188,7 +188,8 @@ TEST_CASE("DO-260B 2.2.3.2.3.1.3: a TYPE 0 message is never read as a position")
 }
 
 TEST_CASE(
-    "DO-260B 2.2.3.2.3.1.3.1: TYPE 0 means no position, so its zero CPR fields place nothing") {
+    "DO-260B 2.2.3.2.3.1.3.1: TYPE 0 means no position, so its zero CPR fields place nothing" *
+    doctest::test_suite("main")) {
     adsb::Squitter frame = squitter(0);
     CHECK(hear(frame).status == Status::Unsupported);
     put(frame, 9, 20, q_field(1440));
