@@ -3,7 +3,7 @@ module Analytics
   PERIOD_PRESETS = [ 1, 7, 30, 90 ].freeze
 
   AHOY_VISIT_FILTER_KEYS = %i[start_on end_on country region city referrer browser os device].freeze
-  ANALYTICS_VISIT_FILTER_KEYS = %i[segment section channel entry exit path].freeze
+  ANALYTICS_VISIT_FILTER_KEYS = %i[segment section channel entry exit path outbound].freeze
   FILTER_KEYS = (AHOY_VISIT_FILTER_KEYS + ANALYTICS_VISIT_FILTER_KEYS).freeze
   DISPLAY_FILTER_KEYS = (FILTER_KEYS - %i[start_on end_on segment section]).freeze
 

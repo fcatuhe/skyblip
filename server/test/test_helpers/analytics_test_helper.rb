@@ -19,4 +19,9 @@ module AnalyticsTestHelper
     Analytics::Visit.compute_now(visit)
     visit
   end
+
+  def click(visit, href, text: nil, section: nil, page: "/buy", after: 1.second)
+    Ahoy::Event.create!(name: "$click", visit_id: visit.id, time: visit.started_at + after,
+                        properties: { "tag" => "a", "page" => page, "section" => section, "text" => text, "href" => href }.compact)
+  end
 end

@@ -1,4 +1,4 @@
-# The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_do260b_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
+# The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
 DO-260B 2.2.3.2 ADS-B and TIS-B Message Baseline Format and Structures
 DO-260B 2.2.3.2.1 ADS-B Message Baseline Field Descriptions
 DO-260B 2.2.3.2.1.1 "DF" Downlink Format Field

@@ -7,9 +7,8 @@
 #   make fuzz-nmea   one of them: nmea, air, adsb, adsb_assembly or link
 #   make ... ABI=ilp32  any of the above for i386, where long is 32 bits as on the nRF52
 #   make tidy        clang-tidy the sources the host build compiles
-#   make simulator   terminal simulator
 #   make browser     compile the WASM the browser page drives
-#   make watch       incremental rebuild on save (WATCH=browser|simulator|test)
+#   make watch       incremental rebuild on save (WATCH=browser|test)
 #
 # The page that drives it is the Rails app's /briefing/simulator, which loads the
 # WASM from a release. This file compiles; it does not serve.
@@ -93,10 +92,6 @@ OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) $(TEST_SRC)) $(VENDOR_OBJ)
 
 BIN := $(BUILD)/skyblip_tests
 
-# The simulator: the same product, on the host platform, inside simulator/world.
-SIMULATOR_OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) simulator/frontends/terminal.cpp) $(VENDOR_OBJ)
-SIMULATOR_BIN := $(BUILD)/skyblip_simulator
-
 EMCC ?= emcc
 # Linking C++ objects with emcc leaves operator new/delete undefined.
 EMXX ?= em++
@@ -111,7 +106,7 @@ WEB_STAMP := $(BUILD)/web/emsdk-version
 WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC)) $(patsubst %.c,$(WEB_BUILD)/%.o,$(VENDOR_SRC))
 WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
 
-.PHONY: test test-sanitize test-protocols fuzz fuzzers all clean simulator browser watch tidy
+.PHONY: test test-sanitize test-protocols fuzz fuzzers all clean browser watch tidy
 all: test
 
 test: $(BIN)
@@ -174,12 +169,6 @@ tidy:
 $(BIN): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $@ $(LDFLAGS)
 
-simulator: $(SIMULATOR_BIN)
-	@echo "run: ./$(SIMULATOR_BIN)"
-
-$(SIMULATOR_BIN): $(SIMULATOR_OBJ)
-	$(CXX) $(CXXFLAGS) $(SIMULATOR_OBJ) -o $@ $(LDFLAGS)
-
 # WASM build, with the Emscripten .github/pins/action.yml pins: ../scripts/emsdk.rb installs it
 # when $(EMCC) runs another version. Objects sit under the version, and the stamp relinks on a switch.
 browser:
@@ -224,7 +213,6 @@ $(BUILD)/%.o: %.c
 #
 #   make watch            rebuild + rerun host tests on every save (default)
 #   make watch WATCH=browser    recompile the WASM on every save
-#   make watch WATCH=simulator  rebuild the terminal simulator on every save
 #
 WATCH ?= test
 WATCH_SRC := core ui ports hardware boards runtime products simulator test
@@ -250,12 +238,8 @@ watch:
 clean:
 	rm -rf $(BUILD)
 
-# Header dependencies for ALL THREE object trees. Without the web half, editing
-# a .h left the stale .o in place and the browser kept running old code; without
-# the simulator half, the terminal frontend was the one translation unit no
-# other target compiles, so renaming a driver method left it linking against a
-# symbol that no longer existed.
+# Header dependencies for every object tree. Without the web half, editing a .h
+# left the stale .o in place and the browser kept running old code.
 -include $(OBJ:.o=.d)
 -include $(FUZZ_OBJ:.o=.d)
--include $(SIMULATOR_OBJ:.o=.d)
 -include $(WEB_OBJ:.o=.d)

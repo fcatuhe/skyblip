@@ -104,47 +104,6 @@ TEST_CASE("bravo: the settings come back from flash after a reboot") {
     CHECK_FALSE(second.settings().peer.pinned);
 }
 
-// Version 2 adds where the aircraft address came from, and must not cost a Bravo its pin.
-TEST_CASE(
-    "bravo: a version 1 blob is read whole, the pin kept and the aircraft address a phone's") {
-    struct {
-        uint32_t aircraft_address{0x3C6586};
-        bravo::PeerPin peer{};
-        bool alarm_enabled{true};
-        uint8_t alarm_volume{1};
-    } v1{};
-    v1.peer.pinned = true;
-    v1.peer.address_type = 1;
-    uint8_t blob[64]{};
-    settings::seal(1, &v1, sizeof(v1), blob, sizeof(blob));
-    bravo::Settings read{};
-    REQUIRE(bravo::from_blob(blob, settings::blob_bytes(sizeof(v1)), read) == Status::Ok);
-    CHECK(read.aircraft_address == 0x3C6586u);
-    CHECK_FALSE(read.aircraft_address_from_go);
-    CHECK(read.peer.pinned);
-    CHECK(read.peer.address_type == 1);
-    CHECK(read.alarm == bravo::Alarm::Soft);
-}
-
-// Both old offs silenced the buzzer and the haptic and kept the lamp, which visual does.
-TEST_CASE("bravo: a version 2 blob's alarm off or volume off comes back as visual") {
-    struct V2 {
-        uint32_t aircraft_address{0};
-        bravo::PeerPin peer{};
-        bool alarm_enabled{true};
-        uint8_t alarm_volume{2};
-        bool aircraft_address_from_go{true};
-    };
-    for (const V2 old : {V2{0, {}, false, 2, true}, V2{0, {}, true, 0, true}}) {
-        uint8_t blob[64]{};
-        settings::seal(2, &old, sizeof(old), blob, sizeof(blob));
-        bravo::Settings read{};
-        REQUIRE(bravo::from_blob(blob, settings::blob_bytes(sizeof(old)), read) == Status::Ok);
-        CHECK(read.alarm == bravo::Alarm::Visual);
-        CHECK(read.aircraft_address_from_go);
-    }
-}
-
 TEST_CASE("bravo: a capture records the alarm Bravo plays, its Go's while paired") {
     bravo::Settings settings = bravo::defaults();
     settings.alarm = bravo::Alarm::Visual;
@@ -157,26 +116,6 @@ TEST_CASE("bravo: a capture records the alarm Bravo plays, its Go's while paired
     capture.describe(record);
     CHECK(record.alarm_setting == static_cast<uint8_t>(bravo::Alarm::Soft));
     CHECK(record.settings_version == 4);
-}
-
-// A Bravo paired before version 4 played its own alarm, so its Go's starts there.
-TEST_CASE("bravo: a version 3 blob is read whole, the Go's alarm starting at Bravo's own") {
-    struct {
-        uint32_t aircraft_address{0x3C6586};
-        bravo::PeerPin peer{};
-        bravo::Alarm alarm{bravo::Alarm::Soft};
-        bool aircraft_address_from_go{true};
-    } v3{};
-    v3.peer.pinned = true;
-    uint8_t blob[64]{};
-    settings::seal(3, &v3, sizeof(v3), blob, sizeof(blob));
-    bravo::Settings read{};
-    REQUIRE(bravo::from_blob(blob, settings::blob_bytes(sizeof(v3)), read) == Status::Ok);
-    CHECK(read.aircraft_address == 0x3C6586u);
-    CHECK(read.peer.pinned);
-    CHECK(read.alarm == bravo::Alarm::Soft);
-    CHECK(read.go_alarm == bravo::Alarm::Soft);
-    CHECK(read.aircraft_address_from_go);
 }
 
 // #192 stores the pinned Go from the first image, and version 4 keeps it with its Go's alarm.
@@ -199,5 +138,7 @@ TEST_CASE("bravo: blob version 4 carries the peer pin and the Go's alarm, and no
     CHECK(read.go_alarm == bravo::Alarm::Visual);
 
     blob[0] = 5;
+    CHECK(bravo::from_blob(blob, bravo::blob_size(), read) == Status::Unsupported);
+    settings::seal(3, &pinned, sizeof(pinned), blob, sizeof(blob));
     CHECK(bravo::from_blob(blob, bravo::blob_size(), read) == Status::Unsupported);
 }

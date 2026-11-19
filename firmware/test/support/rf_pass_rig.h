@@ -9,9 +9,8 @@
 #include "core/diagnostics/recorder.h"
 #include "hardware/platform/host/platform.h"
 #include "ports/null.h"
-#include "products/common/services/traffic.h"
-#include "products/skyblip_go/features.h"
 #include "products/skyblip_go/services/radio.h"
+#include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
 
@@ -27,7 +26,7 @@ struct Pass {
     platform::host::Platform platform{};
     models::Sx1262& chip{platform.chips().radio};
     parts::Sx1262 radio{chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin};
-    bus::Bus bus{};
+    bus::GoBus bus{};
     bus::State state{};
     platform::host::Rf rf{radio, platform.clock(), bus.rf};
     ports::NullRoles null{};
@@ -49,7 +48,7 @@ struct Pass {
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio_service{context, settings};
-    common::TrafficService traffic_service{context, go::kFeatures, settings.aircraft_address};
+    go::TrafficService traffic_service{context, bus.rf, settings.aircraft_address};
 
     Status begin() {
         const Status status = rf.begin();

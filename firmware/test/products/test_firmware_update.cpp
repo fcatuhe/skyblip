@@ -9,6 +9,7 @@
 #include "products/skyblip_go/pages/recovery.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "runtime/tasks.h"
+#include "test/support/confirmed.h"
 #include "test/support/frame_glass.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
@@ -50,9 +51,9 @@ bool attempt_recorded(Rig& rig) {
 
 const go::SelfTestPart& storage_row(Rig& rig) {
     for (int i = 0; i < go::kSelfTestPartCount; i++)
-        if (std::string(rig.product.self_test_rows()[i].name) == "STORAGE")
-            return rig.product.self_test_rows()[i];
-    return rig.product.self_test_rows()[0];
+        if (std::string(rig.product.self_test().parts[i].name) == "STORAGE")
+            return rig.product.self_test().parts[i];
+    return rig.product.self_test().parts[0];
 }
 
 // What a later image stores: one layout ahead of this one, sealed the way every blob is.
@@ -105,10 +106,9 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     now_ms += 200;
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Install);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
-    CHECK(rig.product.installing());
     CHECK(rig.product.board().rf().sleeps() == 1);
     CHECK_FALSE(rig.product.screen().powered());
-    CHECK_FALSE(config(rig).install_requested());
+    CHECK_FALSE(taken(config(rig)));
 
     // the panel is still clocking its refresh, and nothing is on record yet
     CHECK(rig.platform.dfu().triggered == 0);
