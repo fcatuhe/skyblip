@@ -23,12 +23,12 @@ module BriefingTestHelper
     def a_go(**options) = { name: "skyBlip Go 00012A", **options }
     def a_bravo(**options) = { name: "skyBlip Bravo 3F2A", product: "bravo", address: nil, running: "0.1.0+40", key: "212602F2", imu: nil, **options }
 
-    # INFO: fc 12nov26 a shelf frame still loading when the cassettes close would reach GitHub, so the block waits for it
+    # INFO: fc 12nov26 a shelf frame still loading when the cassettes close would reach GitHub, so the block waits for it | 19nov26 and for a Turbo preview to land
     def on_the_shelf
       VCR.use_cassette("github/releases", allow_playback_repeats: true) do
         VCR.use_cassette("github/firmware", allow_playback_repeats: true) do
           yield
-          assert_no_selector "turbo-frame#firmware_shelf:not([complete])", visible: :all
+          assert_no_selector "html[aria-busy], turbo-frame#firmware_shelf:not([complete])", visible: :all
         end
       end
     end
@@ -37,7 +37,7 @@ module BriefingTestHelper
     def with_installers
       VCR.use_cassette("github/installers", allow_playback_repeats: true) do
         yield
-        assert_no_selector "turbo-frame#installers:not([complete])", visible: :all
+        assert_no_selector "html[aria-busy], turbo-frame#installers:not([complete])", visible: :all
         assert_no_selector "turbo-frame#firmware_shelf:not([complete])", visible: :all
       end
     end
