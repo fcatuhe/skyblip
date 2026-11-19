@@ -43,8 +43,7 @@ int32_t signed_bearing(uint16_t clockwise_deg) {
 }  // namespace
 
 Status NmeaService::setup() {
-    enabled_ =
-        has_feature(supported(declared_, context_.roles.capabilities), Feature::CompanionLink);
+    enabled_ = ports::has(context_.roles.capabilities, ports::Capability::Link);
     return Status::Ok;
 }
 

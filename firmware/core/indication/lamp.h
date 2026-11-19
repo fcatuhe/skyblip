@@ -193,7 +193,7 @@ struct Situation {
     // with the same debounce and the same sanity floor.
     power::PowerLevel power_level{power::PowerLevel::Unknown};
     bool fix_valid{false};
-    // INFO: fc 12nov26 only a product without a screen claims these, common::Feature::LampShowsLink
+    // INFO: fc 12nov26 only a product without a screen sets these | 19nov26 through lamp_shows_link
     bool prompting{false};
     bool pairing{false};
     bool linked{false};

@@ -10,7 +10,6 @@
 #include "ports/indicator.h"
 #include "products/common/alarm.h"
 #include "products/common/alarm_grader.h"
-#include "products/common/features.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
 
@@ -44,10 +43,9 @@ struct AlarmSettings {
 // owner of the lamp, the buzzer and the motor.
 class AlarmService : public runtime::Service {
    public:
-    AlarmService(runtime::Context& context, Feature declared, AlarmSettings settings)
-        : runtime::Service(context), declared_(declared), settings_(settings) {}
+    AlarmService(runtime::Context& context, AlarmSettings settings, bool lamp_shows_link = false)
+        : runtime::Service(context), lamp_shows_link_(lamp_shows_link), settings_(settings) {}
 
-    Status setup() override;
     void tick(uint32_t now_ms) override;
 
     // The device is going down: the loop stops running, so the buzzer is
@@ -131,8 +129,7 @@ class AlarmService : public runtime::Service {
     bool sign_on_pending_{false};
     bool sign_off_pending_{false};
     bool running_{true};
-    bool lamp_shows_link_{false};
-    const Feature declared_;
+    const bool lamp_shows_link_;
     AlarmSettings settings_;
 };
 

@@ -45,6 +45,14 @@ enum class Pending : uint8_t {
     Pair = 10
 };
 
+enum class Action : uint8_t { PowerOff, Install, Recovery, EraseLog, GnssColdStart, Capture };
+
+struct Confirmed {
+    Action action;
+    CaptureProfile capture{CaptureProfile::Stop};
+    events::Peer peer{0, 0};
+};
+
 // INFO: fc 16nov26 a Go asks an untrusted browser's pair on its glass, Bravo has none to ask on
 enum class PairingSide : uint8_t { None, Go, Bravo };
 
@@ -256,8 +264,6 @@ class ConfigService {
         capture_available_ = available;
         capture_armed_ = armed;
     }
-    std::optional<CaptureProfile> capture_requested() const { return capture_requested_; }
-    void clear_capture_request() { capture_requested_.reset(); }
 
     // INFO: fc 16nov26 a Go and a Bravo answer pair, each told the tag of the other (README.md)
     void serve_pairing(PairingSide side) { pairing_side_ = side; }
@@ -267,35 +273,16 @@ class ConfigService {
     // connected
     void pairing_ended(link::Reason verdict);
 
-    // Erasing the flight log destroys evidence a pilot may need for a claim or
-    // an incident, so it knocks on the same door a firmware upload does: the
-    // flight log service asks, the glass shows the prompt, and only the
-    // confirmation gesture on the device itself latches it.
+    // INFO: fc 19nov26 an erase destroys a pilot's evidence, so only a press on the unit allows it
     void request_log_erase();
-    bool log_erase_requested() const { return log_erase_requested_; }
-    // INFO: fc 10nov26 the erase answers the phone whose prompt was confirmed
-    const events::Peer& log_erase_peer() const { return log_erase_peer_; }
-    void clear_log_erase_request() { log_erase_requested_ = false; }
 
-    // Latched by a confirmed "gnss_cold_start". A receiver whose almanac is poisoned
-    // takes twenty minutes to fix and a pilot reads that as a broken device, so
-    // throwing the stored orbit data away has to be reachable without a cable.
-    // It is behind the same confirmation as the rest: a cold start costs the next
-    // fix, and a phone must not be able to spend that on its own.
-    bool gnss_cold_start_requested() const { return gnss_cold_start_requested_; }
-    void clear_gnss_cold_start_request() { gnss_cold_start_requested_ = false; }
-
-    // Latched by a confirmed "power_off". The shell owns the sequencer, so this
-    // is where the request waits for it: core/power::ShutdownSequencer::request
-    // with ShutdownReason::LinkRequest.
-    bool power_off_requested() const { return power_off_requested_; }
-    void clear_power_off_request() { power_off_requested_ = false; }
-
-    bool install_requested() const { return install_requested_; }
-    void clear_install_request() { install_requested_ = false; }
-
-    bool recovery_requested() const { return recovery_requested_; }
-    void clear_recovery_request() { recovery_requested_ = false; }
+    // INFO: fc 19nov26 the product takes, each pass, what a press confirmed or a finished upload
+    std::optional<Confirmed> take_confirmed() {
+        if (!confirmed_) return std::nullopt;
+        const Confirmed taken{*confirmed_, staged_capture_, log_erase_peer_};
+        confirmed_.reset();
+        return taken;
+    }
 
     // INFO: fc 04aug26 Every frame this service could not put on the link: one
     // that would not fit the negotiated payload, one the controller refused, and
@@ -407,17 +394,12 @@ class ConfigService {
     int connected_count_{0};
     LinkClaim claim_{};
     bool status_push_due_{false};
-    bool power_off_requested_{false};
-    bool install_requested_{false};
-    bool recovery_requested_{false};
-    bool log_erase_requested_{false};
+    std::optional<Action> confirmed_{};
     events::Peer log_erase_peer_{0, 0};
-    bool gnss_cold_start_requested_{false};
     bool serves_captures_{false};
     bool capture_available_{false};
     bool capture_armed_{false};
     CaptureProfile staged_capture_{CaptureProfile::Stop};
-    std::optional<CaptureProfile> capture_requested_{};
     PairingSide pairing_side_{PairingSide::None};
     std::optional<uint16_t> paired_tag_{};
     std::optional<uint16_t> pair_requested_{};

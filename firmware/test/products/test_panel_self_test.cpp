@@ -17,7 +17,7 @@ TEST_CASE("product: a device that can fly keeps the self test off the glass at b
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.platform.chips().epd.present_count == 0);
-    CHECK(rig.product.self_test_page().count_black() > 200);
+    CHECK(rig.self_test_page().count_black() > 200);
 
     rig.run(0, 2000);
     CHECK(rig.product.screen().page() == go::Page::Radar);
@@ -37,8 +37,8 @@ TEST_CASE("product: the self-test page reaches the panel before anything refuses
     CHECK(rig.platform.chips().epd.present_count == 1);
     CHECK(rig.platform.chips().epd.last_full);
     CHECK(rig.platform.chips().epd.framebuffer().count_black() ==
-          rig.product.self_test_page().count_black());
-    CHECK(rig.product.self_test_page().count_black() > 200);
+          rig.self_test_page().count_black());
+    CHECK(rig.self_test_page().count_black() > 200);
 
     // And it stays. The loop refuses to fly, so nothing overwrites the one page
     // that says why.
@@ -59,8 +59,8 @@ TEST_CASE("product: the self-test page names the part, not just the failure") {
 
     // Row 1 is GNSS (products/skyblip_go/product.h::kSelfTestParts). The two pages
     // differ there and nowhere else in that row's band.
-    const go::Glass& bad = missing.product.self_test_page();
-    const go::Glass& good = whole.product.self_test_page();
+    const go::Glass& bad = missing.self_test_page();
+    const go::Glass& good = whole.self_test_page();
     int row_difference = 0;
     for (int y = go::self_test_row_y(1); y < go::self_test_row_y(1) + 8; y++)
         for (int x = 0; x < go::kGlassWidth; x++)
@@ -89,7 +89,7 @@ TEST_CASE("product: the self-test page carries what the probes found, not what w
     const go::SelfTestPart* haptic = nullptr;
     const go::SelfTestPart* radio = nullptr;
     for (int i = 0; i < go::kSelfTestPartCount; i++) {
-        const go::SelfTestPart& row = rig.product.self_test_rows()[i];
+        const go::SelfTestPart& row = rig.product.self_test().parts[i];
         if (go::kSelfTestParts[i].capability == ports::Capability::Barometer) barometer = &row;
         if (go::kSelfTestParts[i].capability == ports::Capability::Haptic) haptic = &row;
         if (go::kSelfTestParts[i].capability == ports::Capability::Rf) radio = &row;
@@ -117,7 +117,7 @@ TEST_CASE("product: every row on the self-test page names its part, inside the w
 
     constexpr size_t kRowCells = go::kSelfTestRowCells;
     for (int i = 0; i < go::kSelfTestPartCount; i++) {
-        const go::SelfTestPart& row = rig.product.self_test_rows()[i];
+        const go::SelfTestPart& row = rig.product.self_test().parts[i];
         REQUIRE(row.detail != nullptr);
         CHECK(std::string(row.detail).size() > 0);
         // name, space, part, space, then the longest verdict there is.
@@ -134,14 +134,14 @@ TEST_CASE("product: the parts this firmware never drives are named on the bus ro
     uint32_t now_ms = 100;
     open_menu(rig, now_ms);
 
-    CHECK(reads_at(rig.product.self_test_page(), go::kSelfTestLeftX,
+    CHECK(reads_at(rig.self_test_page(), go::kSelfTestLeftX,
                    go::self_test_row_y(go::kSelfTestPartCount), "I2C IMU RTC HAPTIC BARO"));
 }
 
 // The page is the inventory: a capability with no row is a part nobody can miss.
-TEST_CASE("product: every capability the product flies on or without has a row") {
-    const uint32_t declared =
-        static_cast<uint32_t>(go::kRequired) | static_cast<uint32_t>(go::kOptional);
+TEST_CASE("product: every capability a fully fitted Go flies on has a row") {
+    const uint32_t declared = static_cast<uint32_t>(go::kRequired) |
+                              static_cast<uint32_t>(platform::host::Platform::kFullyFitted);
     for (int bit = 0; bit < 32; bit++) {
         const uint32_t one = 1u << bit;
         if ((declared & one) == 0) continue;
@@ -162,7 +162,7 @@ TEST_CASE("product: an optional part nothing answered reads NOT FOUND and names 
 
     for (int i = 0; i < go::kSelfTestPartCount; i++) {
         if (go::kSelfTestParts[i].capability != ports::Capability::Haptic) continue;
-        const go::SelfTestPart& row = rig.product.self_test_rows()[i];
+        const go::SelfTestPart& row = rig.product.self_test().parts[i];
         CHECK(row.state == go::PartState::Absent);
         REQUIRE(row.detail != nullptr);
         CHECK(std::string(row.detail) == "DRV2605");
@@ -179,7 +179,7 @@ TEST_CASE("product: a footprint nothing answered names the part and prints no ad
 
     for (int i = 0; i < go::kSelfTestPartCount; i++) {
         if (go::kSelfTestParts[i].capability != ports::Capability::Barometer) continue;
-        const go::SelfTestPart& row = rig.product.self_test_rows()[i];
+        const go::SelfTestPart& row = rig.product.self_test().parts[i];
         CHECK(row.state == go::PartState::Fail);
         REQUIRE(row.detail != nullptr);
         CHECK(std::string(row.detail) == "BME280");

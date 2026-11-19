@@ -2,12 +2,6 @@
 
 namespace skyblip::common {
 
-Status AlarmService::setup() {
-    lamp_shows_link_ =
-        has_feature(supported(declared_, context_.roles.capabilities), Feature::LampShowsLink);
-    return Status::Ok;
-}
-
 void AlarmService::tick(uint32_t now_ms) {
     accrue_annunciator(now_ms);
     const Alarm alarm = alarm_in_force();

@@ -15,7 +15,6 @@
 #include "core/events/link.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/table.h"
-#include "products/common/features.h"
 #include "runtime/service.h"
 
 namespace skyblip::common {
@@ -75,8 +74,8 @@ class NmeaService : public runtime::Service {
     static constexpr int kMaxPassSentences = 5 + kTargetsPerPass;
     static constexpr int kPassBytes = kMaxPassSentences * kSentenceBytes;
 
-    NmeaService(runtime::Context& context, Feature declared, const comms::ConfigService& config)
-        : runtime::Service(context), config_(config), declared_(declared) {}
+    NmeaService(runtime::Context& context, const comms::ConfigService& config)
+        : runtime::Service(context), config_(config) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
@@ -118,7 +117,6 @@ class NmeaService : public runtime::Service {
     // went out, so a pass cut short by a refusing link resends its tail first.
     int cursor_{0};
     bool passed_once_{false};
-    const Feature declared_;
     bool enabled_{false};
 };
 

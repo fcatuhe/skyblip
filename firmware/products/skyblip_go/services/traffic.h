@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_TRAFFIC_H
-#define SKYBLIP_PRODUCTS_COMMON_SERVICES_TRAFFIC_H
+#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_TRAFFIC_H
+#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_TRAFFIC_H
 
 #include <cstdint>
 
@@ -11,18 +11,10 @@
 #include "core/protocol/alptas.h"
 #include "core/radio/log.h"
 #include "core/traffic/callsigns.h"
-#include "products/common/features.h"
+#include "products/common/traffic_settings.h"
 #include "runtime/service.h"
 
-namespace skyblip::common {
-
-struct TrafficSettings {
-    TrafficSettings(const uint32_t& aircraft_address_of) : aircraft_address(aircraft_address_of) {}
-    TrafficSettings(uint32_t&&) = delete;
-    TrafficSettings(const uint32_t&&) = delete;
-
-    const uint32_t& aircraft_address;
-};
+namespace skyblip::go {
 
 // Owns state.traffic: radio events become targets. The dwell that heard a burst
 // names the system it belongs to (core/protocol/air.h), so nothing here guesses:
@@ -32,13 +24,10 @@ struct TrafficSettings {
 // never shown.
 class TrafficService : public runtime::Service {
    public:
-    TrafficService(runtime::Context& context, Feature declared, TrafficSettings settings)
-        : runtime::Service(context), declared_(declared), settings_(settings) {}
+    TrafficService(runtime::Context& context, common::TrafficSettings settings)
+        : runtime::Service(context), settings_(settings) {}
 
-    Status setup() override;
     void tick(uint32_t now_ms) override;
-
-    bool uplink_enabled() const { return uplink_enabled_; }
 
    private:
     void on_frame(const events::RfEvent& event, uint32_t now_ms);
@@ -61,11 +50,9 @@ class TrafficService : public runtime::Service {
 
     protocol::AdslUplink uplink_codec_{};
     protocol::AlptasReceiver alptas_receiver_{};
-    const Feature declared_;
-    TrafficSettings settings_;
-    bool uplink_enabled_{false};
+    common::TrafficSettings settings_;
 };
 
-}  // namespace skyblip::common
+}  // namespace skyblip::go
 
 #endif
