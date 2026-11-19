@@ -288,7 +288,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kRefusalParkCeilingMs` | 6000 (6 s) | milliseconds | Ceiling | a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two |
-| `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | at worst one dwell asleep before a plan's start plus one 375 ms dwell, 750 ms against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of) |
+| `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | the request wakes every executor wait, so only a radio that hangs takes 2 s |
 
 ## [`firmware/products/skyblip_go/input`](../firmware/products/skyblip_go/input/README.md)
 
