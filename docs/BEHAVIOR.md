@@ -5488,7 +5488,7 @@ The loop is what every shell drives, so setup failure reporting and tick order a
 
 ### test/products/test_scenarios.cpp
 
-The committed scenarios are regression fixtures: the same files the browser and the terminal load are replayed here, and a training scenario's expectations are the assertions. A bug found in flight becomes a file, not a bug report.
+The committed scenarios are regression fixtures: the same files the browser loads are replayed here, and a training scenario's expectations are the assertions. A bug found in flight becomes a file, not a bug report.
 
 **scenario**
 
@@ -5737,7 +5737,7 @@ End-to-end tests through the simulator: modelled GNSS emits real NMEA that the p
 - a wink that starts and ends between two looks is still seen once
   > The browser looks once a frame, and a 30 ms wink fits between two looks 33 ms apart.
 - an ALP-TAS-equipped aircraft enters traffic as ALP-TAS
-  > The same call the page's "+ Aircraft" button and the terminal's [j] make. If this passes and the page still shows nothing, the gap is in the shell, not in the receive path.
+  > The same call the page's "+ Aircraft" button makes. If this passes and the page still shows nothing, the gap is in the shell, not in the receive path.
 - an aircraft entering the window buzzes and vibrates
 - an aircraft that names itself is named on the device
   > The one path a name can reach the glass by, end to end: a neighbour's own burst.

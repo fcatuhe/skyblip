@@ -402,9 +402,8 @@ TEST_CASE("simulator: a phone connects, the gauge pushes, the phone leaves and i
     CHECK(simulator.companion_frames(events::Endpoint::Config) == pushed);
 }
 
-// The same call the page's "+ Aircraft" button and the terminal's [j] make. If
-// this passes and the page still shows nothing, the gap is in the shell, not in
-// the receive path.
+// The same call the page's "+ Aircraft" button makes. If this passes and the
+// page still shows nothing, the gap is in the shell, not in the receive path.
 TEST_CASE("simulator: an ALP-TAS-equipped aircraft enters traffic as ALP-TAS") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);

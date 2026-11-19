@@ -77,6 +77,34 @@ timing::ClockState locked_at(uint64_t utc_ms) {
     return clock;
 }
 
+// INFO: fc 19nov26 the support lines live in the test, so their strings stay out of the image
+const char* meaning_of(Condition condition) {
+    switch (condition) {
+        case Condition::Off: return "dark: off, or on its way down";
+        case Condition::Alarm: return "red, fast flicker: a traffic advisory stands";
+        case Condition::Prompt: return "green, fast blink: a phone asks, one press allows";
+        case Condition::Pairing:
+            return "blue, fast blink: a skyBlip Go asks to pair, one press pairs";
+        case Condition::Critical:
+            return "red, blinking every 600 ms: cell critical, land and charge";
+        case Condition::Low:
+            return "red, one wink every 3 s: cell low, past the knee and into the last of its "
+                   "charge";
+        case Condition::NoFixCapturing:
+            return "blue, two winks every 3 s: a diagnostics capture is armed, no GNSS fix yet";
+        case Condition::AliveCapturing:
+            return "green, two winks every 3 s: a diagnostics capture is armed, fix valid";
+        case Condition::NoFixLinked:
+            return "blue, one wink every 1.5 s: a phone is connected, no GNSS fix yet";
+        case Condition::AliveLinked:
+            return "green, one wink every 1.5 s: a phone is connected, fix valid";
+        case Condition::NoFix: return "blue, one wink every 3 s: running, no GNSS fix yet";
+        case Condition::Alive: return "green, one wink every 3 s: running, fix valid";
+        case Condition::Count: break;
+    }
+    return "";
+}
+
 }  // namespace
 
 TEST_CASE("indication: the whole state-to-indicator table, in priority order") {
@@ -87,13 +115,9 @@ TEST_CASE("indication: the whole state-to-indicator table, in priority order") {
                 " flashes=", static_cast<int>(row.indication.flashes), " on=", row.indication.on_ms,
                 "ms between=", row.indication.between_ms, "ms off=", row.indication.off_ms,
                 "ms duty=", indication::duty_permille(row.indication),
-                "/1000 : ", std::string(row.meaning));
-        REQUIRE(row.meaning != nullptr);
-        CHECK(row.meaning[0] != 0);
-        // The accessors and the row have to agree, or support reads one thing and
-        // the device does another.
+                "/1000 : ", std::string(meaning_of(row.condition)));
+        CHECK(meaning_of(row.condition)[0] != 0);
         CHECK(indication_for(row.condition).lamp == row.indication.lamp);
-        CHECK(std::string(meaning_of(row.condition)) == row.meaning);
     }
     CHECK(kRowCount == static_cast<int>(Condition::Count));
 }

@@ -8,7 +8,7 @@ A service that more than one product runs lives in `products/common/`, in namesp
 
 `ports/` is a port layer, not a hardware abstraction layer, and it is named for what it is: it declares the roles the core needs filled, in the core's own vocabulary, and `hardware/` is where a part or a platform fills one. A port is what the core calls; what the world does to a sensor arrives as an `events::` value on a queue instead, and `hardware/README.md` is where that half of the contract is written down. Register code belongs there, never here. `protocols/`, `core/` and `ui/` compile with no framework headers at all, which is what buys the host suite and the WASM simulator; Zephyr is used freely below `ports/` and never above it.
 
-`make test` runs the host suite, the protocol stacks' tests among it, `make test-protocols` builds and runs each stack alone from a copy holding nothing else, `make test-sanitize` runs it again under ASan and UBSan in `build/sanitize/`, `make fuzz` runs the libFuzzer harnesses in `test/fuzz/` with clang, `ABI=ilp32` builds any of them for i386 where `long` is 32 bits as on the nRF52, `make simulator` builds the terminal one, `scripts/build_local.sh` from the repo root builds the device images.
+`make test` runs the host suite, the protocol stacks' tests among it, `make test-protocols` builds and runs each stack alone from a copy holding nothing else, `make test-sanitize` runs it again under ASan and UBSan in `build/sanitize/`, `make fuzz` runs the libFuzzer harnesses in `test/fuzz/` with clang, `ABI=ilp32` builds any of them for i386 where `long` is 32 bits as on the nRF52, `scripts/build_local.sh` from the repo root builds the device images.
 
 `.clang-format` and `.clang-tidy` live here rather than at the root because this is the only C++ in the repository, and both tools read the nearest config above the file they are given. `make tidy` runs the linter over what the host build compiles; CI runs the same target.
 
@@ -30,7 +30,7 @@ This tree is open source, and some of what it compiles in names skyBlip and nobo
 | Bluetooth names `skyBlip Go`, `skyBlip Go+`, `skyBlip Bravo`, with the serial behind them | `CONFIG_BT_DEVICE_NAME` in each `prj.conf`, `products/skyblip_go/product.h`, `products/skyblip_bravo/name.h`, `core/identity/` | names its own product, so a companion app does not take it for a skyBlip |
 | Bluetooth service and characteristic UUIDs, base `69c21300-0187-4204-a91d-02eb8858b440` | `hardware/platform/zephyr/skyblip_uuid.h` | draws its own 128-bit base |
 | MCUboot signing keys | `keys/development.pub.pem`, `keys/production.pub.pem` | signs with keys of its own (`keys/README.md`) |
-| MCUboot image vendor name `skyblip.eu` | `CONFIG_MCUBOOT_IMGTOOL_UUID_VID_NAME` in `products/skyblip_go/prj.conf` and `products/skyblip_bravo/prj.conf` | sets its own domain, from which imgtool derives the image's vendor UUID |
+| MCUboot image vendor name `skyblip.eu` | `CONFIG_MCUBOOT_IMGTOOL_UUID_VID_NAME` in `products/common/prj.conf` | sets its own domain, from which imgtool derives the image's vendor UUID |
 | The skyblip.eu server key, id `8c06724d` | `keys/server.pub`, compiled in by `cmake/skyblip.cmake` | runs its own activation server with its own key, or leaves `CONFIG_SKYBLIP_ACTIVATION` off |
 
 ## Naming a boolean

@@ -32,12 +32,6 @@ const Indication& indication_for(Condition condition) {
     return kTable[0].indication;
 }
 
-const char* meaning_of(Condition condition) {
-    for (int i = 0; i < kRowCount; i++)
-        if (kTable[i].condition == condition) return kTable[i].meaning;
-    return kTable[0].meaning;
-}
-
 const char* to_string(Condition condition) {
     switch (condition) {
         case Condition::Off: return "off";

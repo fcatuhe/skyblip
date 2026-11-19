@@ -15,6 +15,8 @@ The services more than one product runs, and the vocabulary they read. Why they 
 
 No file here includes `products/<product>/*`. What a service needs from a product reaches it at construction, like everything else a service needs.
 
+The Kconfig both products share is here too. `prj.conf` loads before each product's own (`cmake/skyblip.cmake`), `sysbuild/mcuboot.conf` after each product's MCUboot fragment (its `sysbuild.cmake`), and `release/` is what `scripts/build_image.sh` adds to both images of a production build.
+
 ## What stays with the product
 
 A shared service reads the parts fitted from `context.roles.capabilities`, so a part the board lacks is skipped, as the inclinometer and the die sensor are. The self-test page and the parts table it lists are the product's, because they name the parts its board carries.

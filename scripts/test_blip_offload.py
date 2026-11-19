@@ -3,10 +3,9 @@
 
     python3 scripts/test_blip_offload.py
 
-Run by test_blip.py as well, which is the file CI invokes. No radio, no network,
-no sleeps: the endpoint below answers a list and a read the way core/comms/log_link.cpp
-does, and fails a host that asks for a frame it did not send or sends a command
-while a reply of the last one is still queued.
+No radio, no network, no sleeps: the endpoint below answers a list and a read the way
+core/comms/log_link.cpp does, and fails a host that asks for a frame it did not send or
+sends a command while a reply of the last one is still queued.
 """
 import argparse
 import asyncio
