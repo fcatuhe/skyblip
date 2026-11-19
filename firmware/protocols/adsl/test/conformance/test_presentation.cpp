@@ -20,8 +20,7 @@ TEST_CASE("ADS-L.4.SRD860.F.1: the ADS-L data is a 40-bit header and a payload b
     CHECK((traffic_payload_bits - 24) % 32 == 0);
 }
 
-TEST_CASE("ADS-L.4.SRD860.F.2: the header is a type byte, 30 bits of sender, reserved, relay" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.F.2: the header is a type byte, 30 bits of sender, reserved, relay") {
     adsl::Packet packet = traffic_packet();
     CHECK(packet.payload_type == 0x02);
     CHECK(packet.address() == 0x123456u);

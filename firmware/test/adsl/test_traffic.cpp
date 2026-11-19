@@ -300,7 +300,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
 }
 
 // Our reading: the age is taken at the top of the second, and the burst carries the fix forward.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second is never sent") {
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second is never sent" *
+          doctest::test_suite("main")) {
     CHECK(timing::Transmitter::kFixMaxAgeMs == 500);
 
     timing::ClockState clock{};

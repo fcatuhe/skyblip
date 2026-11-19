@@ -102,7 +102,8 @@ TEST_CASE("DO-260B 2.2.4.4.3.2: no sliding window repairs a wrong bit, which is 
     CHECK(receive_frame(frame, message) == Status::Crc);
 }
 
-TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is read") {
+TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is read" *
+          doctest::test_suite("main")) {
     const adsb::Squitter frame = sealed(position());
     Message message;
     REQUIRE(receive_frame(frame, message) == Status::Ok);

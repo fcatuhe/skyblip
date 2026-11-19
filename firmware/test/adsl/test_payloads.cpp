@@ -148,8 +148,8 @@ adsl::Packet status_beside_transponder(uint32_t aircraft_address, uint32_t heard
 
 }  // namespace
 
-TEST_CASE("ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version" *
-          doctest::test_suite("main")) {
+TEST_CASE(
+    "ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version") {
     const adsl::Packet& packet = status_heard();
     CHECK(packet.payload_type == 3);
     CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
@@ -209,8 +209,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.7: a Go with no Bravo declares no other system tra
 }
 
 // An identification Bravo heard from the entered address is an extended squitter, so ADS-B out.
-TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address identifies" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address identifies") {
     const adsl::Packet named = status_beside_transponder(kOwnTransponder, kOwnTransponder,
                                                          ",\"own_transponder_callsign\":\"FHBXA\"");
     CHECK(named.field(wire::BitField{60, 8}) == adsl::conspicuity::kAdsb1090);
@@ -220,7 +219,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address
 }
 
 // The cockpit transponder at the entered address, heard by Bravo on the ground, on the Go's Status.
-TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status on air carries the ADS-B out Bravo heard") {
+TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status on air carries the ADS-B out Bravo heard" *
+          doctest::test_suite("main")) {
     CHECK(status_beside_cockpit(cockpit_identification()).field(wire::BitField{60, 8}) ==
           adsl::conspicuity::kAdsb1090);
     CHECK(status_beside_cockpit(cockpit_all_call()).field(wire::BitField{60, 8}) == 0);

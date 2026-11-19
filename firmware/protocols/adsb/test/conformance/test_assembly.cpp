@@ -158,8 +158,7 @@ TEST_CASE(
     CHECK(bravo.heard.air_ground == AirGround::Ground);
 }
 
-TEST_CASE("DO-260B 2.2.10.3.3: a message before the pair is kept and shows once the track does" *
-          doctest::test_suite("main")) {
+TEST_CASE("DO-260B 2.2.10.3.3: a message before the pair is kept and shows once the track does") {
     Bravo bravo;
     REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
     REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 100));
