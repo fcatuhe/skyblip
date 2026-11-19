@@ -2,7 +2,6 @@ de:
   briefing:
     title: Briefing
     app:
-      name: skyBlip Briefing
       title: Briefing
       description: Aktivieren, konfigurieren und aktualisieren Sie Ihr skyBlip-Gerät per Bluetooth.
     menu:

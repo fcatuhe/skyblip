@@ -5,8 +5,8 @@ class Briefing::ManifestsControllerTest < ActionDispatch::IntegrationTest
     get briefing_manifest_path(format: :json)
 
     manifest = response.parsed_body
-    assert_equal "skyBlip Briefing", manifest["name"]
-    assert_equal "skyBlip Briefing", manifest["short_name"]
+    assert_equal "skyBlip", manifest["name"]
+    assert_equal "skyBlip", manifest["short_name"]
     assert_equal "/briefing", manifest["start_url"]
     assert_equal "/briefing", manifest["scope"]
     assert_equal "standalone", manifest["display"]
@@ -31,12 +31,9 @@ class Briefing::ManifestsControllerTest < ActionDispatch::IntegrationTest
     maskable.each { assert Rails.public_path.join(it["src"].delete_prefix("/")).file?, it["src"] }
   end
 
-  test "the app installs on iOS under its own name, and the site keeps its own" do
+  # Without its own title, iOS would install the app under the page title, Briefing.
+  test "the app installs on iOS as skyBlip" do
     get briefing_root_path
-    assert_select "meta[name=apple-mobile-web-app-title][content=?]", "skyBlip Briefing"
-    assert_select "meta[name=application-name][content=?]", "skyBlip Briefing"
-
-    get "/"
     assert_select "meta[name=apple-mobile-web-app-title][content=?]", "skyBlip"
     assert_select "meta[name=application-name][content=?]", "skyBlip"
   end

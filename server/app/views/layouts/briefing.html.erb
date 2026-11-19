@@ -1,7 +1,6 @@
 <% content_for :stylesheets, area_stylesheet_link_tags("briefing") %>
 <% content_for :head, tag.link(rel: "manifest", href: briefing_manifest_path) %>
 <% content_for :noindex, "noindex" %>
-<% content_for :app_name, t("briefing.app.name") %>
 <!DOCTYPE html>
 <html lang="<%= I18n.locale %>">
   <head>
