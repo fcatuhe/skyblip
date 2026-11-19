@@ -43,7 +43,8 @@ double metres_between(const adsb::CprPosition& one, double latitude, double long
 
 }
 
-TEST_CASE("adsb cpr: the Riddle's airborne pair decodes globally to 52.25720 N 3.91937 E") {
+TEST_CASE("adsb cpr: the Riddle's airborne pair decodes globally to 52.25720 N 3.91937 E" *
+          doctest::test_suite("main")) {
     const adsb::Cpr even = heard("8d40621d58c382d690c8ac2863a7").airborne_position.cpr;
     const adsb::Cpr odd = heard("8d40621d58c386435cc412692ad6").airborne_position.cpr;
     adsb::CprPosition position;
@@ -59,7 +60,8 @@ TEST_CASE("adsb cpr: the Riddle's airborne frame decodes locally beside its refe
     CHECK(position.longitude_1e7 == e7(3.91937255859375));
 }
 
-TEST_CASE("adsb cpr: the Riddle's surface pair takes the quadrant of its reference") {
+TEST_CASE("adsb cpr: the Riddle's surface pair takes the quadrant of its reference" *
+          doctest::test_suite("main")) {
     const adsb::Cpr even = heard("8c4841753aab238733c8cd4020b1").surface_position.cpr;
     const adsb::Cpr odd = heard("8c4841753a8a35323faebdac702d").surface_position.cpr;
     REQUIRE_FALSE(even.odd);

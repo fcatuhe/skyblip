@@ -13,7 +13,8 @@
 using namespace skyblip;
 using namespace skyblip::protocol;
 
-TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the cell") {
+TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the cell" *
+          doctest::test_suite("main")) {
     char buffer[128];
     Lk8Ex1 lk8ex1{};
     lk8ex1.pressure_pa = 90000;

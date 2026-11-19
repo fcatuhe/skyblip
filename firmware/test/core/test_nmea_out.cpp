@@ -81,7 +81,8 @@ TEST_CASE("nmea: a target across the antimeridian is metres away, not the width 
     CHECK(east_m == doctest::Approx(22).epsilon(0.05));
 }
 
-TEST_CASE("nmea: PFLAA carries the id, the relative position and the checksum") {
+TEST_CASE("nmea: PFLAA carries the id, the relative position and the checksum" *
+          doctest::test_suite("main")) {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObservation observation{};
     observation.position_valid = true;
@@ -106,7 +107,8 @@ TEST_CASE("nmea: PFLAA carries the id, the relative position and the checksum") 
 }
 
 // OGN hangs the name off the ID field behind a '!' (oss/nrf52-ogn-tracker/src/lookout.h:144).
-TEST_CASE("nmea: PFLAA carries a known callsign behind the address, as OGN's does") {
+TEST_CASE("nmea: PFLAA carries a known callsign behind the address, as OGN's does" *
+          doctest::test_suite("main")) {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObservation observation{};
     observation.position_valid = true;
@@ -241,7 +243,8 @@ TEST_CASE("nmea: PFLAU leaves RelativeVertical empty for a threat with no altitu
     CHECK(checksum_ok(sentence));
 }
 
-TEST_CASE("nmea: PFLAU reports the receive count, the GPS state and the threat") {
+TEST_CASE("nmea: PFLAU reports the receive count, the GPS state and the threat" *
+          doctest::test_suite("main")) {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObservation threat{};
     threat.address = 0x112233;
@@ -326,7 +329,8 @@ TEST_CASE("nmea: PFLAU's TX field follows the transmitter's own gate, not the cl
 }
 
 // core/protocol/README.md argues each row against ADS-L G.1.3 and the $PFLAA AcftType field.
-TEST_CASE("nmea: every ADS-L category reaches PFLAA as the FLARM aircraft type it names") {
+TEST_CASE("nmea: every ADS-L category reaches PFLAA as the FLARM aircraft type it names" *
+          doctest::test_suite("main")) {
     const uint8_t expected[18] = {0x0, 0x8, 0x9, 0x3, 0x1, 0xB, 0x8, 0x7, 0x4,
                                   0x3, 0x3, 0xD, 0xD, 0xD, 0xD, 0x3, 0x6, 0x7};
     for (uint8_t category = 0; category < 18; category++) {
@@ -365,7 +369,8 @@ TEST_CASE(
 // 2026-08-02T00:00:00Z base test/support/product_rig.h flies every product
 // case from), chosen so the date and time fields below are hand-checkable
 // rather than merely re-deriving the same arithmetic the formatter uses.
-TEST_CASE("nmea: GPRMC/GPGGA carry own-ship's own absolute position") {
+TEST_CASE("nmea: GPRMC/GPGGA carry own-ship's own absolute position" *
+          doctest::test_suite("main")) {
     auto own = own_at(481234500, -81234500, 1000);
     own.utc_s = 1785628800u + 3661u;
     own.altitude_msl_mm = 950000;

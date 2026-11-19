@@ -140,7 +140,8 @@ TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, cou
     CHECK(silent <= 5);
 }
 
-TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock)") {
+TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock)" *
+          doctest::test_suite("main")) {
     adsl::Packet tx[adsl::kUplinkMaxTargets];
     for (int i = 0; i < adsl::kUplinkMaxTargets; i++) tx[i] = make_target(0x200000 + i);
     uint8_t packet[1 + adsl::kUplinkMaxLength];

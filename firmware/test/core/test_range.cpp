@@ -126,7 +126,8 @@ TEST_CASE("range: ranking skips what it cannot range") {
     CHECK(rows[0].address == 0x200);
 }
 
-TEST_CASE("range: an aircraft raising an alarm ranks above every quiet one, however near") {
+TEST_CASE("range: an aircraft raising an alarm ranks above every quiet one, however near" *
+          doctest::test_suite("main")) {
     TrafficTable table;
     for (int i = 0; i < 4; i++) {
         model::AircraftObservation observation = emitter(500 + 100 * i);
@@ -148,7 +149,8 @@ TEST_CASE("range: an aircraft raising an alarm ranks above every quiet one, howe
 }
 
 // An airliner overhead is nearer on the ground than the glider at our height, and matters less.
-TEST_CASE("range: inside the advisory's height window outranks nearer traffic far above") {
+TEST_CASE("range: inside the advisory's height window outranks nearer traffic far above" *
+          doctest::test_suite("main")) {
     TrafficTable table;
     model::AircraftObservation airliner = emitter(1000);
     airliner.address = 0x401;

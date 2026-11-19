@@ -13,7 +13,8 @@ using namespace skyblip::timing;
 constexpr uint64_t kLastEdgeUs = 12'000'000;
 
 // The owner's rule of 17nov26: three windows heard in full, one switch between each two.
-TEST_CASE("timing: the dwell map covers the uplink, ALP-TAS's first window and its second") {
+TEST_CASE("timing: the dwell map covers the uplink, ALP-TAS's first window and its second" *
+          doctest::test_suite("main")) {
     CHECK(kUplinkWindowMs.start_ms == 210);
     CHECK(kUplinkWindowMs.end_ms == 440);
     CHECK(kWindowAMs.start_ms == 450);
@@ -104,7 +105,8 @@ TEST_CASE("timing: the dwell owns its burst from the instant it opens") {
     CHECK_FALSE(Scheduler::plan(300, anchored()).tx_allowed);
 }
 
-TEST_CASE("timing: TX only in M-band direct slots when clock is anchored") {
+TEST_CASE("timing: TX only in M-band direct slots when clock is anchored" *
+          doctest::test_suite("main")) {
     Scheduler scheduler;
     SlotPlan plan = scheduler.plan(500, anchored());
     CHECK(plan.tx_allowed);
@@ -116,7 +118,8 @@ TEST_CASE("timing: TX only in M-band direct slots when clock is anchored") {
     CHECK(plan.band == Band::O);
 }
 
-TEST_CASE("timing: PPS lost within holdover, still receiving, no slotted TX") {
+TEST_CASE("timing: PPS lost within holdover, still receiving, no slotted TX" *
+          doctest::test_suite("main")) {
     Scheduler scheduler;
     ClockState clock{true, false, 5000, kLastEdgeUs};
     SlotPlan plan = scheduler.plan(500, clock);
@@ -153,7 +156,8 @@ TEST_CASE("timing: a clock no solution has dated yet carries no second to advanc
     CHECK(clock.pps_edge_us == 13'000'000);
 }
 
-TEST_CASE("timing: past holdover or no UTC, listen only, fail closed") {
+TEST_CASE("timing: past holdover or no UTC, listen only, fail closed" *
+          doctest::test_suite("main")) {
     Scheduler scheduler;
     ClockState past{true, false, kPpsHoldoverMs + 1};
     CHECK(scheduler.plan(500, past).listen_only);

@@ -67,7 +67,8 @@ TEST_CASE("dfu: a blob of the wrong length is refused rather than half read") {
     CHECK(to_blob(attempt(), small, sizeof(small)) == 0);
 }
 
-TEST_CASE("dfu: the image that boots after the swap is classified by what it is running") {
+TEST_CASE("dfu: the image that boots after the swap is classified by what it is running" *
+          doctest::test_suite("main")) {
     const UpdateRecord record = attempt();
     const SlotImage to = image(record.to, record.to_hash);
     CHECK(outcome(record, to, std::nullopt) == Outcome::Landed);
@@ -116,7 +117,8 @@ TEST_CASE("dfu: versions order by major, minor, revision, then build") {
     CHECK(compare({0, 1, 0, 12}, {0, 1, 0, 12}) == 0);
 }
 
-TEST_CASE("dfu: a release unit refuses only an older image, a development unit none") {
+TEST_CASE("dfu: a release unit refuses only an older image, a development unit none" *
+          doctest::test_suite("main")) {
     const ports::ImageVersion running{0, 2, 0, 15};
     CHECK(std::string(version_refusal(running, {0, 2, 0, 14}, false)) == "older");
     CHECK(version_refusal(running, running, false) == nullptr);
@@ -279,7 +281,7 @@ TEST_CASE("smp: every read passes, in or out of the upload window") {
     }
 }
 
-TEST_CASE("smp: the upload is the one write the window opens") {
+TEST_CASE("smp: the upload is the one write the window opens" * doctest::test_suite("main")) {
     CHECK_FALSE(smp_permitted({kImage, kSmpImageUpload, kWrite}, false));
     CHECK(smp_permitted({kImage, kSmpImageUpload, kWrite}, true));
 }

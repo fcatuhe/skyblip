@@ -273,7 +273,8 @@ TEST_CASE("DO-260B 2.2.3.2.3.8: the encoded longitude is the 17 bits of ME 40 to
     CHECK(heard_ok(frame).airborne_position.cpr.latitude_cpr == 0x15555);
 }
 
-TEST_CASE("DO-260B 2.2.3.2.4: a surface position is TYPE, movement, track, T, F and CPR") {
+TEST_CASE("DO-260B 2.2.3.2.4: a surface position is TYPE, movement, track, T, F and CPR" *
+          doctest::test_suite("main")) {
     const Message message = heard_ok(surface(6, 39));
     CHECK(message.kind == Kind::SurfacePosition);
     CHECK(message.surface_position.speed_mkt.value == 15000);
@@ -371,7 +372,8 @@ TEST_CASE("DO-260B 2.2.3.2.4.8: the surface encoded longitude is the 17 bits of 
     CHECK(heard_ok(frame).surface_position.cpr.latitude_cpr == 0x12345);
 }
 
-TEST_CASE("DO-260B 2.2.3.2.5: an identification is TYPE, emitter category and eight characters") {
+TEST_CASE("DO-260B 2.2.3.2.5: an identification is TYPE, emitter category and eight characters" *
+          doctest::test_suite("main")) {
     const Message message = heard_ok(identification(4, 3, "KLM1023"));
     CHECK(message.kind == Kind::Identification);
     CHECK(message.identification.category_set == 'A');

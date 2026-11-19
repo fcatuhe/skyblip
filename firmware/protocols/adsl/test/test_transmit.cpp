@@ -10,7 +10,8 @@
 using namespace skyblip;
 using namespace skyblip::adsl;
 
-TEST_CASE("adsl transmit: the report period is 1 s airborne and 10 s on the ground") {
+TEST_CASE("adsl transmit: the report period is 1 s airborne and 10 s on the ground" *
+          doctest::test_suite("main")) {
     CHECK(period_s(true) == 1u);
     CHECK(period_s(false) == kGroundReportPeriodS);
     CHECK(channel_hz(0) == kMBand0Hz);

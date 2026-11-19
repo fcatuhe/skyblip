@@ -119,7 +119,8 @@ TEST_CASE("traffic: age-out removes stale entries") {
 }
 
 // Six 1 Hz bursts is a link that stopped rather than one that collided, and 360 m of lie at 60 m/s.
-TEST_CASE("traffic: an airborne aircraft is drawn for six of its own bursts and no longer") {
+TEST_CASE("traffic: an airborne aircraft is drawn for six of its own bursts and no longer" *
+          doctest::test_suite("main")) {
     TrafficTable table;
     table.update(observation(0x1, 6, 100), 100);
     table.age_out(100 + kAirborneTargetForgetS);
@@ -129,7 +130,8 @@ TEST_CASE("traffic: an airborne aircraft is drawn for six of its own bursts and 
 }
 
 // The same six reports at the rate G.1.16 gives a parked aircraft, where one miss was 10 s of 12.
-TEST_CASE("traffic: a parked aircraft is drawn for six of its own bursts, which is a minute") {
+TEST_CASE("traffic: a parked aircraft is drawn for six of its own bursts, which is a minute" *
+          doctest::test_suite("main")) {
     TrafficTable table;
     table.update(parked(0x1, 6, 100), 100);
     CHECK(kGroundTargetForgetS == 60);

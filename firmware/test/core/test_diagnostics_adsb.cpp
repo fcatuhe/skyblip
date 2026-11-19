@@ -65,7 +65,8 @@ TEST_CASE("diagnostics adsb: a unit with no 1090 MHz receiver sends no adsb grou
     CHECK(alone.exhausted());
 }
 
-TEST_CASE("diagnostics adsb: the receiver's counters and its RSSI histogram reach the link") {
+TEST_CASE("diagnostics adsb: the receiver's counters and its RSSI histogram reach the link" *
+          doctest::test_suite("main")) {
     const Diagnostics diagnostics = receiving();
     DiagnosticsReport link(diagnostics, link::Command::Diagnostics, DiagnosticsReport::Group::Adsb);
     const std::string frame = only_adsb_frame(link);
