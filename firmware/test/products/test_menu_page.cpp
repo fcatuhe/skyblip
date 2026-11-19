@@ -380,7 +380,8 @@ TEST_CASE("product: walking the rows without changing one writes nothing at all"
     CHECK(rig.product.screen().page() == go::Page::Nearby);
 }
 
-TEST_CASE("product: a page nobody presses gives the traffic picture back on its own") {
+TEST_CASE("product: a page nobody presses gives the traffic picture back on its own" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;

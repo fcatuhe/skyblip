@@ -337,7 +337,8 @@ TEST_CASE("uplink: the relay takes over once the direct report has gone stale") 
 // The phantom a relay can make that a direct reception never can: a ground
 // station hears us and puts us in the frame it sends back. Own-ship on the
 // radar, at own-ship's position, is a permanent level-3 collision with itself.
-TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") {
+TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

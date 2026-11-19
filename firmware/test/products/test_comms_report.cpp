@@ -188,8 +188,7 @@ TEST_CASE(
     CHECK(link.sent.size() == 3);
 }
 
-TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat is not" *
-          doctest::test_suite("main")) {
+TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat is not") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();

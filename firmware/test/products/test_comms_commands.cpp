@@ -493,7 +493,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     CHECK_FALSE(config.upload_allowed());
 }
 
-TEST_CASE("comms: DFU refused in flight" * doctest::test_suite("main")) {
+TEST_CASE("comms: DFU refused in flight") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();

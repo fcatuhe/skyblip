@@ -159,7 +159,8 @@ TEST_CASE(
     CHECK(sky.tone_commands() > before);
 }
 
-TEST_CASE("product: soft or loud, the advisory is called at that loudness and felt") {
+TEST_CASE("product: soft or loud, the advisory is called at that loudness and felt" *
+          doctest::test_suite("main")) {
     for (const go::Alarm volume : {go::Alarm::Soft, go::Alarm::Loud}) {
         Sky sky;
         REQUIRE(sky.simulator.setup() == Status::Ok);
@@ -176,7 +177,8 @@ TEST_CASE("product: soft or loud, the advisory is called at that loudness and fe
     }
 }
 
-TEST_CASE("product: visual shows the advisory and sounds neither the buzzer nor the motor") {
+TEST_CASE("product: visual shows the advisory and sounds neither the buzzer nor the motor" *
+          doctest::test_suite("main")) {
     Sky sky;
     REQUIRE(sky.simulator.setup() == Status::Ok);
     sky.simulator.product().settings().alarm = go::Alarm::Visual;

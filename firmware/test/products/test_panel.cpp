@@ -126,7 +126,8 @@ TEST_CASE("product: a long touch comes back to the radar from wherever the pilot
     CHECK_FALSE(rig.product.screen().editor().active());
 }
 
-TEST_CASE("product: powering the panel down leaves the wordmark on it") {
+TEST_CASE("product: powering the panel down leaves the wordmark on it" *
+          doctest::test_suite("main")) {
     // An e-paper holds its last image with the rails down, so what is written
     // immediately before power_off is what the device wears while it is off.
     Rig rig;
