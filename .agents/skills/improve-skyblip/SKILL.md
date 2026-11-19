@@ -16,6 +16,7 @@ From skyBlip's MCP server, `https://skyblip.eu/mcp`, which an admin connects as 
 - `resolve_error` with `fingerprint`: once the fix for an error is deployed, takes it off `list_errors` until it happens again.
 - `list_events`: the catalog first, then everybody's events as JSON lines. Narrow with `name` (`device.`, `browser.failed`), `device`, `support_code` or an error's `fingerprint`.
 - `get_unit` with `device`: an activated unit's record.
+- `list_outbound_clicks` with `days`: the clicks on links to other sites, the affiliate links among them, one line per link with its section (`go`, `go-plus`, `bravo` on the buy page). Narrow with `href`, and add `each` for every click with its visitor.
 
 When the MCP server is unavailable, from a laptop that deploys skyBlip, in `server/`:
 

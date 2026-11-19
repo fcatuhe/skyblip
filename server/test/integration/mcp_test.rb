@@ -1,7 +1,9 @@
 require "test_helper"
+require_relative "../test_helpers/analytics_test_helper"
 
 class McpTest < ActionDispatch::IntegrationTest
   include ConnectingAgents
+  include AnalyticsTestHelper
 
   # An agent holding no token learns from the 401 alone where skyBlip's authorization server is.
   test "an agent with no token is pointed at the resource metadata, and from there at the authorization server" do
@@ -25,7 +27,7 @@ class McpTest < ActionDispatch::IntegrationTest
       mcp "tools/list", token: connect(client_id:, redirect_uri:).fetch("access_token")
 
       tools = response.parsed_body.dig("result", "tools")
-      assert_equal %w[get_insights list_events list_errors resolve_error get_unit], tools.pluck("name"), client_id
+      assert_equal %w[get_insights list_events list_errors resolve_error get_unit list_outbound_clicks], tools.pluck("name"), client_id
       assert_equal %w[resolve_error], tools.reject { it.dig("annotations", "readOnlyHint") }.pluck("name")
     end
     assert_equal "tools/list", Event.where(name: "mcp.answered").last.payload["method"]
@@ -88,6 +90,24 @@ class McpTest < ActionDispatch::IntegrationTest
 
     assert_equal %w[now before], insights.keys
     assert_includes insights["now"].keys, "stranded"
+  end
+
+  # The owner asks whether anyone clicked to buy a Go, and the agent reads the affiliate links and then each click.
+  test "list_outbound_clicks counts the clicks on each link out, lists each one, and logs the read" do
+    token = connect(client_id: CLAUDE_CODE).fetch("access_token")
+    clear_analytics
+    pilot = browse [ [ "/buy", 30 ] ], visitor: "pilot", started_at: 1.day.ago
+    click pilot, "https://link.amazon/B00EaKI0W", text: "€68", section: "go"
+    click pilot, "https://github.com/fcatuhe/skyblip", page: "/about", after: 5.seconds
+    click browse([ [ "/buy", 30 ] ], visitor: "francois", started_at: 1.day.ago, user: users(:francois)), "https://link.amazon/B00EaKI0W"
+
+    links = JSON.parse(call_tool("list_outbound_clicks", { href: "amazon" }, token:))
+    assert_equal [ [ "https://link.amazon/B00EaKI0W", "go", "€68", 1, 1 ] ], links.map { it.values_at("href", "section", "text", "clicks", "visitors") }
+
+    clicks = JSON.parse(call_tool("list_outbound_clicks", { each: true, segment: "all" }, token:))
+    assert_equal [ [ "pilot", "/buy" ], [ "pilot", "/about" ], [ "francois", "/buy" ] ].sort, clicks.map { it.values_at("visitor_token", "page") }.sort
+    assert_equal({ "by_id" => users(:francois).id, "days" => 30, "segment" => "all", "each" => true },
+      Event.where(name: "analytics.listed").last.payload)
   end
 
   # An admin demoted after connecting an agent reads nothing more through it.
