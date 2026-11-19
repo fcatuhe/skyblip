@@ -64,7 +64,6 @@ class PromptAnswer {
     bool pressing() const { return pressing_; }
     uint32_t pressed_ms() const { return pressed_ms_; }
     uint32_t released_ms() const { return released_ms_; }
-    bool released_once() const { return released_once_; }
 
    private:
     uint32_t asked_ms_{0};

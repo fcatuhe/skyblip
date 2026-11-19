@@ -173,7 +173,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Config` | `products/common/services/capture.cpp` `record_config`, with the settings `products/skyblip_go/capture_settings.h` describes | the same instant, and for the same reason |
 | `Gnss` | `products/common/services/ownship.cpp` `record_gnss` | every solution the receiver publishes, fix or not |
 | `Pps` | `products/common/services/ownship.cpp` `record_pps` | every latched edge, and every `kPpsRecordPeriodMs` that brings none |
-| `Burst` | `products/common/services/traffic.cpp` `log`, `products/skyblip_go/services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
+| `Burst` | `products/skyblip_go/services/traffic.cpp` `log`, `products/skyblip_go/services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |
 | `Flight` | `products/common/services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
 | `Power` | `products/common/services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |

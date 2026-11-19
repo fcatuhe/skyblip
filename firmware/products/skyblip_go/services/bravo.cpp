@@ -55,7 +55,7 @@ void BravoService::tick(uint32_t now_ms) {
     if (const std::optional<uint16_t> tag = config_.take_pair_request()) pair_with(*tag, now_ms);
     if (seek_due_ && !leaving_) seek(now_ms);
     events::CentralEvent event{};
-    while (context_.bus.central_events.pop(event)) take_event(event, now_ms);
+    while (central_events_.pop(event)) take_event(event, now_ms);
     events::RxFrame frame{};
     while (context_.bus.peer_rx.pop(frame)) take_frame(frame, now_ms);
 
@@ -88,6 +88,12 @@ void BravoService::tick(uint32_t now_ms) {
     config_.set_paired_tag(paired(settings_)
                                ? std::optional<uint16_t>(events::bluetooth_tag(settings_.bravo))
                                : std::nullopt);
+}
+
+uint32_t BravoService::due_in_ms(uint32_t now_ms) const {
+    if (step_ != BravoStep::Idle || leaving_ || seek_due_) return runtime::kServicePassCeilingMs;
+    if (linked()) return runtime::remaining_ms(now_ms - claimed_ms_, kClaimPeriodMs);
+    return runtime::kServiceRestCeilingMs;
 }
 
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {

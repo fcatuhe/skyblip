@@ -39,7 +39,7 @@ SoftRF and Meshtastic are GPL-3.0 and were read for facts only. No code is copie
 
 On the case, the LED sits just above the button, as the owner confirmed on 18 November 2026.
 
-SoftRF lists a console UART on P0.16 and P0.17, and Meshtastic names it `SERIAL2`. SoftRF also says the X1 does not expose it (`nRF52.cpp:3885-3893`), so the devicetree leaves it out. The console is USB CDC, which only the smoke image below builds.
+SoftRF lists a console UART on P0.16 and P0.17, and Meshtastic names it `SERIAL2`. SoftRF also says the X1 does not expose it (`nRF52.cpp:3885-3893`), so the devicetree leaves it out. The smoke image below declares a USB CDC console in its own overlay, and the board declares none.
 
 ## Parts
 

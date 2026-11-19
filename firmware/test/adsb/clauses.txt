@@ -1,4 +1,4 @@
-# The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_do260b_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
+# The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
 DO-260B A.1.7 Latitude/Longitude Coding Using Compact Position Reporting (CPR)
 DO-260B A.1.7.1 Principle of the CPR algorithm
 DO-260B A.1.7.2 CPR Algorithm Parameters and Internal Functions

@@ -66,6 +66,8 @@ class ConfigLinkService : public runtime::Service {
     void adopt_install_trust();
     void load_identity();
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 a reply or a write goes a pass at a time, and a frame wakes the rest
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     void set_product_name(const char* product_name) { product_name_ = product_name; }
 
@@ -95,7 +97,6 @@ class ConfigLinkService : public runtime::Service {
     void publish_identity(uint32_t now_ms);
     void advertise(uint32_t now_ms);
     void place_unlock(uint32_t now_ms);
-    void spend_gnss_cold_start();
     void record_link(diagnostics::LinkAction action, uint16_t session, uint16_t frame_bytes,
                      uint32_t now_ms);
     diagnostics::Link link_record(diagnostics::LinkAction action, uint16_t session,

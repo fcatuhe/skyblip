@@ -19,8 +19,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         system_offs++;
     }
 
-    void reboot() override { reboots++; }
-
     bool supply_monitor_armed() const override { return supply_monitor_fitted; }
 
     bool take_supply_warning() override {
@@ -53,7 +51,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     power::CellOnGlass retained_cell_on_glass{power::CellOnGlass::None};
     bool retained_went_dark_flat{false};
     int system_offs{0};
-    int reboots{0};
     power::PowerDownStep performed_steps[power::kPowerDownStepCount]{};
     int performed_count{0};
 

@@ -66,8 +66,8 @@ struct ScenarioEvent {
     bool on_bravo{false};
 };
 
-// One scenario file drives the browser, the terminal and the regression tests, so
-// a bug found in flight becomes a committed fixture rather than a bug report.
+// One scenario file drives the browser and the regression tests, so a bug found
+// in flight becomes a committed fixture rather than a bug report.
 constexpr const char* kDefaultCallsign = "S-BLIP";
 
 struct Scenario {
