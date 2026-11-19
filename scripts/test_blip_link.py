@@ -227,6 +227,14 @@ class CommandVerdict(unittest.TestCase):
         self.assertEqual([frame for _, frame in replies], [COLD_START_PENDING, COLD_STARTED])
         self.assertEqual(said, [blip_capture.PRESS_TO_ALLOW])
 
+    # The pinned case: on 0.1.0+2073 the pending reply arrived twice, and the copy was read as the verdict.
+    def test_a_repeated_pending_reply_is_not_the_verdict(self):
+        unit = FakeGo(COLD_START_PENDING, COLD_START_PENDING, COLD_STARTED)
+        said = []
+        replies = asyncio.run(blip.reply_and_verdict(unit, {"command": "gnss_cold_start"}, 1.0, said.append))
+        self.assertEqual([frame for _, frame in replies], [COLD_START_PENDING, COLD_STARTED])
+        self.assertEqual(said, [blip_capture.PRESS_TO_ALLOW])
+
     def test_a_command_answered_at_once_waits_for_nothing(self):
         unit = FakeGo(COLD_STARTED, PUSHED)
         said = []
@@ -259,6 +267,13 @@ class Capture(unittest.TestCase):
         with self.assertRaises(SystemExit) as caught:
             asyncio.run(blip_capture.run(unit, "full", 1.0, list().append, blip.decoded_or_refused))
         self.assertIn("3c7472756e6361746564", str(caught.exception))
+
+    # The pinned case: a second copy of the pending reply was taken as a refusal, and the link dropped.
+    def test_a_repeated_pending_reply_is_passed_over(self):
+        said = []
+        outcome = asyncio.run(blip_capture.run(FakeBravo(PENDING, PENDING, GRANTED), "full", 1.0, said.append))
+        self.assertEqual(said, [blip_capture.PRESS_TO_ALLOW])
+        self.assertEqual(outcome, "full capture armed")
 
     def test_a_stop_allowed_on_the_unit_says_the_capture_stopped(self):
         outcome = asyncio.run(blip_capture.run(FakeBravo(PENDING, GRANTED), "stop", 1.0, list().append))

@@ -29,13 +29,21 @@ async def run(link, profile, timeout, say=print, decode=frames.decode_frame):
     frame = await next_acknowledgement(link, timeout, decode)
     if frame.get("pending"):
         say(PRESS_TO_ALLOW)
-        frame = await next_acknowledgement(link, timeout, decode)
+        frame = await press_verdict(link, timeout, decode)
     return verdict(frame, profile)
 
 
 async def next_acknowledgement(link, timeout, decode):
     """The next acknowledgement, past the status and update frames the unit pushes unasked."""
     return await frames.next_frame(link, ("acknowledgement",), timeout, "verdict", decode)
+
+
+async def press_verdict(link, timeout, decode):
+    """The verdict of a press, past a pending acknowledgement the link delivered twice."""
+    while True:
+        frame = await next_acknowledgement(link, timeout, decode)
+        if not frame.get("pending"):
+            return frame
 
 
 def verdict(frame, profile):

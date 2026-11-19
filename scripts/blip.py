@@ -152,7 +152,7 @@ async def reply_and_verdict(link, body, timeout, say):
     replies = await link.command(body, timeout)
     if replies[-1][1].get("pending"):
         say(blip_capture.PRESS_TO_ALLOW)
-        verdict = await blip_capture.next_acknowledgement(
+        verdict = await blip_capture.press_verdict(
             link, blip_capture.VERDICT_WAIT_S, decoded_or_refused)
         replies.append((time.monotonic() - sent, verdict))
     return replies
