@@ -35,6 +35,7 @@
           <span class="visually-hidden" data-slot="attention" hidden><%= t("briefing.devices.attention") %></span>
         </a>
         <button type="button" class="button-app fleet-connect" data-slot="connect" data-action="fleet#link"><%= t("briefing.unit.connect") %></button>
+        <ul class="fleet-partners" data-slot="partners" aria-label="<%= t("briefing.devices.paired") %>"></ul>
       </li>
     </template>
     <div class="fleet-actions<%= " app-actions" if variant == "home" %>">

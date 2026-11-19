@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { hasWebBluetooth, joinFleet } from "#skyblip/fleet"
+import { tangoGroups } from "#skyblip/tango"
 import { battery, newsOf, seen, shortName } from "controllers/briefing/facts"
 import { stayAwake } from "controllers/briefing/wake"
 import { say, sayNotice } from "controllers/briefing/words"
@@ -66,7 +67,7 @@ export default class extends Controller {
     const units = this.fleet.units.filter(unit => unit.remembered || unit.slug.startsWith("activate-"))
     const known = this.fleet.remembered.length > 0
     stayAwake(units.some(unit => unit.state?.phase === "uploading"))
-    const rows = units.map(unit => this.#row(unit, bluetooth))
+    const rows = tangoGroups(units).map(({ unit, partners }) => this.#row(unit, bluetooth, partners))
     const drawn = rows.map(row => row.outerHTML).join("")
     if (drawn !== this.drawn) {
       this.drawn = drawn
@@ -85,7 +86,7 @@ export default class extends Controller {
     }
   }
 
-  #row(unit, bluetooth) {
+  #row(unit, bluetooth, partners = []) {
     const row = this.rowTarget.content.firstElementChild.cloneNode(true)
     const slot = name => row.querySelector(`[data-slot="${name}"]`)
     row.dataset.slug = unit.slug
@@ -105,6 +106,12 @@ export default class extends Controller {
     connect.hidden = !bluetooth || unit.linked || unit.slug.startsWith("activate-")
     connect.disabled = unit.busy
     connect.setAttribute("aria-label", `${connect.textContent.trim()} ${unit.name}`)
+    if (partners.length > 0) {
+      row.classList.add("has-partners")
+      slot("partners").replaceChildren(...partners.map(partner => this.#row(partner, bluetooth)))
+    } else {
+      slot("partners").remove()
+    }
     return row
   }
 

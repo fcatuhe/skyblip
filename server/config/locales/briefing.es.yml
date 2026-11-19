@@ -19,6 +19,7 @@ es:
       support_code_hint: "Indica este código si pides ayuda. Nos permite consultar qué pasó entre este navegador y tus dispositivos: conexiones, rechazos, instalaciones y errores. No guarda nada de lo que escribiste."
     devices:
       attention: "Requiere atención"
+      paired: "Emparejado con este Go"
       no_bluetooth_title: "Abre esta página en Android o en un ordenador"
       no_bluetooth_tools: "El simulador y el editor del símbolo de tu aeronave funcionan aquí."
       title: "Tus dispositivos"

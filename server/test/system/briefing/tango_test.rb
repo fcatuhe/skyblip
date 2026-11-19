@@ -80,6 +80,28 @@ class Briefing::TangoTest < ApplicationSystemTestCase
     end
   end
 
+  test "the device list puts Go first, then Go+, then Bravo, and nests a paired Bravo under its Go" do
+    in_range a_bravo(name: "skyBlip Bravo 5C1D", bluetoothTag: 0x5c1d, pairedTag: 0x1b2c), a_bravo,
+      a_go(name: "skyBlip Go+ 00012B", variant: "plus", bluetoothTag: 0x1b2c, pairedTag: 0x5c1d), a_go(bluetoothTag: 0x0a0b)
+    on_the_shelf do
+      visit "/briefing"
+      [ "Bravo 5C1D", "Bravo 3F2A", "Go+ 00012B", "Go 00012A" ].each do |name|
+        page.execute_script("fakeFleet.pick = '#{name}'")
+        find(".fleet-connect-new").click
+        assert_selector ".fleet-unit.is-linked", text: name
+      end
+
+      within ".fleet--rail" do
+        assert_selector ".fleet-list > .fleet-unit", count: 3
+        assert_equal [ "Go 00012A", "Go+ 00012B", "Bravo 3F2A" ], all(".fleet-list > .fleet-unit > .fleet-unit-link .fleet-unit-name").map(&:text)
+        assert_selector ".fleet-unit.has-partners", text: "Go+ 00012B" do
+          assert_selector ".fleet-partners[aria-label='Paired with this Go'] .fleet-unit-name", text: "Bravo 5C1D"
+        end
+      end
+      screen "68-tango-in-the-list"
+    end
+  end
+
   private
     def connect_both
       connect_device

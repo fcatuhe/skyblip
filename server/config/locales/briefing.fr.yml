@@ -19,6 +19,7 @@ fr:
       support_code_hint: "Donnez ce code quand vous demandez de l\u2019aide. Il nous permet de lire ce qui s\u2019est passé entre ce navigateur et vos appareils\u00a0: connexions, refus, installations et erreurs. Il ne contient rien de ce que vous avez saisi."
     devices:
       attention: "Demande votre attention"
+      paired: "Appairé avec ce Go"
       no_bluetooth_title: "Ouvrez ceci sur Android ou un ordinateur"
       no_bluetooth_tools: "Le simulateur et l\u2019éditeur de l\u2019appareil marchent ici."
       title: "Vos appareils"
