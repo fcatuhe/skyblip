@@ -39,15 +39,26 @@ class ReleaseTest < ActiveSupport::TestCase
   end
 
   test "a USB install takes the newest stable release holding the product's .uf2, else the newest main build, never a branch's" do
-    main = release("dev-1005", prerelease: true, published_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1005.uf2 skyblip-bravo-dev-1005.uf2])
-    branch = release("dev-1010-feat-x", prerelease: true, published_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1010-feat-x.uf2])
-    stable = release("v0.1.0", published_at: "2026-10-01T00:00:00Z", assets: %w[skyblip-go-0.1.0.uf2 skyblip-go-0.1.0.signed.bin])
+    main = release("dev-1005", prerelease: true, committed_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1005.uf2 skyblip-bravo-dev-1005.uf2])
+    branch = release("dev-1010-feat-x", prerelease: true, committed_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1010-feat-x.uf2])
+    stable = release("v0.1.0", committed_at: "2026-10-01T00:00:00Z", assets: %w[skyblip-go-0.1.0.uf2 skyblip-go-0.1.0.signed.bin])
 
     installers = Release.installers([ main, branch, stable ])
 
     assert_equal [ "v0.1.0", "skyblip-go-0.1.0.uf2" ], installers.fetch("go").then { |release, file| [ release.tag, file ] }
     assert_equal [ "dev-1005", "skyblip-bravo-dev-1005.uf2" ], installers.fetch("bravo").then { |release, file| [ release.tag, file ] }
     assert_empty Release.installers([ branch ])
+  end
+
+  # On Nov 19 two merges a few minutes apart could publish their builds in the other order, and the older one looked newest.
+  test "a build is offered by when its commit was made, not by when its run published it" do
+    newer = release("dev-2032", prerelease: true, committed_at: "2026-11-19T07:26:25Z", published_at: "2026-11-19T07:33:56Z", assets: %w[skyblip-go-dev-2032.uf2 skyblip-go-dev-2032.signed.bin] + Release::SIMULATOR_FILES)
+    older = release("dev-2030", prerelease: true, committed_at: "2026-11-19T07:23:13Z", published_at: "2026-11-19T07:36:10Z", assets: %w[skyblip-go-dev-2030.uf2 skyblip-go-dev-2030.signed.bin] + Release::SIMULATOR_FILES)
+
+    assert_equal %w[dev-2032 dev-2030], Release.shelf([ older, newer ]).map(&:tag)
+    assert_equal "dev-2032", Release.installers([ older, newer ]).fetch("go").first.tag
+    assert_equal "dev-2032", Release.simulator([ older, newer ]).tag
+    assert_equal "skyblip-go-dev-2032.signed.bin", Release.firmware_shelf([ older, newer ]).first.last
   end
 
   # Each product had its own pre-releases, tagged bravo-dev-*, before one release carried them all.
@@ -65,29 +76,29 @@ class ReleaseTest < ActiveSupport::TestCase
   end
 
   test "the shelf keeps the newest stable release and every development build, never a release candidate" do
-    older_stable = release("v0.1.0", published_at: "2026-10-01T00:00:00Z")
-    newer_stable = release("v0.2.0", published_at: "2026-10-10T00:00:00Z")
-    candidate = release("v0.3.0-rc1", prerelease: true, published_at: "2026-10-12T00:00:00Z")
-    main = release("dev-1005", prerelease: true, published_at: "2026-10-14T00:00:00Z")
-    branch = release("dev-1010-feat-x", prerelease: true, published_at: "2026-10-15T00:00:00Z")
+    older_stable = release("v0.1.0", committed_at: "2026-10-01T00:00:00Z")
+    newer_stable = release("v0.2.0", committed_at: "2026-10-10T00:00:00Z")
+    candidate = release("v0.3.0-rc1", prerelease: true, committed_at: "2026-10-12T00:00:00Z")
+    main = release("dev-1005", prerelease: true, committed_at: "2026-10-14T00:00:00Z")
+    branch = release("dev-1010-feat-x", prerelease: true, committed_at: "2026-10-15T00:00:00Z")
 
     assert_equal %w[v0.2.0 dev-1010-feat-x dev-1005], Release.shelf([ older_stable, main, candidate, branch, newer_stable ]).map(&:tag)
   end
 
   test "the firmware shelf lists every base image newest first, then every full one" do
-    older = release("dev-1002", published_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1002.full.signed.bin skyblip-go-dev-1002.signed.bin])
-    newer = release("dev-1005", published_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1005.full.signed.bin skyblip-go-dev-1005.signed.bin])
+    older = release("dev-1002", committed_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1002.full.signed.bin skyblip-go-dev-1002.signed.bin])
+    newer = release("dev-1005", committed_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1005.full.signed.bin skyblip-go-dev-1005.signed.bin])
 
     assert_equal %w[skyblip-go-dev-1005.signed.bin skyblip-go-dev-1002.signed.bin skyblip-go-dev-1005.full.signed.bin skyblip-go-dev-1002.full.signed.bin],
                  Release.firmware_shelf([ older, newer ]).map(&:last)
   end
 
   test "the simulator prefers the newest stable release, then the newest main build" do
-    older_stable = release("v0.1.0", published_at: "2026-10-01T00:00:00Z", assets: Release::SIMULATOR_FILES)
-    newer_stable = release("v0.2.0", published_at: "2026-10-10T00:00:00Z", assets: Release::SIMULATOR_FILES)
-    candidate = release("v0.3.0-rc1", prerelease: true, published_at: "2026-10-12T00:00:00Z", assets: Release::SIMULATOR_FILES)
-    branch = release("dev-1010-feat-x", prerelease: true, published_at: "2026-10-15T00:00:00Z", assets: Release::SIMULATOR_FILES)
-    main = release("dev-1005", prerelease: true, published_at: "2026-10-14T00:00:00Z", assets: Release::SIMULATOR_FILES)
+    older_stable = release("v0.1.0", committed_at: "2026-10-01T00:00:00Z", assets: Release::SIMULATOR_FILES)
+    newer_stable = release("v0.2.0", committed_at: "2026-10-10T00:00:00Z", assets: Release::SIMULATOR_FILES)
+    candidate = release("v0.3.0-rc1", prerelease: true, committed_at: "2026-10-12T00:00:00Z", assets: Release::SIMULATOR_FILES)
+    branch = release("dev-1010-feat-x", prerelease: true, committed_at: "2026-10-15T00:00:00Z", assets: Release::SIMULATOR_FILES)
+    main = release("dev-1005", prerelease: true, committed_at: "2026-10-14T00:00:00Z", assets: Release::SIMULATOR_FILES)
 
     assert_equal "v0.2.0", Release.simulator([ branch, candidate, newer_stable, main, older_stable ]).tag
     assert_equal "dev-1005", Release.simulator([ branch, candidate, main ]).tag
@@ -123,8 +134,8 @@ class ReleaseTest < ActiveSupport::TestCase
   end
 
   test "the changelog holds a stable release's news and a main build's technical changes, newest first" do
-    stable = release("v0.2.0", published_at: "2026-10-10T00:00:00Z", body: "## What's new\n\n- The alarm warbles.\n\n## What's Changed\n* feat: warble by @fcatuhe in https://github.com/fcatuhe/skyblip/pull/130\n")
-    main = release("dev-1005", name: "skyBlip dev 0.1.0+1005", prerelease: true, published_at: "2026-10-14T00:00:00Z",
+    stable = release("v0.2.0", committed_at: "2026-10-10T00:00:00Z", body: "## What's new\n\n- The alarm warbles.\n\n## What's Changed\n* feat: warble by @fcatuhe in https://github.com/fcatuhe/skyblip/pull/130\n")
+    main = release("dev-1005", name: "skyBlip dev 0.1.0+1005", prerelease: true, committed_at: "2026-10-14T00:00:00Z",
                                body: "## What's Changed\n* ui: draw traffic by @fcatuhe in https://github.com/fcatuhe/skyblip/pull/127\n")
     branch = release("dev-1010-feat-x", name: "skyBlip dev 0.1.0+1010 (feat-x)", prerelease: true, body: "## What's Changed\n* feat: x\n")
     silent = release("dev-1002", name: "skyBlip dev 0.1.0+1002", prerelease: true, body: nil)
@@ -136,8 +147,8 @@ class ReleaseTest < ActiveSupport::TestCase
   end
 
   private
-    def release(tag, name: "skyBlip", prerelease: false, published_at: "2026-10-17T00:00:00Z", assets: [], body: nil)
-      Release.new("tag_name" => tag, "name" => name, "prerelease" => prerelease, "published_at" => published_at,
+    def release(tag, name: "skyBlip", prerelease: false, committed_at: "2026-10-17T00:00:00Z", published_at: committed_at, assets: [], body: nil)
+      Release.new("tag_name" => tag, "name" => name, "prerelease" => prerelease, "created_at" => committed_at, "published_at" => published_at,
                   "assets" => assets.map { |asset| { "name" => asset } }, "body" => body)
     end
 

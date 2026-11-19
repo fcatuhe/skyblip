@@ -89,6 +89,21 @@ test('a Go and a Bravo stay connected side by side', async () => {
   fleet.units.forEach(unit => unit.disconnect());
 });
 
+// The list nests a Bravo under its Go from what this browser last read, with neither switched on.
+test('the unit a device is paired with is remembered after a reload', async () => {
+  const shelf = storage();
+  airwaves(new FakeSkyblip({ name: 'skyBlip Bravo 3F2A', bufSize: 300, product: 'bravo', address: null, bluetoothTag: 0x3f2a, pairedTag: 0x1b2c }));
+  const fleet = new Fleet({ storage: shelf });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.settings);
+  assert.equal(unit.pairedTag, 0x1b2c);
+  unit.disconnect();
+
+  const [again] = new Fleet({ storage: shelf }).remembered;
+  assert.equal(again.linked, false);
+  assert.equal(again.pairedTag, 0x1b2c);
+});
+
 test('a device remembered from another visit is asked for by its name only', async () => {
   const shelf = storage();
   shelf.setItem('skyblip.devices.v1', JSON.stringify([{ slug: 'go-00012a', name: 'skyBlip Go 00012A' }]));
@@ -110,6 +125,47 @@ test('a device connected once in this session connects again without the chooser
   assert.equal(radio.asked.length, 1);
   assert.equal(unit.linked, true);
   unit.disconnect();
+});
+
+// A page left open for hours keeps a handle Chrome no longer finds, and only a reload got the pilot out of it.
+test('a device the browser lost track of is asked for again by its name, in the same tap', async () => {
+  const radio = airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 }));
+  const fleet = new Fleet({ storage: storage() });
+  const unit = await fleet.connectNew();
+  unit.disconnect();
+  await settled(fleet, () => !unit.linked);
+  const handle = unit.handle;
+  const connect = handle.gatt.connect;
+  handle.gatt.connect = async () => {
+    throw Object.assign(new Error('Bluetooth Device is no longer in range.'), { name: 'NetworkError' });
+  };
+  const choose = radio.requestDevice;
+  radio.requestDevice = async options => {
+    handle.gatt.connect = connect;
+    return choose(options);
+  };
+
+  await fleet.connect('go-00012a');
+  assert.deepEqual(radio.asked.at(-1), [{ name: 'skyBlip Go 00012A' }, { name: 'skyBlip Go+ 00012A' }]);
+  assert.equal(unit.linked, true);
+  unit.disconnect();
+});
+
+test('a device that refuses for another reason keeps its handle and shows why', async () => {
+  const radio = airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 }));
+  const fleet = new Fleet({ storage: storage() });
+  const unit = await fleet.connectNew();
+  unit.disconnect();
+  await settled(fleet, () => !unit.linked);
+  const handle = unit.handle;
+  handle.gatt.connect = async () => {
+    throw Object.assign(new Error('Connection attempt failed.'), { name: 'NotSupportedError' });
+  };
+
+  await fleet.connect('go-00012a');
+  assert.equal(radio.asked.length, 1);
+  assert.equal(unit.handle, handle);
+  assert.deepEqual(unit.state.notice, { key: 'failed', detail: 'Connection attempt failed.' });
 });
 
 test('a chooser closed without a pick leaves nothing new behind', async () => {

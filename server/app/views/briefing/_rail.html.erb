@@ -23,26 +23,28 @@
     <h1 class="fleet-title" data-fleet-target="title" hidden><%= t("briefing.devices.title") %></h1>
   <% end %>
 
-  <ul class="fleet-list" data-fleet-target="list"></ul>
-  <template data-fleet-target="row">
-    <li class="fleet-unit">
-      <a class="fleet-unit-link" data-slot="link">
-        <span class="fleet-dot" aria-hidden="true"></span>
-        <span class="fleet-unit-name" data-slot="name"></span>
-        <span class="fleet-unit-facts" data-slot="facts"></span>
-        <span class="fleet-unit-news" data-slot="news" hidden></span>
-        <span class="visually-hidden" data-slot="attention" hidden><%= t("briefing.devices.attention") %></span>
-      </a>
-      <button type="button" class="button-app fleet-connect" data-slot="connect" data-action="fleet#link"><%= t("briefing.unit.connect") %></button>
-    </li>
-  </template>
-
-  <p class="fleet-notice" role="status" data-fleet-target="notice" hidden></p>
-  <div class="fleet-actions<%= " app-actions" if variant == "home" %>">
-    <%= link_to t("briefing.devices.set_up"), briefing_setup_path, class: "button-app fleet-set-up", data: { fleet_target: "setUp" }, hidden: true %>
-    <button type="button" class="button-app fleet-connect-new" data-fleet-target="connectNew" data-action="fleet#connectNew" aria-label="<%= t("briefing.devices.connect_new") %>">
-      <span class="fleet-connect-new-plus" aria-hidden="true">+</span>
-      <span class="fleet-connect-new-label"><%= t("briefing.devices.connect_new") %></span>
-    </button>
+  <div class="fleet-strip">
+    <ul class="fleet-list" data-fleet-target="list"></ul>
+    <template data-fleet-target="row">
+      <li class="fleet-unit">
+        <a class="fleet-unit-link" data-slot="link">
+          <span class="fleet-dot" aria-hidden="true"></span>
+          <span class="fleet-unit-name" data-slot="name"></span>
+          <span class="fleet-unit-facts" data-slot="facts"></span>
+          <span class="fleet-unit-news" data-slot="news" hidden></span>
+          <span class="visually-hidden" data-slot="attention" hidden><%= t("briefing.devices.attention") %></span>
+        </a>
+        <button type="button" class="button-app fleet-connect" data-slot="connect" data-action="fleet#link"><%= t("briefing.unit.connect") %></button>
+        <ul class="fleet-partners" data-slot="partners" aria-label="<%= t("briefing.devices.paired") %>"></ul>
+      </li>
+    </template>
+    <div class="fleet-actions<%= " app-actions" if variant == "home" %>">
+      <%= link_to t("briefing.devices.set_up"), briefing_setup_path, class: "button-app fleet-set-up", data: { fleet_target: "setUp" }, hidden: true %>
+      <button type="button" class="button-app fleet-connect-new" data-fleet-target="connectNew" data-action="fleet#connectNew" aria-label="<%= t("briefing.devices.connect_new") %>">
+        <span class="fleet-connect-new-plus" aria-hidden="true">+</span>
+        <span class="fleet-connect-new-label"><%= t("briefing.devices.connect_new") %></span>
+      </button>
+    </div>
   </div>
+  <p class="fleet-notice" role="status" data-fleet-target="notice" hidden></p>
 <% end %>

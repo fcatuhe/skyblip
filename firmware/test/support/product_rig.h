@@ -236,7 +236,9 @@ struct Rig {
     // platform -> board -> bus -> config service, which is the path silicon uses.
     void raise_link(uint16_t session_id = 1) { platform.link().raise_link(session_id); }
     void drop_link() { platform.link().drop_link(); }
-    void drop_link(uint16_t session_id) { platform.link().drop_link(session_id); }
+    void drop_link(uint16_t session_id, uint8_t reason = 0) {
+        platform.link().drop_link(session_id, reason);
+    }
     bool link_up() { return product.config_link().config().link_up(); }
 
     // The last thing the device said on one endpoint, the NMEA broadcast aside, named in JSON.

@@ -25,6 +25,7 @@ inline Diagnostics busy_device() {
     diagnostics.uptime_s = 3725;
     diagnostics.reset = power::ResetReason::Watchdog;
     diagnostics.link_drops = 2;
+    diagnostics.link_drop_reason = 8;
 
     diagnostics.noise_dbm = -101;
     diagnostics.duty_permille = 7;
@@ -121,6 +122,7 @@ inline Diagnostics widest_device() {
     diagnostics.uptime_s = 0xFFFFFFFFu;
     diagnostics.reset = power::ResetReason::Lockup;  // "CPU LOCKUP"
     diagnostics.link_drops = 0xFFFFFFFFu;
+    diagnostics.link_drop_reason = 0xFF;
     diagnostics.noise_dbm = -128;
     diagnostics.duty_permille = 1000;
     diagnostics.rx_ok = 0xFFFFFFFFu;

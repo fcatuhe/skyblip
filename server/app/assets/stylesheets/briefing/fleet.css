@@ -10,13 +10,14 @@
   .fleet-list:empty { display: none; }
 
   .fleet-unit {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
     align-items: center;
     gap: var(--space-inline-s);
   }
 
   .fleet-unit-link {
+    flex: 1;
+    min-inline-size: 0;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: baseline;
@@ -36,11 +37,24 @@
     font-size: var(--text-s);
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
+    text-wrap: pretty;
+  }
+
+  .fleet-unit.has-partners { flex-wrap: wrap; row-gap: 0; }
+
+  .fleet-partners {
+    flex-basis: 100%;
+    margin: 0;
+    margin-inline-start: calc(0.3rem - 1px);
+    padding: 0;
+    padding-inline-start: var(--space-inline-s);
+    border-inline-start: 2px solid var(--card-border);
+    list-style: none;
   }
 
   .fleet-unit-news { grid-column: 2; font-size: var(--text-s); font-weight: 700; color: var(--blip-text); }
 
-  .fleet-connect-new { display: inline-flex; gap: var(--space-inline-xs); }
+  .fleet-connect-new { display: inline-flex; justify-content: center; align-items: center; gap: var(--space-inline-xs); }
   .fleet-connect-new-plus { display: none; }
 
   .fleet-dot {
@@ -50,10 +64,10 @@
     border: 2px solid var(--sky);
     translate: 0 -0.05rem;
   }
-  .fleet-unit.is-linked .fleet-dot { background: var(--coverage); border-color: var(--coverage); }
-  .fleet-unit.is-busy .fleet-dot { border-style: dotted; border-color: var(--ink-muted); }
+  .fleet-unit.is-linked > .fleet-unit-link .fleet-dot { background: var(--coverage); border-color: var(--coverage); }
+  .fleet-unit.is-busy > .fleet-unit-link .fleet-dot { border-style: dotted; border-color: var(--ink-muted); }
   .fleet-unit-link { position: relative; }
-  .fleet--rail .fleet-unit.has-news .fleet-unit-link::after {
+  .fleet--rail .fleet-unit.has-news > .fleet-unit-link::after {
     content: "";
     position: absolute;
     inset-block-start: var(--space-2xs);
@@ -64,7 +78,10 @@
     background: var(--blip);
   }
 
-  .fleet-connect[hidden] { display: none; }
+  .fleet-strip { display: contents; }
+
+  .fleet-connect[hidden],
+  .fleet-unit-link[aria-current="page"] + .fleet-connect { display: none; }
 
   .fleet-notice { margin: 0; font-size: var(--text-s); color: var(--blip-text); }
   .fleet-notice[hidden] { display: none; }
@@ -90,12 +107,14 @@
   .fleet-unsupported .is-copied .when-copied { display: inline; }
 
   .fleet-first { display: grid; gap: var(--space-2xs); }
-  .fleet-hint { margin: 0; color: var(--ink-soft); }
+  .fleet-hint { margin: 0; color: var(--ink-soft); text-wrap: pretty; }
 
   .fleet--home .fleet-unit { border-block-end: 1px solid var(--card-border); }
   .fleet--home .fleet-unit:first-child { border-block-start: 1px solid var(--card-border); }
   .fleet--home .fleet-unit-link { padding-block: var(--space-s); }
   .fleet--home .fleet-unit-name { font-size: var(--text-m); }
+  .fleet--home .fleet-connect { padding-inline: var(--space-inline-s); font-size: var(--text-s); background: transparent; color: var(--ink); border-color: var(--card-border); }
+  .fleet--home .fleet-partners .fleet-unit { border-block: 0; }
 
   .fleet--rail {
     padding: var(--space-xs) var(--gutter);
@@ -103,47 +122,82 @@
     background: var(--sky-soft);
   }
 
-  @media (max-width: 59.99rem) {
-    .fleet--rail {
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: var(--space-inline-s);
-    }
+  @property --fleet-fade-start { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @property --fleet-fade-end { syntax: "<length>"; inherits: false; initial-value: 0px; }
 
-    .fleet--rail .fleet-list {
-      grid-auto-flow: column;
-      grid-auto-columns: max-content;
+  @keyframes fleet-fade-start {
+    from { --fleet-fade-start: 0px; }
+    to { --fleet-fade-start: calc(2 * var(--gutter)); }
+  }
+
+  @keyframes fleet-fade-end {
+    from { --fleet-fade-end: calc(2 * var(--gutter)); }
+    to { --fleet-fade-end: 0px; }
+  }
+
+  @media (max-width: 59.99rem) {
+    .fleet--home .fleet-actions { column-gap: var(--space-inline-s); }
+    .fleet--home .fleet-actions > .button-app { flex: 1 1 0; min-inline-size: max-content; padding-inline: var(--space-inline-xs); }
+
+    .fleet--rail .fleet-strip {
+      display: flex;
+      align-items: center;
       gap: var(--space-inline-xs);
+      margin-inline: calc(-1 * var(--gutter));
+      padding-inline: var(--gutter);
       overflow-x: auto;
       scrollbar-width: none;
     }
 
-    .fleet--rail .fleet-unit { grid-template-columns: auto; }
+    @supports (animation-timeline: scroll()) {
+      .fleet--rail .fleet-strip {
+        mask-image: linear-gradient(to right, transparent, var(--ink) var(--fleet-fade-start), var(--ink) calc(100% - var(--fleet-fade-end)), transparent);
+        animation: fleet-fade-start linear both, fleet-fade-end linear both;
+        animation-timeline: scroll(self inline);
+        animation-range: 0 calc(2 * var(--gutter)), calc(100% - 2 * var(--gutter)) 100%;
+      }
+    }
+
+    .fleet--rail .fleet-list {
+      display: flex;
+      flex: none;
+      gap: var(--space-inline-xs);
+    }
+
     .fleet--rail .fleet-unit-link {
-      min-block-size: 2.25rem;
-      padding: var(--space-2xs) var(--space-inline-s);
+      display: flex;
+      align-items: center;
+      gap: var(--space-inline-xs);
+      min-block-size: var(--tap);
+      padding-inline: var(--space-inline-s);
       border: 1px solid var(--card-border);
       border-radius: 999px;
       background: var(--card-bg);
       font-size: var(--text-s);
+      white-space: nowrap;
     }
     .fleet--rail .fleet-unit-link[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-    .fleet--rail .fleet-unit-facts,
-    .fleet--rail .fleet-unit-news,
-    .fleet--rail .fleet-connect,
-    .fleet--rail .fleet-notice { grid-column: 1 / -1; }
+    .fleet--rail .fleet-unit.has-news > .fleet-unit-link::after { inset-block-start: 0; inset-inline-end: 0; }
+    .fleet--rail :is(.fleet-unit-facts, .fleet-unit-news) { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+    .fleet--rail .fleet-connect { display: none; }
+    .fleet--rail .fleet-unit.has-partners { flex-wrap: nowrap; gap: 0; }
+    .fleet--rail .fleet-unit.has-partners > .fleet-unit-link { border-start-end-radius: 0; border-end-end-radius: 0; }
+    .fleet--rail .fleet-unit.has-partners > .fleet-unit-link::after { inset-inline-end: var(--space-2xs); }
+    .fleet--rail .fleet-partners { flex-basis: auto; display: flex; margin: 0; padding: 0; border: 0; }
+    .fleet--rail .fleet-partners .fleet-unit-link { margin-inline-start: -1px; border-radius: 0; }
+    .fleet--rail .fleet-partners > .fleet-unit:last-child .fleet-unit-link { border-start-end-radius: 999px; border-end-end-radius: 999px; }
     .fleet--rail .fleet-connect-new {
-      min-block-size: 2.25rem;
-      min-inline-size: 2.25rem;
+      min-inline-size: var(--tap);
       padding: 0;
       border-radius: 999px;
       background: var(--card-bg);
       border-color: var(--card-border);
       color: var(--ink);
       font-size: var(--text-l);
+      line-height: 1;
     }
     .fleet--rail .fleet-connect-new:hover:not(:disabled) { background: var(--card-bg); border-color: var(--ink); color: var(--ink); }
-    .fleet--rail .fleet-connect-new-plus { display: inline; }
+    .fleet--rail .fleet-connect-new-plus { display: block; }
     .fleet--rail .fleet-connect-new-label { display: none; }
   }
 
@@ -162,10 +216,11 @@
       padding-inline: var(--space-inline-xs);
       border-radius: var(--space-inline-xs);
     }
+    .fleet--rail .fleet-partners { margin-inline-start: calc(var(--space-inline-xs) + 0.3rem - 1px); padding-inline-start: 0; }
     .fleet--rail .fleet-unit-link[aria-current="page"] { background: var(--card-bg); box-shadow: inset 3px 0 0 var(--blip); }
     .fleet--rail .fleet-connect { min-block-size: 2rem; padding: var(--space-2xs) var(--space-inline-xs); font-size: var(--text-xs); background: transparent; color: var(--ink); border-color: var(--card-border); }
     .fleet--rail .fleet-actions { display: grid; justify-items: start; }
-    .fleet--rail .fleet-connect-new { background: transparent; color: var(--ink); border-color: var(--ink); }
+    .fleet--rail .fleet-connect-new { padding-inline: var(--space-inline-s); background: transparent; color: var(--ink); border-color: var(--ink); }
     .fleet--rail .fleet-connect-new:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
   }
 }

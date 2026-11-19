@@ -37,20 +37,20 @@ class Release
   def self.kind_of(file) = FULL_FIRMWARE.match?(file) ? "full" : "base"
 
   def self.firmware_shelf(releases)
-    images = releases.sort_by(&:published_at).reverse.flat_map { |release| release.firmware_files.map { |file| [ release, file ] } }
+    images = releases.sort_by(&:committed_at).reverse.flat_map { |release| release.firmware_files.map { |file| [ release, file ] } }
     base, full = images.partition { |_release, file| kind_of(file) == "base" }
     base + full
   end
 
   def self.changelog(releases, locale)
-    releases.sort_by(&:published_at).reverse.filter_map do |release|
+    releases.sort_by(&:committed_at).reverse.filter_map do |release|
       changes = release.changes(locale)
       [ release, changes ] if release.version && changes.any?
     end
   end
 
   def self.shelf(releases)
-    newest_first = releases.sort_by(&:published_at).reverse
+    newest_first = releases.sort_by(&:committed_at).reverse
     [ newest_first.find(&:stable?), *newest_first.select(&:development?) ].compact
   end
 
@@ -68,7 +68,7 @@ class Release
 
   # INFO: fc 17nov26 a unit installed over USB gets what a pilot should fly: the newest stable release, else the newest main build
   def self.installers(releases = published)
-    newest_first = releases.sort_by(&:published_at).reverse
+    newest_first = releases.sort_by(&:committed_at).reverse
     %w[go bravo].index_with do |product|
       holding = newest_first.select { |release| release.installer_file(product) }
       release = holding.find(&:stable?) || holding.find(&:main_development?)
@@ -77,7 +77,7 @@ class Release
   end
 
   def self.simulator(releases = all)
-    available = releases.select(&:simulator?).sort_by(&:published_at).reverse
+    available = releases.select(&:simulator?).sort_by(&:committed_at).reverse
     available.find(&:stable?) || available.find(&:main_development?)
   end
 
@@ -147,14 +147,15 @@ class Release
   end
   private_class_method :local_file
 
-  attr_reader :tag, :name, :assets, :published_at, :notes
+  attr_reader :tag, :name, :assets, :committed_at, :notes
 
   def initialize(entry)
     @tag = entry.fetch("tag_name")
     @name = entry.fetch("name").presence || tag
     @assets = entry.fetch("assets").map { |asset| asset.fetch("name") }
     @prerelease = entry.fetch("prerelease")
-    @published_at = Time.iso8601(entry.fetch("published_at"))
+    # INFO: fc 19nov26 GitHub dates created_at by the release's commit, so a build a slow run published late still sorts by when it was made
+    @committed_at = Time.iso8601(entry.fetch("created_at"))
     @notes = Notes.new(entry.fetch("body").to_s)
   end
 

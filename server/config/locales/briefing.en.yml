@@ -2,7 +2,6 @@ en:
   briefing:
     title: Briefing
     app:
-      name: skyBlip Briefing
       title: Briefing
       description: Activate, set up and update your skyBlip over Bluetooth.
     menu:
@@ -20,6 +19,7 @@ en:
       support_code_hint: "When you ask for help, give this code. It lets us read what happened between this browser and your devices: connections, refusals, installs and errors. It holds nothing you typed."
     devices:
       attention: Needs attention
+      paired: Paired with this Go
       no_bluetooth_title: Open this on Android or a computer
       no_bluetooth_tools: The simulator and the ownship editor work here.
       title: Your devices

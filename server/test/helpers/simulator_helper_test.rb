@@ -18,7 +18,7 @@ class SimulatorHelperTest < ActionView::TestCase
 
   test "the workbench receives the scenario bundle from the same release as its runtime" do
     @release = Release.new("tag_name" => "dev-1005", "name" => "Development", "prerelease" => true,
-                           "published_at" => "2026-10-17T00:00:00Z", "assets" => [], "body" => nil)
+                           "created_at" => "2026-10-17T00:00:00Z", "assets" => [], "body" => nil)
     @tag = @release.tag
     @workbench = true
 

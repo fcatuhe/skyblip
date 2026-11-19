@@ -2,7 +2,6 @@ it:
   briefing:
     title: Briefing
     app:
-      name: skyBlip Briefing
       title: Briefing
       description: Attiva, configura e aggiorna il tuo skyBlip via Bluetooth.
     menu:
@@ -20,6 +19,7 @@ it:
       support_code_hint: "Quando chiedi aiuto, comunica questo codice. Ci permette di leggere cosa è successo tra questo browser e i tuoi dispositivi: connessioni, rifiuti, installazioni ed errori. Non contiene nulla di ciò che hai digitato."
     devices:
       attention: Richiede attenzione
+      paired: Abbinato a questo Go
       no_bluetooth_title: Apri su Android o su un computer
       no_bluetooth_tools: Il simulatore e l'editor del tuo aeromobile funzionano qui.
       title: I tuoi dispositivi

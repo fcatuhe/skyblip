@@ -54,7 +54,7 @@ export function noticeOf(error) {
     return { key: 'smp', detail: error.message };
   }
   if (error instanceof SmpTimeout) return { key: 'timeout' };
-  if (error instanceof LinkLost) return { key: 'link_lost' };
+  if (error instanceof LinkLost || error.cause instanceof LinkLost) return { key: 'link_lost' };
   return { key: 'failed', detail: error.message };
 }
 
@@ -143,7 +143,10 @@ function motionSensorWithoutFirmwareOf({ image }) {
 export class Updater {
   #onChange;
   #device = null;
-  #smp = new SmpClient(bytes => this.#device.sendSmp(bytes, this.#writeBytes));
+  #smp = new SmpClient(async bytes => {
+    if (!this.#device) throw new LinkLost();
+    return this.#device.sendSmp(bytes, this.#writeBytes);
+  });
   #packetBytes = null;
   #writeBytes = GATT_WRITE_BYTES;
   #probed = false;
@@ -200,6 +203,7 @@ export class Updater {
     dump: null,
     capture: null,
     fetching: null,
+    left: false,
   };
 
   constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey, attestations = null }) {
@@ -232,10 +236,12 @@ export class Updater {
     if (this.#opening) return this.#opening;
     this.#stopReturn();
     this.#leaving = false;
-    this.#set({ phase: 'connecting', notice: null });
+    this.#set({ phase: 'connecting', notice: null, left: false });
     try {
       await this.#open();
     } catch (error) {
+      // INFO: fc 19nov26 Chrome answers NetworkError on a handle it lost track of, as on a page left open for hours, and only a new scan finds the device
+      if (error.name === 'NetworkError' && !this.#device) this.#bluetoothDevice = null;
       return this.#set({ phase: 'offline', notice: error.name === 'NotFoundError' ? null : noticeOf(error) });
     }
   }
@@ -658,7 +664,7 @@ export class Updater {
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
+      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
@@ -666,7 +672,7 @@ export class Updater {
     this.#set({
       phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false,
       progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
-      notice,
+      notice, left: leaving,
     });
   }
 

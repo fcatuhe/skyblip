@@ -44,8 +44,14 @@ device.disconnected:
   group: Devices
   from: browser
   keys: [phase, expected, linked_ms]
-  says: The link to a device closed, in which phase, whether the app expected it, as for an install or a recovery, and how long the link lasted.
+  says: The link to a device closed, in which phase, whether the app expected it, as for an install, a recovery or a disconnect the pilot asked for, and how long the link lasted.
   answers: How often links drop in the middle of something, which is where Bluetooth hurts pilots most.
+device.drop_reported:
+  group: Devices
+  from: browser
+  keys: [reason, code]
+  says: The next connection to a unit read why the unit's last link dropped, any central's, as the HCI `code` its controller gave and the `reason` the page words it with, `timeout` for a central gone out of range or asleep, `central_closed` for the phone closing it, `unit_closed` for the unit, `other` for a code the page does not name.
+  answers: Why links drop when nobody asked them to, the phone asleep, out of range or closing it, or the unit hanging up.
 device.read:
   group: Devices
   from: browser

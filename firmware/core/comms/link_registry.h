@@ -285,6 +285,7 @@ enum : uint32_t {
     kUnmatched = 89,
     kTxHeldForFix = 90,
     kTxRedrawnForFix = 91,
+    kLinkDropReason = 94,
 };
 }
 

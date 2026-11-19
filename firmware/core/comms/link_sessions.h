@@ -101,11 +101,11 @@ class LinkSessions {
         if (slot != nullptr) slot->exchanged_by_unit = outcome == events::MtuRequest::Exchanged;
     }
 
-    void disconnected(uint16_t session_id) {
+    void disconnected(uint16_t session_id, uint8_t reason = 0) {
         Slot* slot = find(session_id);
         if (slot == nullptr) return;
         slot->used = false;
-        raise(events::LinkEventType::Down, *slot);
+        raise(events::LinkEventType::Down, *slot, reason);
     }
 
     bool pop(events::LinkEvent& out) {
@@ -199,12 +199,13 @@ class LinkSessions {
         return nullptr;
     }
 
-    void raise(events::LinkEventType type, const Slot& slot) {
+    void raise(events::LinkEventType type, const Slot& slot, uint8_t reason = 0) {
         events::LinkEvent event{};
         event.type = type;
         event.session_id = slot.session_id;
         event.payload_bytes = slot.payload_bytes;
         event.connection = slot.connection;
+        event.reason = reason;
         if (type == events::LinkEventType::Down) event.mtu_exchange_started_by = starter_of(slot);
         if (!is_ok(events_.push(event))) dropped_++;
     }

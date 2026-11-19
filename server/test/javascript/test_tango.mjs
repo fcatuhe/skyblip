@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { pairTango, tagText, tangoView } from '#skyblip/tango';
+import { pairTango, tagText, tangoGroups, tangoView } from '#skyblip/tango';
 
 class Fleet {
   listeners = new Set();
@@ -78,6 +78,26 @@ test('nothing is offered in flight, before activation, or without a link', () =>
   assert.equal(tangoView(unit(fleet, { product: 'go', tag: 1, flight: 'airborne' }), [bravo]), null);
   assert.equal(tangoView({ ...unit(fleet, { product: 'go', tag: 1 }), needsActivation: true }, [bravo]), null);
   assert.equal(tangoView(unit(fleet, { product: 'go', tag: 1, linked: false }), [bravo]), null);
+});
+
+// The device list names a Tango as one group, so a pilot sees which Bravo rides with which Go.
+test('the list puts Go first, then Go+, then Bravo, each by number, and nests a Bravo under the Go it is paired with', () => {
+  const listed = (slug, { product = slug.split('-')[0], plus = false, tag = null, pairedTag = null } = {}) => ({ slug, product, plus, tag, pairedTag });
+  const lone = listed('bravo-0a0b', { tag: 0x0a0b });
+  const tied = listed('bravo-3f2a', { tag: 0x3f2a, pairedTag: 0x1b2c });
+  const named = listed('bravo-0001', { tag: 0x0001 });
+  const plus = listed('go-00012b', { plus: true, tag: 0x1b2c });
+  const second = listed('go-000130', { tag: 0x2222, pairedTag: 0x0001 });
+  const first = listed('go-00012a', { tag: 0x1111 });
+  const fresh = listed('activate-0002', { product: 'go', tag: 0x0002 });
+  const groups = tangoGroups([lone, tied, named, plus, fresh, second, first]);
+  assert.deepEqual(groups.map(({ unit, partners }) => [unit.slug, partners.map(partner => partner.slug)]), [
+    ['go-00012a', []],
+    ['go-000130', ['bravo-0001']],
+    ['activate-0002', []],
+    ['go-00012b', ['bravo-3f2a']],
+    ['bravo-0a0b', []],
+  ]);
 });
 
 test('two trusted units pair with no press: Bravo is armed first, then the Go asks and Bravo reads back its Go', async () => {

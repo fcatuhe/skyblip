@@ -30,6 +30,32 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal({ "probation_failed" => 1 }, installs[:failed_by_cause])
   end
 
+  # Links dropped while ready were left out, and they were most of the drops pilots saw.
+  test "links that dropped unasked are counted by phase, beside the reasons the units gave" do
+    journey "BROWSER0", "device.disconnected", 30.minutes.ago, phase: "ready", expected: false
+    journey "BROWSER0", "device.disconnected", 20.minutes.ago, phase: "uploading", expected: false
+    journey "BROWSER0", "device.disconnected", 15.minutes.ago, phase: "ready", expected: true
+    journey "BROWSER0", "device.drop_reported", 10.minutes.ago, reason: "timeout", code: 8
+
+    devices = Event::Review.new.devices
+
+    assert_equal({ "ready" => 1, "uploading" => 1 }, devices[:dropped_by_phase])
+    assert_equal({ "uploading" => 1 }, devices[:dropped_while_busy])
+    assert_equal({ "timeout" => 1 }, devices[:drop_reasons])
+  end
+
+  # A unit repeats its report on every connection until the next install, which counted one failure three times.
+  test "a failed install is counted once however often its unit reports it, and a second try of the same image counts again" do
+    report = { cause: "slot_damaged", from: "0.1.0+1677", to: "0.1.0+1693" }
+    journey "BROWSER0", "device.install_reported", 40.minutes.ago, **report, tried: "0.1.0+1693"
+    journey "BROWSER0", "device.install_reported", 38.minutes.ago, **report
+    journey "BROWSER0", "device.install_reported", 20.minutes.ago, **report
+    journey "BROWSER0", "device.install_reported", 10.minutes.ago, **report, tried: "0.1.0+1693"
+    journey "BROWSER0", "device.install_reported", 5.minutes.ago, cause: "bootloader_refused", from: "0.1.0+1677", to: "0.1.0+1701"
+
+    assert_equal({ "slot_damaged" => 2, "bootloader_refused" => 1 }, Event::Review.new.installs[:failed_by_cause])
+  end
+
   test "browsers are counted once, and those without Bluetooth by browser and system" do
     journey "IPHONE00", "browser.opened", 2.days.ago, bluetooth: false, browser_name: "Safari", os_name: "iOS"
     journey "IPHONE00", "browser.opened", 1.day.ago, bluetooth: false, browser_name: "Safari", os_name: "iOS"
@@ -39,6 +65,16 @@ class Event::ReviewTest < ActiveSupport::TestCase
 
     assert_equal [ 2, 1, 1 ], browsers.values_at(:total, :installed_app, :without_bluetooth)
     assert_equal({ "Safari on iOS" => 1 }, browsers[:without_bluetooth_on])
+  end
+
+  test "agents' calls are counted by tool, and the sessions they open apart from them" do
+    2.times { answered "initialize" }
+    answered "notifications/initialized"
+    answered "tools/list"
+    2.times { answered "tools/call", tool: "list_errors" }
+    answered "tools/call", tool: "get_insights"
+
+    assert_equal({ sessions: 2, calls: { "list_errors" => 2, "get_insights" => 1 } }, Event::Review.new.agents)
   end
 
   test "the daily cap is compared with the busiest day, and a cap under twice it is advised up to three times it" do
@@ -57,6 +93,10 @@ class Event::ReviewTest < ActiveSupport::TestCase
   end
 
   private
+    def answered(method, tool: nil)
+      Event.create! name: "mcp.answered", payload: { method:, tool: }.compact, occurred_at: 1.minute.ago
+    end
+
     def journey(browser, name, at, **payload)
       Event.create! name:, payload:, context: { browser:, device: "go-00012a" }, occurred_at: at
     end
