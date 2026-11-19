@@ -139,11 +139,27 @@ async def run_stream(args):
 async def run_command(args):
     body = command_fields(args.json)
     async with await connect(args, config=True) as link:
-        for delay, frame in await link.command(body, args.timeout):
+        for delay, frame in await reply_and_verdict(link, body, args.timeout, say_on_stderr):
             print("%7.1f ms  %s" % (delay * 1000, frames.printable(frame)))
             if refused_as_too_wide(frame):
                 print(SMALL_MTU, file=sys.stderr)
     return 0
+
+
+async def reply_and_verdict(link, body, timeout, say):
+    """The reply to one command, and the press's verdict when it staged a prompt on the unit."""
+    sent = time.monotonic()
+    replies = await link.command(body, timeout)
+    if replies[-1][1].get("pending"):
+        say(blip_capture.PRESS_TO_ALLOW)
+        verdict = await blip_capture.next_acknowledgement(
+            link, blip_capture.VERDICT_WAIT_S, decoded_or_refused)
+        replies.append((time.monotonic() - sent, verdict))
+    return replies
+
+
+def say_on_stderr(text):
+    print(text, file=sys.stderr)
 
 
 async def run_protocols(args):
