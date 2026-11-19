@@ -38,7 +38,8 @@ skyblip::gnss::SkyView sky_of(int gps, int beidou, int used) {
 
 // The page a pilot on the apron opens: what is up there, how loud, and which ones solved.
 TEST_CASE(
-    "satellites page: a bar for every satellite in view, filled for the ones in the solution") {
+    "satellites page: a bar for every satellite in view, filled for the ones in the solution" *
+    doctest::test_suite("main")) {
     const skyblip::gnss::SkyView sky = sky_of(6, 4, 3);
     SatellitesSnapshot snapshot;
     snapshot.levels_live = true;

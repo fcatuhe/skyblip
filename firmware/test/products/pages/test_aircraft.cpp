@@ -45,7 +45,8 @@ bool reads(const Glass& canvas, const char* text, int scale, bool ink = true) {
 }  // namespace
 
 TEST_CASE(
-    "aircraft: what Bravo heard becomes the aircraft address, the callsign and the type at once") {
+    "aircraft: what Bravo heard becomes the aircraft address, the callsign and the type at once" *
+    doctest::test_suite("main")) {
     Settings settings = go::defaults();
     CHECK(adopt(heard_glider(), settings));
     CHECK(settings.aircraft_address == kHeardAddress);
@@ -73,7 +74,8 @@ TEST_CASE("aircraft: a callsign or a type the transponder does not send is kept 
 }
 
 // A Go moved to another aircraft must not put the last one's name on the air with this address.
-TEST_CASE("aircraft: a new address heard with no callsign clears the one stored") {
+TEST_CASE("aircraft: a new address heard with no callsign clears the one stored" *
+          doctest::test_suite("main")) {
     Settings settings = go::defaults();
     REQUIRE(adopt(heard_glider(), settings));
     Detected other = heard_glider();
@@ -84,7 +86,8 @@ TEST_CASE("aircraft: a new address heard with no callsign clears the one stored"
     CHECK(settings.callsign[0] == 0);
 }
 
-TEST_CASE("aircraft: nothing but a transponder heard on the ground is ever adopted") {
+TEST_CASE("aircraft: nothing but a transponder heard on the ground is ever adopted" *
+          doctest::test_suite("main")) {
     for (const Detection state : {Detection::Unpaired, Detection::NotConnected, Detection::Airborne,
                                   Detection::NoFix, Detection::Listening}) {
         Detected detected = heard_glider();
@@ -167,7 +170,8 @@ TEST_CASE("aircraft menu: each state with nothing to propose says why, and what 
     }
 }
 
-TEST_CASE("aircraft notice: it names what Bravo heard, and says what each contact does") {
+TEST_CASE("aircraft notice: it names what Bravo heard, and says what each contact does" *
+          doctest::test_suite("main")) {
     Glass canvas;
     draw_aircraft_notice(canvas, heard_glider(), 30);
     CHECK(reads_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt));
@@ -196,7 +200,8 @@ TEST_CASE("aircraft menu: the settings row opens it, and the pad past its last r
 }
 
 // One press stores what the glass shows, and the settings row it came from reads the new name.
-TEST_CASE("aircraft menu: a press on what Bravo heard stores it and goes back to settings") {
+TEST_CASE("aircraft menu: a press on what Bravo heard stores it and goes back to settings" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.values.detected = heard_glider();
     bench.focus_on(MenuRow::Detected);

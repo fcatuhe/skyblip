@@ -32,7 +32,8 @@ TEST_CASE("bravo: config answers aircraft_address, alarm and alarm_from_go, and 
 }
 
 // The briefing shows a paired Bravo's alarm as its Go's, which the Go's ALARM row sets.
-TEST_CASE("bravo: paired, config answers its Go's alarm, and a set of alarm is refused set_on_go") {
+TEST_CASE("bravo: paired, config answers its Go's alarm, and a set of alarm is refused set_on_go" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.product.settings().alarm = bravo::Alarm::Visual;

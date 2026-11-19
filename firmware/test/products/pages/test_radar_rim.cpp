@@ -33,7 +33,8 @@ bool diamond_on(const Glass& canvas, int x, int y) {
 
 }  // namespace
 
-TEST_CASE("radar rim: an aircraft past the ring stands on the rim at its bearing") {
+TEST_CASE("radar rim: an aircraft past the ring stands on the rim at its bearing" *
+          doctest::test_suite("main")) {
     RadarTarget six_ahead[1] = {{6 * kMetresPerNm, 0, 0, Level::None}};
     CHECK(diamond_on(radar(plotting_all(six_ahead, 1)), 100, kRimAheadY));
 

@@ -439,7 +439,8 @@ TEST_CASE("sixpack page: a track due north reads 360") {
 }
 
 // The horizon is drawn off a track rate and a climb rate, so nothing else may move it.
-TEST_CASE("sixpack page: the horizon banks with the turn and pitches with climb") {
+TEST_CASE("sixpack page: the horizon banks with the turn and pitches with climb" *
+          doctest::test_suite("main")) {
     SixPackSnapshot level = flying();
     level.speed_kt = 100;
     level.turn_cdps = 0;

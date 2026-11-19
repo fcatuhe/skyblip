@@ -108,8 +108,8 @@ const Call kQuiet{};
 
 }  // namespace
 
-TEST_CASE(
-    "bravo follow: Bravo plays its Go's call, not its own grading, which NMEA still carries") {
+TEST_CASE("bravo follow: Bravo plays its Go's call, not its own grading, which NMEA still carries" *
+          doctest::test_suite("main")) {
     Pinned pinned;
     pinned.rig.raise_link(3);
     pinned.seconds(20, &kQuiet);

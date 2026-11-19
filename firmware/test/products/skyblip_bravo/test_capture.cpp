@@ -31,7 +31,8 @@ void allow(BravoRig& rig, const char* profile) {
 
 }  // namespace
 
-TEST_CASE("bravo capture: the command blinks the prompt, and one press arms the profile it names") {
+TEST_CASE("bravo capture: the command blinks the prompt, and one press arms the profile it names" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);

@@ -35,7 +35,8 @@ uint32_t arming_pass_ms() {
 
 }  // namespace
 
-TEST_CASE("bravo: a set from a phone blinks the prompt and one press stores it") {
+TEST_CASE("bravo: a set from a phone blinks the prompt and one press stores it" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -63,7 +64,8 @@ TEST_CASE("bravo: a prompt nobody answers expires, and nothing changes") {
     CHECK(rig.product.button().prompt() == comms::Pending::None);
 }
 
-TEST_CASE("bravo: presses made before the prompt stood are never spent on it") {
+TEST_CASE("bravo: presses made before the prompt stood are never spent on it" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -89,7 +91,7 @@ TEST_CASE("bravo: with no fix since boot a power-off from the phone stands, and 
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LinkRequest);
 }
 
-TEST_CASE("bravo: in flight a prompt is refused before it stands") {
+TEST_CASE("bravo: in flight a prompt is refused before it stands" * doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(20, 25000);
@@ -100,7 +102,8 @@ TEST_CASE("bravo: in flight a prompt is refused before it stands") {
     CHECK(rig.product.button().prompt() == comms::Pending::None);
 }
 
-TEST_CASE("bravo: in flight an advisory flickers the lamp and sounds, and one press dismisses it") {
+TEST_CASE("bravo: in flight an advisory flickers the lamp and sounds, and one press dismisses it" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(20, 25000);

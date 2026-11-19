@@ -143,7 +143,8 @@ TEST_CASE("radar page: a dismissed aircraft keeps its symbol and takes its secto
 }
 
 // Two aircraft are two places to look, and a pilot told only about the louder one looks once.
-TEST_CASE("radar page: every graded aircraft flashes a sector of its own") {
+TEST_CASE("radar page: every graded aircraft flashes a sector of its own" *
+          doctest::test_suite("main")) {
     RadarTarget pair[2] = {{0, 1500, 0}, {0, -1500, 0}};
     pair[1].alarm_level = Level::Advisory;
     RadarSnapshot snapshot = with_threat(pair, Level::Advisory);

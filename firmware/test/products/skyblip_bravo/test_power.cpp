@@ -32,7 +32,8 @@ TEST_CASE("bravo: a long press switches it off with the receiver asleep and ever
     check_parked(rig);
 }
 
-TEST_CASE("bravo: a long press signs off with three red pulses under the thumb, then parks") {
+TEST_CASE("bravo: a long press signs off with three red pulses under the thumb, then parks" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
