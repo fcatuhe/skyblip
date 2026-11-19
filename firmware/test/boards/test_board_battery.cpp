@@ -34,7 +34,7 @@ struct Unit {
     }
 
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     bus::State state;
     uint32_t now_ms{0};
@@ -77,4 +77,21 @@ TEST_CASE("board battery: a believable reading off the cable goes out as it was 
     REQUIRE(published.size() == 2);
     CHECK(published.back().divider_mv == 3870);
     CHECK_FALSE(published.back().external_power);
+}
+
+// A pressed button is timed in passes, and an idle board waits for its next reading.
+TEST_CASE("board: a contact down asks for every pass, an idle board waits") {
+    Unit unit;
+    for (unit.now_ms = 0; unit.now_ms <= 20500; unit.now_ms += runtime::kServicePassCeilingMs) {
+        unit.platform.clock().set_milliseconds(unit.now_ms);
+        unit.board.poll(unit.state, unit.now_ms);
+    }
+    unit.now_ms -= runtime::kServicePassCeilingMs;
+    const uint32_t idle_ms = unit.board.due_in_ms(unit.state.clock, unit.now_ms);
+    CHECK(idle_ms > runtime::kServicePassCeilingMs);
+    CHECK(idle_ms <= runtime::kBatteryPeriodMs);
+
+    unit.platform.board_gpio().button_down = true;
+    unit.board.poll(unit.state, unit.now_ms);
+    CHECK(unit.board.due_in_ms(unit.state.clock, unit.now_ms) == runtime::kServicePassCeilingMs);
 }

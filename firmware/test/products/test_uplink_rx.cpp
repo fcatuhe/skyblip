@@ -4,8 +4,7 @@
 // radio service that armed the O-band dwell for its sync word - and no product
 // caller at all. Every RxDone went to protocol::receive_m_band, which frames the
 // two M-band systems and nothing else, so an uplink frame that arrived was
-// counted as rx_bad and thrown away. Feature::UplinkRx had no reader, so the
-// capability the product claimed - ADS-L uplink receive - was not one it had.
+// counted as rx_bad and thrown away.
 //
 // So nothing here pushes an RfEvent. A real encoded frame goes on the virtual
 // air, through the SX1262 model's own sync detector, into the dwell the product
@@ -160,52 +159,6 @@ int sourced(Rig& rig, model::Source source) {
 }
 
 void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 25000, 900); }
-
-// The service alone, so that the only thing a case changes is what the product
-// claims to do.
-struct FeatureRig {
-    platform::host::Clock clock;
-    platform::host::Identity identity{platform::host::Identity::kSerial};
-    platform::host::Random random{};
-    ports::NullRoles null;
-    ports::Roles roles{
-        clock,          null.rf,          null.link, null.display,         null.key_value,
-        null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss,      identity,         random};
-    bus::Bus bus{};
-    bus::State state{};
-    diagnostics::Recorder recorder{};
-    runtime::Context context{roles, bus, state, recorder};
-    uint32_t aircraft_address{};
-    common::TrafficService traffic;
-
-    explicit FeatureRig(common::Feature declared) : traffic(context, declared, aircraft_address) {
-        roles.capabilities = ports::Capability::Rf;
-        state.own.fix_valid = true;
-        state.own.utc_valid = true;
-        state.own.utc_s = Rig::kBaseUtcS;
-        // The same place Rig flies, because the table's range gate
-        // (core/traffic/sanity.h) measures a relayed position against own-ship's:
-        // a rig claiming a fix at 0N 0E is 5000 km from the aircraft this frame
-        // relays, and every one of them is then correctly refused as a ghost.
-        state.own.latitude_1e7 = 485000000;
-        state.own.longitude_1e7 = 85000000;
-        REQUIRE(traffic.setup() == Status::Ok);
-    }
-
-    // Straight onto the bus, because what is under test here is the service and
-    // not the dwell: the band the executor stamped is what the service reads.
-    void deliver(const uint8_t* packet) {
-        events::RfEvent event{};
-        event.type = events::RfEventType::RxDone;
-        event.band = model::Band::O;
-        event.bytes = protocol::AdslUplink::kPacketBytes;
-        event.rssi_dbm = -92;
-        for (int i = 0; i < protocol::AdslUplink::kPacketBytes; i++) event.data[i] = packet[i];
-        bus.rf.push(event);
-        traffic.tick(4000);
-    }
-};
 
 }  // namespace
 
@@ -383,44 +336,6 @@ TEST_CASE(
     REQUIRE(relay(rig, now_ms, heard, 2));
     CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) < 0);
     CHECK(rig.state().traffic.count() == 1);
-}
-
-// The feature is what turns the path on, following the pattern the companion
-// link established: a claim in products/skyblip_go/features.h with a reader.
-// Take it away and the frame still arrives at the service and is still not
-// decoded.
-TEST_CASE("uplink: with Feature::UplinkRx off, a ground frame decodes to nothing") {
-    model::AircraftObservation relayed{};
-    relayed.address = 0x4E0001;
-    relayed.address_mapping_table = 6;
-    relayed.latitude_1e7 = 485000000;
-    relayed.longitude_1e7 = 85000000;
-    relayed.altitude_m = 1000;
-    relayed.position_valid = true;
-
-    protocol::AdslUplink codec;
-    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
-    REQUIRE(codec.encode(&relayed, 1, Rig::kBaseUtcS, 0, kStation,
-                         adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
-
-    FeatureRig silent(common::Feature::None);
-    CHECK_FALSE(silent.traffic.uplink_enabled());
-    silent.deliver(packet);
-    CHECK(silent.state.air.uplink_frames == 0);
-    CHECK(silent.state.air.uplink_targets == 0);
-    CHECK(silent.state.traffic.count() == 0);
-    // And not counted as an M-band failure either: the product simply does not
-    // claim this band.
-    CHECK(silent.state.air.rx_bad == 0);
-
-    // The same rig, the same frame: the feature is the difference, which is what
-    // makes it a gate and not decoration.
-    FeatureRig listening(common::Feature::UplinkRx);
-    CHECK(listening.traffic.uplink_enabled());
-    listening.deliver(packet);
-    CHECK(listening.state.air.uplink_frames == 1);
-    CHECK(listening.state.air.uplink_targets == 1);
-    CHECK(listening.state.traffic.count() == 1);
 }
 
 // Point 6 of the brief, as a case rather than a paragraph: what the O-band dwell

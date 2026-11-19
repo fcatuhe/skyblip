@@ -15,11 +15,6 @@ void FlightLogService::tick(uint32_t now_ms) {
     serve_link(now_ms);
     watch_link_drops(now_ms);
 
-    if (config_.log_erase_requested()) {
-        config_.clear_log_erase_request();
-        erase_peer_ = config_.log_erase_peer();
-        flights_.begin_erase();
-    }
     if (flights_.erasing()) {
         flights_.step_erase(now_ms);
         if (!flights_.erasing()) {
@@ -44,6 +39,14 @@ void FlightLogService::tick(uint32_t now_ms) {
         watch(now_ms);
     drain(now_ms);
     if (flights_.index_stale() && !session_.closing()) flights_.rebuild_index();
+}
+
+uint32_t FlightLogService::due_in_ms(uint32_t /*now_ms*/) const {
+    flight::LogEvent event{};
+    const bool owed = replying() || flights_.erasing() || flights_.index_stale() ||
+                      (session_.queued() > 0 && (session_.recording() || session_.closing())) ||
+                      events_.peek(event) || (session_.recording() && !flights_.spare_ready());
+    return owed ? runtime::kServicePassCeilingMs : runtime::kServiceRestCeilingMs;
 }
 
 // INFO: fc 15oct26 sampled with the fix, so an event is dated by the second the track holds

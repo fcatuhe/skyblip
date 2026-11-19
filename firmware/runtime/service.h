@@ -6,8 +6,13 @@
 #include "core/diagnostics/recorder.h"
 #include "core/util/result.h"
 #include "ports/roles.h"
+#include "runtime/tasks.h"
 
 namespace skyblip::runtime {
+
+constexpr uint32_t remaining_ms(uint32_t since_ms, uint32_t period_ms) {
+    return since_ms >= period_ms ? 0 : period_ms - since_ms;
+}
 
 // INFO: fc 20sep26 many producers and one consumer, which is neither a bus queue nor blackboard
 struct Context {
@@ -40,6 +45,9 @@ class Service {
     // wedged takes the device down rather than riding along on a loop that is
     // still spinning. Default: reaching tick() is progress enough.
     virtual bool progressing(uint32_t /*now_ms*/) const { return true; }
+
+    // INFO: fc 19nov26 the longest the loop may sleep before this service needs a pass
+    virtual uint32_t due_in_ms(uint32_t /*now_ms*/) const { return kServicePassCeilingMs; }
 
    protected:
     Context& context_;

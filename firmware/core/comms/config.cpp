@@ -53,7 +53,7 @@ void ConfigService::tick(uint32_t now_ms) {
     if (upload_window_open_ && !install_held_ &&
         now_ms - upload_window_opened_ms_ >= kUploadWindowMs)
         upload_window_open_ = false;
-    if (install_held_ && !in_flight()) install_received_image();
+    if (install_held_ && !in_flight() && pending_ == Pending::None) install_received_image();
     if (identity_ != nullptr) identity_->tick(now_ms);
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptCeilingMs) {
         pending_ = Pending::None;
@@ -295,7 +295,7 @@ void ConfigService::install_received_image() {
     } else if (!swap_powered()) {
         acknowledge(false, link::Reason::LowPower);
     } else {
-        install_requested_ = true;
+        confirmed_ = Action::Install;
         acknowledge(true, link::Reason::Install);
     }
 }

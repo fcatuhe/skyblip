@@ -61,10 +61,16 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     drain_settings(now_ms);
     drain_browsers(now_ms);
     drain_install_trust(now_ms);
-    spend_gnss_cold_start();
     confirm_image_once_healthy();
     watch_claim(now_ms);
     watch_link_drops(now_ms);
+}
+
+uint32_t ConfigLinkService::due_in_ms(uint32_t /*now_ms*/) const {
+    const bool owed = config_.replying() || (config_.status_push_due() && config_.link_up()) ||
+                      writes_.pending() || browser_writes_.pending() || unlock_writes_.pending() ||
+                      trust_page_erases_.pending();
+    return owed ? runtime::kServicePassCeilingMs : runtime::kServiceRestCeilingMs;
 }
 
 // INFO: fc 18oct26 before the link advertises at all: the name says whether the unit is activated
@@ -179,15 +185,6 @@ void ConfigLinkService::watch_link_drops(uint32_t now_ms) {
     if (config_.link_drops() == recorded_drops_) return;
     recorded_drops_ = config_.link_drops();
     record_link(diagnostics::LinkAction::Dropped, config_.claim_holder(), 0, now_ms);
-}
-
-// A cold start costs the next fix and the driver puts our configuration back
-// behind it, so it is spent where the request is read rather than reached for
-// through the board.
-void ConfigLinkService::spend_gnss_cold_start() {
-    if (!config_.gnss_cold_start_requested()) return;
-    config_.clear_gnss_cold_start_request();
-    context_.roles.gnss.request_restart(ports::Restart::Cold);
 }
 
 // INFO: le 04aug26 The single reader of the connection, drained once per pass and

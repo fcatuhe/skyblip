@@ -6,7 +6,7 @@ The suite has two halves. The cases the ADS-L component satisfies on its own tra
 
 ## One case per clause
 
-A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the clause and `docs/BEHAVIOR.md` groups by it. `scripts/check_adsl_clauses.py` is the gate over both halves: every `ADS-L.4.SRD860.x.y` heading in the specification has at least one case in one of them, and every case names a real clause. Each half names a file after the subpart it reads, and has no file for a subpart it has no case in:
+A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the clause and `docs/BEHAVIOR.md` groups by it. `scripts/check_clauses.py` is the gate over both halves: every `ADS-L.4.SRD860.x.y` heading in the specification has at least one case in one of them, and every case names a real clause. Each half names a file after the subpart it reads, and has no file for a subpart it has no case in:
 
 | File | Clauses | Here, in the device's half | In the component's half |
 |---|---|---|---|
@@ -22,7 +22,7 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the cla
 
 ## A gap is a skipped case, never a missing one
 
-Where the firmware does not satisfy a clause, the case is still written as the clause requires, marked `doctest::skip()` over a one-line `TODO:` naming why. `build/skyblip_tests --no-skip --test-case="ADS-L*"` runs them all and prints what is not conformant, which is the list of what this device would have to do to claim the clause. Four kinds of skip live in the two halves, told apart by how the message opens, and `scripts/check_adsl_clauses.py` refuses a skip that opens on none of them:
+Where the firmware does not satisfy a clause, the case is still written as the clause requires, marked `doctest::skip()` over a one-line `TODO:` naming why. `build/skyblip_tests --no-skip --test-case="ADS-L*"` runs them all and prints what is not conformant, which is the list of what this device would have to do to claim the clause. Four kinds of skip live in the two halves, told apart by how the message opens, and `scripts/check_clauses.py` refuses a skip that opens on none of them:
 
 - `not implemented:` a mandatory clause the firmware does not meet. There is none today. F.2.3's configured ICAO address was the last, and its cases now pass. They test our reading, that every payload goes under table 5 while an ICAO address is set, which EASA is being asked to confirm (`core/settings/README.md`, The ICAO address).
 - `prose:` the clause has nothing executable, such as the block diagram or the OSI table. G.5 is one too: it reserves a payload for drones and leaves its format to a later issue.

@@ -71,7 +71,7 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     Spy second(context, 2, order, Status::Ok);
     const runtime::Loop::Entry services[] = {{&first, diagnostics::LoopService::Config},
                                              {&second, diagnostics::LoopService::Ownship}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
 
     CHECK(loop.setup() == Status::Ok);
     CHECK(first.setups == 1);
@@ -123,7 +123,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     Slow render(context, clock, 2000);
     const runtime::Loop::Entry services[] = {{&quick, diagnostics::LoopService::Config},
                                              {&render, diagnostics::LoopService::Screen}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
     runtime::LoopMeter meter(clock);
 
     const uint16_t phases[] = {10, 22, 230, 242};
@@ -206,7 +206,7 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
     Spy ok(context, 2, order, Status::Ok);
     const runtime::Loop::Entry services[] = {{&failing, diagnostics::LoopService::Config},
                                              {&ok, diagnostics::LoopService::Ownship}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
 
     CHECK(loop.setup() == Status::Down);
     CHECK(ok.setups == 1);
@@ -311,7 +311,7 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     Spy wedged(context, 2, order, Status::Ok);
     const runtime::Loop::Entry services[] = {{&healthy, diagnostics::LoopService::Config},
                                              {&wedged, diagnostics::LoopService::Ownship}};
-    runtime::Loop loop(services, 2);
+    runtime::Loop loop(services);
 
     // order[0] is the Spy's write cursor: rewound every pass, because this case
     // runs a thousand of them and the ordering is pinned above.
@@ -367,4 +367,47 @@ TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
     CHECK(feed.stalled_service(744u) == gnss);
     // The one that is still checking in is not the one stalled.
     CHECK(feed.silent_ms(radio, 744u) == 1);
+}
+
+namespace {
+
+struct Due : runtime::Service {
+    Due(runtime::Context& context, uint32_t due_ms) : runtime::Service(context), due_ms_(due_ms) {}
+    void tick(uint32_t) override {}
+    uint32_t due_in_ms(uint32_t) const override { return due_ms_; }
+    uint32_t due_ms_;
+};
+
+}  // namespace
+
+// The loop sleeps until the earliest service is due, and never past the rest ceiling.
+TEST_CASE("runtime: the loop is due when its earliest service is, the rest ceiling at most") {
+    struct : ports::Clock {
+        uint32_t milliseconds() const override { return 0; }
+        uint64_t microseconds() const override { return 0; }
+    } clock;
+
+    platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
+    ports::NullRoles null;
+    ports::Roles roles{
+        clock,          null.rf,          null.link, null.display,           null.key_value,
+        null.log_flash, null.annunciator, null.dfu,  null.die_temperature,   null.indicator,
+        null.gnss,      identity,         random,    ports::Capability::None};
+    bus::Bus bus;
+    bus::State state;
+    diagnostics::Recorder recorder{};
+    runtime::Context context{roles, bus, state, recorder};
+
+    Due idle(context, 5 * runtime::kServiceRestCeilingMs);
+    Due soon(context, 250);
+    const runtime::Loop::Entry both[] = {{&idle, diagnostics::LoopService::Config},
+                                         {&soon, diagnostics::LoopService::Ownship}};
+    CHECK(runtime::Loop(both).due_in_ms(0) == 250);
+    const runtime::Loop::Entry alone[] = {{&idle, diagnostics::LoopService::Config}};
+    CHECK(runtime::Loop(alone).due_in_ms(0) == runtime::kServiceRestCeilingMs);
+
+    int order[8]{0};
+    Spy plain(context, 1, order, Status::Ok);
+    CHECK(plain.due_in_ms(0) == runtime::kServicePassCeilingMs);
 }

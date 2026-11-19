@@ -11,6 +11,7 @@
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
+#include "test/support/confirmed.h"
 #include "test/support/screen_rig.h"
 
 using namespace skyblip;
@@ -169,14 +170,14 @@ TEST_CASE(
     REQUIRE(config.receiving_firmware());
     config.set_flight_state(flight::FlightState::Airborne);
     config.tick(100);
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
     CHECK_FALSE(config.upload_allowed());
     CHECK_FALSE(config.receiving_firmware());
 
     config.tick(100 + 11u * 60u * 1000u);
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(100 + 12u * 60u * 1000u);
-    CHECK(config.install_requested());
+    CHECK(taken(config) == comms::Action::Install);
     CHECK(link_text(link.last().bytes) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"install\"}");
 }

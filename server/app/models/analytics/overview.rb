@@ -3,6 +3,7 @@ module Analytics
     include Breakdowns
 
     BREAKDOWN_LIMIT = 10
+    OUTBOUND_LIMIT = 30
     SERIES = %i[pageviews visits visitors].freeze
     HOURLY_MAX_DAYS = 2
 
@@ -23,6 +24,8 @@ module Analytics
     def chart = Chart.new(series, hourly: hourly?)
 
     def hourly? = period_in_days <= HOURLY_MAX_DAYS
+
+    def outbound_links = OutboundClicks.new(scope).links(limit: OUTBOUND_LIMIT)
 
     private
       def scope
