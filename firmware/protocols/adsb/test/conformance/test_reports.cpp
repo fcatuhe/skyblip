@@ -60,7 +60,8 @@ TEST_CASE("DO-260B 2.2.8: a Track carries the report parameters in a structure o
     CHECK(track.version_valid);
 }
 
-TEST_CASE("DO-260B 2.2.8.1: the state vector is position, altitudes, velocity and climb") {
+TEST_CASE("DO-260B 2.2.8.1: the state vector is position, altitudes, velocity and climb" *
+          doctest::test_suite("main")) {
     Bravo bravo = tracking();
     REQUIRE(bravo.hear(air_velocity(100, -50, 640, false), 1500));
     CHECK(metres_from(bravo.heard, kLatitude, kLongitude) < 10);
@@ -107,7 +108,8 @@ TEST_CASE("DO-260B 2.2.8.1.3: every Track is from DF17, whose AA is an ICAO addr
     CHECK(bravo.heard.address == kAddress);
 }
 
-TEST_CASE("DO-260B 2.2.8.1.4: position and velocity each keep the instant they were true") {
+TEST_CASE("DO-260B 2.2.8.1.4: position and velocity each keep the instant they were true" *
+          doctest::test_suite("main")) {
     Bravo bravo = tracking(1000);
     REQUIRE(bravo.hear(air_velocity(100, -50, 640, false), 1400));
     CHECK(bravo.heard.at_ms == 1000);
@@ -195,7 +197,8 @@ TEST_CASE("DO-260B 2.2.8.1.6: the longitude is the CPR decode, and none is no lo
 }
 
 TEST_CASE(
-    "DO-260B 2.2.8.1.7: the geometric altitude comes from TYPE 20 to 22 or baro plus difference") {
+    "DO-260B 2.2.8.1.7: the geometric altitude comes from TYPE 20 to 22 or baro plus difference" *
+    doctest::test_suite("main")) {
     Bravo bravo = tracking();
     REQUIRE(bravo.hear(air_velocity(100, -50, 640, false), 1500));
     CHECK(bravo.heard.gnss_height_valid);
@@ -539,7 +542,8 @@ TEST_CASE("DO-260B 2.2.9: the Track is the report set of the least class, A0") {
 }
 
 TEST_CASE(
-    "DO-260B 2.2.9.1: a class A0 receiver reports state vector and mode status, airborne or not") {
+    "DO-260B 2.2.9.1: a class A0 receiver reports state vector and mode status, airborne or not" *
+    doctest::test_suite("main")) {
     Bravo bravo = tracking();
     REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 1500));
     CHECK(bravo.heard.position_valid);

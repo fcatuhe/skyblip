@@ -56,7 +56,8 @@ ConfigService& upload_opened(ConfigService& config, SpyDfu& dfu) {
     return config;
 }
 
-TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation") {
+TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -355,7 +356,8 @@ TEST_CASE("comms: recovery refused in flight") {
 // The third way a device is asked to go dark (core/power/shutdown.h:
 // ShutdownReason::LinkRequest). The button and the cutoff already had callers;
 // this is the companion link's, behind the same gate as dfu and recovery.
-TEST_CASE("comms: power_off is confirmed on the device, then latched for the sequencer") {
+TEST_CASE("comms: power_off is confirmed on the device, then latched for the sequencer" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -491,7 +493,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     CHECK_FALSE(config.upload_allowed());
 }
 
-TEST_CASE("comms: DFU refused in flight") {
+TEST_CASE("comms: DFU refused in flight" * doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();

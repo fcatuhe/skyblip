@@ -87,7 +87,8 @@ TEST_CASE("bravo traffic: Bravo's target enters the table at the instants Bravo 
 }
 
 // One merged stream: the Go's own $PFLAA carries Bravo's target as ADS-B, Source 1 (#175).
-TEST_CASE("bravo traffic: the phone hears Bravo's target in the Go's own $PFLAA, as Source 1") {
+TEST_CASE("bravo traffic: the phone hears Bravo's target in the Go's own $PFLAA, as Source 1" *
+          doctest::test_suite("main")) {
     Flight flight(named_target_every_second(2, 6));
     flight.fly(5);
 
@@ -100,7 +101,8 @@ TEST_CASE("bravo traffic: the phone hears Bravo's target in the Go's own $PFLAA,
     CHECK(values[13] == "1");
 }
 
-TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar marks a live Bravo") {
+TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar marks a live Bravo" *
+          doctest::test_suite("main")) {
     Flight flight(named_target_every_second(2, 8));
     flight.fly(3);
     CHECK(flight.state().bravo == comms::BravoState::Live);
@@ -169,8 +171,8 @@ TEST_CASE("bravo traffic: a quiet sky with Bravo's health coming keeps Bravo liv
     CHECK(last_status(flight.go()).find("\"bravo\":\"live\"") != std::string::npos);
 }
 
-TEST_CASE(
-    "bravo traffic: a lost health says NO LINK reversed, with one tone, until it comes back") {
+TEST_CASE("bravo traffic: a lost health says NO LINK reversed, with one tone, until it comes back" *
+          doctest::test_suite("main")) {
     Flight flight;
     flight.fly(3);
     flight.tones.clear();

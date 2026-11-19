@@ -138,7 +138,8 @@ TEST_CASE("log link: the count comes first and says whether it is the whole trut
           "{\"command\":\"log\",\"acknowledge\":true,\"sessions\":3,\"truncated\":false}");
 }
 
-TEST_CASE("log link: a session line says how many records and whether the flight ended") {
+TEST_CASE("log link: a session line says how many records and whether the flight ended" *
+          doctest::test_suite("main")) {
     uint8_t buffer[comms::kLogReplyBytes];
     const int written = comms::format_log_session(buffer, sizeof(buffer), 0, 3, 1785628800u, 0,
                                                   1700, false, false, false);

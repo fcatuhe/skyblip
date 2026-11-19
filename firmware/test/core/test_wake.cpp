@@ -51,7 +51,8 @@ static BootCell healthy(uint16_t cell_mv = 3900) {
 }
 
 // The silicon sets VBUS without OFF on a cable wake, and Zephyr's hwinfo reports that bit as POR.
-TEST_CASE("wake: a charger plugged into a sleeping device does not switch it on") {
+TEST_CASE("wake: a charger plugged into a sleeping device does not switch it on" *
+          doctest::test_suite("main")) {
     const ResetCause charger = ResetCause::UsbVbus | ResetCause::PowerOn;
     CHECK(boot_path(charger, /*button_down=*/false, healthy()) == BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::UsbVbus, false, healthy()) == BootPath::SleepAgain);
@@ -60,7 +61,8 @@ TEST_CASE("wake: a charger plugged into a sleeping device does not switch it on"
     CHECK(std::string(to_string(ResetReason::ChargerWake)) == "CHARGER WAKE");
 }
 
-TEST_CASE("wake: a pilot holding the button while plugging in gets the device") {
+TEST_CASE("wake: a pilot holding the button while plugging in gets the device" *
+          doctest::test_suite("main")) {
     const ResetCause charger = ResetCause::UsbVbus | ResetCause::PowerOn;
     CHECK(boot_path(charger, /*button_down=*/true, healthy()) == BootPath::Run);
 }
@@ -88,7 +90,8 @@ TEST_CASE("wake: on a cell that can run, the button and the reset pin ask for a 
 }
 
 // Left to boot, each press costs the panel and kParkSettleMs to reach the same cutoff.
-TEST_CASE("wake: a flat cell refuses the boot, whoever asks and however they ask") {
+TEST_CASE("wake: a flat cell refuses the boot, whoever asks and however they ask" *
+          doctest::test_suite("main")) {
     const BootCell flat = healthy(power::kFlatMv);
     CHECK(boot_path(ResetCause::LowPowerWake, /*button_down=*/true, flat) == BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::Pin, false, flat) == BootPath::SleepAgain);

@@ -123,7 +123,8 @@ TEST_CASE("comms prompt cap: a prompt command while a prompt stands leaves that 
     CHECK(desk.last() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
 }
 
-TEST_CASE("comms prompt cap: a prompt that stands still expires 30 s after it was first staged") {
+TEST_CASE("comms prompt cap: a prompt that stands still expires 30 s after it was first staged" *
+          doctest::test_suite("main")) {
     Desk desk;
     desk.say("{\"command\":\"recovery\"}");
     REQUIRE(desk.config.pending() == Pending::Recovery);
@@ -232,7 +233,8 @@ TEST_CASE("comms prompt cap: the update page's settings, install and retry run o
     CHECK(config.receiving_firmware());
 }
 
-TEST_CASE("comms prompt cap: on the glass, a tap refuses and a new connection asks again") {
+TEST_CASE("comms prompt cap: on the glass, a tap refuses and a new connection asks again" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

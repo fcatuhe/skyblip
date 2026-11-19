@@ -91,7 +91,8 @@ TEST_CASE("EN 300 220-1 5.21.1: a burst goes out below the CCA threshold and def
 // "With antenna gain of -5 dB, the CCA threshold shall be corrected and increased by 5 dB".
 TEST_CASE(
     "EN 300 220-1 5.21.2.2: the CCA threshold is 15 dB over the sensitivity limit, corrected by "
-    "the antenna gain, at the chip behind the feed") {
+    "the antenna gain, at the chip behind the feed" *
+    doctest::test_suite("main")) {
     const int32_t sensitivity_200_khz = -9399;
     const int32_t limit_at_0_dbd = sensitivity_200_khz + 1500;
     CHECK(timing::cca_threshold_centi_dbm(0, 0) == limit_at_0_dbd);
@@ -110,7 +111,8 @@ TEST_CASE(
     CHECK_FALSE(Burst(static_cast<int8_t>(loudest_clear_dbm + 1)).keyed());
 }
 
-TEST_CASE("EN 300 220-1 5.21.3.1: listening, dead time, on-time and off-time sit inside Table 48") {
+TEST_CASE("EN 300 220-1 5.21.3.1: listening, dead time, on-time and off-time sit inside Table 48" *
+          doctest::test_suite("main")) {
     CHECK(timing::PoliteAccess::kCcaWindowUs >= 160);
     CHECK(timing::ChannelLevel::kWindowUs >= 160);
     CHECK(timing::PoliteAccess::kDeferralFloorUs >= timing::PoliteAccess::kCcaWindowUs);

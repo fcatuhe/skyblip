@@ -74,7 +74,8 @@ bool all_from(const std::vector<Sent>& sent, const Sender& sender) {
 
 }  // namespace
 
-TEST_CASE("rf: an aircraft address puts Traffic, Status and name under table 5 and that address") {
+TEST_CASE("rf: an aircraft address puts Traffic, Status and name under table 5 and that address" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     fly(simulator);
     simulator.product().settings().aircraft_address = kAircraftAddress;
@@ -88,7 +89,8 @@ TEST_CASE("rf: an aircraft address puts Traffic, Status and name under table 5 a
 }
 
 TEST_CASE(
-    "rf: with no aircraft address, Traffic, Status and name go under table 58 and the serial") {
+    "rf: with no aircraft address, Traffic, Status and name go under table 58 and the serial" *
+    doctest::test_suite("main")) {
     simulator::Simulator simulator;
     fly(simulator);
     REQUIRE(simulator.product().settings().aircraft_address == go::kAircraftAddressUnset);
@@ -167,7 +169,8 @@ TEST_CASE(
 }
 
 // Status is the page that names this aircraft, and it names the ICAO address once one is set.
-TEST_CASE("product: status names the address on air, the aircraft address once it is set") {
+TEST_CASE("product: status names the address on air, the aircraft address once it is set" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().aircraft_address = kAircraftAddress;

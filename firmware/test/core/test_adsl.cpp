@@ -74,7 +74,7 @@ TEST_CASE("adsl: without an address the encoder builds no frame, position or nam
 // (G.1.11 to G.1.16), so an untouched block is not neutral: it tells a receiver
 // we claim no integrity at all, and receivers are entitled to weight us
 // accordingly. Without a fix that is the truthful answer; with one it is not.
-TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
+TEST_CASE("adsl: from_own claims integrity from the receiver's DOP" * doctest::test_suite("main")) {
     skyblip::model::Ownship own{};
     own.latitude_1e7 = 485000000;
     own.longitude_1e7 = 85000000;
@@ -147,7 +147,8 @@ TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
 }
 
 // A codec that agrees with itself can still put a frame on air no other receiver reads.
-TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read") {
+TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read" *
+          doctest::test_suite("main")) {
     skyblip::model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;

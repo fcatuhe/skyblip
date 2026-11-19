@@ -60,7 +60,8 @@ std::vector<simulator::AirRecord> held_from_cycle_start(int speed_kt, uint32_t h
 }  // namespace
 
 // Forced on the ground only: airborne the Status and the name are still busy at +8, past 3000 ms.
-TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms") {
+TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms" *
+          doctest::test_suite("main")) {
     uint64_t held_from_us = 0;
     uint32_t forced = 0;
     const std::vector<simulator::AirRecord> ground =
@@ -80,7 +81,8 @@ TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then
 }
 
 // D.1.1's length byte is the last of the sync tail, so a receiver reads each burst's own length.
-TEST_CASE("ADS-L.4.SRD860.D.1.1: the Go sends a Status as 16 bytes and Traffic as 24") {
+TEST_CASE("ADS-L.4.SRD860.D.1.1: the Go sends a Status as 16 bytes and Traffic as 24" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);

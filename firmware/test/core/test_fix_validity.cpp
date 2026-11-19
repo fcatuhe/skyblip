@@ -31,7 +31,8 @@ constexpr const char* kRmc = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4
 constexpr const char* kGga = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
 }
 
-TEST_CASE("fix validity: one sentence is never a fix, both of them are") {
+TEST_CASE("fix validity: one sentence is never a fix, both of them are" *
+          doctest::test_suite("main")) {
     Burst burst;
     CHECK(burst.validity.evaluate(0) == FixReject::MissingRmc);
 
@@ -45,7 +46,8 @@ TEST_CASE("fix validity: one sentence is never a fix, both of them are") {
 }
 
 // 3500 ms is SoftRF's NMEA_EXP_TIME: three missed solutions, liveness, not the freshness rule.
-TEST_CASE("fix validity: a receiver that stops talking stops having a fix") {
+TEST_CASE("fix validity: a receiver that stops talking stops having a fix" *
+          doctest::test_suite("main")) {
     Burst burst;
     burst.feed(kRmc, 1000);
     burst.feed(kGga, 1000);
@@ -88,7 +90,7 @@ TEST_CASE("fix validity: V means no fix, and so does a GGA quality outside 1 to 
 // The date is part of the fix, not a decoration: SoftRF calls it crucial and
 // refuses the fix without it. Our timestamp code, our flight log session and
 // every log record carry it.
-TEST_CASE("fix validity: a fix with the MTK 1980 date is not a fix") {
+TEST_CASE("fix validity: a fix with the MTK 1980 date is not a fix" * doctest::test_suite("main")) {
     Burst burst;
     const char* lie = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230380,003.1,W*6F";
     burst.feed(lie, 1000);
@@ -101,7 +103,8 @@ TEST_CASE("fix validity: a fix with the MTK 1980 date is not a fix") {
 
 // moshe-braner's jump gate: 0.15 deg of latitude or 0.25 deg of longitude
 // between consecutive solutions is bad data, not flight. 0.15 deg is 16.7 km.
-TEST_CASE("fix validity: a position no aircraft could have flown to is refused once") {
+TEST_CASE("fix validity: a position no aircraft could have flown to is refused once" *
+          doctest::test_suite("main")) {
     Burst burst;
     burst.feed(kRmc, 1000);
     burst.feed(kGga, 1000);

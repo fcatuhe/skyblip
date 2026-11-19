@@ -30,7 +30,8 @@ TEST_CASE("product: a cable takes the cell's word off the radar, and no charge c
 }
 
 // Nobody pressed anything, so the frame is the only thing that can say why the device stopped.
-TEST_CASE("product: a cell that takes the device down names itself on the way out") {
+TEST_CASE("product: a cell that takes the device down names itself on the way out" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 2000);
@@ -216,7 +217,8 @@ TEST_CASE("product: a switch-off on a critical cell asks for the charger under t
 
 // The first step already winks the lamp red, so the glass has to carry that word too.
 TEST_CASE(
-    "product: a cell past the knee wears BAT in the ring and asks for the charger at switch-off") {
+    "product: a cell past the knee wears BAT in the ring and asks for the charger at switch-off" *
+    doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 2000);

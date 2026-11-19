@@ -12,7 +12,8 @@
 
 using namespace skyblip;
 
-TEST_CASE("product: a pad tap switches page, and no swap costs the full waveform") {
+TEST_CASE("product: a pad tap switches page, and no swap costs the full waveform" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.screen().page() == go::Page::Radar);
@@ -104,7 +105,8 @@ TEST_CASE("product: the pad leaves a page it was sent to for the page that sent 
 }
 
 // Counting taps back to the traffic picture is what nobody does with traffic converging.
-TEST_CASE("product: a long touch comes back to the radar from wherever the pilot is") {
+TEST_CASE("product: a long touch comes back to the radar from wherever the pilot is" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -156,7 +158,8 @@ TEST_CASE("product: powering the panel down leaves the wordmark on it") {
 }
 
 // An e-paper stored for months under one image keeps a shadow of it for good.
-TEST_CASE("product: the pad held through the press leaves the glass blank") {
+TEST_CASE("product: the pad held through the press leaves the glass blank" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -326,7 +329,8 @@ TEST_CASE("product: the word holds through the band between a standstill and a t
 }
 
 // An antenna under a wing in the circuit is a glitch, not a landing.
-TEST_CASE("product: a fix lost in the air says NO FIX over a clock that keeps running") {
+TEST_CASE("product: a fix lost in the air says NO FIX over a clock that keeps running" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

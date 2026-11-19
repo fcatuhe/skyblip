@@ -17,7 +17,8 @@
 
 using namespace skyblip;
 
-TEST_CASE("adsl edge: the name goes out as OGN's registration record, and reads back") {
+TEST_CASE("adsl edge: the name goes out as OGN's registration record, and reads back" *
+          doctest::test_suite("main")) {
     adsl::Packet packet{};
     REQUIRE(protocol::from_own_callsign(packet, 0x123456, 58, "D-KXYZ"));
     CHECK(adsl_edge::is_registration(packet));
@@ -58,7 +59,8 @@ TEST_CASE("adsl edge: a registration with a comma is refused, not split into PFL
 }
 
 // Out of the direct slot ADS-L Issue 2 defines, on B, in the even second whose position is on A.
-TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on B") {
+TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on B" *
+          doctest::test_suite("main")) {
     timing::ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = true;
@@ -85,7 +87,8 @@ TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on
 }
 
 // A receiver files the name under the same target as the Traffic, so it follows the ICAO address.
-TEST_CASE("adsl edge: the name goes under the ICAO address while one is set") {
+TEST_CASE("adsl edge: the name goes under the ICAO address while one is set" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     go::Settings& settings = simulator.product().settings();

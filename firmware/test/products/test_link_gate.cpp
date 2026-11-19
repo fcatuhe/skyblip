@@ -43,7 +43,7 @@ TEST_CASE("product: the gate closes on the take-off the fix stream proved, not o
 }
 
 // The case the whole gesture was chosen for.
-TEST_CASE("product: paging does not authorise a firmware upload") {
+TEST_CASE("product: paging does not authorise a firmware upload" * doctest::test_suite("main")) {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -100,7 +100,8 @@ TEST_CASE("product: a press on the ground is what opens the upload window") {
     CHECK(rig.config().pending() == comms::Pending::None);
 }
 
-TEST_CASE("product: the glass names the operation while it waits, and stops cycling pages") {
+TEST_CASE("product: the glass names the operation while it waits, and stops cycling pages" *
+          doctest::test_suite("main")) {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

@@ -30,7 +30,8 @@ go::Glass confirm(comms::Pending pending, const char* detail, uint32_t seconds) 
 
 }  // namespace
 
-TEST_CASE("prompt glass: a set reads its changes against the unit's settings, as the Go does") {
+TEST_CASE("prompt glass: a set reads its changes against the unit's settings, as the Go does" *
+          doctest::test_suite("main")) {
     go::Glass glass;
     REQUIRE(simulator::draw_prompt(
         glass, "set", "{\"command\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":\"metric\"}",

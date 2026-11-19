@@ -97,7 +97,8 @@ struct Pairing {
 
 }  // namespace
 
-TEST_CASE("pair from a browser: each unit named, both pin, and the Go says paired unasked") {
+TEST_CASE("pair from a browser: each unit named, both pin, and the Go says paired unasked" *
+          doctest::test_suite("main")) {
     Pairing pairing;
     pairing.prove(pairing.bravo, /*trusted=*/true);
     pairing.bravo.say(kPairGo);

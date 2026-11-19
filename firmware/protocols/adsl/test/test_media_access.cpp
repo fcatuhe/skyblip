@@ -27,7 +27,8 @@ Deferral deferral(uint32_t draw, uint32_t units = 8) { return Deferral{kUnitUs, 
 
 }  // namespace
 
-TEST_CASE("adsl media access: a clear channel transmits at the instant it was assessed") {
+TEST_CASE("adsl media access: a clear channel transmits at the instant it was assessed" *
+          doctest::test_suite("main")) {
     ChannelAttempt attempt = busy_at(kAtUs);
     attempt.clear = true;
     const AccessVerdict verdict = media_access(attempt, deferral(0));

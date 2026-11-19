@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""Self-check for behavior_index.py, on a run small enough to read whole.
+
+    python3 scripts/test_behavior_index.py
+"""
+import pathlib
+import sys
+import unittest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+import behavior_index  # noqa: E402
+
+BUTTON = "test/core/test_button.cpp"
+TONE = "test/core/diagnostics/test_tone.cpp"
+SLOT = "protocols/adsl/test/conformance/test_physical.cpp"
+
+RUN = f"""<?xml version="1.0" encoding="UTF-8"?>
+<doctest binary="skyblip_tests">
+  <Options order_by="file"/>
+  <TestSuite>
+    <TestCase name="button: a bounce emits nothing" filename="{BUTTON}" line="12" description="">
+      <OverallResultsAsserts successes="1" failures="0" test_case_success="true"/>
+    </TestCase>
+  </TestSuite>
+  <TestSuite name="main">
+    <TestCase name="button: a stable press emits exactly one event" filename="{BUTTON}" line="30" description="">
+      <SubCase name="held" filename="{BUTTON}" line="33"/>
+      <OverallResultsAsserts successes="2" failures="0" test_case_success="true"/>
+    </TestCase>
+  </TestSuite>
+  <TestSuite>
+    <TestCase name="button: a press past the counter wraps once" filename="{BUTTON}" line="48" description=""/>
+    <TestCase name="tone: a fault reads as two beeps" filename="{TONE}" line="7" description=""/>
+    <TestCase name="ADS-L.4.SRD860.C.2.5: the two channels are 868.2 and 868.4 MHz" filename="{SLOT}" line="20" description=""/>
+    <TestCase name="tone: a click is a fault" filename="{TONE}" line="20" skipped="true"/>
+  </TestSuite>
+  <TestSuite name="main">
+    <TestCase name="tone: a hum is a fault" filename="{TONE}" line="15" skipped="true"/>
+  </TestSuite>
+  <OverallResultsAsserts successes="5" failures="0"/>
+</doctest>
+"""
+
+PROSE = {
+    BUTTON: ("The one button, debounced into events.",
+             {"button: a stable press emits exactly one event": "A held press is still one."}),
+    TONE: ("What a fault sounds like.", {}),
+    SLOT: ("ADS-L's physical layer, as the component reads it.", {}),
+}
+
+
+def cases():
+    return behavior_index.parse_run(RUN)[0]
+
+
+def skipped():
+    return behavior_index.parse_run(RUN)[1]
+
+
+class Run(unittest.TestCase):
+    # doctest writes no name attribute for the unnamed suite, and reports a skipped case where it would run.
+    def test_a_case_takes_its_tier_from_the_test_suite_around_it(self):
+        main = [case.name for case in cases() if behavior_index.is_main(case)]
+        self.assertEqual(main, ["button: a stable press emits exactly one event"])
+        self.assertEqual(len(cases()), 5)
+        self.assertEqual(cases()[1].line, 30)
+
+    def test_a_skipped_case_is_set_apart_with_its_tier(self):
+        self.assertEqual([(case.name, case.suite) for case in skipped()],
+                         [("tone: a click is a fault", ""), ("tone: a hum is a fault", "main")])
+
+
+class Problems(unittest.TestCase):
+    def test_a_clean_run_has_none(self):
+        self.assertEqual(behavior_index.problems(cases(), skipped()[:1], PROSE), [])
+
+    def test_each_rule_refuses_its_case(self):
+        bad = cases() + [
+            behavior_index.Case(BUTTON, 60, "button presses", ""),
+            behavior_index.Case(BUTTON, 70, "button: a press is loud", "edge"),
+        ]
+        prose = dict(PROSE, **{"test/test_loose.cpp": ("", {})})
+        messages = behavior_index.problems(bad, skipped(), prose)
+        self.assertEqual(len(messages), 5)
+        self.assertIn("name must read `subject: what holds`: button presses", messages)
+        self.assertIn('test suite must be "main" or none, not "edge": button: a press is loud',
+                      messages)
+        self.assertIn(f"a skipped case claims nothing, so it cannot be main: {TONE}: "
+                      "tone: a hum is a fault", messages)
+        self.assertIn("no opening comment saying what it pins down: test/test_loose.cpp", messages)
+        self.assertIn("in no area: test/test_loose.cpp: name its area in AREAS", messages)
+
+
+class Pages(unittest.TestCase):
+    def test_one_page_per_area_with_subdirectories_folded_in(self):
+        pages = behavior_index.render_pages(cases(), PROSE)
+        self.assertEqual(sorted(pages), ["core.md", "protocols-adsl-conformance.md"])
+        self.assertIn("**tone**\n\n- a fault reads as two beeps", pages["core.md"])
+
+    def test_main_claims_come_first_and_the_rest_fold_below(self):
+        page = behavior_index.render_pages(cases(), PROSE)["core.md"]
+        main = page.index("## Main claims")
+        details = page.index("<details><summary>Edge cases and details (3)</summary>")
+        files = page.index("## Test files")
+        self.assertLess(main, details)
+        self.assertLess(details, files)
+        self.assertIn("- a stable press emits exactly one event "
+                      f"([test_button.cpp:30](../../firmware/{BUTTON}#L30))\n"
+                      "  > A held press is still one.", page[main:details])
+        self.assertIn(f"- a bounce emits nothing ([test_button.cpp:12](../../firmware/{BUTTON}#L12))",
+                      page[details:files])
+
+    def test_a_page_with_no_main_case_hides_nothing(self):
+        page = behavior_index.render_pages(cases(), PROSE)["protocols-adsl-conformance.md"]
+        self.assertNotIn("<details>", page)
+        self.assertIn("## Claims\n\n**ADS-L.4.SRD860.C.2.5**\n\n- the two channels", page)
+        self.assertIn(f"### [{SLOT}](../../firmware/{SLOT})\n\n"
+                      "ADS-L's physical layer, as the component reads it.", page)
+
+
+    def test_the_go_pages_and_bravo_are_areas_apart_from_products(self):
+        self.assertEqual(behavior_index.area_of("test/products/pages/test_radar.cpp"), "pages")
+        self.assertEqual(behavior_index.area_of("test/products/skyblip_bravo/test_fold.cpp"), "bravo")
+        self.assertEqual(behavior_index.area_of("test/products/test_pipeline.cpp"), "products")
+        self.assertEqual(behavior_index.area_of("test/core/diagnostics/test_tone.cpp"), "core")
+
+
+class Index(unittest.TestCase):
+    def test_the_index_counts_each_area_and_lists_its_main_claims(self):
+        index = behavior_index.render_index(cases(), PROSE)
+        self.assertIn("5 host test cases over 3 subjects in 3 files", index)
+        self.assertIn("| [core - the logic the radio and the screen are built on]"
+                      "(behavior/core.md) | 4 | 1 |", index)
+        self.assertIn("(behavior/protocols-adsl-conformance.md) | 1 | 0 |", index)
+        self.assertIn("**button**\n\n- a stable press emits exactly one event "
+                      f"([test_button.cpp:30](../firmware/{BUTTON}#L30))", index)
+        self.assertNotIn("a bounce emits nothing", index)
+
+    def test_with_no_main_case_the_index_says_so(self):
+        plain = [case._replace(suite="") for case in cases()]
+        self.assertIn("No case is marked main yet.", behavior_index.render_index(plain, PROSE))
+
+
+class Subjects(unittest.TestCase):
+    # The ADS-L conformance report uses this format for the stack's own tests.
+    def test_render_subjects_keeps_its_output(self):
+        self.assertEqual(
+            behavior_index.render_subjects(
+                ["b: two", "a: one", "b: three"], {"b: two": "a note"}),
+            ["**a**\n", "- one", "", "**b**\n", "- three", "- two", "  > a note", ""])
+
+
+if __name__ == "__main__":
+    unittest.main()

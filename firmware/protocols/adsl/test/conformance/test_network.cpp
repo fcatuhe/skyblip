@@ -261,7 +261,8 @@ TEST_CASE("ADS-L.4.SRD860.E.1.3: key 0 is the scrambling key, and it is the key 
 
 // E.2's table prints num_data_words 6, F.1 makes a Traffic packet 5 words, and 5 is what is
 // scrambled.
-TEST_CASE("ADS-L.4.SRD860.E.2: the scrambler is XXTEA over the ADS-L data, six rounds") {
+TEST_CASE("ADS-L.4.SRD860.E.2: the scrambler is XXTEA over the ADS-L data, six rounds" *
+          doctest::test_suite("main")) {
     adsl::Packet packet = traffic_packet();
     uint32_t mirror[5];
     std::memcpy(mirror, packet.payload, sizeof(mirror));
@@ -286,7 +287,8 @@ TEST_CASE("ADS-L.4.SRD860.E.3: error control is the CRC unless the header bit na
 
 // Four header fields in one byte, and this device sends a zero in every one of them.
 // The Mode-S polynomial over the header and the scrambled data, most significant byte first.
-TEST_CASE("ADS-L.4.SRD860.E.3.1: the parity is the 24-bit CRC the clause prints") {
+TEST_CASE("ADS-L.4.SRD860.E.3.1: the parity is the 24-bit CRC the clause prints" *
+          doctest::test_suite("main")) {
     adsl::Packet packet = traffic_packet();
     packet.scramble();
     packet.set_crc();

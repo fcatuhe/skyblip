@@ -122,7 +122,8 @@ TEST_CASE("DO-260B A.1.7.8: a surface pair decodes globally into the reference's
     }
 }
 
-TEST_CASE("DO-260B A.1.7.9: positions come from a global pair first, then single frames") {
+TEST_CASE("DO-260B A.1.7.9: positions come from a global pair first, then single frames" *
+          doctest::test_suite("main")) {
     receiver::Bravo bravo;
     bravo.fly(receiver::kLatitude, receiver::kLongitude, 0, false);
     CHECK_FALSE(bravo.heard.position_valid);

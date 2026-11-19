@@ -73,7 +73,8 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
 }
 
 // Our reading, which EASA is asked to confirm: every payload goes under table 5 while one is set.
-TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it was configured") {
+TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it was configured" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     go::Settings& settings = simulator.product().settings();
@@ -86,7 +87,8 @@ TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it w
 }
 
 // "This setting shall be revertible by user configuration": 0 clears it, from the next burst on.
-TEST_CASE("ADS-L.4.SRD860.F.2.3: a cleared ICAO address puts the manufacturer's back on the air") {
+TEST_CASE("ADS-L.4.SRD860.F.2.3: a cleared ICAO address puts the manufacturer's back on the air" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     go::Settings& settings = simulator.product().settings();
@@ -105,7 +107,8 @@ TEST_CASE("ADS-L.4.SRD860.F.2.3: a cleared ICAO address puts the manufacturer's 
 }
 
 // "The ADS-L system shall enforce this by disallowing inconsistent user configurations."
-TEST_CASE("ADS-L.4.SRD860.F.2.3: an address no aircraft holds, or not the one aboard, is refused") {
+TEST_CASE("ADS-L.4.SRD860.F.2.3: an address no aircraft holds, or not the one aboard, is refused" *
+          doctest::test_suite("main")) {
     go::Settings settings = go::defaults();
     CHECK(apply_patch(settings, "{\"aircraft_address\":16777215}") == Status::OutOfRange);
     CHECK(apply_patch(settings, "{\"aircraft_address\":3934737}", 0x3C6586u) == Status::Conflict);
