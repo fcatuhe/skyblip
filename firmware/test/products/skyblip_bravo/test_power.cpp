@@ -95,7 +95,8 @@ TEST_CASE("bravo: an install checks slot 1, keeps the install report, then resta
     CHECK(rig.platform.key_value().read("install.report", blob, sizeof(blob), count) == Status::Ok);
 }
 
-TEST_CASE("bravo: a press from off signs on with one green pulse, then the lamp takes its row") {
+TEST_CASE("bravo: a press from off signs on with one green pulse, then the lamp takes its row" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
     REQUIRE(rig.setup() == Status::Ok);

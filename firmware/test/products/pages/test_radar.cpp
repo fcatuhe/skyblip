@@ -233,7 +233,8 @@ TEST_CASE("radar page: the ring is labelled and sized in the unit a pilot set") 
 }
 
 TEST_CASE(
-    "radar page: the footer counts traffic it is handed, placed or not, either side of the clock") {
+    "radar page: the footer counts traffic it is handed, placed or not, either side of the clock" *
+    doctest::test_suite("main")) {
     RadarTarget targets[3] = {
         {2000, 0, 0, Level::Advisory},
         {0, -3000, 0, Level::Advisory},
@@ -257,8 +258,7 @@ TEST_CASE(
 }
 
 // An empty sky and a radio that is not listening yet look the same on the plot.
-TEST_CASE("radar page: a radio not yet listening counts no aircraft, it dashes" *
-          doctest::test_suite("main")) {
+TEST_CASE("radar page: a radio not yet listening counts no aircraft, it dashes") {
     RadarSnapshot deaf = flying(0);
     deaf.receiver_listening = false;
     const Glass canvas = radar(deaf);
