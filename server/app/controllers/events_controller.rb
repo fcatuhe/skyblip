@@ -11,7 +11,7 @@ class EventsController < ApplicationController
       user: Current.user, request_id: request.request_id, ip_address: request.remote_ip)
 
     if journal.valid?
-      journal.record
+      journal.record unless ahoy.exclude?
       head :no_content
     else
       head :unprocessable_content
