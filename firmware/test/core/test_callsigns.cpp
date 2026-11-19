@@ -29,7 +29,8 @@ TEST_CASE("callsigns: hearing the same aircraft again refreshes rather than fill
     CHECK(std::string(names.find(58, 0x123456)) == "D-KABC");
 }
 
-TEST_CASE("callsigns: a name outlives the target and then it is forgotten") {
+TEST_CASE("callsigns: a name outlives the target and then it is forgotten" *
+          doctest::test_suite("main")) {
     CallsignTable names;
     names.learn(58, 0x123456, "D-KXYZ", 1000);
 

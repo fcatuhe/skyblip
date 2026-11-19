@@ -47,7 +47,8 @@ TEST_CASE("uplink: skyPost starts its longest frame from 210 to 425 ms, done by 
     CHECK(adsl::kUplinkSlotStartMs < dwell.start_ms);
 }
 
-TEST_CASE("uplink: a relayed record is an uplink observation, with a speed only when it has one") {
+TEST_CASE("uplink: a relayed record is an uplink observation, with a speed only when it has one" *
+          doctest::test_suite("main")) {
     AdslUplink up;
     model::AircraftObservation tx[2] = {make_target(0x600001), make_target(0x600002)};
     tx[1].speed_valid = false;

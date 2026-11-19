@@ -22,7 +22,8 @@ Edge step(input::Contact& contact, bool level, uint32_t& now_ms, uint32_t for_ms
 
 }  // namespace
 
-TEST_CASE("contact: one down and one up per press, whatever the level did between") {
+TEST_CASE("contact: one down and one up per press, whatever the level did between" *
+          doctest::test_suite("main")) {
     input::Contact contact{kSettleMs};
     uint32_t now_ms = 1000;
     CHECK(step(contact, true, now_ms, 200) == Edge::Down);

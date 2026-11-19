@@ -79,7 +79,8 @@ timing::ClockState locked_at(uint64_t utc_ms) {
 
 }  // namespace
 
-TEST_CASE("indication: the whole state-to-indicator table, in priority order") {
+TEST_CASE("indication: the whole state-to-indicator table, in priority order" *
+          doctest::test_suite("main")) {
     for (int i = 0; i < kRowCount; i++) {
         const Row& row = kTable[i];
         MESSAGE(i, ": ", std::string(to_string(row.condition)), " -> ",
@@ -111,7 +112,8 @@ TEST_CASE("indication: no row spends more of the pack than the budget it declare
     }
 }
 
-TEST_CASE("indication: traffic outranks everything the device has to say about itself") {
+TEST_CASE("indication: traffic outranks everything the device has to say about itself" *
+          doctest::test_suite("main")) {
     Situation situation = everything_at_once();
     CHECK(condition_for(situation) == Condition::Alarm);
     CHECK(indication_for(Condition::Alarm).lamp == indication::Colour::Red);
@@ -212,7 +214,7 @@ TEST_CASE("indication: the cutoff monitor decides what low means, not a second t
     CHECK(condition_for(situation) == Condition::NoFix);
 }
 
-TEST_CASE("indication: alive is a wink, not an LED left on") {
+TEST_CASE("indication: alive is a wink, not an LED left on" * doctest::test_suite("main")) {
     Situation situation{};
     situation.power_level = power::PowerLevel::Normal;
     situation.fix_valid = true;

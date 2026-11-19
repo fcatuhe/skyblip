@@ -48,7 +48,7 @@ bool bursts_overlap(int one_ms, int other_ms) {
 }  // namespace
 
 // A burst's first instant is its window's start, its last the window's end less air time and 5 ms.
-TEST_CASE("transmit: a position on A goes out from 450 to 810 ms") {
+TEST_CASE("transmit: a position on A goes out from 450 to 810 ms" * doctest::test_suite("main")) {
     Transmitter transmitter = airborne_transmitter();
     int earliest = 1000, latest = 0;
     // Every other second is the lower channel's: §C.2.5's alternation is the clock's.
@@ -66,7 +66,8 @@ TEST_CASE("transmit: a position on A goes out from 450 to 810 ms") {
           kWindowAMs.end_ms - static_cast<int>(Transmitter::kAirTimeMs) - kCompletionAllowanceMs);
 }
 
-TEST_CASE("transmit: a position on B goes out from 830 to 990 ms, where the direct slot ends") {
+TEST_CASE("transmit: a position on B goes out from 830 to 990 ms, where the direct slot ends" *
+          doctest::test_suite("main")) {
     Transmitter transmitter = airborne_transmitter();
     int earliest = 2000, latest = 0;
     for (uint32_t utc_s = 1; utc_s < 5000; utc_s += 2) {
@@ -98,7 +99,8 @@ TEST_CASE("transmit: the channel check before a window's first instant listens o
     CHECK(PoliteAccess::kCcaLeadUs <= static_cast<uint32_t>(kSwitchLeadMs) * 1000);
 }
 
-TEST_CASE("transmit: two devices do not pick the same instant every second") {
+TEST_CASE("transmit: two devices do not pick the same instant every second" *
+          doctest::test_suite("main")) {
     Transmitter first = airborne_transmitter(0x5B7E57);
     Transmitter second = airborne_transmitter(0x123456);
     int same = 0;
@@ -192,7 +194,8 @@ TEST_CASE("transmit: nothing goes out unless the slot allows it") {
     CHECK(early.at_ms >= adsl::kDirectStartMs);
 }
 
-TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored clock") {
+TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored clock" *
+          doctest::test_suite("main")) {
     const skyblip::settings::AirAddress address = 0x00012Au;
     skyblip::model::Ownship own{};
     own.fix_valid = true;
@@ -217,7 +220,8 @@ TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored
 }
 
 // Issue #126: a unit the server never gave a serial has nothing it may transmit under.
-TEST_CASE("transmit: own-ship with every fact but an address does not go on air") {
+TEST_CASE("transmit: own-ship with every fact but an address does not go on air" *
+          doctest::test_suite("main")) {
     skyblip::model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
@@ -226,7 +230,8 @@ TEST_CASE("transmit: own-ship with every fact but an address does not go on air"
 }
 
 // A transmitter at twice the design rate is faulted, and a faulted one that will not stop is worse.
-TEST_CASE("transmit: an exhausted hour blocks the burst and says so") {
+TEST_CASE("transmit: an exhausted hour blocks the burst and says so" *
+          doctest::test_suite("main")) {
     Transmitter transmitter = airborne_transmitter();
     for (uint32_t i = 0; i < 7200; i++) transmitter.sent(i, i * 500);
     REQUIRE(transmitter.air_time().window_ms(3599500) == timing::AirTime::kBudgetMs);

@@ -42,7 +42,8 @@ model::Source source_of(const TrafficTable& table, int index) {
 }  // namespace
 
 // Epic #184 ranks the duplicates: direct ADS-L and FLARM, then ADS-B, then the uplink.
-TEST_CASE("traffic: one aircraft heard three ways is direct first, then ADS-B, then the uplink") {
+TEST_CASE("traffic: one aircraft heard three ways is direct first, then ADS-B, then the uplink" *
+          doctest::test_suite("main")) {
     TrafficTable table;
     const uint32_t hold_s = direct_preferred_max_age_s(observation(0x3C6586, kIcao, 100));
     table.update(observation(0x3C6586, kIcao, 100, model::Source::AdslDirect), 100);
@@ -74,7 +75,8 @@ TEST_CASE("traffic: one aircraft heard three ways is direct first, then ADS-B, t
 }
 
 // ADS-L F.2.3 has a transponder-carrying aircraft send its ICAO address, so only that copy merges.
-TEST_CASE("traffic: only an ADS-L or FLARM target sending its ICAO address merges with ADS-B") {
+TEST_CASE("traffic: only an ADS-L or FLARM target sending its ICAO address merges with ADS-B" *
+          doctest::test_suite("main")) {
     TrafficTable table;
     table.update(observation(0x3C6586, kIcao, 100, model::Source::Adsb), 100);
     table.update(observation(0x3C6586, kIcao, 100, model::Source::Alptas), 100);
@@ -87,7 +89,8 @@ TEST_CASE("traffic: only an ADS-L or FLARM target sending its ICAO address merge
 }
 
 // The Bravo in our cockpit, a FLARM set to our ICAO and every ground station all report our own.
-TEST_CASE("traffic: our ADS-L address and our aircraft's ICAO address are both not traffic") {
+TEST_CASE("traffic: our ADS-L address and our aircraft's ICAO address are both not traffic" *
+          doctest::test_suite("main")) {
     TrafficTable table;
     table.set_own_address(settings::kSkyblipAddressMappingTable, 0x00ABCD);
     table.set_aircraft_address(0x3C6586);

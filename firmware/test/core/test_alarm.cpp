@@ -14,7 +14,8 @@ using namespace skyblip::traffic;
 
 // The advisory is a place, not a prediction: inside 3 km and 300 m, an aircraft
 // is one whatever it is doing, and outside it is none however fast it closes.
-TEST_CASE("alarm: an aircraft inside three kilometres and three hundred metres is an advisory") {
+TEST_CASE("alarm: an aircraft inside three kilometres and three hundred metres is an advisory" *
+          doctest::test_suite("main")) {
     const model::Ownship own = flying(40, 0);
 
     CHECK(assess(own, target_at(own, 2800, 0, 0, 40, 180), 0).level == Level::Advisory);
@@ -24,7 +25,8 @@ TEST_CASE("alarm: an aircraft inside three kilometres and three hundred metres i
 }
 
 // A circuit flown over a full apron is a circuit of advisories, and G.1.2 says which those are.
-TEST_CASE("alarm: an aircraft that says it is on the ground is a target and never an advisory") {
+TEST_CASE("alarm: an aircraft that says it is on the ground is a target and never an advisory" *
+          doctest::test_suite("main")) {
     const model::Ownship own = flying(40, 0);
 
     model::AircraftObservation apron = target_at(own, 400, 0, 0, 0, 0);
@@ -128,7 +130,8 @@ TEST_CASE("alarm: a target that reports no velocity degrades, it does not vanish
 // The annunciator is not the alarm level: a target already announced must not
 // re-drive it every pass of the service loop. SoftRF keeps one notification per
 // address (oss/SoftRF-lyusupov .../src/TrafficHelper.cpp:236-260).
-TEST_CASE("alarm: an aircraft is announced once, and not again while it stands") {
+TEST_CASE("alarm: an aircraft is announced once, and not again while it stands" *
+          doctest::test_suite("main")) {
     AlarmTracker tracker;
     const model::Ownship own = flying(30, 0);
 
@@ -148,7 +151,8 @@ TEST_CASE("alarm: an aircraft is announced once, and not again while it stands")
 }
 
 // A target sitting on the boundary is one aircraft, not an alarm every second.
-TEST_CASE("alarm: an aircraft is announced again only after it has been outside for a window") {
+TEST_CASE("alarm: an aircraft is announced again only after it has been outside for a window" *
+          doctest::test_suite("main")) {
     AlarmTracker tracker;
     const model::Ownship own = flying(30, 0);
 
@@ -187,7 +191,8 @@ TEST_CASE("alarm: a dismissed target stops re-announcing itself") {
 }
 
 // One gesture covers the sky the pilot has looked at, not the aeroplane behind them.
-TEST_CASE("alarm: a dismissal is spent per aircraft, and a newcomer keeps its own voice") {
+TEST_CASE("alarm: a dismissal is spent per aircraft, and a newcomer keeps its own voice" *
+          doctest::test_suite("main")) {
     AlarmTracker tracker;
     const model::Ownship own = flying(30, 0);
 
@@ -326,7 +331,8 @@ TEST_CASE("alarm: the announcement stands while the target does, and falls a win
 }
 
 // A unit at the hold beeped for every aircraft that climbed out or joined the circuit above it.
-TEST_CASE("alarm: nothing is an advisory while own-ship is on the ground") {
+TEST_CASE("alarm: nothing is an advisory while own-ship is on the ground" *
+          doctest::test_suite("main")) {
     model::Ownship own = flying(0, 0);
     const model::AircraftObservation overhead = target_at(own, 400, 0, 150, 40, 180);
     REQUIRE(assess(own, overhead, 0).level == Level::Advisory);

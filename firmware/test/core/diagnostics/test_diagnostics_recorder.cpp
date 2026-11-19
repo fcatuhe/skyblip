@@ -39,7 +39,8 @@ int drain(diagnostics::Recorder& recorder) {
 
 }  // namespace
 
-TEST_CASE("diagnostics recorder: a boot comes up disarmed and records nothing") {
+TEST_CASE("diagnostics recorder: a boot comes up disarmed and records nothing" *
+          doctest::test_suite("main")) {
     diagnostics::Recorder recorder{};
     CHECK_FALSE(recorder.armed());
     CHECK_FALSE(recorder.record(fix(7), at_ms(0)));
@@ -234,7 +235,8 @@ TEST_CASE("diagnostics recorder: everything the ring holds is drained once, gaps
     CHECK(drain(recorder) == 0);
 }
 
-TEST_CASE("diagnostics recorder: a power run records the cell and the duty, and refuses the rest") {
+TEST_CASE("diagnostics recorder: a power run records the cell and the duty, and refuses the rest" *
+          doctest::test_suite("main")) {
     diagnostics::Recorder recorder;
     recorder.arm(diagnostics::Profile::PowerRun);
     CHECK(recorder.profile() == diagnostics::Profile::PowerRun);
@@ -271,7 +273,8 @@ TEST_CASE("diagnostics recorder: a type the profile never wanted is not counted 
     CHECK(recorder.queued() == 0);
 }
 
-TEST_CASE("diagnostics recorder: a full capture records every subject the device decides") {
+TEST_CASE("diagnostics recorder: a full capture records every subject the device decides" *
+          doctest::test_suite("main")) {
     diagnostics::Recorder recorder;
     recorder.arm();
     CHECK(recorder.profile() == diagnostics::Profile::Full);

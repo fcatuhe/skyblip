@@ -11,7 +11,8 @@ using namespace skyblip::power;
 // order matters more than the entry: the radio and the panel are parked first,
 // and the wake pin is armed only once the button is actually up.
 
-TEST_CASE("shutdown: a short press is not a shutdown, a long one is") {
+TEST_CASE("shutdown: a short press is not a shutdown, a long one is" *
+          doctest::test_suite("main")) {
     ShutdownSequencer shutdown;
     uint32_t now_ms = 0;
     shutdown.tick(now_ms, false);  // the button starts up: the hold is armed
@@ -27,7 +28,8 @@ TEST_CASE("shutdown: a short press is not a shutdown, a long one is") {
     CHECK(shutdown.reason() == ShutdownReason::LongPress);
 }
 
-TEST_CASE("shutdown: the pad held through the press asks to be stowed, not switched off") {
+TEST_CASE("shutdown: the pad held through the press asks to be stowed, not switched off" *
+          doctest::test_suite("main")) {
     ShutdownSequencer shutdown;
     uint32_t now_ms = 0;
     shutdown.tick(now_ms, false);
@@ -76,7 +78,7 @@ TEST_CASE("shutdown: a pad never seen up since boot is not a stow") {
 }
 
 // A cheek, a raindrop or a bag rests on the pad: it may never switch anything off.
-TEST_CASE("shutdown: the pad on its own switches nothing off") {
+TEST_CASE("shutdown: the pad on its own switches nothing off" * doctest::test_suite("main")) {
     ShutdownSequencer shutdown;
     shutdown.tick(0, false);
     for (uint32_t now_ms = 10; now_ms < 30000; now_ms += 10)
@@ -302,7 +304,8 @@ TEST_CASE("power down: every step runs once, in the order the table declares") {
 // already lost its supply, the command does nothing, and an external flash draws
 // its full standby current for the whole night the device spends in a flight bag
 // looking switched off.
-TEST_CASE("power down: the external flash is told to sleep while it still has a rail") {
+TEST_CASE("power down: the external flash is told to sleep while it still has a rail" *
+          doctest::test_suite("main")) {
     RecordingSink sink;
     power_down(sink);
     CHECK(sink.at(PowerDownStep::ExternalFlashDeepPowerDown) <
@@ -377,7 +380,8 @@ TEST_CASE("power down: a switch-off asks the bootloader to skip DFU only where a
     CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/false) == 0x00);
 }
 
-TEST_CASE("power down: a recovery asks every factory bootloader for the UF2 drive") {
+TEST_CASE("power down: a recovery asks every factory bootloader for the UF2 drive" *
+          doctest::test_suite("main")) {
     CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, /*recovery_armed=*/true) == 0x57);
     CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/true) == 0x57);
 }

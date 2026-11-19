@@ -58,7 +58,8 @@ uint32_t fly_on_station(Tracker& tracker) {
 
 }  // namespace
 
-TEST_CASE("formation: a wingman holding station is flying with us after the steady window") {
+TEST_CASE("formation: a wingman holding station is flying with us after the steady window" *
+          doctest::test_suite("main")) {
     Tracker tracker;
     Report report{};
     for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
@@ -340,7 +341,8 @@ model::Ownship airborne_at(uint32_t at_ms) {
 }  // namespace
 
 // A parked pair holds station better than any patrol, and the apron would be one formation.
-TEST_CASE("formation: nothing flies in formation while own-ship is on the ground") {
+TEST_CASE("formation: nothing flies in formation while own-ship is on the ground" *
+          doctest::test_suite("main")) {
     Tracker tracker;
     Report report{};
     for (uint32_t now_ms = 1000; now_ms <= 1000 + 3 * kTogetherHoldMs; now_ms += 1000) {
@@ -383,7 +385,7 @@ TEST_CASE("formation: a target beside us as we lift off is joining until it hold
 }
 
 // A tug lifts off after the glider it tows, so own-ship's liftoff is not the one that counts.
-TEST_CASE("formation: a target that lifts off beside us is joining") {
+TEST_CASE("formation: a target that lifts off beside us is joining" * doctest::test_suite("main")) {
     Tracker tracker;
     const uint32_t now_ms = 30000;
     const model::Ownship own = airborne_at(now_ms);
@@ -431,7 +433,8 @@ TEST_CASE("formation: a joiner that leaves its station is traffic on that fix, a
 }
 
 // An interval takeoff: the second aircraft catches up with the first, and that is a closure.
-TEST_CASE("formation: a joiner closing on us is traffic after two fixes of it") {
+TEST_CASE("formation: a joiner closing on us is traffic after two fixes of it" *
+          doctest::test_suite("main")) {
     Tracker tracker;
     tracker.observe_own(parked_at(0), 0);
 

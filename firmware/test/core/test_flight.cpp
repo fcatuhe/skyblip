@@ -51,7 +51,8 @@ struct Stream {
 }  // namespace
 
 // 23 kt is a speed no aircraft taxis at and every takeoff roll passes it well before it flies.
-TEST_CASE("flight: a takeoff is the speed no taxi holds, and it waits for nothing") {
+TEST_CASE("flight: a takeoff is the speed no taxi holds, and it waits for nothing" *
+          doctest::test_suite("main")) {
     Stream sky;
     REQUIRE(sky.hold(3, 0.0) == FlightState::Ground);
 
@@ -72,7 +73,8 @@ TEST_CASE("flight: a taxi does not take off, and one bad solution does not eithe
 }
 
 // A stop is a landing on the solution that shows it, with no hold to wait out.
-TEST_CASE("flight: a landing is a standstill, and a fast rollout is not one yet") {
+TEST_CASE("flight: a landing is a standstill, and a fast rollout is not one yet" *
+          doctest::test_suite("main")) {
     Stream sky;
     REQUIRE(sky.hold(3, 25.0) == FlightState::Airborne);
 
@@ -83,7 +85,8 @@ TEST_CASE("flight: a landing is a standstill, and a fast rollout is not one yet"
 }
 
 // The other landing: a tug that rolls in and taxis back has landed, and the glass says TAXI.
-TEST_CASE("flight: a taxi held for the landing hold is a landing, stop or no stop") {
+TEST_CASE("flight: a taxi held for the landing hold is a landing, stop or no stop" *
+          doctest::test_suite("main")) {
     Stream sky;
     REQUIRE(sky.hold(3, 25.0) == FlightState::Airborne);
 
@@ -225,7 +228,8 @@ TEST_CASE("flight: only the two ADS-L G.1.2 codes name a state, every other valu
         CHECK(state_from(static_cast<uint8_t>(code)) == FlightState::Unknown);
 }
 
-TEST_CASE("flight: a lost fix is not a landing, so the ground latch holds airborne") {
+TEST_CASE("flight: a lost fix is not a landing, so the ground latch holds airborne" *
+          doctest::test_suite("main")) {
     GroundLatch latch;
     CHECK(latch.state() == FlightState::Unknown);
 
@@ -245,7 +249,8 @@ TEST_CASE("flight: a lost fix is not a landing, so the ground latch holds airbor
 }
 
 // A paraglider soaring a ridge at walking pace went on air landed, once every ten seconds.
-TEST_CASE("flight state: a craft that can hover is never announced landed, only undefined") {
+TEST_CASE("flight state: a craft that can hover is never announced landed, only undefined" *
+          doctest::test_suite("main")) {
     const uint8_t on_ground = static_cast<uint8_t>(FlightState::Ground);
     const uint8_t airborne_code = static_cast<uint8_t>(FlightState::Airborne);
     const uint8_t undefined = static_cast<uint8_t>(FlightState::Unknown);

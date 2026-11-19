@@ -5,7 +5,8 @@
 using namespace skyblip;
 using namespace skyblip::power;
 
-TEST_CASE("charge: a cable in the cold and a cable in the sun are both named") {
+TEST_CASE("charge: a cable in the cold and a cable in the sun are both named" *
+          doctest::test_suite("main")) {
     CHECK(charge_condition(true, true, 200) == ChargeCondition::Ok);
     CHECK(charge_condition(true, true, -100) == ChargeCondition::TooCold);
     // The parked-cockpit soak project/research/enclosure-and-mount-go.md designs against.

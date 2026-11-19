@@ -122,7 +122,8 @@ TEST_CASE("dfu: an image of the running product passes every chunk") {
     CHECK(first_refused(verdicts) == verdicts.size());
 }
 
-TEST_CASE("dfu: an image of another product is refused on the chunk that completes its class") {
+TEST_CASE("dfu: an image of another product is refused on the chunk that completes its class" *
+          doctest::test_suite("main")) {
     ProductCheck check;
     const std::vector<uint8_t> bravo = image(kBravo);
     const std::vector<bool> verdicts = upload(check, bravo, 64, kGo);

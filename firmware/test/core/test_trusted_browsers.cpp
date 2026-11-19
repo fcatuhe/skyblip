@@ -33,7 +33,8 @@ TEST_CASE("trusted browsers: a browser is stored once, under the id its key star
     CHECK(std::string(browsers.at(0).label) == "Chrome on Android");
 }
 
-TEST_CASE("trusted browsers: a ninth browser replaces the one stored first") {
+TEST_CASE("trusted browsers: a ninth browser replaces the one stored first" *
+          doctest::test_suite("main")) {
     TrustedBrowsers browsers;
     for (uint8_t number = 1; number <= TrustedBrowsers::kCapacity + 1; number++)
         browsers.store(key_numbered(number), "");

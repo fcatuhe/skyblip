@@ -6,7 +6,8 @@ using namespace skyblip;
 using comms::LinkClaim;
 using events::Peer;
 
-TEST_CASE("link claim: the first session to ask holds it, and the next one is refused") {
+TEST_CASE("link claim: the first session to ask holds it, and the next one is refused" *
+          doctest::test_suite("main")) {
     LinkClaim claim;
     CHECK_FALSE(claim.held());
 

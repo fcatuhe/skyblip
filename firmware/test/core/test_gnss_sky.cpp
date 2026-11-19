@@ -43,7 +43,8 @@ TEST_CASE("gnss: a second GSV set replaces the first, it does not pile up") {
 }
 
 // GSA lists what solved, GSV what is up there: the page draws the difference.
-TEST_CASE("gnss: the satellites GSA named are the ones GSV marks as in the solution") {
+TEST_CASE("gnss: the satellites GSA named are the ones GSV marks as in the solution" *
+          doctest::test_suite("main")) {
     NmeaParser parser;
     const char* gsa = "$GNGSA,A,3,01,03,,,,,,,,,,,2.50,1.25,2.10,1*01";
     const char* gsv = "$GPGSV,1,1,03,01,40,083,42,02,30,120,38,03,60,200,40,0*54";

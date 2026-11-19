@@ -192,7 +192,8 @@ TEST_CASE("log session: on the ground the ring is a holding pen and not a queue"
     CHECK_FALSE(session.peek(out));
 }
 
-TEST_CASE("log session: a record a second, the rate ADS-L reports an aircraft in flight at") {
+TEST_CASE("log session: a record a second, the rate ADS-L reports an aircraft in flight at" *
+          doctest::test_suite("main")) {
     flight::LogSession session;
     session.update(flying(kBaseUtcS, 50000), false, 0);
     flight::LogRecord drained{};
@@ -233,7 +234,8 @@ TEST_CASE("log session: the record cadence spans the 49.7-day wrap") {
           flight::LogAction::AppendRecord);
 }
 
-TEST_CASE("log session: the file opens before the criterion agreed, so the roll is in it") {
+TEST_CASE("log session: the file opens before the criterion agreed, so the roll is in it" *
+          doctest::test_suite("main")) {
     flight::LogSession session;
     uint32_t now_ms = 0;
     // A minute of taxiing, sampled and held in RAM.
@@ -256,7 +258,8 @@ TEST_CASE("log session: the file opens before the criterion agreed, so the roll 
     CHECK(first.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
 }
 
-TEST_CASE("log session: a landing closes the session with a record that says so") {
+TEST_CASE("log session: a landing closes the session with a record that says so" *
+          doctest::test_suite("main")) {
     flight::LogSession session;
     uint32_t now_ms = 0;
     REQUIRE(session.update(flying(kBaseUtcS, 50000), false, now_ms) ==

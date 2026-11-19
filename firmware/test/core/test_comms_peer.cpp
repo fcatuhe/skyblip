@@ -138,7 +138,8 @@ std::string claim_frame(const std::string& fields) {
 
 }  // namespace
 
-TEST_CASE("peer frames: Bravo reads back every field of the claim the Go writes") {
+TEST_CASE("peer frames: Bravo reads back every field of the claim the Go writes" *
+          doctest::test_suite("main")) {
     comms::PeerClaim written{};
     written.boot_epoch = 7;
     written.utc_valid = true;
@@ -438,7 +439,8 @@ TEST_CASE("peer frames: a key a newer Bravo adds is skipped, not a reason to ref
 }
 
 // Bravo has no glass, so the Go is where a pilot reads what it runs, holds and hears.
-TEST_CASE("peer frames: Bravo's health carries its firmware, its cell and its receiver's rate") {
+TEST_CASE("peer frames: Bravo's health carries its firmware, its cell and its receiver's rate" *
+          doctest::test_suite("main")) {
     comms::PeerHealth health{};
     health.listening = true;
     std::strcpy(health.firmware, "0.4.1+1702");

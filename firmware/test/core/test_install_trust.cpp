@@ -180,7 +180,8 @@ TEST_CASE(
     CHECK_FALSE(comms::install_trust_page(0, 4096));
 }
 
-TEST_CASE("install trust: a record in slot0 adds its key once, and is erased only once it landed") {
+TEST_CASE("install trust: a record in slot0 adds its key once, and is erased only once it landed" *
+          doctest::test_suite("main")) {
     const Vectors vectors;
     Slots slots;
     slots.dfu.running_slot = slot0(vectors, vectors.bytes("record"));
