@@ -127,7 +127,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static z
     CHECK(good.vertical_accuracy >= poor.vertical_accuracy);
 }
 
-TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {
+TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance" *
+          doctest::test_suite("main")) {
     const adsl::Packet packet = from_dop(90, 150);
     CHECK(packet.source_integrity == 0);
     CHECK(packet.design_assurance == 0);

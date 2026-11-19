@@ -17,7 +17,8 @@ std::string registration(const char* callsign, uint32_t address, size_t capacity
 
 }  // namespace
 
-TEST_CASE("adsb registration: the address block names where the nationality mark ends") {
+TEST_CASE("adsb registration: the address block names where the nationality mark ends" *
+          doctest::test_suite("main")) {
     CHECK(registration("FJABC", 0x3A4B5C) == "F-JABC");
     CHECK(registration("DEABC", 0x3C6586) == "D-EABC");
     CHECK(registration("GABCD", 0x400F00) == "G-ABCD");

@@ -163,7 +163,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.5: latitude counts 1/93206 of a degree and longitu
     CHECK(std::abs(packet.longitude_1e7() + 81234500) < 200);
 }
 
-TEST_CASE("ADS-L.4.SRD860.G.1.5: 0x800000 means no fix, and no fix is not an aircraft") {
+TEST_CASE("ADS-L.4.SRD860.G.1.5: 0x800000 means no fix, and no fix is not an aircraft" *
+          doctest::test_suite("main")) {
     adsl::Packet packet = traffic_packet();
     REQUIRE(packet.has_position());
 
@@ -319,7 +320,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: the ground track is 512 steps of 0.703125 degr
 }
 
 // The rates the clause names. How an integrator spaces reports inside them is its own reading.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: Traffic goes out at 1 Hz airborne and 0.1 Hz on the ground") {
+TEST_CASE("ADS-L.4.SRD860.G.1.16: Traffic goes out at 1 Hz airborne and 0.1 Hz on the ground" *
+          doctest::test_suite("main")) {
     CHECK(adsl::period_s(/*airborne=*/true) == 1u);
     CHECK(adsl::period_s(/*airborne=*/false) == 10u);
     CHECK(adsl::report_period_s(adsl::FlightState::Airborne) == 1u);

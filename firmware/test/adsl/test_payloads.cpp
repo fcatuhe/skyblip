@@ -242,7 +242,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.8: Mode S is declared once Bravo hears the entered
 }
 
 // Bravo names the aircraft's transponder on the ground only, and the aircraft keeps it in flight.
-TEST_CASE("ADS-L.4.SRD860.G.2.8: a transponder confirmed on the ground stays declared in flight") {
+TEST_CASE("ADS-L.4.SRD860.G.2.8: a transponder confirmed on the ground stays declared in flight" *
+          doctest::test_suite("main")) {
     Tango tango;
     confirm_on_ground(tango, kOwnTransponder, kOwnTransponder,
                       ",\"own_transponder_callsign\":\"FHBXA\"");
@@ -275,7 +276,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is p
 // Twenty seconds from second to second, and the instant inside each one is the direct slot's own
 // draw.
 // Gaps alternate 11 and 9 s, so a receiver parked on one channel still hears one every 20 s.
-TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds") {
+TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds" *
+          doctest::test_suite("main")) {
     constexpr uint64_t kSlotUs = (adsl::kDirectEndMs - adsl::kDirectStartMs) * 1000;
     for (const int speed_kt : {0, 50}) {
         CAPTURE(speed_kt);
@@ -350,7 +352,8 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not dra
 
 // What the ground station sends is the aircraft's own payload, so the climb and track a relay once
 // lost now arrive.
-TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target arrives with its whole Traffic payload") {
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target arrives with its whole Traffic payload" *
+          doctest::test_suite("main")) {
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[1] = {target(0x300001)};
     targets[0].climb_valid = true;

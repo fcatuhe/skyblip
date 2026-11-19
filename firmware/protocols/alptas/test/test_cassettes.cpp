@@ -357,8 +357,8 @@ bool rated(const Cassette& cassette) {
 
 }
 
-TEST_CASE(
-    "alptas: cassette frames replay to the position, motion and altitude their senders sent") {
+TEST_CASE("alptas: cassette frames replay to the position, motion and altitude their senders sent" *
+          doctest::test_suite("main")) {
     for (const Cassette& cassette : kCassettes) {
         CAPTURE(cassette.scene);
         CHECK(crc_ok(cassette.frame));
@@ -374,7 +374,8 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("alptas: cassette frames name their sender, its type, its urgency and its flags") {
+TEST_CASE("alptas: cassette frames name their sender, its type, its urgency and its flags" *
+          doctest::test_suite("main")) {
     for (const Cassette& cassette : kCassettes) {
         CAPTURE(cassette.scene);
         const Position position = replayed(cassette);

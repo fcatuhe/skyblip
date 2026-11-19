@@ -178,7 +178,8 @@ TEST_CASE("DO-260B 2.2.3.2.6: TYPE 19 subtypes 1 to 4 are the airborne velocitie
 
 TEST_CASE(
     "DO-260B 2.2.3.2.6.1: subtype 1 reads its ground speed, subsonic in 1 kt steps, climb and "
-    "difference") {
+    "difference" *
+    doctest::test_suite("main")) {
     check_subtype(1);
 }
 
@@ -326,7 +327,8 @@ TEST_CASE("DO-260B 2.2.3.2.6.2.15: subtype 2's difference counts 25 ft, 127 past
 
 TEST_CASE(
     "DO-260B 2.2.3.2.6.3: subtype 3 reads its airspeed, subsonic in 1 kt steps, climb and "
-    "difference") {
+    "difference" *
+    doctest::test_suite("main")) {
     check_subtype(3);
 }
 

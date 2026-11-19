@@ -180,7 +180,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
 }
 
 // Every type the panel offers is a G.1.3 code a person flies seated in, and goes out as that code.
-TEST_CASE("ADS-L.4.SRD860.G.1.3: every type a pilot picks goes out as its own code") {
+TEST_CASE("ADS-L.4.SRD860.G.1.3: every type a pilot picks goes out as its own code" *
+          doctest::test_suite("main")) {
     for (const go::AircraftType& type : go::kAircraftTypes) {
         CAPTURE(int(type.code));
         CHECK((type.code <= 10 || (type.code >= 15 && type.code <= 17)));
@@ -254,7 +255,7 @@ TEST_CASE(
     CHECK(observation.position_valid);
 }
 
-// A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
+// The Go used to transmit the receiver's last height as valid when it had only a 2D fix.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
     model::Ownship own = flying();
     own.vdop_e2 = 0;
@@ -295,7 +296,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
 }
 
 // Our reading: the age is taken at the top of the second, and the burst carries the fix forward.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second is never sent") {
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second is never sent" *
+          doctest::test_suite("main")) {
     CHECK(timing::Transmitter::kFixMaxAgeMs == 500);
 
     timing::ClockState clock{};
@@ -312,7 +314,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second
 // skyBlip reads "0.1 Hz (once every 10 seconds)" as an average: C.2.5 and the parity rule make it
 // 9 then 11 s.
 TEST_CASE(
-    "ADS-L.4.SRD860.G.1.16: on the ground Traffic averages exactly 0.1 Hz, 9 then 11 s apart") {
+    "ADS-L.4.SRD860.G.1.16: on the ground Traffic averages exactly 0.1 Hz, 9 then 11 s apart" *
+    doctest::test_suite("main")) {
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         CAPTURE(serial);
         timing::Transmitter tx;

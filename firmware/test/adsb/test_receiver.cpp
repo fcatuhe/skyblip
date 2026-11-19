@@ -30,7 +30,8 @@ bool framed(const AdsbAir& air) {
 
 }
 
-TEST_CASE("DO-260B 2.2.4: Bravo's receiver listens on 1090 MHz at two chips a microsecond") {
+TEST_CASE("DO-260B 2.2.4: Bravo's receiver listens on 1090 MHz at two chips a microsecond" *
+          doctest::test_suite("main")) {
     models::Lr2021 part;
     REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
     CHECK(part.frequency_hz == 1090000000);
