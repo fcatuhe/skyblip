@@ -2,8 +2,8 @@ class Briefing::ManifestsController < Briefing::ApplicationController
   def show
     render json: {
       id: "/briefing",
-      name: t("briefing.app.name"),
-      short_name: t("briefing.app.name"),
+      name: helpers.site_name,
+      short_name: helpers.site_name,
       icons: [
         { src: "/icon.png", type: "image/png", sizes: "512x512" },
         { src: "/icon.svg", type: "image/svg+xml", sizes: "any" },
