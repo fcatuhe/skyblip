@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate docs/ADSL_CONFORMANCE.md: the ADS-L test report, clause by clause, in spec order.
 
-docs/BEHAVIOR.md lists every case of the suite by directory, so ADS-L's cases sit in four of its
-sections: the component's conformance half, the device's half, the stack's unit tests and the
+docs/behavior/ lists every case of the suite by area, so ADS-L's cases sit on four of its
+pages: the component's conformance half, the device's half, the stack's unit tests and the
 EN 300 220 suite that D.3 names. This report puts them back together for a reader of the
 declaration of conformity. Every clause heading of the specification gets its passing cases, from
 both halves, and its skipped ones with the reason each was skipped. The EN 300 220 cases follow,
