@@ -13,7 +13,9 @@
 using namespace skyblip;
 
 // Table 4, band M: 868.000 MHz to 868.600 MHz, 25 mW e.r.p., which is 13.98 dBm.
-TEST_CASE("EN 300 220-2 4.2.4: own-ship transmits inside band M, at no more than 25 mW e.r.p.") {
+TEST_CASE(
+    "EN 300 220-2 4.2.4: own-ship's channels are in band M and its computed e.r.p. is at most 25 "
+    "mW") {
     for (const uint32_t centre_hz : {adsl::kMBand0Hz, adsl::kMBand1Hz}) {
         CHECK(centre_hz - adsl::kMBandChannelBandwidthHz / 2 >= 868000000u);
         CHECK(centre_hz + adsl::kMBandChannelBandwidthHz / 2 <= 868600000u);

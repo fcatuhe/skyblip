@@ -6,6 +6,8 @@ Open-source electronic conspicuity for general aviation: [ADS-L 4 SRD-860](https
 
 [`docs/BEHAVIOR.md`](docs/BEHAVIOR.md) lists every claim the firmware makes about itself, straight from the host test suite that checks them. It is generated, so it cannot describe a behavior that stopped being true.
 
+[`docs/ADSL_CONFORMANCE.md`](docs/ADSL_CONFORMANCE.md) is the ADS-L part of that index, put back in the specification's order: each clause of ADS-L 4 SRD-860 Issue 2 with the cases that check it and those skipped, and why. It is the test report the ADS-L declaration of conformity attaches, generated the same way.
+
 [`docs/TUNING.md`](docs/TUNING.md) is the other half: every number that behavior is tuned by, with the line of source that justifies it. Also generated, from the constants themselves.
 
 ## The hardware

@@ -286,13 +286,16 @@ constexpr uint8_t kFlarm = 1u << 0;
 constexpr uint8_t kAdsb1090 = 1u << 4;
 }  // namespace conspicuity
 
-// INFO: fc 13nov26 a G.2 field left out sends its zero code: no Mobile, no transponder, no FIS-B
+enum class Transponder : uint8_t { None = 0, ModeC = 1, ModeS = 2 };
+
+// INFO: fc 13nov26 a G.2 field left out sends its zero code: no Mobile and no FIS-B
 struct StatusReport {
     ReceiveClass m_band{ReceiveClass::None};
     ReceiveClass o_band_ldr{ReceiveClass::None};
     ReceiveClass o_band_hdr{ReceiveClass::None};
     uint8_t conspicuity_received{0};
     uint8_t conspicuity_transmitted{0};
+    Transponder transponder{Transponder::None};
     bool traffic_uplink_client{false};
 };
 
