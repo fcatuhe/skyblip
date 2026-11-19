@@ -1,4 +1,4 @@
-// The flight log fed every quarter: each record is its whole second's solution, off the flash.
+// The flight log at 2 Hz: each record is its whole second's solution, read back off the flash.
 #include <cstdint>
 #include <map>
 #include <vector>
@@ -6,8 +6,8 @@
 #include "core/flight/log_record.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
+#include "test/support/half_second_feed.h"
 #include "test/support/product_rig.h"
-#include "test/support/quarter_feed.h"
 
 using namespace skyblip;
 
@@ -36,7 +36,7 @@ std::vector<flight::LogRecord> logged(Rig& rig) {
 
 }  // namespace
 
-// The pinned case: a record dated by its second held the quarter solved up to 750 ms after it.
+// The pinned case: a record dated by its second held the solution solved 500 ms after it.
 TEST_CASE(
     "flight log: a record holds its whole second's position, and a second with no .000 none") {
     Rig rig{kBarometerByHand};
@@ -45,11 +45,13 @@ TEST_CASE(
     constexpr int32_t kFlyingMmS = 30000;
     std::map<uint32_t, int32_t> whole_latitude_1e7;
     for (uint32_t second = 1; second <= 90; second++) {
-        for (uint32_t quarter = 0; quarter < 4; quarter++) {
-            if (quarter == 0 && second % 10 == 7) continue;
-            solve(rig, second, quarter, kFlyingMmS, updates);
-            if (quarter == 0)
+        for (uint32_t half = 0; half < 2; half++) {
+            if (half == 0 && second % 10 == 7) continue;
+            solve(rig, second, half, kFlyingMmS, updates);
+            if (half == 0)
                 whole_latitude_1e7[Rig::kBaseUtcS + second] = rig.state().own.latitude_1e7;
+            const uint32_t landed_ms = second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs;
+            rig.run(landed_ms + 50, landed_ms + kHalfSecondFeedMs - 50);
         }
     }
 

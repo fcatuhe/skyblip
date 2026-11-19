@@ -27,7 +27,7 @@ inline void L76k::emit_burst() {
     if (gll_enabled) emit_gll();
     if (gsa_due) emit_gsa();
     if (gsv_due) emit_gsv();
-    if (rmc_enabled && !rmc_dropped()) emit_rmc();
+    if (rmc_enabled) emit_rmc();
     if (vtg_enabled) emit_vtg();
 }
 

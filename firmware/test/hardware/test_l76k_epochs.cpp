@@ -1,4 +1,4 @@
-// What the driver publishes as one solution, and how it knows the part is solving on the quarters.
+// What the driver publishes as one solution, and how it knows the part solves on .000 and .500.
 #include <cstdio>
 #include <string>
 
@@ -50,28 +50,28 @@ constexpr int32_t kGeoidMm = 47000;
 
 }  // namespace
 
-// The pinned case: the validity edge published the .500 RMC beside the .750 GGA's height.
+// The pinned case: the validity edge published an RMC beside the next solution's GGA height.
 TEST_CASE("l76k: an RMC whose GGA never came, then the next GGA, is not a fix") {
     ScriptedWire wire;
     parts::L76k gnss(ports::SolutionRate::Half, wire);
-    wire.say(rmc("123519.500"));
+    wire.say(rmc("123519.000"));
     gnss.poll(1000);
-    wire.say(gga("123519.750", 1300));
+    wire.say(gga("123519.500", 1300));
     gnss.poll(1010);
     CHECK_FALSE(gnss.solution().fix_valid);
 
-    wire.say(rmc("123519.750", "4807.050"));
+    wire.say(rmc("123519.500", "4807.050"));
     REQUIRE(gnss.poll(1020));
     CHECK(gnss.solution().fix_valid);
-    CHECK(gnss.solution().utc_ms == 750);
+    CHECK(gnss.solution().utc_ms == 500);
     CHECK(gnss.solution().altitude_hae_mm == 1300000 + kGeoidMm);
 }
 
-// The pinned case: one drain held a whole .000 pair and the .250 GGA, and mixed the two.
+// The pinned case: one drain held a whole .000 pair and the next GGA, and mixed the two.
 TEST_CASE("l76k: a drain holding a whole pair and the next GGA publishes the pair as it was") {
     ScriptedWire wire;
     parts::L76k gnss(ports::SolutionRate::Half, wire);
-    wire.say(gga("123520.000", 1000) + rmc("123520.000") + gga("123520.250", 1005));
+    wire.say(gga("123520.000", 1000) + rmc("123520.000") + gga("123520.500", 1005));
     REQUIRE(gnss.poll(1000));
     CHECK(gnss.solution().fix_valid);
     CHECK(gnss.solution().utc_ms == 0);
@@ -119,8 +119,7 @@ TEST_CASE("l76k: a part that drifts off 2 Hz while ready is asked for it again")
     CHECK(gnss.solving_half_seconds());
 }
 
-// The pinned case: a part refusing 2 Hz was put back on 1 Hz for good, where ADS-L loses most
-// bursts.
+// The pinned case: a part refusing 2 Hz was left at 1 Hz for good, where ADS-L loses most bursts.
 TEST_CASE("l76k: a part that will not solve at 2 Hz is reset and asked again, never left at 1 Hz") {
     models::L76k chip;
     chip.refuses_fast_rate = true;
@@ -134,8 +133,7 @@ TEST_CASE("l76k: a part that will not solve at 2 Hz is reset and asked again, ne
     CHECK(chip.sub_second_rate_asked > 2 * parts::L76k::kMaxConfigAttempts);
 }
 
-// The pinned case: no time read as off the quarters, and three tries left the part at 1 Hz for
-// good.
+// The pinned case: no time read as off the half seconds, and three tries left the part at 1 Hz.
 TEST_CASE("l76k: a part that loses its time stays at 2 Hz, and its fix comes back with the time") {
     models::L76k chip;
     parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
@@ -176,29 +174,29 @@ TEST_CASE(
 TEST_CASE("l76k: a stalled pass publishes the newest pair it drains, marked as a backlog") {
     ScriptedWire wire;
     parts::L76k gnss(ports::SolutionRate::Half, wire);
-    wire.say(gga("123520.000", 1000) + rmc("123520.000") + gga("123520.250", 1005) +
-             rmc("123520.250"));
-    REQUIRE(gnss.poll(1300));
+    wire.say(gga("123520.000", 1000) + rmc("123520.000") + gga("123520.500", 1005) +
+             rmc("123520.500"));
+    REQUIRE(gnss.poll(1600));
     CHECK(gnss.solution().fix_valid);
-    CHECK(gnss.solution().utc_ms == 250);
+    CHECK(gnss.solution().utc_ms == 500);
     CHECK(gnss.solution().altitude_hae_mm == 1005000 + kGeoidMm);
     CHECK(gnss.solution().backlogged);
 
-    wire.say(gga("123520.500", 1010) + rmc("123520.500"));
-    REQUIRE(gnss.poll(1310));
-    CHECK(gnss.solution().utc_ms == 500);
+    wire.say(gga("123521.000", 1010) + rmc("123521.000"));
+    REQUIRE(gnss.poll(1610));
+    CHECK(gnss.solution().utc_ms == 0);
     CHECK_FALSE(gnss.solution().backlogged);
 }
 
-// Delivery jitters: an epoch landing 240 ms late and the next 70 ms late are 80 ms apart.
-TEST_CASE("l76k: pairs delivered 80 ms apart are both published") {
+// Delivery jitters: an epoch landing 240 ms late and the next 70 ms late are 330 ms apart.
+TEST_CASE("l76k: pairs delivered 330 ms apart are both published") {
     ScriptedWire wire;
     parts::L76k gnss(ports::SolutionRate::Half, wire);
     wire.say(gga("123520.000", 1000) + rmc("123520.000"));
     REQUIRE(gnss.poll(1240));
-    wire.say(gga("123520.250", 1005) + rmc("123520.250"));
-    REQUIRE(gnss.poll(1320));
-    CHECK(gnss.solution().utc_ms == 250);
+    wire.say(gga("123520.500", 1005) + rmc("123520.500"));
+    REQUIRE(gnss.poll(1570));
+    CHECK(gnss.solution().utc_ms == 500);
     CHECK_FALSE(gnss.solution().backlogged);
 }
 
@@ -208,12 +206,12 @@ TEST_CASE("l76k: a pair no newer than the last one published is not published") 
     parts::L76k gnss(ports::SolutionRate::Half, wire);
     wire.say(gga("123520.500", 1000) + rmc("123520.500"));
     REQUIRE(gnss.poll(1000));
-    wire.say(gga("123520.250", 1005) + rmc("123520.250"));
+    wire.say(gga("123520.000", 1005) + rmc("123520.000"));
     CHECK_FALSE(gnss.poll(1250));
     CHECK(gnss.solution().utc_ms == 500);
-    wire.say(gga("123520.750", 1010) + rmc("123520.750"));
+    wire.say(gga("123521.000", 1010) + rmc("123521.000"));
     REQUIRE(gnss.poll(1500));
-    CHECK(gnss.solution().utc_ms == 750);
+    CHECK(gnss.solution().utc_ms == 0);
 }
 
 // The receiver's start and its line time at the live rate bound when a solution can land.

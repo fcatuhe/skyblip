@@ -1,6 +1,6 @@
-// Harness, not a test: a solution every quarter fed onto the product's bus, each when it lands.
-#ifndef SKYBLIP_TEST_SUPPORT_QUARTER_FEED_H
-#define SKYBLIP_TEST_SUPPORT_QUARTER_FEED_H
+// Harness, not a test: a 2 Hz receiver's solutions fed onto the product's bus, each when it lands.
+#ifndef SKYBLIP_TEST_SUPPORT_HALF_SECOND_FEED_H
+#define SKYBLIP_TEST_SUPPORT_HALF_SECOND_FEED_H
 
 #include <cstdint>
 
@@ -9,14 +9,14 @@
 
 namespace skyblip {
 
-constexpr uint32_t kQuarterFeedMs = 250;
-constexpr uint32_t kQuarterFeedLatencyMs = 70;
+constexpr uint32_t kHalfSecondFeedMs = 500;
+constexpr uint32_t kFeedLatencyMs = 70;
 
 struct Solution {
     uint32_t second{0};
     uint32_t utc_ms{0};
     int32_t speed_mm_s{0};
-    uint32_t late_ms{kQuarterFeedLatencyMs};
+    uint32_t late_ms{kFeedLatencyMs};
     bool fix_valid{true};
     int32_t stamped_ahead_s{0};
     uint16_t delivery_ms{0};
@@ -47,9 +47,8 @@ inline void deliver(Rig& rig, const Solution& delivered, uint32_t& updates) {
     rig.run(at_ms, at_ms);
 }
 
-inline void solve(Rig& rig, uint32_t second, uint32_t quarter, int32_t speed_mm_s,
-                  uint32_t& updates) {
-    deliver(rig, Solution{second, quarter * kQuarterFeedMs, speed_mm_s}, updates);
+inline void solve(Rig& rig, uint32_t second, uint32_t half, int32_t speed_mm_s, uint32_t& updates) {
+    deliver(rig, Solution{second, half * kHalfSecondFeedMs, speed_mm_s}, updates);
 }
 
 }  // namespace skyblip

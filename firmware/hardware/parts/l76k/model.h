@@ -60,8 +60,7 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     uint32_t baud{parts::L76k::kFactoryBaudRate};
     bool refuses_baud_command{false};
     bool refuses_fast_rate{false};
-    // INFO: fc 18nov26 a part answering a sub-second $PCAS02 at another interval, as its stamps
-    // show
+    // INFO: fc 18nov26 a part that runs a sub-second $PCAS02 at another interval, as stamps show
     uint32_t fast_rate_runs_at_ms{0};
     // INFO: fc 18nov26 the shortest $PCAS02 interval the part takes, so 1000 refuses 2 Hz
     uint32_t fastest_interval_ms{100};
@@ -100,8 +99,6 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     uint32_t stall_period_ms{0};
     uint32_t stall_from_ms{0};
     uint32_t stall_until_ms{0};
-    // INFO: fc 18nov26 the quarter whose RMC the part leaves off the wire, -1 for none
-    int32_t drop_rmc_at_ms{-1};
     uint8_t constellations{0};
     uint8_t dynamic_model{0};
     bool sentence_set_applied{false};
@@ -302,10 +299,6 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
         const uint32_t phase_ms = ready_ms % stall_period_ms;
         if (phase_ms < stall_from_ms || phase_ms >= stall_until_ms) return ready_ms;
         return ready_ms - phase_ms + stall_until_ms;
-    }
-
-    bool rmc_dropped() const {
-        return drop_rmc_at_ms >= 0 && utc_ms() == static_cast<uint32_t>(drop_rmc_at_ms);
     }
 
     void say(const char* line, int bytes) {
