@@ -82,7 +82,6 @@ uint32_t status_field(wire::BitField where) { return status_heard().field(where)
 
 constexpr uint32_t kOwnTransponder = 0x3A4B5C;
 
-// A Go on the ground beside its Bravo, the pilot's address entered and Bravo naming what it hears.
 void confirm_on_ground(Tango& tango, uint32_t aircraft_address, uint32_t heard,
                        const std::string& more) {
     tango.bravo.health.aircraft_address_set = true;
@@ -204,6 +203,10 @@ TEST_CASE("ADS-L.4.SRD860.G.2.8: a transponder confirmed on the ground stays dec
     CHECK(report.conspicuity_transmitted == adsl::conspicuity::kAdsb1090);
 
     tango.go.settings().aircraft_address = 0x3A0001;
+    report = tango.go.product.radio().status_report();
+    CHECK(report.transponder == adsl::Transponder::None);
+    CHECK(report.conspicuity_transmitted == 0);
+
     tango.go.seconds(tango.now_ms, 2, 25000, 900);
     report = tango.go.product.radio().status_report();
     CHECK(report.transponder == adsl::Transponder::None);
