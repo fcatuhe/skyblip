@@ -8,7 +8,7 @@ On the public simulator, the Bravo checkbox starts a fresh Go alone or loads the
 
 ## The console
 
-`ble.js` is the transport and knows nothing about what a page draws: it connects, reassembles the stream, and hands whole lines and decoded frames back. `controllers/console_controller.js` renders the console UI. `test_ble.mjs` pins down the reassembly, because a sentence cut across two notifications is the failure that looks like a firmware bug from the page.
+`ble.js` is the transport and knows nothing about what a page draws: it connects, reassembles the stream, and hands whole lines and decoded frames back. `controllers/console_controller.js` renders the console UI. `test_ble.mjs` pins down the reassembly, because a sentence cut across two notifications is the failure that looks like a firmware bug from the page. `ble.js` stops a characteristic's notifications before it starts them. Chrome on Linux keeps the notify session of a link that dropped and answers the next start from it, so a reconnect in the same page would hear nothing until a reload. `fake_skyblip.mjs` does the same with `keepsNotifySessions`.
 
 The picker lists anything advertising Nordic UART or HM-10, which is skyBlip and SoftRF both, so the same page is how you read one and configure the other.
 

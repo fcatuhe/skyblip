@@ -32,6 +32,7 @@ class Characteristic {
     this.onWrite = onWrite;
     this.listeners = [];
     this.notifying = false;
+    this.orphaned = false;
     this.longestAttempt = 0;
   }
 
@@ -40,11 +41,19 @@ class Characteristic {
     this.link.writing = true;
     await tick();
     this.link.writing = false;
+    if (this.orphaned) return;
     this.notifying = true;
   }
 
   async stopNotifications() {
     this.notifying = false;
+    this.orphaned = false;
+  }
+
+  // INFO: fc 19nov26 Chrome on Linux keeps a dropped link's notify session, answers the next start from it, and sends its notifications to the dead link
+  dropped(keepsSession) {
+    this.orphaned = keepsSession && this.notifying;
+    this.notifying = this.orphaned;
   }
 
   addEventListener(type, listener) {
@@ -56,7 +65,7 @@ class Characteristic {
   }
 
   notify(bytes) {
-    if (!this.notifying) return;
+    if (!this.notifying || this.orphaned) return;
     if (bytes.length > this.link.mtu - ATT_HEADER_BYTES) {
       this.link.refusedNotifications++;
       return;
@@ -111,10 +120,12 @@ export class FakeSkyblip {
     evictsFlights = 3,
     pairedTag = null,
     pairVerdict = 'paired',
+    keepsNotifySessions = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, key, downgrade, bootloaderKeys, address, product, variant, deviceId, bluetoothTag, release, identity });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, evictsFlights, pairedTag, pairVerdict });
+    this.keepsNotifySessions = keepsNotifySessions;
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -237,6 +248,7 @@ export class FakeSkyblip {
     this.refusedOnDevice = false;
     this.windowOpen = false;
     this.forgetSession();
+    for (const characteristic of [this.config, this.smp, this.log]) characteristic.dropped(this.keepsNotifySessions);
     for (const listener of this.listeners) listener();
   }
 

@@ -70,6 +70,20 @@ test('after an install the device is connected again by itself once it restarts'
   updater.disconnect();
 });
 
+// Brave on Linux heard nothing from a Go back from its install until the page was reloaded.
+test('after an install a browser that keeps the dropped link\'s notify sessions still hears the device once it restarts', async () => {
+  const { device, updater, until } = await chosen({ returnEveryMs: 0, keepsNotifySessions: true });
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+  device.running = '0.2.0.15';
+  const back = await until(state => state.phase === 'ready' && (state.running || state.notice));
+  assert.equal(back.notice, null);
+  assert.equal(back.running, '0.2.0+15');
+  updater.disconnect();
+});
+
 test('a device that does not come back in time is left offline, and says so', async () => {
   const { device, updater, until } = await chosen({ returnEveryMs: 0, returnWithinMs: 0 });
   updater.install();
