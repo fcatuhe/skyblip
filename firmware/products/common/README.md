@@ -16,6 +16,8 @@ The services more than one product runs, and the vocabulary they read. Why they 
 
 No file here includes `products/<product>/*`. What a service needs from a product reaches it at construction, like everything else a service needs.
 
+The Kconfig both products share is here too. `prj.conf` loads before each product's own (`cmake/skyblip.cmake`), `sysbuild/mcuboot.conf` after each product's MCUboot fragment (its `sysbuild.cmake`), and `release/` is what `scripts/build_image.sh` adds to both images of a production build.
+
 ## Claims
 
 `features.h` lists the claims a shared service branches on, and the capability each claim needs of the board. Which claims a build makes is the product's `kFeatures`, in its own `features.h`. A service asks `supported(declared, capabilities)` in its `setup()`, so a claim the hardware cannot serve is off rather than broken.
