@@ -38,6 +38,8 @@ jobs:
               - 'server/**'
               - '.github/workflows/server.yml'
               - '.github/test/**'
+              - 'lib/deploy_order.rb'
+              - 'scripts/deploy_order.rb'
             protocol:
               - 'firmware/core/comms/config.cpp'
               - 'firmware/core/comms/identity_link.cpp'
@@ -171,6 +173,8 @@ jobs:
         run: bundle exec ruby ../.github/test/deployment_test.rb
       - name: Run development pre-release tests
         run: bundle exec ruby ../.github/test/dev_release_test.rb
+      - name: Run deploy order tests
+        run: bundle exec ruby ../.github/test/deploy_order_test.rb
       - name: Run upstream pin tests
         run: bundle exec ruby ../.github/test/upstream_pins_test.rb
       - name: Run emsdk install tests
@@ -253,6 +257,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
@@ -261,7 +267,15 @@ jobs:
       - uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      # A run that reaches this job after a newer commit's leaves the newer one in production (lib/deploy_order.rb).
+      - name: Skip a commit older than the one production runs
+        id: order
+        run: ruby ../scripts/deploy_order.rb "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+        env:
+          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+          SKYBLIP_SERVER_IP: ${{ secrets.SKYBLIP_SERVER_IP }}
       - name: Deploy with Kamal
+        if: steps.order.outputs.deploy == 'true'
         run: bundle exec kamal deploy
         env:
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
