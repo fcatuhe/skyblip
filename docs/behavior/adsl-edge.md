@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # adsl_edge - what a Go sends on ADS-L's frame beyond issue 2
 
 5 host test cases over 1 subject in 1 file, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. Main claims come first (3), and the edge cases and details are folded below them (2).

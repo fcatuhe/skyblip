@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # ads-l - ADS-L 4 SRD-860 issue 2, the device read clause by clause
 
 79 host test cases over 39 subjects in 9 files, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. Main claims come first (29), and the edge cases and details are folded below them (50).
