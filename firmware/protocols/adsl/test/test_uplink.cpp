@@ -183,7 +183,7 @@ TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
     CHECK(rx[3].latitude_1e7() == tx[3].latitude_1e7());
 }
 
-TEST_CASE("uplink: a packet damaged past repair is refused, never read as wrong traffic" *
+TEST_CASE("uplink: a packet with 40 bytes destroyed, past the 16 it repairs, is refused" *
           doctest::test_suite("main")) {
     adsl::Packet tx[2] = {make_target(1), make_target(2)};
     uint8_t packet[1 + adsl::kUplinkMaxLength];
