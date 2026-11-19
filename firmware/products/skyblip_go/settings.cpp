@@ -9,7 +9,6 @@
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
 #include "core/util/cbor.h"
-#include "products/skyblip_go/settings_migration.h"
 
 namespace skyblip::go {
 
@@ -65,16 +64,9 @@ void to_blob(const Settings& settings, uint8_t* out, size_t capacity) {
 
 Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     if (length < settings::kBlobOverhead) return Status::Crc;
-
-    const uint8_t version = settings::blob_version(in);
-    const Status status = version == kBlobVersion ? settings::open(in, length, kPayload, &out)
-                                                  : migrate_blob(version, in, length, out);
+    if (settings::blob_version(in) != kBlobVersion) return Status::Unsupported;
+    const Status status = settings::open(in, length, kPayload, &out);
     if (status != Status::Ok) return status;
-    // INFO: fc 23sep26 a name an older build took over the link is dropped, not the trims beside it
-    if (!callsign_is_typeable(out.callsign)) out.callsign[0] = 0;
-    // INFO: fc 14nov26 an older build stored FFFFFF, which no aircraft holds, so it goes alone
-    if (out.aircraft_address == settings::kAddressMask)
-        out.aircraft_address = kAircraftAddressUnset;
     if (validate(out) != Status::Ok) return Status::Invalid;
     return Status::Ok;
 }
