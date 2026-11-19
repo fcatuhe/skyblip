@@ -255,7 +255,7 @@ TEST_CASE(
     CHECK(observation.position_valid);
 }
 
-// A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
+// The Go used to transmit the receiver's last height as valid when it had only a 2D fix.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
     model::Ownship own = flying();
     own.vdop_e2 = 0;
