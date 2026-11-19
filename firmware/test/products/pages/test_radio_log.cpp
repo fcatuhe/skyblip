@@ -60,7 +60,8 @@ RadioLogSnapshot with(const radio::Log& log) {
 
 }  // namespace
 
-TEST_CASE("radio log page: a received frame shows when, from whom, and how loud") {
+TEST_CASE("radio log page: a received frame shows when, from whom, and how loud" *
+          doctest::test_suite("main")) {
     radio::Log log;
     log.record(received(0x3FA21C, -87));
 
@@ -135,8 +136,7 @@ TEST_CASE("radio log page: a transmission that worked prints no verdict at all")
 
 // §G.1.16: one burst a second in the air and one in ten on the ground, so rows either side of a
 // takeoff read differently.
-TEST_CASE("radio log page: a sent burst names the schedule it went out on" *
-          doctest::test_suite("main")) {
+TEST_CASE("radio log page: a sent burst names the schedule it went out on") {
     radio::Log log;
     log.record(entry_of(radio::Verdict::Transmitted));
     radio::Entry flying = entry_of(radio::Verdict::Transmitted);

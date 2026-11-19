@@ -129,7 +129,8 @@ TEST_CASE("menu editor: the callsign field opens on what is stored") {
 }
 
 // The ring only rolls forward, so blanking nine characters is sixty taps nobody will spend.
-TEST_CASE("menu editor: a press on a blank first character removes the stored name") {
+TEST_CASE("menu editor: a press on a blank first character removes the stored name" *
+          doctest::test_suite("main")) {
     Bench bench;
     std::memcpy(bench.values.settings.callsign, "F-JABC", 7);
     bench.focus_on(MenuRow::Callsign);
@@ -222,8 +223,7 @@ TEST_CASE("menu editor: an aircraft address with a digit left blank stores nothi
 }
 
 TEST_CASE(
-    "menu editor: clearing the aircraft address is asked again: the button clears, the pad keeps" *
-    doctest::test_suite("main")) {
+    "menu editor: clearing the aircraft address is asked again: the button clears, the pad keeps") {
     Bench bench;
     bench.values.settings.aircraft_address = 0x3C6586;
     bench.focus_on(MenuRow::AircraftAddress);

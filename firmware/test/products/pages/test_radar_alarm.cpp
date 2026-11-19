@@ -30,7 +30,8 @@ RadarSnapshot with_threat(RadarTarget* one, Level level) {
 }  // namespace
 
 // The wedge is the whole alarm on the glass: which way to look, from the first grade.
-TEST_CASE("radar page: an alarm flashes a wedge on the bearing of the threat") {
+TEST_CASE("radar page: an alarm flashes a wedge on the bearing of the threat" *
+          doctest::test_suite("main")) {
     RadarTarget east[1] = {{0, 1500, 0}};
     RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 
@@ -143,8 +144,7 @@ TEST_CASE("radar page: a dismissed aircraft keeps its symbol and takes its secto
 }
 
 // Two aircraft are two places to look, and a pilot told only about the louder one looks once.
-TEST_CASE("radar page: every graded aircraft flashes a sector of its own" *
-          doctest::test_suite("main")) {
+TEST_CASE("radar page: every graded aircraft flashes a sector of its own") {
     RadarTarget pair[2] = {{0, 1500, 0}, {0, -1500, 0}};
     pair[1].alarm_level = Level::Advisory;
     RadarSnapshot snapshot = with_threat(pair, Level::Advisory);
