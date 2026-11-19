@@ -53,7 +53,8 @@ TEST_CASE("product: a cell that takes the device down names itself on the way ou
 }
 
 // The other road to the same empty cell: a winter on a shelf, which runs no shutdown at all.
-TEST_CASE("product: a boot refused on a flat cell writes the reason under the mark") {
+TEST_CASE("product: a boot refused on a flat cell writes the reason under the mark" *
+          doctest::test_suite("main")) {
     Rig rig;
     rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     REQUIRE(rig.setup() == Status::Ok);

@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # core - the logic the radio and the screen are built on
 
 891 host test cases over 84 subjects in 79 files, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. Main claims come first (125), and the edge cases and details are folded below them (766).

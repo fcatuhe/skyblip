@@ -169,8 +169,8 @@ TEST_CASE(
     CHECK(message.airborne_position.cpr.longitude_cpr == 0x0AAAA);
 }
 
-TEST_CASE(
-    "DO-260B 2.2.3.2.3.1: TYPE 9 to 18 carry a pressure altitude and 20 to 22 a GNSS height") {
+TEST_CASE("DO-260B 2.2.3.2.3.1: TYPE 9 to 18 carry a pressure altitude and 20 to 22 a GNSS height" *
+          doctest::test_suite("main")) {
     for (uint8_t type_code = 9; type_code <= 18; type_code++) {
         const Message message = heard_ok(airborne(type_code, q_field(1440)));
         CHECK(message.airborne_position.pressure_altitude_valid);
@@ -188,7 +188,8 @@ TEST_CASE("DO-260B 2.2.3.2.3.1.3: a TYPE 0 message is never read as a position")
 }
 
 TEST_CASE(
-    "DO-260B 2.2.3.2.3.1.3.1: TYPE 0 means no position, so its zero CPR fields place nothing") {
+    "DO-260B 2.2.3.2.3.1.3.1: TYPE 0 means no position, so its zero CPR fields place nothing" *
+    doctest::test_suite("main")) {
     adsb::Squitter frame = squitter(0);
     CHECK(hear(frame).status == Status::Unsupported);
     put(frame, 9, 20, q_field(1440));

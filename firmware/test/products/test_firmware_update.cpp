@@ -563,7 +563,8 @@ TEST_CASE("product: an image with nothing of its own beside a newer blob starts 
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 }
 
-TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone") {
+TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone" *
+          doctest::test_suite("main")) {
     Rig rig;
     const NewerBlob newer;
     REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
