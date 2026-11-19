@@ -4,6 +4,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
@@ -125,9 +126,9 @@ class AdslConformance(unittest.TestCase):
             conformance.render_adsl(stray, SKIPPED, PROSE, SPEC, EN300220, VERSION)
 
 
-ADSB_CLAUSES = """# Receive-side clauses in the order listed
-DO-260B A.1.7.9.2 Emitter Centered Local Decoding
+ADSB_CLAUSES = """# Receive-side clauses with an interleaved appendix entry
 DO-260B 2.2.4.3.4 Receiver Signal Processing
+DO-260B A.1.7.9.2 Emitter Centered Local Decoding
 DO-260B 2.2.4.3.4.7 Message Reception
 """
 ADSB_VERSION = 'inline constexpr char kVersion[] = "1.0.0";\n'
@@ -165,16 +166,17 @@ class AdsbConformance(unittest.TestCase):
         self.assertIn("ADS-B implementation 1.0.0", text)
         self.assertIn("RTCA DO-260B draft 4.2 (1090-WP30-18)", text)
         self.assertIn("3 receive-side clauses", text)
+        self.assertIn("test Bravo's driver against an LR2021 radio model", text)
         self.assertIn("passed 3 cases and skipped 1 (1 unmeasured)", text)
         self.assertNotIn("EN 300 220", text)
 
-    def test_headings_follow_the_clause_listing(self):
+    def test_each_section_appears_once_and_its_clauses_follow_the_listing(self):
         self.assertEqual([line for line in self.rendered().splitlines() if line.startswith("##")], [
-            "## Appendix A",
-            "### DO-260B A.1.7.9.2 Emitter Centered Local Decoding",
             "## Section 2",
             "### DO-260B 2.2.4.3.4 Receiver Signal Processing",
             "### DO-260B 2.2.4.3.4.7 Message Reception",
+            "## Appendix A",
+            "### DO-260B A.1.7.9.2 Emitter Centered Local Decoding",
         ])
 
     def test_a_clause_lists_the_component_before_the_device_with_each_file(self):
@@ -207,17 +209,53 @@ class AdsbConformance(unittest.TestCase):
                 conformance.do260b_clauses(listing)
 
 
+def parsed_run(*results):
+    root = ET.Element("testsuites")
+    suite = ET.SubElement(root, "testsuite")
+    for name, *failures in results:
+        case = ET.SubElement(suite, "testcase", classname=ADSB_DEVICE, name=name)
+        for message in failures:
+            ET.SubElement(case, "failure", message=message)
+    return conformance.junit_cases(ET.tostring(root))
+
+
 class JunitConformance(unittest.TestCase):
     def test_a_skipped_case_reports_its_reason_after_a_failing_check(self):
-        xml = """<testsuites><testsuite>
-          <testcase classname="test/adsb/test_receiver.cpp" name="DO-260B 2.2.4: the target is met">
-            <failure message="true" type="CHECK_FALSE"/>
-            <failure message="unmeasured: no bench measurement yet" type="FAIL"/>
-          </testcase>
-        </testsuite></testsuites>"""
-        self.assertEqual(conformance.junit_cases(xml), [
-            (ADSB_DEVICE, "DO-260B 2.2.4: the target is met", "unmeasured: no bench measurement yet"),
-        ])
+        normal = parsed_run(("receiver: a frame arrives",))
+        no_skip = parsed_run(("receiver: a frame arrives",),
+                             ("receiver: the target is met", "true", "unmeasured: bench pending"))
+        self.assertEqual(conformance.classify_runs(normal, no_skip), (
+            [(ADSB_DEVICE, "receiver: a frame arrives")],
+            [(ADSB_DEVICE, "receiver: the target is met", "unmeasured: bench pending")],
+        ))
+
+    def test_a_duplicate_key_cannot_hide_a_skipped_case_with_the_same_name(self):
+        name = "receiver: a frame arrives"
+        passing = parsed_run((name,))
+        duplicate = parsed_run((name,), (name, "optional: unsupported mode"))
+        for run, normal, no_skip in [("normal run", duplicate, passing),
+                                     ("--no-skip run", passing, duplicate)]:
+            with self.subTest(run=run):
+                with self.assertRaisesRegex(ValueError, f"duplicate case in {run}: {ADSB_DEVICE}: {name}"):
+                    conformance.classify_runs(normal, no_skip)
+
+    def test_a_failed_normal_run_names_each_failing_case(self):
+        failing = parsed_run(("receiver: a frame arrives", "no frame"),
+                             ("receiver: a frame is dated", ""))
+        with self.assertRaises(ValueError) as error:
+            conformance.classify_runs(failing, failing)
+        self.assertIn(f"{ADSB_DEVICE}: receiver: a frame arrives: no frame", str(error.exception))
+        self.assertIn(f"{ADSB_DEVICE}: receiver: a frame is dated", str(error.exception))
+
+    def test_a_skipped_case_that_passes_is_named(self):
+        no_skip = parsed_run(("receiver: a frame arrives",))
+        with self.assertRaisesRegex(ValueError, r"passes with --no-skip: .*receiver: a frame arrives"):
+            conformance.classify_runs([], no_skip)
+
+    def test_a_skipped_case_without_a_recognized_reason_is_named(self):
+        no_skip = parsed_run(("receiver: a frame arrives", "no frame"))
+        with self.assertRaisesRegex(ValueError, r"no recognized reason: .*receiver: a frame arrives: no frame"):
+            conformance.classify_runs([], no_skip)
 
 
 if __name__ == "__main__":

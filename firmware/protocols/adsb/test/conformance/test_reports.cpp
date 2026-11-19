@@ -265,7 +265,8 @@ TEST_CASE(
     CHECK_FALSE(none.heard.pressure_altitude_valid);
 }
 
-TEST_CASE("DO-260B 2.2.8.1.13: the vertical rate is named baro or geometric by its source") {
+TEST_CASE("DO-260B 2.2.8.1.13: the vertical rate is named baro or geometric by its source" *
+          doctest::test_suite("main")) {
     Bravo bravo = tracking();
     REQUIRE(bravo.hear(air_velocity(10, 10, -1280, true), 1500));
     CHECK(bravo.heard.climb_fpm == -1280);

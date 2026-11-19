@@ -81,8 +81,7 @@ TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then
 }
 
 // D.1.1's length byte is the last of the sync tail, so a receiver reads each burst's own length.
-TEST_CASE("ADS-L.4.SRD860.D.1.1: the Go sends a Status as 16 bytes and Traffic as 24" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.D.1.1: the Go sends a Status as 16 bytes and Traffic as 24") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);

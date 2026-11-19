@@ -59,8 +59,7 @@ TEST_CASE("adsl edge: a registration with a comma is refused, not split into PFL
 }
 
 // Out of the direct slot ADS-L Issue 2 defines, on B, in the even second whose position is on A.
-TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on B" *
-          doctest::test_suite("main")) {
+TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on B") {
     timing::ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = true;
@@ -87,8 +86,7 @@ TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on
 }
 
 // A receiver files the name under the same target as the Traffic, so it follows the ICAO address.
-TEST_CASE("adsl edge: the name goes under the ICAO address while one is set" *
-          doctest::test_suite("main")) {
+TEST_CASE("adsl edge: the name goes under the ICAO address while one is set") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     go::Settings& settings = simulator.product().settings();

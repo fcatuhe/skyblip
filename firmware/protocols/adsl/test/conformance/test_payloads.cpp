@@ -111,8 +111,7 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed timestamp of 60 to 63 is no age, and ne
 }
 
 // The header byte is in clear, and its error control bit says the parity is E.3.2's.
-TEST_CASE("ADS-L.4.SRD860.G.3: the uplink is sent with FEC, as an Issue 2 payload" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.3: the uplink is sent with FEC, as an Issue 2 payload") {
     adsl::Packet traffic[1] = {relayed_traffic(0x3C1234, 0)};
     uint8_t packet[1 + adsl::kUplinkMaxLength];
     sent_uplink(traffic, 1, packet);

@@ -158,8 +158,8 @@ TEST_CASE(
         CHECK(hear(squitter(type_code)).status == Status::Unsupported);
 }
 
-TEST_CASE(
-    "DO-260B 2.2.3.2.3: an airborne position is TYPE, status, NIC-B, altitude, T, F and CPR") {
+TEST_CASE("DO-260B 2.2.3.2.3: an airborne position is TYPE, status, NIC-B, altitude, T, F and CPR" *
+          doctest::test_suite("main")) {
     const Message message = heard_ok(airborne(11, q_field(1440)));
     CHECK(message.airborne_position.pressure_altitude_valid);
     CHECK(message.airborne_position.pressure_altitude_ft == 35000);
@@ -169,8 +169,8 @@ TEST_CASE(
     CHECK(message.airborne_position.cpr.longitude_cpr == 0x0AAAA);
 }
 
-TEST_CASE(
-    "DO-260B 2.2.3.2.3.1: TYPE 9 to 18 carry a pressure altitude and 20 to 22 a GNSS height") {
+TEST_CASE("DO-260B 2.2.3.2.3.1: TYPE 9 to 18 carry a pressure altitude and 20 to 22 a GNSS height" *
+          doctest::test_suite("main")) {
     for (uint8_t type_code = 9; type_code <= 18; type_code++) {
         const Message message = heard_ok(airborne(type_code, q_field(1440)));
         CHECK(message.airborne_position.pressure_altitude_valid);

@@ -49,8 +49,7 @@ uint8_t version_sent(const model::Ownship& own, uint8_t category = 4) {
 // What own-ship knows decides the codes, and the codes decide the issue a receiver must read.
 TEST_CASE(
     "ADS-L.4.SRD860.E.1.1: own-ship sends version 0 with all it knows, 1 once it marks a field "
-    "absent" *
-    doctest::test_suite("main")) {
+    "absent") {
     CHECK(version_sent(flying()) == 0);
 
     model::Ownship two_d = flying();
@@ -69,8 +68,7 @@ TEST_CASE(
 }
 
 // "Low-power or constrained ADS-L clients may optionally use key index 3", and the Go draws them.
-TEST_CASE("ADS-L.4.SRD860.E.1.3: a neighbour sending under key 3 is heard and drawn" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.E.1.3: a neighbour sending under key 3 is heard and drawn") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
