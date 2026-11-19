@@ -16,7 +16,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
-from itertools import chain, groupby
+from itertools import chain
 
 import behavior_index
 import check_adsl_clauses
@@ -222,7 +222,10 @@ def render_adsb(passed, skipped, prose, clauses, version_h):
         skipped=len(skipped),
         kinds=kind_counts(message for _, _, message in skipped) or "none",
     )]
-    for section, entries in groupby(clauses.items(), key=do260b_section):
+    sections = defaultdict(list)
+    for clause, title in clauses.items():
+        sections[do260b_section(clause)].append((clause, title))
+    for section, entries in sections.items():
         lines.append(f"## {section}\n")
         for clause, title in entries:
             lines.append(f"### {clause} {title}\n")
@@ -231,8 +234,8 @@ def render_adsb(passed, skipped, prose, clauses, version_h):
     return "\n".join(lines).rstrip() + "\n"
 
 
-def do260b_section(entry):
-    number = entry[0].split(" ", 1)[1].split(".", 1)[0]
+def do260b_section(clause):
+    number = clause.split(" ", 1)[1].split(".", 1)[0]
     return f"Section {number}" if number.isdigit() else f"Appendix {number}"
 
 

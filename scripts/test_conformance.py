@@ -126,9 +126,9 @@ class AdslConformance(unittest.TestCase):
             conformance.render_adsl(stray, SKIPPED, PROSE, SPEC, EN300220, VERSION)
 
 
-ADSB_CLAUSES = """# Receive-side clauses in the order listed
-DO-260B A.1.7.9.2 Emitter Centered Local Decoding
+ADSB_CLAUSES = """# Receive-side clauses with an interleaved appendix entry
 DO-260B 2.2.4.3.4 Receiver Signal Processing
+DO-260B A.1.7.9.2 Emitter Centered Local Decoding
 DO-260B 2.2.4.3.4.7 Message Reception
 """
 ADSB_VERSION = 'inline constexpr char kVersion[] = "1.0.0";\n'
@@ -170,13 +170,13 @@ class AdsbConformance(unittest.TestCase):
         self.assertIn("passed 3 cases and skipped 1 (1 unmeasured)", text)
         self.assertNotIn("EN 300 220", text)
 
-    def test_headings_follow_the_clause_listing(self):
+    def test_each_section_appears_once_and_its_clauses_follow_the_listing(self):
         self.assertEqual([line for line in self.rendered().splitlines() if line.startswith("##")], [
-            "## Appendix A",
-            "### DO-260B A.1.7.9.2 Emitter Centered Local Decoding",
             "## Section 2",
             "### DO-260B 2.2.4.3.4 Receiver Signal Processing",
             "### DO-260B 2.2.4.3.4.7 Message Reception",
+            "## Appendix A",
+            "### DO-260B A.1.7.9.2 Emitter Centered Local Decoding",
         ])
 
     def test_a_clause_lists_the_component_before_the_device_with_each_file(self):
