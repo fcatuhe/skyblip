@@ -67,8 +67,14 @@ export function reassembleLines(onLine) {
   return event => feed(bytesOf(event));
 }
 
-async function subscribe(chr, listener) {
+// INFO: fc 19nov26 Chrome on Linux keeps a dropped link's notify session and answers a start from it, so its notifications reach only the dead link
+async function startNotifications(chr) {
+  await chr.stopNotifications();
   await chr.startNotifications();
+}
+
+async function subscribe(chr, listener) {
+  await startNotifications(chr);
   chr.addEventListener('characteristicvaluechanged', listener);
   return async () => {
     chr.removeEventListener('characteristicvaluechanged', listener);
@@ -113,7 +119,7 @@ async function openSmp(server, onSmp) {
   const svc = await serviceOrNull(server, UUID.smp);
   if (!svc) return null;
   const chr = await svc.getCharacteristic(UUID.smpChr);
-  await chr.startNotifications();
+  await startNotifications(chr);
   chr.addEventListener('characteristicvaluechanged', event => onSmp(bytesOf(event)));
   return chr;
 }

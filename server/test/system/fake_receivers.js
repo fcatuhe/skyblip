@@ -35,6 +35,7 @@
   };
   const characteristic = {
     startNotifications: async () => {},
+    stopNotifications: async () => {},
     addEventListener: (type, listener) => bravo.listeners.push(listener),
     writeValueWithoutResponse: async () => {},
   };

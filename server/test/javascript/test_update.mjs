@@ -70,6 +70,34 @@ test('after an install the device is connected again by itself once it restarts'
   updater.disconnect();
 });
 
+// Brave on Linux heard nothing from a Go back from its install until the page was reloaded.
+test('after an install a browser that keeps the dropped link\'s notify sessions still hears the device once it restarts', async () => {
+  const { device, updater, until } = await chosen({ returnEveryMs: 0, keepsNotifySessions: true });
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+  device.running = '0.2.0.15';
+  const back = await until(state => state.phase === 'ready' && (state.running || state.notice));
+  assert.equal(back.notice, null);
+  assert.equal(back.running, '0.2.0+15');
+  updater.disconnect();
+});
+
+test('a link that drops before the first SMP request says it was lost, and nothing else', async () => {
+  const device = new FakeSkyblip({ bufSize: 300 }).install();
+  const onConfig = device.onConfig.bind(device);
+  device.onConfig = bytes => {
+    onConfig(bytes);
+    if (device.commands.at(-1) === 'defaults') device.drop();
+  };
+  const { updater, until } = session();
+  await updater.connect();
+  const lost = await until(state => state.phase === 'offline' && state.notice);
+  assert.equal(lost.notice.key, 'link_lost');
+  assert.equal(lost.notice.detail, undefined);
+});
+
 test('a device that does not come back in time is left offline, and says so', async () => {
   const { device, updater, until } = await chosen({ returnEveryMs: 0, returnWithinMs: 0 });
   updater.install();
