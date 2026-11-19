@@ -144,7 +144,7 @@ TEST_CASE("DO-260B 2.2.4.3.4.7.2: the preamble is four pulses at 0, 1, 3.5 and 4
     CHECK(framed(identification()));
 }
 
-TEST_CASE("DO-260B 2.2.4.3.5: the receiver listens all the time, so its duty factor is 100%") {
+TEST_CASE("DO-260B 2.2.4.3.5: the driver receives three modeled bursts after one SetRx") {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
     uint8_t frame[adsb::kFrameBytes]{};

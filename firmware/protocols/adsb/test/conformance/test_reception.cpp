@@ -39,7 +39,7 @@ Status receive_frame(const adsb::Squitter& frame, Message& message) {
 
 }
 
-TEST_CASE("DO-260B 2.2.4.3.4.5: every valid DF17 message with a zero PI overlay is decoded") {
+TEST_CASE("DO-260B 2.2.4.3.4.5: six DF17 examples with a zero PI overlay decode") {
     for (const adsb::Squitter& frame :
          {position(), standard::velocity(1), standard::velocity(3),
           adsb::identification(standard::kAddress, 5, 4, 1, "KLM1023"),

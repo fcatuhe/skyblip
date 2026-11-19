@@ -166,6 +166,7 @@ class AdsbConformance(unittest.TestCase):
         self.assertIn("ADS-B implementation 1.0.0", text)
         self.assertIn("RTCA DO-260B draft 4.2 (1090-WP30-18)", text)
         self.assertIn("3 receive-side clauses", text)
+        self.assertIn("test Bravo's driver against an LR2021 radio model", text)
         self.assertIn("passed 3 cases and skipped 1 (1 unmeasured)", text)
         self.assertNotIn("EN 300 220", text)
 
