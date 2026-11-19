@@ -94,8 +94,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
     }
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequency" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequency") {
     for (const int speed_kt : {0, 50}) {
         CAPTURE(speed_kt);
         const std::vector<simulator::AirRecord> statuses = statuses_flown(speed_kt, 61);
@@ -188,8 +187,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship's Traffic and Status go out inside the D
     }
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges") {
     const timing::Window dwell = timing::dwell_of(timing::kUplinkWindowMs);
     CHECK(dwell.start_ms >= adsl::kUplinkSlotStartMs);
     CHECK(dwell.end_ms <= adsl::kUplinkSlotEndMs);

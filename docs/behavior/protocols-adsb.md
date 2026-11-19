@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # protocols/adsb - the ADS-B stack
 
 80 host test cases over 5 subjects in 7 files, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. Main claims come first (10), and the edge cases and details are folded below them (70).
