@@ -10,82 +10,6 @@ namespace {
 
 constexpr size_t kPayload = sizeof(Settings);
 
-// INFO: fc 15nov26 the volume versions 1 and 2 stored, before alarm replaced it and alarm_enabled
-enum class AlarmVolume : uint8_t { Off = 0, Soft = 1, Loud = 2 };
-
-// INFO: fc 13nov26 version 1's layout, read once and migrated: it had no aircraft_address_from_go
-struct SettingsV1 {
-    uint32_t aircraft_address{kAircraftAddressUnset};
-    PeerPin peer{};
-    bool alarm_enabled{true};
-    AlarmVolume alarm_volume{AlarmVolume::Loud};
-};
-
-struct SettingsV2 {
-    uint32_t aircraft_address{kAircraftAddressUnset};
-    PeerPin peer{};
-    bool alarm_enabled{true};
-    AlarmVolume alarm_volume{AlarmVolume::Loud};
-    bool aircraft_address_from_go{false};
-};
-
-struct SettingsV3 {
-    uint32_t aircraft_address{kAircraftAddressUnset};
-    PeerPin peer{};
-    Alarm alarm{Alarm::Loud};
-    bool aircraft_address_from_go{false};
-};
-
-constexpr uint8_t kBlobVersionV1 = 1;
-constexpr uint8_t kBlobVersionV2 = 2;
-constexpr uint8_t kBlobVersionV3 = 3;
-
-// INFO: fc 15nov26 both old offs silenced the buzzer and the haptic and kept the lamp, as visual
-// does
-Alarm alarm_of(bool enabled, AlarmVolume volume) {
-    if (!enabled || volume == AlarmVolume::Off) return Alarm::Visual;
-    return volume == AlarmVolume::Soft ? Alarm::Soft : Alarm::Loud;
-}
-
-Status open_v1(const uint8_t* in, size_t length, Settings& out) {
-    SettingsV1 read{};
-    const Status status = settings::open(in, length, sizeof(SettingsV1), &read);
-    if (status != Status::Ok) return status;
-    out = Settings{};
-    out.aircraft_address = read.aircraft_address;
-    out.peer = read.peer;
-    out.alarm = alarm_of(read.alarm_enabled, read.alarm_volume);
-    out.go_alarm = out.alarm;
-    return Status::Ok;
-}
-
-Status open_v2(const uint8_t* in, size_t length, Settings& out) {
-    SettingsV2 read{};
-    const Status status = settings::open(in, length, sizeof(SettingsV2), &read);
-    if (status != Status::Ok) return status;
-    out = Settings{};
-    out.aircraft_address = read.aircraft_address;
-    out.peer = read.peer;
-    out.alarm = alarm_of(read.alarm_enabled, read.alarm_volume);
-    out.aircraft_address_from_go = read.aircraft_address_from_go;
-    out.go_alarm = out.alarm;
-    return Status::Ok;
-}
-
-// INFO: fc 17nov26 a pinned Bravo played its own alarm before version 4, so its Go's starts there
-Status open_v3(const uint8_t* in, size_t length, Settings& out) {
-    SettingsV3 read{};
-    const Status status = settings::open(in, length, sizeof(SettingsV3), &read);
-    if (status != Status::Ok) return status;
-    out = Settings{};
-    out.aircraft_address = read.aircraft_address;
-    out.peer = read.peer;
-    out.alarm = read.alarm;
-    out.aircraft_address_from_go = read.aircraft_address_from_go;
-    out.go_alarm = read.alarm;
-    return Status::Ok;
-}
-
 template <class Value, class Assign>
 Status apply_key(const Result<Value>& read, Assign assign) {
     if (read.status() == Status::NotFound) return Status::Ok;
@@ -126,13 +50,9 @@ void to_blob(const Settings& settings, uint8_t* out, size_t capacity) {
 
 Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     if (length < settings::kBlobOverhead) return Status::Crc;
-    const uint8_t version = settings::blob_version(in);
+    if (settings::blob_version(in) != kBlobVersion) return Status::Unsupported;
     Settings read{};
-    Status status = Status::Unsupported;
-    if (version == kBlobVersion) status = settings::open(in, length, kPayload, &read);
-    if (version == kBlobVersionV3) status = open_v3(in, length, read);
-    if (version == kBlobVersionV2) status = open_v2(in, length, read);
-    if (version == kBlobVersionV1) status = open_v1(in, length, read);
+    const Status status = settings::open(in, length, kPayload, &read);
     if (status != Status::Ok) return status;
     if (validate(read) != Status::Ok) return Status::Invalid;
     out = read;

@@ -1,6 +1,6 @@
 # simulator
 
-The simulator runs a real product on the host platform, inside a world that drives the part models. `simulator.h` flies a skyBlip Go on the T-Echo's models, and `bravo_simulator.h` flies a skyBlip Bravo on the MeshTracker X1's (`hardware/platform/host/meshtracker_x1.h`). `paired_simulator.h` flies both in one aircraft, a Go paired with a Bravo. `frontends/terminal.cpp` and `frontends/browser.cpp` draw them, and the host suite asserts on them. None of them adds behaviour.
+The simulator runs a real product on the host platform, inside a world that drives the part models. `simulator.h` flies a skyBlip Go on the T-Echo's models, and `bravo_simulator.h` flies a skyBlip Bravo on the MeshTracker X1's (`hardware/platform/host/meshtracker_x1.h`). `paired_simulator.h` flies both in one aircraft, a Go paired with a Bravo. `frontends/browser.cpp` draws them, and the host suite asserts on them. Neither adds behaviour.
 
 ## The world
 
@@ -55,7 +55,7 @@ The world does not model:
 
 ## Scenarios
 
-A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, that the terminal, the browser and the suite all load. `scripts/simulator_scenarios.rb` bundles every file for the browser.
+A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, that the browser and the suite both load. `scripts/simulator_scenarios.rb` bundles every file for the browser.
 
 - `"product": "bravo"` flies a Bravo, and `"product": "paired"` a Go paired with a Bravo. A file without it flies a Go.
 - An aircraft's `"system"` is `adsl_direct`, `alptas`, `adsl_uplink`, or `adsb` for ADS-B Out alone.

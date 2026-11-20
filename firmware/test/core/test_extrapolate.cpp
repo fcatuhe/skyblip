@@ -71,7 +71,8 @@ TEST_CASE("extrapolate: flying east across the antimeridian comes out at 180 wes
 }
 
 // A neighbour is carried by the three things its burst states: position, ground speed and track.
-TEST_CASE("extrapolate: a reported target moves along its reported track") {
+TEST_CASE("extrapolate: a reported target moves along its reported track" *
+          doctest::test_suite("main")) {
     const model::Ownship own = flying(48.5, 8.5, 40.0, 90.0);
     model::AircraftObservation observation{};
     observation.position_valid = true;
@@ -283,7 +284,8 @@ TEST_CASE("extrapolate: a relative height past int32 stops at the type's limit")
 }
 
 // The receiver solves on the quarter, so the burst carries that solution unmoved, named by it.
-TEST_CASE("adsl: own Traffic is the solution as measured, named by its own quarter second") {
+TEST_CASE("adsl: own Traffic is the solution as measured, named by its own quarter second" *
+          doctest::test_suite("main")) {
     model::Ownship own{};
     own.fix_valid = true;
     own.latitude_1e7 = 485000000;

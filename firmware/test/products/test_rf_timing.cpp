@@ -159,7 +159,8 @@ TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed 
 }
 
 // Two devices on a bench, both transmitting, neither ever hearing the other.
-TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
+TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
@@ -186,7 +187,8 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
     CHECK(framed > 0);
 }
 
-TEST_CASE("rf: a paraglider below the flight speed transmits every second, flight undefined") {
+TEST_CASE("rf: a paraglider below the flight speed transmits every second, flight undefined" *
+          doctest::test_suite("main")) {
     for (const uint8_t type : {uint8_t{7}, uint8_t{1}}) {
         CAPTURE(int(type));
         simulator::Simulator simulator;

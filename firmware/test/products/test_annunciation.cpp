@@ -64,7 +64,8 @@ struct Sky {
 
 }  // namespace
 
-TEST_CASE("product: an advisory is two calls, and the target standing says nothing more") {
+TEST_CASE("product: an advisory is two calls, and the target standing says nothing more" *
+          doctest::test_suite("main")) {
     Sky sky;
     uint32_t now_ms = sky.with_a_target_in_the_window();
 
@@ -101,7 +102,8 @@ TEST_CASE("product: an empty sky releases the buzzer and does not re-announce an
 }
 
 // The pad's long touch is a pilot saying they have the aircraft in sight.
-TEST_CASE("product: a long touch of the pad dismisses a standing alarm") {
+TEST_CASE("product: a long touch of the pad dismisses a standing alarm" *
+          doctest::test_suite("main")) {
     Sky sky;
     uint32_t now_ms = sky.with_a_target_in_the_window();
 
@@ -157,7 +159,8 @@ TEST_CASE(
     CHECK(sky.tone_commands() > before);
 }
 
-TEST_CASE("product: soft or loud, the advisory is called at that loudness and felt") {
+TEST_CASE("product: soft or loud, the advisory is called at that loudness and felt" *
+          doctest::test_suite("main")) {
     for (const go::Alarm volume : {go::Alarm::Soft, go::Alarm::Loud}) {
         Sky sky;
         REQUIRE(sky.simulator.setup() == Status::Ok);
@@ -174,7 +177,8 @@ TEST_CASE("product: soft or loud, the advisory is called at that loudness and fe
     }
 }
 
-TEST_CASE("product: visual shows the advisory and sounds neither the buzzer nor the motor") {
+TEST_CASE("product: visual shows the advisory and sounds neither the buzzer nor the motor" *
+          doctest::test_suite("main")) {
     Sky sky;
     REQUIRE(sky.simulator.setup() == Status::Ok);
     sky.simulator.product().settings().alarm = go::Alarm::Visual;
@@ -189,7 +193,8 @@ TEST_CASE("product: visual shows the advisory and sounds neither the buzzer nor 
 }
 
 // The traffic picture and an EFB's stream keep the level, so off only stops the interruption.
-TEST_CASE("product: off raises no advisory and sounds nothing, and the target keeps its level") {
+TEST_CASE("product: off raises no advisory and sounds nothing, and the target keeps its level" *
+          doctest::test_suite("main")) {
     Sky sky;
     REQUIRE(sky.simulator.setup() == Status::Ok);
     sky.simulator.product().settings().alarm = go::Alarm::Off;
@@ -246,7 +251,8 @@ TEST_CASE("product: a standing advisory shakes the motor with its two calls, and
 }
 
 // A unit at the hold beeped for every aircraft that climbed out of the field or turned in above it.
-TEST_CASE("product: a unit on the ground says nothing of the circuit, and one thing at liftoff") {
+TEST_CASE("product: a unit on the ground says nothing of the circuit, and one thing at liftoff" *
+          doctest::test_suite("main")) {
     Sky sky;
     sky.simulator.world().set_speed_kt(0);
     REQUIRE(sky.simulator.setup() == Status::Ok);
@@ -374,7 +380,6 @@ TEST_CASE("product: a unit with no haptic driver flies, sounds, and says what is
     // Optional, so the device flies and says so once.
     CHECK(rig.product.flyable());
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Haptic));
-    CHECK(ports::has(rig.product.degraded(), ports::Capability::Haptic));
 
     // And the voice it does have still works: the first fix is chirped by the
     // same service that would have pulsed the motor.

@@ -30,7 +30,8 @@ bool pflaa_names(BravoRig& rig, uint32_t address) {
 
 }  // namespace
 
-TEST_CASE("bravo: with a fix an aircraft heard on 1090 MHz reaches the phone as $PFLAA") {
+TEST_CASE("bravo: with a fix an aircraft heard on 1090 MHz reaches the phone as $PFLAA" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link();
@@ -58,7 +59,8 @@ TEST_CASE("bravo: an airliner 200 km away at FL350 reaches the phone as $PFLAA")
     CHECK(pflaa_names(rig, kAircraft));
 }
 
-TEST_CASE("bravo: without a fix it says GPS 0, sends no $PFLAA and keeps decoding") {
+TEST_CASE("bravo: without a fix it says GPS 0, sends no $PFLAA and keeps decoding" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link();
@@ -89,7 +91,8 @@ TEST_CASE("bravo: a fix that comes back does not make an aircraft heard before i
     CHECK(pflaa_names(rig, kAircraft));
 }
 
-TEST_CASE("bravo: the aircraft's own transponder, named by aircraft address, is never traffic") {
+TEST_CASE("bravo: the aircraft's own transponder, named by aircraft address, is never traffic" *
+          doctest::test_suite("main")) {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.product.settings().aircraft_address = kAircraft;

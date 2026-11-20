@@ -91,7 +91,8 @@ TEST_CASE("channel: the declared route is the duty cycle, and nothing else refus
     CHECK_FALSE(air.may_spend(1000, Transmitter::kAirTimeMs));
 }
 
-TEST_CASE("channel: air time is counted per rolling hour and leaves it again") {
+TEST_CASE("channel: air time is counted per rolling hour and leaves it again" *
+          doctest::test_suite("main")) {
     AirTime air;
     for (uint32_t second = 0; second < 3600; second++)
         air.spend(second * 1000, Transmitter::kAirTimeMs);
@@ -107,7 +108,8 @@ TEST_CASE("channel: air time is counted per rolling hour and leaves it again") {
     CHECK(air.total_ms() == 18000);
 }
 
-TEST_CASE("channel: the hour's allowance is 1% of it, and the counter stops at the figure") {
+TEST_CASE("channel: the hour's allowance is 1% of it, and the counter stops at the figure" *
+          doctest::test_suite("main")) {
     CHECK(AirTime::kBudgetMs == AirTime::kWindowMs / 100);
     CHECK(AirTime::kBudgetMs == 36000);
 

@@ -1,7 +1,7 @@
 name: firmware
 
-# Everything in this tree that is not the server: firmware/, plus the scripts,
-# schemas and simulator harnesses the firmware is tested through. The site has
+# Everything in this tree that is not the server or prose: firmware/, plus the
+# scripts, schemas and simulator harnesses the firmware is tested through. The site has
 # its own workflow, and every dependency is Dependabot's: the upstreams it has no
 # manifest for are named in .github/pins/action.yml.
 #
@@ -40,9 +40,17 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
+          # A negated pattern excludes a file whatever else matches it, and the other patterns of a filter stay OR-ed.
+          predicate-quantifier: some-with-excludes
           filters: |
+            # Prose no check reads. The firmware's READMEs stay in: docs/TUNING.md and the protocol locks read them.
             firmware:
               - '!(server)/**'
+              - '!*.md'
+              - '!docs/!(BEHAVIOR|TUNING).md'
+              - '!docs/bench/*.md'
+              - '!scripts/*.md'
+              - '!.agents/**'
             # What goes into a published image, so a change elsewhere publishes no build. lib/dev_release.rb lists the same paths.
             release:
               - 'firmware/**'
@@ -93,66 +101,26 @@ jobs:
         run: make test-protocols CXX="ccache g++"
       - name: the protocol stacks include nothing from skyBlip
         run: python3 scripts/check_protocol_boundary.py
-      - name: the boundary check refuses an include that crosses it
-        run: python3 scripts/test_check_protocol_boundary.py
       - name: every frozen protocol stack matches its version.lock
         run: python3 scripts/check_protocol_freeze.py
-      - name: the freeze check refuses a frozen file changed without a reseal
-        run: python3 scripts/test_check_protocol_freeze.py
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
-      # The conformance suite reads the published specification clause by clause, and a
-      # clause nobody read is the one a product is found non-conformant on.
-      - name: every ADS-L clause has a case
-        run: python3 scripts/check_adsl_clauses.py
-      - name: the clause check refuses a skipped case of no kind
-        run: python3 scripts/test_check_adsl_clauses.py
+      # A conformance suite reads its standard clause by clause, and a clause nobody read is the one a product is found non-conformant on.
+      - name: every clause of ADS-L, EN 300 220 and DO-260B has a case
+        run: python3 scripts/check_clauses.py
       # The suite reads the markdown, not the PDF, so a word the conversion lost is a requirement nobody reads.
       - name: the ADS-L markdown carries every word of its PDF, in order
         run: python3 scripts/check_spec_markdown.py
-      - name: the markdown check refuses a word lost, cut or misplaced
-        run: python3 scripts/test_check_spec_markdown.py
-      # The ETSI standards cannot be fetched here, so the suite is held to the clause list committed in their place.
-      - name: every listed EN 300 220 clause has a case
-        run: python3 scripts/check_en300220_clauses.py
-      - name: the EN 300 220 clause check refuses a case off the list
-        run: python3 scripts/test_check_en300220_clauses.py
-      # RTCA's draft cannot be committed either, so the ADS-B suite is held to its committed clause list.
-      - name: every listed DO-260B clause has a case
-        run: python3 scripts/check_do260b_clauses.py
-      - name: the DO-260B clause check refuses a case off the list
-        run: python3 scripts/test_check_do260b_clauses.py
       # A hold, a settle and a floor behave nothing alike, and a tree that spells
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
         run: python3 scripts/check_tuning_names.py
-      # The generated C++ is compared as clang-format writes it, so the check needs the lint job's pinned formatter.
+      # The generated C++ is compared as clang-format writes it, so the check and its test need the lint job's pinned formatter.
       - name: install the pinned clang-format
         run: pip install --disable-pip-version-check "$(grep '^clang-format==' .github/lint/requirements.txt)"
       # The firmware, the simulator, the suite and the server read the link's numbers from files generated off one registry, and phones read the status frame it describes unasked.
       - name: the link registry is described, its generated files are current and the status writer matches it
         run: python3 scripts/check_link_registry.py
-      - name: the registry check refuses a file that differs by one byte
-        run: python3 scripts/test_link_registry.py
-      # All that stands between a partition edit and an install that erases the
-      # factory bootloader, or one that hangs on an earlier swap's status. Stdlib only, so it runs here.
-      - name: mkuf2 range guards and blanked trailer sector
-        run: python3 scripts/test_mkuf2.py
-      # The update page picks the file a unit needs off two TLVs: an image without them makes it guess.
-      - name: the image says which hub image it pins
-        run: python3 scripts/test_check_imu_image.py
-      # A unit takes only an image naming its own product, and nothing while it runs one naming none.
-      - name: the image names its product
-        run: python3 scripts/test_check_image_product.py
-      # A unit installs over the air what its MCUboot verifies: both keys on development, production alone on a release.
-      - name: the bootloader embeds the keys of its channel
-        run: python3 scripts/test_check_bootloader_keys.py
-      # The budgets come off each build's slot and SRAM, and a build with no slot fails.
-      - name: the size check holds each target to its flash and RAM budgets
-        run: python3 scripts/test_size_check.py
-      # The Go turns all three switches on, so only this configure sees a product that has none.
-      - name: a product without activation, a hub or a central builds no unit key, no hub image and no central
-        run: python3 scripts/test_shared_layers.py
       # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
       # device then sits in DFU mode until someone drops a .uf2 on it by hand.
       - name: no Nordic DFU package
@@ -163,30 +131,22 @@ jobs:
       # Dependabot proposes doctest and Zephyr in .github/pins, and the copies in use have to follow.
       - name: the vendored doctest and the Zephyr pin match .github/pins
         run: ruby scripts/upstream_pins.rb check
-      # The host decoder and the firmware's record layout are one layout written
-      # twice, and a corpus decoded wrong is worse than one that failed to decode.
-      - name: blip decoders, NMEA reassembly and resume
-        run: python3 scripts/test_blip.py
-      # The budget reads the Duty counters by name and subtracts across their wrap:
-      # a field that moves in payload.h must fail here, not read as a quiet zero.
-      - name: power budget deltas, postures and caveats
-        run: python3 scripts/test_power_budget.py
-      # The link budget pairs Burst records and reads Config's transmitter bytes: a field
-      # that moves in payload.h, or a figure that moves in sx1262.h, must fail here.
-      - name: link budget pairing, free space and what it sets
-        run: python3 scripts/test_link_budget.py
-      # The ETSI standards are fetched, not committed, so the fetcher's refusals are held offline.
-      - name: the fetcher of the ETSI standards
-        run: python3 scripts/test_fetch_etsi.py
-      # The DO-260B draft is fetched, not committed, so its fetcher is held offline too.
-      - name: the fetcher of the DO-260B draft
-        run: python3 scripts/test_fetch_rtca.py
-      # docs/BEHAVIOR.md is generated from the test names: a rename that does not
-      # land with the doc leaves the repo claiming behavior the suite dropped.
+      - name: the Python self-checks
+        run: python3 -m unittest discover -s scripts
+      # docs/BEHAVIOR.md and docs/behavior/ are generated from the test names: a rename that does not
+      # land with the doc leaves the repo claiming behavior the suite dropped. A page not committed is a diff too.
       - name: behavior index matches the suite
         run: |
           python3 scripts/behavior_index.py
-          git diff --exit-code docs/BEHAVIOR.md
+          git add --intent-to-add docs/BEHAVIOR.md docs/behavior
+          git diff --exit-code docs/BEHAVIOR.md docs/behavior
+      # docs/ADSL_CONFORMANCE.md is what the declaration of conformity attaches, so it must be the suite as it runs.
+      - name: ADS-L and DO-260B reports match the suite
+        run: |
+          python3 scripts/conformance.py adsl
+          python3 scripts/conformance.py adsb
+          git add --intent-to-add docs/ADSL_CONFORMANCE.md docs/ADSB_CONFORMANCE.md
+          git diff --exit-code docs/ADSL_CONFORMANCE.md docs/ADSB_CONFORMANCE.md
       # docs/TUNING.md is generated from the constants themselves: a threshold
       # that moves without its note moving is the whole point of the gate.
       - name: tuning index matches the sources

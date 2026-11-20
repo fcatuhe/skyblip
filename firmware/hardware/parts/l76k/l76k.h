@@ -169,6 +169,7 @@ class L76k : public ports::Gnss {
     }
     uint32_t recoveries() const { return recoveries_; }
     bool degraded() const { return stage_ == ConfigStage::Degraded; }
+    bool probing() const { return stage_ == ConfigStage::Probing; }
 
     // Drain whatever the receiver has said into the parser. Returns true when
     // that produced a NEW fix, or when the fix we already published stopped

@@ -27,7 +27,9 @@ That is 282 clauses. Bravo answers to equipage class A0, the class whose 100 tra
 | `protocols/adsb/test/conformance/test_cpr.cpp` | component | A.1.7: compact position reporting |
 | `test_receiver.cpp` | device | 2.2.4's radio, 2.2.6.1.2's delivery time, 2.2.8.5's time stamps, and DF18's TIS-B and ADS-R |
 
-A case is named `DO-260B <clause>: what holds`. `scripts/check_do260b_clauses.py` fails when a listed clause has no case in either half, when a case names a clause the list does not, and when a skipped case opens on none of the kinds below. Where the draft is fetched, it also checks each listed heading against it, so a typo in the list cannot stand in for a clause. CI runs it, and `scripts/test_check_do260b_clauses.py` checks the checker.
+A case is named `DO-260B <clause>: what holds`. `scripts/check_clauses.py` fails when a listed clause has no case in either half, when a case names a clause the list does not, and when a skipped case opens on none of the kinds below. Where the draft is fetched, it also checks each listed heading against it, so a typo in the list cannot stand in for a clause. CI runs it, and `scripts/test_check_clauses.py` checks the checker.
+
+[`docs/ADSB_CONFORMANCE.md`](../../../docs/ADSB_CONFORMANCE.md) puts both halves under the headings from `clauses.txt`. It lists the passing cases and the reason each skipped case makes no claim. `python3 scripts/conformance.py adsb` generates it from the host test run without the fetched draft. CI checks that it matches the suite.
 
 ## A gap is a skipped case
 

@@ -132,7 +132,8 @@ TEST_CASE("blip: past the advisory's window the blip is smaller, and carries no 
 }
 
 // A target that sends no altitude has no side to point to, so its blip has no point.
-TEST_CASE("blip: no altitude is a ring, and the caret clears it as it clears the diamond") {
+TEST_CASE("blip: no altitude is a ring, and the caret clears it as it clears the diamond" *
+          doctest::test_suite("main")) {
     const TestBitmap ring = blip(Vertical::Unknown, Trend::Steady);
     CHECK_FALSE(ring.get_pixel(kCentreX, kCentreY));
     CHECK(ring.get_pixel(kCentreX - 5, kCentreY));

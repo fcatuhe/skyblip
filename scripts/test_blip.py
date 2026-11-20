@@ -473,15 +473,5 @@ class Summaries(unittest.TestCase):
         self.assertTrue(any("4 records written, 9 dropped" in line for line in lines), lines)
 
 
-def load_tests(loader, tests, pattern):
-    """CI runs this file by name, so it loads the offload, link, frame, altitude and flight suites."""
-    tests.addTests(loader.loadTestsFromName("test_blip_offload"))
-    tests.addTests(loader.loadTestsFromName("test_blip_link"))
-    tests.addTests(loader.loadTestsFromName("test_blip_frames"))
-    tests.addTests(loader.loadTestsFromName("test_blip_altitude"))
-    tests.addTests(loader.loadTestsFromName("test_blip_flight"))
-    return tests
-
-
 if __name__ == "__main__":
     unittest.main(verbosity=2)

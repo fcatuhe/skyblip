@@ -44,7 +44,8 @@ TEST_CASE("turn: a half turn is signed, never larger than half a circle") {
 // right and not merely consistent. One cordic9 unit is 0.7 deg and the division
 // truncates, so a rate read off a differentiated track is worth a degree per
 // second, which is the tolerance below and not a rounding excuse.
-TEST_CASE("turn: the rate is degrees per second, positive to the right") {
+TEST_CASE("turn: the rate is degrees per second, positive to the right" *
+          doctest::test_suite("main")) {
     CHECK(turn_rate_dps(cordic9(90), cordic9(0), 1000) == 90);
     CHECK(turn_rate_dps(cordic9(0), cordic9(90), 1000) == -90);
 

@@ -44,6 +44,12 @@ void CaptureService::tick(uint32_t now_ms) {
     if (publish_due(now_ms)) publish(now_ms);
 }
 
+uint32_t CaptureService::due_in_ms(uint32_t now_ms) const {
+    if (context_.diagnostics.queued() > 0 || (open_ && !context_.diagnostics.armed()))
+        return runtime::kServicePassCeilingMs;
+    return runtime::remaining_ms(now_ms - published_ms_, kPublishPeriodMs);
+}
+
 bool CaptureService::publish_due(uint32_t now_ms) const {
     const bus::CaptureState& published = context_.state.capture;
     if (!published_ || published.armed != open_ || published.stopped != stopped_) return true;

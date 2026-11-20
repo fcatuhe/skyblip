@@ -49,7 +49,8 @@ TEST_CASE("adsb category: a glider, rotorcraft, skydiver, balloon and UAV reach 
     CHECK(adsl_category_to_alptas_type(adsb_emitter_to_adsl_category(kSetB, 6)) == 0xD);
 }
 
-TEST_CASE("adsb category: an airliner reaches PFLAA as a jet, and a light aircraft as a piston") {
+TEST_CASE("adsb category: an airliner reaches PFLAA as a jet, and a light aircraft as a piston" *
+          doctest::test_suite("main")) {
     for (uint8_t emitter = 2; emitter <= 6; emitter++) {
         CAPTURE(int(emitter));
         CHECK(adsl_category_to_alptas_type(adsb_emitter_to_adsl_category(kSetA, emitter)) == 0x9);

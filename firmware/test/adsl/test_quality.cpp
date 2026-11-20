@@ -8,10 +8,12 @@
 using namespace skyblip;
 
 namespace {
-adsl::Packet from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = true) {
+adsl::Packet from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = true,
+                      bool geoid_measured = true) {
     model::Ownship own{};
     own.fix_valid = fix;
     own.utc_valid = true;
+    own.geoid_measured = geoid_measured;
     own.latitude_1e7 = 481234500;
     own.longitude_1e7 = 81234500;
     own.altitude_hae_mm = 1000000;
@@ -55,12 +57,21 @@ TEST_CASE("ADS-L.4.SRD860.G.1.15: a solution with no VDOP claims no vertical acc
     CHECK(from_dop(90, 150).vertical_accuracy > 0);
 }
 
+// With no geoid separation reported, the height rests on a regional guess that VDOP does not bound.
+TEST_CASE("ADS-L.4.SRD860.G.1.15: a height on an assumed geoid separation claims no accuracy") {
+    const adsl::Packet assumed = from_dop(90, 150, /*fix=*/true, /*geoid_measured=*/false);
+    CHECK(assumed.has_altitude());
+    CHECK(assumed.vertical_accuracy == 0);
+    CHECK(from_dop(90, 150).vertical_accuracy > 0);
+}
+
 // HFOM's model taken to VDOP: 1.00 is a 12 m VFOM, which the two issues code differently.
 TEST_CASE(
     "ADS-L.4.SRD860.G.1.15: own-ship sends a 10 to 15 m VFOM as Issue 2, or GVA 3 for Issue 1") {
     const auto sent = [](uint16_t vdop_e2, model::Ownship& own) {
         own.fix_valid = true;
         own.utc_valid = true;
+        own.geoid_measured = true;
         own.climb_valid = true;
         own.latitude_1e7 = 481234500;
         own.longitude_1e7 = 81234500;
@@ -116,7 +127,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static z
     CHECK(good.vertical_accuracy >= poor.vertical_accuracy);
 }
 
-TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {
+TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance" *
+          doctest::test_suite("main")) {
     const adsl::Packet packet = from_dop(90, 150);
     CHECK(packet.source_integrity == 0);
     CHECK(packet.design_assurance == 0);

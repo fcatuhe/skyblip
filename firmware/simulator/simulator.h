@@ -13,8 +13,8 @@
 
 namespace skyblip::simulator {
 
-// A product on the host platform, inside a world. The frontends add pixels and
-// controls. The tests add assertions. Neither adds behaviour.
+// A product on the host platform, inside a world. The browser frontend adds pixels
+// and controls. The tests add assertions. Neither adds behaviour.
 class Simulator {
    public:
     using Product = go::Product<platform::host::Platform>;

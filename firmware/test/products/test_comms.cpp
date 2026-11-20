@@ -24,7 +24,8 @@
 using namespace skyblip;
 using namespace skyblip::comms;
 
-TEST_CASE("comms: get returns current config on the Config endpoint") {
+TEST_CASE("comms: get returns current config on the Config endpoint" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -65,7 +66,8 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     CHECK(settings.aircraft_address == go::kAircraftAddressUnset);
 }
 
-TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
+TEST_CASE("comms: set on the ground stages, needs confirmation, then applies" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -86,7 +88,8 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
 }
 
 // The press authorises what the glass says, so the glass says what the phone sent.
-TEST_CASE("comms: the settings prompt lists what the set changes, and only that") {
+TEST_CASE("comms: the settings prompt lists what the set changes, and only that" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();

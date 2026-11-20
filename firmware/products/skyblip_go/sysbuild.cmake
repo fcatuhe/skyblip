@@ -10,3 +10,7 @@ endif()
 set_config_bool(${DEFAULT_IMAGE} CONFIG_SKYBLIP_IMU_IMAGE_LINKED ${imu_image_linked})
 set_config_string(${DEFAULT_IMAGE} CONFIG_MCUBOOT_EXTRA_IMGTOOL_ARGS
   "--custom-tlv 0xa0 0x${imu_image_digest} --custom-tlv 0xa1 0x${imu_image_carried}")
+
+# MCUboot's shared Kconfig, after products/skyblip_go/sysbuild/mcuboot.conf or the list a -D passes.
+sysbuild_cache_set(VAR mcuboot_EXTRA_CONF_FILE APPEND REMOVE_DUPLICATES
+  ${CMAKE_CURRENT_LIST_DIR}/../common/sysbuild/mcuboot.conf)

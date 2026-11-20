@@ -8,6 +8,7 @@
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
+#include "test/support/confirmed.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -123,7 +124,8 @@ TEST_CASE("comms prompt cap: a prompt command while a prompt stands leaves that 
     CHECK(desk.last() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
 }
 
-TEST_CASE("comms prompt cap: a prompt that stands still expires 30 s after it was first staged") {
+TEST_CASE("comms prompt cap: a prompt that stands still expires 30 s after it was first staged" *
+          doctest::test_suite("main")) {
     Desk desk;
     desk.say("{\"command\":\"recovery\"}");
     REQUIRE(desk.config.pending() == Pending::Recovery);
@@ -134,7 +136,7 @@ TEST_CASE("comms prompt cap: a prompt that stands still expires 30 s after it wa
     CHECK(desk.config.pending() == Pending::None);
     CHECK(desk.last() == refusal("expired"));
     desk.config.confirm();
-    CHECK_FALSE(desk.config.recovery_requested());
+    CHECK_FALSE(taken(desk.config));
 }
 
 // One press is the pilot saying no, and a sender that asks again at once is not taking it.
@@ -232,7 +234,8 @@ TEST_CASE("comms prompt cap: the update page's settings, install and retry run o
     CHECK(config.receiving_firmware());
 }
 
-TEST_CASE("comms prompt cap: on the glass, a tap refuses and a new connection asks again") {
+TEST_CASE("comms prompt cap: on the glass, a tap refuses and a new connection asks again" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

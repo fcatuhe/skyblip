@@ -47,7 +47,7 @@ class SentenceWire : public io::Uart {
 
 }
 
-TEST_CASE("l76k: a new fix is reported exactly once") {
+TEST_CASE("l76k: a new fix is reported exactly once" * doctest::test_suite("main")) {
     models::L76k chip;
     chip.fix_valid = true;
     chip.satellites = 9;
@@ -76,7 +76,7 @@ TEST_CASE("l76k: a wired but silent receiver never reports a fix") {
     CHECK(gnss.sentences() == 0);
 }
 
-TEST_CASE("l76k: losing the fix is reported like any other update") {
+TEST_CASE("l76k: losing the fix is reported like any other update" * doctest::test_suite("main")) {
     models::L76k chip;
     chip.fix_valid = true;
     parts::L76k gnss(ports::SolutionRate::Half, chip);
@@ -122,7 +122,8 @@ TEST_CASE("l76k: a receiver reporting no VDOP leaves the fix without one") {
 }
 
 // G.1.16 refuses a solution over 500 ms old on air, so each lands well inside its quarter.
-TEST_CASE("l76k: two solutions a second, each on the wire inside its own quarter") {
+TEST_CASE("l76k: two solutions a second, each on the wire inside its own quarter" *
+          doctest::test_suite("main")) {
     CHECK(parts::L76k::kSolutionPeriodMs == 500);
     CHECK(parts::L76k::kBurstStartMs + parts::L76k::kBurstMs < gnss::kSolutionLatencyCeilingMs);
 
@@ -181,7 +182,8 @@ TEST_CASE("l76k: the rate the receiver is met at is the baud the devicetree pins
 }
 
 // The fix is refused as too old unless it is parsed before the radio's first transmit instant.
-TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites in view and all") {
+TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites in view and all" *
+          doctest::test_suite("main")) {
     // GGA, three GSA and RMC: 333 ms of 9600 baud line, 28 ms of 115200.
     CHECK(io::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kFactoryBaudRate) ==
           doctest::Approx(333).epsilon(0.02));
@@ -276,7 +278,8 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
 // pinned bug: poll() only reported when a new sentence arrived, and a silent
 // receiver sends none by definition, so a unit whose antenna came off in flight
 // kept transmitting the place it lost the sky.
-TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
+TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once" *
+          doctest::test_suite("main")) {
     models::L76k chip;
     parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
@@ -311,7 +314,8 @@ TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
 // I, row "Date and jump sanity", through the driver: the receiver claims a
 // solution, its position is perfectly ordinary, and its date is the MTK 1980
 // lie. What reaches the bus is not a fix.
-TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix") {
+TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix" *
+          doctest::test_suite("main")) {
     models::L76k chip;
     chip.date = "010180";
     parts::L76k gnss(ports::SolutionRate::Half, chip, chip);

@@ -113,7 +113,8 @@ TEST_CASE("nearby page: a row names the system at full height and the address in
 }
 
 // ADS-L carries no name, so one only reaches this column from a Type 66 burst.
-TEST_CASE("nearby page: a row wears the callsign in place of the address once one is heard") {
+TEST_CASE("nearby page: a row wears the callsign in place of the address once one is heard" *
+          doctest::test_suite("main")) {
     traffic::RangeRow rows[2] = {row_at(400, 0), row_at(900, 0)};
     rows[0].callsign = "D-KXYZ";
 

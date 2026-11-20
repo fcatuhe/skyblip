@@ -59,7 +59,8 @@ TEST_CASE("dfu check: an image imgtool signed matches its digest, protected TLVs
     CHECK(dfu::check_image(slot) == ports::StagedCheck::Matched);
 }
 
-TEST_CASE("dfu check: one byte flipped in the body or in the image class reads as damaged") {
+TEST_CASE("dfu check: one byte flipped in the body or in the image class reads as damaged" *
+          doctest::test_suite("main")) {
     SlotImage body(signed_image());
     body.bytes_[0x20 + 150] ^= 0x01;
     CHECK(dfu::check_image(body) == ports::StagedCheck::Damaged);

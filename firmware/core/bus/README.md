@@ -4,6 +4,8 @@ Two things travel between services, and they are not the same kind of thing.
 
 `bus.h` is what **happened**: typed queues, one producer and one consumer each, drained to exhaustion by whoever owns them. An event that nobody popped is lost and counted (`Queue::dropped`), which is the honest outcome for a fact with an instant attached to it.
 
+`bus::Bus` holds the queues both products drain. `bus::GoBus` adds the Go's radio, central and IMU queues, so Bravo holds no slot for parts it does not have, and Bravo's product holds its own `bus::AdsbQueue`. A producer pushes straight onto its queue and wakes the loop: the radio and Bluetooth threads, a GPIO edge, the GNSS line end and the PPS edge. Nothing copies a frame from a platform queue onto the bus.
+
 `state.h` is what is **true now**: a blackboard every service can read and exactly one may write. No queue, no history, no ordering. A reader gets the current answer or the default the field was born with.
 
 The rule that makes the blackboard safe is one writer per field. It is not enforced by the compiler, so it is written down here, and a second writer appearing in this table is a bug report.
@@ -32,6 +34,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `alarm_level`, `alarm_undismissed`, `alarm_call` | `alarm` |
 | `bravo` | `bravo` |
 | `own_transponder` | `bravo` on a paired Go, `adsb` on Bravo: the transponder Bravo names on the ground, which `status` carries to a page. On the Go an aircraft address typed or `set` must match it (`../settings/README.md`, The ICAO address) |
+| `aircraft_transponder` | `bravo` on a paired Go: the transponder confirmed at the entered address, kept until that address changes. Never written on Bravo |
 | `followed_call` | `peer` on Bravo, while it plays its Go's call. Never written on the Go |
 | `panel_presented` | `screen` |
 | `started` | the product |

@@ -184,7 +184,8 @@ TEST_CASE(
     CHECK_FALSE(identity::code_on(erased));
 }
 
-TEST_CASE("identity: the name says activate and the tag until a serial, then product and address") {
+TEST_CASE("identity: the name says activate and the tag until a serial, then product and address" *
+          doctest::test_suite("main")) {
     char name[identity::kBluetoothNameBytes + 1];
     identity::Activation blank{};
     blank.bluetooth_tag = 0x3F2A;
@@ -210,7 +211,8 @@ TEST_CASE("identity: the host platform is the vectors' unit and trusts the vecto
     CHECK(seed == x.unit_seed);
 }
 
-TEST_CASE("identity: a unit is activated at load only by a code its trusted key signed for it") {
+TEST_CASE("identity: a unit is activated at load only by a code its trusted key signed for it" *
+          doctest::test_suite("main")) {
     SUBCASE("the code the vectors' server signed") {
         Exchange x;
         Identity port(std::nullopt);

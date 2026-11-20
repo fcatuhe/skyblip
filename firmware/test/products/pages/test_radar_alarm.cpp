@@ -30,7 +30,8 @@ RadarSnapshot with_threat(RadarTarget* one, Level level) {
 }  // namespace
 
 // The wedge is the whole alarm on the glass: which way to look, from the first grade.
-TEST_CASE("radar page: an alarm flashes a wedge on the bearing of the threat") {
+TEST_CASE("radar page: an alarm flashes a wedge on the bearing of the threat" *
+          doctest::test_suite("main")) {
     RadarTarget east[1] = {{0, 1500, 0}};
     RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 

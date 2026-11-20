@@ -295,7 +295,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kRefusalParkCeilingMs` | 6000 (6 s) | milliseconds | Ceiling | a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two |
-| `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | at worst one dwell asleep before a plan's start plus one 375 ms dwell, 750 ms against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of) |
+| `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | the request wakes every executor wait, so only a radio that hangs takes 2 s |
 
 ## [`firmware/products/skyblip_go/input`](../firmware/products/skyblip_go/input/README.md)
 
@@ -414,6 +414,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kServicePassCeilingMs` | 10 | milliseconds | Ceiling | - |
+| `kServiceRestCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | the longest the loop sleeps with nothing due, well inside the silence ceiling |
 | `kServicePassFloorMs` | 2 | milliseconds | Floor | a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second |
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
 | `kHardwareWatchdogCeilingMs` | 12000 (12 s) | milliseconds | Ceiling | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
@@ -424,4 +425,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-279 constants over 26 folders.
+280 constants over 26 folders.

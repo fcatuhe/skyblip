@@ -139,7 +139,8 @@ TEST_CASE("radar page: the range ring is one unbroken stroke, and the only ring 
     CHECK(speckles == 0);
 }
 
-TEST_CASE("radar page: the plot turns with the track, so what is ahead is up the glass") {
+TEST_CASE("radar page: the plot turns with the track, so what is ahead is up the glass" *
+          doctest::test_suite("main")) {
     RadarTarget east[1] = {{0, 2 * kMetresPerNm, 0, Level::Advisory}};
     RadarSnapshot flying_east = flying(90);
     flying_east.target_count = 1;
@@ -232,7 +233,8 @@ TEST_CASE("radar page: the ring is labelled and sized in the unit a pilot set") 
 }
 
 TEST_CASE(
-    "radar page: the footer counts traffic it is handed, placed or not, either side of the clock") {
+    "radar page: the footer counts traffic it is handed, placed or not, either side of the clock" *
+    doctest::test_suite("main")) {
     RadarTarget targets[3] = {
         {2000, 0, 0, Level::Advisory},
         {0, -3000, 0, Level::Advisory},
@@ -377,7 +379,8 @@ TEST_CASE("radar page: a warned cell takes the ring, at the size the ring is rea
 }
 
 // NO FIX says the plot is not being fed; the word under it says whether that is going anywhere.
-TEST_CASE("radar page: under NO FIX stands how far the receiver has got") {
+TEST_CASE("radar page: under NO FIX stands how far the receiver has got" *
+          doctest::test_suite("main")) {
     RadarSnapshot searching;
     searching.stage = skyblip::gnss::Stage::Blind;
     const Glass looking = radar(searching);

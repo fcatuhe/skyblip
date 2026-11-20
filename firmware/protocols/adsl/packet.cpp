@@ -262,6 +262,7 @@ void encode_status(Packet& packet, uint32_t address, uint8_t address_mapping_tab
     packet.set_field(Packet::kOBandHdrReceiveField, static_cast<uint32_t>(report.o_band_hdr));
     packet.set_field(Packet::kConspicuityReceiveField, report.conspicuity_received);
     packet.set_field(Packet::kConspicuityTransmitField, report.conspicuity_transmitted);
+    packet.set_field(Packet::kTransponderField, static_cast<uint32_t>(report.transponder));
     packet.set_field(Packet::kTrafficUplinkClientField, report.traffic_uplink_client ? 1 : 0);
 }
 

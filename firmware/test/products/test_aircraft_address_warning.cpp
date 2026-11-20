@@ -8,7 +8,8 @@ using namespace skyblip::go;
 
 TEST_CASE(
     "aircraft address warning: it stands only while paired and neither the Go nor Bravo holds "
-    "one") {
+    "one" *
+    doctest::test_suite("main")) {
     AircraftAddressWarning warning;
     CHECK_FALSE(warning.stands(kAircraftAddressUnset));
 

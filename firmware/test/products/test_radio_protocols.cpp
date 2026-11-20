@@ -91,7 +91,8 @@ TEST_CASE("radio protocols: each product carries the stacks its PROTOCOLS file l
     CHECK(stems(bravo::kRadioProtocols) == listed_in("products/skyblip_bravo/PROTOCOLS"));
 }
 
-TEST_CASE("radio protocols: a Go names its ADS-L and ALP-TAS versions") {
+TEST_CASE("radio protocols: a Go names its ADS-L and ALP-TAS versions" *
+          doctest::test_suite("main")) {
     CHECK(link_text(go_answer()) == "{\"command\":\"protocols\"" + version("adsl", adsl::kVersion) +
                                         version("alptas", alptas::kVersion) + "}");
 }

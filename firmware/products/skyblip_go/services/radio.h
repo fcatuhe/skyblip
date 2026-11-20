@@ -32,6 +32,8 @@ class RadioService : public runtime::Service {
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 the executor flies the queued dwell, so the next pass is due when it starts
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     ports::RfMode armed_mode() const { return current_dwell_.mode; }
     uint32_t arm_count() const { return arm_count_; }

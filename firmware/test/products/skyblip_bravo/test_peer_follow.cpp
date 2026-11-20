@@ -108,8 +108,8 @@ const Call kQuiet{};
 
 }  // namespace
 
-TEST_CASE(
-    "bravo follow: Bravo plays its Go's call, not its own grading, which NMEA still carries") {
+TEST_CASE("bravo follow: Bravo plays its Go's call, not its own grading, which NMEA still carries" *
+          doctest::test_suite("main")) {
     Pinned pinned;
     pinned.rig.raise_link(3);
     pinned.seconds(20, &kQuiet);
@@ -203,7 +203,8 @@ TEST_CASE("bravo follow: a press dismisses the Go's call at once and tells the G
     CHECK(pinned.lamp_level() == traffic::Level::Advisory);
 }
 
-TEST_CASE("bravo follow: with its Go's link down, Bravo grades its own ADS-B at the Go's alarm") {
+TEST_CASE("bravo follow: with its Go's link down, Bravo grades its own ADS-B at the Go's alarm" *
+          doctest::test_suite("main")) {
     Pinned pinned;
     const Call soft{"soft"};
     pinned.seconds(20, &soft);

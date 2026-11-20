@@ -141,7 +141,8 @@ Situation standing(Level level) {
 
 }  // namespace
 
-TEST_CASE("annunciation: the advisory is sky-blip twice with a rest between, and it ends") {
+TEST_CASE("annunciation: the advisory is sky-blip twice with a rest between, and it ends" *
+          doctest::test_suite("main")) {
     CHECK(tune_for(Voice::Traffic, Level::Advisory).notes == kAdvisoryTune.notes);
     CHECK(kAdvisoryCalls == 2);
 
@@ -178,7 +179,8 @@ TEST_CASE("annunciation: each advisory call rises a third across 4 kHz, the last
 }
 
 // Under a headset the motor is what gets through, so it says the same calls the buzzer does.
-TEST_CASE("annunciation: the motor is felt for each advisory call, as long as the call") {
+TEST_CASE("annunciation: the motor is felt for each advisory call, as long as the call" *
+          doctest::test_suite("main")) {
     Buzzer buzzer;
     uint32_t now_ms = 1000;
     buzzer.announce(standing(Level::Advisory), now_ms, 5000);
@@ -285,7 +287,7 @@ TEST_CASE("annunciation: the buzzer and the motor are released the moment their 
 }
 
 // The motor is reserved for traffic, so a pilot who feels it knows what it means without looking.
-TEST_CASE("annunciation: the fix tune is heard and never felt") {
+TEST_CASE("annunciation: the fix tune is heard and never felt" * doctest::test_suite("main")) {
     Buzzer buzzer;
     uint32_t now_ms = 1000;
     Situation fix{};
@@ -421,7 +423,8 @@ TEST_CASE("annunciation: a stream of announcements never holds an output past th
 }
 
 // A lost Bravo is said once, low and unfelt, so it is told apart from traffic and never masks it.
-TEST_CASE("annunciation: a lost Bravo is one low tone, never felt, and traffic cuts it") {
+TEST_CASE("annunciation: a lost Bravo is one low tone, never felt, and traffic cuts it" *
+          doctest::test_suite("main")) {
     Buzzer buzzer;
     uint32_t now_ms = 1000;
     Situation lost{};

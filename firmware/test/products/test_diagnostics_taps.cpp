@@ -467,7 +467,8 @@ TEST_CASE("diagnostics: the rate a capture is priced at covers a quiet airborne 
 }
 
 // The one fact every tap shares: disarmed, the arguments may be gathered but nothing is kept.
-TEST_CASE("diagnostics: a device nobody armed records nothing at all") {
+TEST_CASE("diagnostics: a device nobody armed records nothing at all" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;

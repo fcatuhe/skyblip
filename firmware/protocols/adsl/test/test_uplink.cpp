@@ -183,7 +183,8 @@ TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
     CHECK(rx[3].latitude_1e7() == tx[3].latitude_1e7());
 }
 
-TEST_CASE("uplink: a destroyed frame is DETECTED (Status::Crc), never silently wrong") {
+TEST_CASE("uplink: a packet with 40 bytes destroyed, past the 16 it repairs, is refused" *
+          doctest::test_suite("main")) {
     adsl::Packet tx[2] = {make_target(1), make_target(2)};
     uint8_t packet[1 + adsl::kUplinkMaxLength];
     sent(tx, 2, packet);
@@ -246,7 +247,8 @@ TEST_CASE("uplink: a record with no address and no place on the globe is refused
 }
 
 // G.1.1's timestamp counts quarters inside 15 s, so 10 s of age is 40 quarters behind.
-TEST_CASE("uplink: a relayed record is current up to 10 s old, and never from the future") {
+TEST_CASE("uplink: a relayed record is current up to 10 s old, and never from the future" *
+          doctest::test_suite("main")) {
     const uint32_t utc_s = 1785628815;  // 0 quarters into the 15 s cycle
     const adsl::Packet fresh = make_target(1, 0);
     CHECK(adsl::uplink_record_current(fresh, utc_s, 0));

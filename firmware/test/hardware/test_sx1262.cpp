@@ -214,8 +214,8 @@ TEST_CASE(
     CHECK_FALSE(radio.service(29000, 30000));
 }
 
-TEST_CASE(
-    "sx1262: a reinitialisation that failed after the reset keys nothing until one succeeds") {
+TEST_CASE("sx1262: a reinitialisation that failed after the reset keys nothing until one succeeds" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);

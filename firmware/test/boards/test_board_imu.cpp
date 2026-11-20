@@ -28,7 +28,7 @@ uint32_t run(platform::host::Platform& platform, Board& board, bus::State& state
     return now_ms;
 }
 
-bool last_sample(bus::Bus& bus, events::AccelerometerSample& out) {
+bool last_sample(bus::GoBus& bus, events::AccelerometerSample& out) {
     bool any = false;
     events::AccelerometerSample sample{};
     while (bus.accelerometer.pop(sample)) {
@@ -42,7 +42,7 @@ bool last_sample(bus::Bus& bus, events::AccelerometerSample& out) {
 
 TEST_CASE("board: a sensor hub that answers and names itself is an inclinometer") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -53,7 +53,7 @@ TEST_CASE("board: a sensor hub that answers and names itself is an inclinometer"
 TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer") {
     platform::host::Platform platform;
     platform.chips().imu.product_id = 0x00;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -64,7 +64,7 @@ TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer
 TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
     platform::host::Platform platform;
     platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -73,10 +73,11 @@ TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
 }
 
 // The chip is a quarter turn from the case and face down with it: +X is up, +Y right, +Z forward.
-TEST_CASE("board: the chip's axes are turned into the case's before anything reads them") {
+TEST_CASE("board: the chip's axes are turned into the case's before anything reads them" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     platform.chips().imu.set_acceleration(990, -150, -20);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -94,7 +95,7 @@ TEST_CASE("board: the chip's axes are turned into the case's before anything rea
 TEST_CASE("board: the hub is booted from the loop, and reports once it runs") {
     platform::host::Platform platform;
     platform.chips().imu.set_acceleration(990, -150, -20);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -115,7 +116,7 @@ TEST_CASE("board: the hub is booted from the loop, and reports once it runs") {
 TEST_CASE("board: nothing is asked of a bus with no hub on it") {
     platform::host::Platform platform;
     platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -172,7 +173,7 @@ std::string hex_prefix(const Sha256::Digest& digest) {
 TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it is confirmed") {
     platform::host::Platform platform;
     platform.dfu().image_confirmed = false;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -190,12 +191,13 @@ TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it 
     CHECK(state.imu.bootable);
 }
 
-TEST_CASE("board: a base image boots the hub from the copy on flash") {
+TEST_CASE("board: a base image boots the hub from the copy on flash" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     const ConstByteSpan carried = platform.imu_firmware();
     platform.set_imu_firmware_linked(false);
     store_on_flash(platform, carried.data(), carried.size());
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -212,7 +214,7 @@ TEST_CASE("board: a base image boots the hub from the copy on flash") {
 TEST_CASE("board: a base image on an empty partition leaves the hub idle and says why") {
     platform::host::Platform platform;
     platform.set_imu_firmware_linked(false);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -234,7 +236,7 @@ TEST_CASE("board: a base image refuses a copy it was not built with") {
     platform.set_imu_firmware_linked(false);
     const uint8_t other[] = {0x2B, 0x66, 0x00, 0x00, 0x99, 0x88, 0x77, 0x66};
     store_on_flash(platform, other, sizeof(other));
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -250,7 +252,7 @@ TEST_CASE("board: a full image replaces a copy that is not its own") {
     platform::host::Platform platform;
     const uint8_t other[] = {0x2B, 0x66, 0x00, 0x00, 0x99, 0x88, 0x77, 0x66};
     store_on_flash(platform, other, sizeof(other));
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -263,7 +265,7 @@ TEST_CASE("board: a full image replaces a copy that is not its own") {
 TEST_CASE("board: a plain T-Echo reports no hub and keeps nothing on flash") {
     platform::host::Platform platform;
     platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -279,7 +281,7 @@ TEST_CASE("board: a plain T-Echo reports no hub and keeps nothing on flash") {
 
 TEST_CASE("board: the copy waits for a flash window, as the log does") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
@@ -295,7 +297,7 @@ TEST_CASE("board: a hub that answers but whose flash does not is reported unread
     platform::host::Platform platform;
     platform.set_imu_firmware_linked(false);
     platform.imu_flash().set_fitted(false);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);

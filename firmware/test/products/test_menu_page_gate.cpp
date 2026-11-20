@@ -122,7 +122,8 @@ TEST_CASE("product: a long press in the middle of an edit still switches the dev
     CHECK_FALSE(stored_settings(rig, stored));
 }
 
-TEST_CASE("product: the alarm can be turned up in the air, where a phone is refused") {
+TEST_CASE("product: the alarm can be turned up in the air, where a phone is refused" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;

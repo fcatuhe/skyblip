@@ -31,7 +31,8 @@ TEST_CASE("sx1262: the tuned channel is what the PLL word resolves back to") {
     CHECK(chip.frequency_hz < 868401000);
 }
 
-TEST_CASE("sx1262: carrier sense reads the level on the tuned channel") {
+TEST_CASE("sx1262: carrier sense reads the level on the tuned channel" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
@@ -80,7 +81,8 @@ TEST_CASE("sx1262: a delivered packet carries the level it arrived with") {
     CHECK(event.rssi_dbm == -73);
 }
 
-TEST_CASE("sx1262: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 kHz, unshaped") {
+TEST_CASE("sx1262: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 kHz, unshaped" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
@@ -105,7 +107,8 @@ TEST_CASE("sx1262: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3
           chip.command_order(sx1262::kSetPacketParameters));
 }
 
-TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz channel") {
+TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz channel" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
@@ -195,7 +198,8 @@ TEST_CASE("sx1262: a frequency trim moves the programmed carrier by its own ppm,
     CHECK(chip.frequency_hz <= 869533695u);
 }
 
-TEST_CASE("sx1262: a trim past the band's own limit is clamped, not programmed") {
+TEST_CASE("sx1262: a trim past the band's own limit is clamped, not programmed" *
+          doctest::test_suite("main")) {
     // The two bounds are the same number in two layers: what the flash blob
     // accepts and what the PLL word is allowed to carry. If they ever part, a
     // stored value would be silently altered on its way to the synthesiser.

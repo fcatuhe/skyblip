@@ -51,6 +51,17 @@ void RadioService::tick(uint32_t now_ms) {
     publish_dwell(now_ms);
 }
 
+uint32_t RadioService::due_in_ms(uint32_t /*now_ms*/) const {
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Rf) ||
+        !context_.state.activation.address())
+        return runtime::kServiceRestCeilingMs;
+    if (!next_armed_) return runtime::kServicePassCeilingMs;
+    const uint64_t now_us = context_.roles.clock.microseconds();
+    if (next_dwell_.from_us <= now_us) return 0;
+    const uint64_t until_ms = (next_dwell_.from_us - now_us + 999) / 1000;
+    return static_cast<uint32_t>(std::min<uint64_t>(until_ms, runtime::kServiceRestCeilingMs));
+}
+
 // INFO: fc 18oct26 a unit with no serial arms nothing, so it neither transmits nor receives
 // | 14nov26 the schedule keys on the serial, so setting an aircraft address moves no burst
 bool RadioService::identified() {

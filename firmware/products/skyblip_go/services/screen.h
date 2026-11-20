@@ -62,6 +62,8 @@ class ScreenService : public runtime::Service {
           bravo_(bravo) {}
 
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 a redraw once a second in its window, a press or a refresh a pass at a time
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     void next_page();
     Page next_fitted_page(Page from) const;
@@ -76,6 +78,7 @@ class ScreenService : public runtime::Service {
     void park_for_off();
     void park_for_flat_cell();
     void park_for_low_cell();
+    void present_self_test();
     void set_range_step(int step) {
         settings_.range_step = static_cast<uint8_t>(clamped_range_step(step));
         dirty_ = true;
@@ -178,6 +181,7 @@ class ScreenService : public runtime::Service {
     bool showing_radar() const { return mode_ == Mode::Page && page_ == Page::Radar; }
 
     bool answering() const { return prompt_ != comms::Pending::None; }
+    bool panel_ready(uint32_t now_ms);
     bool unit_activated();
 
     bool alarm_takes_glass() const {
@@ -236,7 +240,7 @@ class ScreenService : public runtime::Service {
     std::optional<bool> activated_{};
 
     Glass framebuffer_{};
-    Glass presented_{};
+    uint32_t presented_crc_{0};
     RadarTarget targets_[kMaxRadarTargets]{};
     traffic::RangeRow nearby_rows_[kNearbyRows]{};
     Page page_{Page::Radar};
@@ -255,6 +259,7 @@ class ScreenService : public runtime::Service {
     Change change_{Change::Asked};
     bool presented_once_{false};
     ParkStep park_{ParkStep::None};
+    bool panel_waiting_{false};
     ParkFrame park_frame_{ParkFrame::Wordmark};
     ports::RecoveryPath recovery_path_{ports::RecoveryPath::Rebooted};
     power::CellOnGlass cell_on_glass_{power::CellOnGlass::None};

@@ -39,7 +39,7 @@ A fix that comes back does not make an old observation fresh. Each assembly fiel
 
 ## Settings
 
-`settings.h` is Bravo's struct, sealed by `core/settings/blob.h` as blob version 4. It holds `aircraft_address`, `aircraft_address_from_go`, `alarm`, `go_alarm`, and `peer`: the Bluetooth address and type of the Go Bravo pinned, and whether one is pinned. `alarm` is Bravo's own, which a phone sets and Bravo plays while it is not paired. `go_alarm` is the last alarm its pinned Go's `peer_claim` gave, which Bravo plays while paired, link down and restart included (The alarm). Paired with a Go says when the pin is written and cleared, and when `aircraft_address_from_go` is set. The pin is in version 1, so the first image already carried it. Version 2 added `aircraft_address_from_go`, and `from_blob` reads a version 1 blob whole, pin included, with `aircraft_address_from_go` false. Version 3 replaced `alarm_enabled` and `alarm_volume` with `alarm`, and either old off comes back `visual` (`../common/README.md`). Version 4 added `go_alarm` at the end, in what was padding, and an older blob comes back with `go_alarm` equal to `alarm`, the alarm a pinned Bravo played until then.
+`settings.h` is Bravo's struct, sealed by `core/settings/blob.h` as blob version 4. It holds `aircraft_address`, `aircraft_address_from_go`, `alarm`, `go_alarm`, and `peer`: the Bluetooth address and type of the Go Bravo pinned, and whether one is pinned. `alarm` is Bravo's own, which a phone sets and Bravo plays while it is not paired. `go_alarm` is the last alarm its pinned Go's `peer_claim` gave, which Bravo plays while paired, link down and restart included (The alarm). Paired with a Go says when the pin is written and cleared, and when `aircraft_address_from_go` is set. `from_blob` reads version 4 alone, and an older blob reads as defaults: no X1 ever stored one.
 
 Bravo answers `config` and `defaults` with `aircraft_address` and `alarm` only, `config` with `alarm_from_go` too, and ignores every other key of a `set`, as the Go ignores `address`. While paired, `config` carries its Go's alarm with `alarm_from_go` true, and a `set` that carries `alarm` is refused `set_on_go` at the door, so a phone never leaves Bravo disagreeing with its Go and Bravo's own alarm stays as it was before the pairing. The Briefing page shows that alarm read-only, `Set on its Go`. `schemas/link.v1.json` says which product stores each key. A `set` on Bravo stands as a prompt like any other, and `describe_changes` writes no rows, because there is no glass to show them on.
 
@@ -55,7 +55,7 @@ A prompt is refused only while the flight state is `Airborne`, as on the Go (`co
 
 ## The lamp
 
-`core/indication` decides the lamp for both products. Bravo claims `common::Feature::LampShowsLink`, so its alarm service also tells the table whether a prompt stands and whether a phone is connected. The Go makes no such claim and its lamp is unchanged.
+`core/indication` decides the lamp for both products. Bravo hands its alarm service `lamp_shows_link`, so it also tells the table whether a prompt stands and whether a phone is connected. The Go does not, and its lamp is unchanged.
 
 | State | Lamp |
 |---|---|

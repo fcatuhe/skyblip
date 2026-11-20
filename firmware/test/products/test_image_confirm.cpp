@@ -13,7 +13,8 @@
 
 using namespace skyblip;
 
-TEST_CASE("product: a fresh image confirms itself once the receiver has spoken, fix or no fix") {
+TEST_CASE("product: a fresh image confirms itself once the receiver has spoken, fix or no fix" *
+          doctest::test_suite("main")) {
     Rig rig;
     rig.platform.dfu().image_confirmed = false;
     REQUIRE(rig.setup() == Status::Ok);

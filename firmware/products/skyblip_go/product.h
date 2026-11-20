@@ -1,12 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PRODUCT_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PRODUCT_H
 
-#include <optional>
-
 #include "boards/lilygo/t_echo_plus/board.h"
-#include "core/power/reset_reason.h"
-#include "core/power/shutdown.h"
-#include "core/power/wake.h"
 #include "core/util/format.h"
 #include "products/common/services/alarm.h"
 #include "products/common/services/capture.h"
@@ -15,10 +10,9 @@
 #include "products/common/services/nmea.h"
 #include "products/common/services/ownship.h"
 #include "products/common/services/power.h"
-#include "products/common/services/traffic.h"
+#include "products/common/shell.h"
 #include "products/common/solution_rate.h"
 #include "products/skyblip_go/capture_settings.h"
-#include "products/skyblip_go/features.h"
 #include "products/skyblip_go/flash_window.h"
 #include "products/skyblip_go/product_name.h"
 #include "products/skyblip_go/radio_protocols.h"
@@ -26,26 +20,20 @@
 #include "products/skyblip_go/services/bravo.h"
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/services/screen.h"
+#include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "runtime/loop.h"
 
 namespace skyblip::go {
 
-// What this product cannot fly without, and what it can lose and keep flying.
 constexpr ports::Capabilities kRequired =
     ports::Capability::Rf | ports::Capability::Gnss | ports::Capability::Barometer;
-constexpr ports::Capabilities kOptional =
-    ports::Capability::Display | ports::Capability::Buzzer | ports::Capability::Haptic |
-    ports::Capability::Link | ports::Capability::Storage | ports::Capability::Dfu |
-    ports::Capability::Contacts | ports::Capability::Battery | ports::Capability::Indicator |
-    ports::Capability::Inclinometer;
 
 // INFO: fc 21sep26 a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two
 constexpr uint32_t kRefusalParkCeilingMs = 6000;
 
-// INFO: fc 08nov26 at worst one dwell asleep before a plan's start plus one 375 ms dwell, 750 ms
-// against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of)
+// INFO: fc 19nov26 the request wakes every executor wait, so only a radio that hangs takes 2 s
 constexpr uint32_t kRadioParkCeilingMs = 2000;
 
 // INFO: fc 19nov26 the Go transmits ADS-L, so it solves on .000 and .500, two of G.1.1's quarters
@@ -73,12 +61,7 @@ class Product {
         roles_.capabilities = board_.capabilities();
         config_link_.set_product_name(product_name(roles_.capabilities));
         config_link_.config().set_variant(variant_of(roles_.capabilities));
-        const power::ResetCause causes = platform_.system_power().reset_causes();
-        reset_reason_ = power::classify(causes);
-        // The register is read once and then only remembered, so the companion
-        // link is told at boot: a watchdog bite in the field is diagnosable
-        // from a phone, without the panel in hand.
-        config_link_.config().set_reset_reason(reset_reason_);
+        const power::ResetCause causes = shell_.read_reset();
         if (board == Status::Ok) config_link_.load();
 
         // The wake cause decides whether this boot becomes a device at all
@@ -87,80 +70,26 @@ class Product {
         // bag must leave no trace on the glass and start nothing. The shell drops
         // the rails; every part is already in a known state, which is why this
         // sits after board_.begin() rather than in front of it.
-        boot_cell_ = read_boot_cell();
-        boot_path_ = power::boot_path(causes, platform_.button_down(), boot_cell_);
+        const power::BootPath path = shell_.read_boot(causes, settings_.battery_offset_mv);
         glass_remembered_ = platform_.system_power().cell_on_glass();
         take_went_dark_flat();
         config_link_.config().set_went_dark_flat(went_dark_flat_);
-        if (boot_path_ == power::BootPath::SleepAgain) {
-            refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
+        if (path == power::BootPath::SleepAgain) {
+            refused_frame_ = power::refused_frame(shell_.boot_cell(), glass_remembered_);
             return Status::Ok;
         }
-        flyable_ = board == Status::Ok &&
-                   ports::without(kRequired, board_.capabilities()) == ports::Capability::None;
         // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
-        if (flyable_) config_link_.load_identity();
+        if (shell_.judge(board, kRequired)) config_link_.load_identity();
 
-        if (!flyable_) (void)board_.take_bus_inventory();
-        draw_self_test();
-        if (!flyable_) roles_.display.present(self_test_page_, ports::Refresh::Full, 0);
-
-        if (board != Status::Ok) return board;
-        if (!flyable_) return Status::Down;
-        if (reset_reason_ == power::ResetReason::LowPowerWake) alarm_.sign_on();
-        const Status loop = loop_.setup();
-        state_.started = loop == Status::Ok;
-        return loop;
+        if (!flyable()) (void)board_.take_bus_inventory();
+        take_self_test();
+        if (!flyable()) screen_.present_self_test();
+        return shell_.start(board);
     }
 
     void run_pass(uint32_t now_ms) {
-        if (!flyable_ && !shutdown_.going_down()) guard_cell(now_ms);
-        if (flyable_ && !shutdown_.going_down()) {
-            const bool metered = diagnostics_.armed();
-            if (metered) {
-                meter_.begin_pass(context_.instant(now_ms).into_ms);
-                meter_.timed(diagnostics::LoopService::BoardPoll,
-                             [&] { board_.poll(state_, now_ms); });
-            } else {
-                meter_.rest();
-                board_.poll(state_, now_ms);
-            }
-            // Polled before the services run, so the pass that may write flash is
-            // the pass that already knows the rail is going. One atomic read on
-            // the silicon side; nothing here is allowed to be slower than that,
-            // because the warning's whole value is the milliseconds it is early.
-            if (platform_.system_power().take_supply_warning()) power_.on_supply_warning();
-            loop_.run_pass(now_ms, metered ? &meter_ : nullptr);
-            if (metered) meter_.end_pass();
-            record_loop(now_ms);
-            scan_for_self_test();
-            if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
-            if (config_link_.config().power_off_requested()) {
-                config_link_.config().clear_power_off_request();
-                shutdown_.request(power::ShutdownReason::LinkRequest, now_ms);
-            }
-            if (config_link_.config().install_requested()) {
-                config_link_.config().clear_install_request();
-                shutdown_.request(power::ShutdownReason::Install, now_ms);
-            }
-            if (config_link_.config().recovery_requested()) {
-                config_link_.config().clear_recovery_request();
-                shutdown_.request(power::ShutdownReason::Recovery, now_ms);
-            }
-            if (const std::optional<comms::CaptureProfile> profile =
-                    config_link_.config().capture_requested()) {
-                config_link_.config().clear_capture_request();
-                common::order_capture(diagnostics_, *profile);
-            }
-        }
-        // INFO: fc 13nov26 before drive_shutdown, so the sign starts on the pass after the park's
-        // flash work
-        if (shutdown_.going_down()) finish_sign_off(now_ms);
-        shutdown_.tick(now_ms, platform_.button_down(), platform_.pad_down());
-        drive_shutdown(now_ms);
-        if (shutdown_.going_down()) screen_.settle_park(now_ms);
-        if (shutdown_.going_down()) await_radio_park(now_ms, ready_but_for_radio());
-        enter_recovery_once_parked();
+        if (shell_.serve(now_ms)) scan_for_self_test();
+        shell_.wind_down(now_ms, platform_.pad_down());
         remember_glass();
     }
 
@@ -170,7 +99,7 @@ class Product {
         if (!refusal_asked_) {
             refusal_asked_ = true;
             refusal_since_ms_ = now_ms;
-            park_parts(now_ms);
+            shell_.park_parts(now_ms);
             if (refused_frame_ == power::RefusedFrame::Leave)
                 screen_.sleep_panel(now_ms);
             else if (refused_frame_ == power::RefusedFrame::FlatCell)
@@ -186,51 +115,27 @@ class Product {
                 screen_.sleep_panel(now_ms);
         }
         const bool ready_but_radio = released && !screen_.parking();
-        await_radio_park(now_ms, ready_but_radio);
+        shell_.await_radio_park(now_ms, ready_but_radio);
         return ready_but_radio && roles_.rf.parked();
     }
 
     power::RefusedFrame refused_frame() const { return refused_frame_; }
 
     ports::Capabilities capabilities() const { return board_.capabilities(); }
-    ports::Capabilities degraded() const {
-        return ports::without(kOptional, board_.capabilities());
-    }
-
-    // False when a required capability is missing: the loop refuses to fly, the
-    // self-test page stays on the glass and the button still works.
-    bool flyable() const { return flyable_; }
-    power::ResetReason reset_reason() const { return reset_reason_; }
+    bool flyable() const { return shell_.flyable(); }
+    power::ResetReason reset_reason() const { return shell_.reset_reason(); }
     bool went_dark_flat() const { return went_dark_flat_; }
-    // Run, or straight back to SYSTEM OFF. The shell reads this immediately after
-    // setup() and performs the second one.
-    power::BootPath boot_path() const { return boot_path_; }
-    const power::BootCell& boot_cell() const { return boot_cell_; }
-    const Glass& self_test_page() const { return self_test_page_; }
-    // The rows behind that page, so a test can read what a part answered instead
-    // of reading pixels back off the glass to find out.
-    const SelfTestPart* self_test_rows() const { return self_test_parts_; }
-
-    power::ShutdownSequencer& shutdown() { return shutdown_; }
-    const power::ShutdownSequencer& shutdown() const { return shutdown_; }
-    // INFO: fc 12sep26 rails cut mid-frame leave the ink half-driven, and the sun develops it
-    bool ready_to_power_off() const { return ready_but_for_radio() && roles_.rf.parked(); }
-    bool installing() const { return shutdown_.reason() == power::ShutdownReason::Install; }
-    bool recovering() const { return shutdown_.reason() == power::ShutdownReason::Recovery; }
-    bool stowing() const { return shutdown_.reason() == power::ShutdownReason::Stow; }
-    bool cell_ran_out() const { return shutdown_.reason() == power::ShutdownReason::LowBattery; }
-    bool cell_needs_charge() const { return power::needs_charge(state_.power.level); }
-
-    // Feeding through a deliberate shutdown is correct: the device is doing what
-    // it was told, and a held button must not turn a power-off into a reboot.
-    bool may_feed_watchdog(uint32_t now_ms) const {
-        if (!flyable_ || shutdown_.going_down()) return true;
-        return loop_.may_feed_watchdog(now_ms);
-    }
-    int stalled_service(uint32_t now_ms) const { return loop_.stalled_service(now_ms); }
+    power::BootPath boot_path() const { return shell_.boot_path(); }
+    const power::BootCell& boot_cell() const { return shell_.boot_cell(); }
+    const SelfTestSnapshot& self_test() const { return self_test_snapshot_; }
+    power::ShutdownSequencer& shutdown() { return shell_.shutdown(); }
+    const power::ShutdownSequencer& shutdown() const { return shell_.shutdown(); }
+    bool ready_to_power_off() const { return shell_.ready_to_power_off(); }
+    bool may_feed_watchdog(uint32_t now_ms) const { return shell_.may_feed_watchdog(now_ms); }
+    uint32_t due_in_ms(uint32_t now_ms) const { return shell_.due_in_ms(now_ms); }
 
     Board& board() { return board_; }
-    bus::Bus& bus() { return bus_; }
+    bus::GoBus& bus() { return bus_; }
     bus::State& state() { return state_; }
     Settings& settings() { return settings_; }
     const Settings& settings() const { return settings_; }
@@ -239,7 +144,7 @@ class Product {
     common::OwnshipService& ownship() { return ownship_; }
     common::PowerService& power() { return power_; }
     RadioService& radio() { return radio_; }
-    common::TrafficService& traffic() { return traffic_; }
+    TrafficService& traffic() { return traffic_; }
     common::AlarmService& alarm() { return alarm_; }
     common::NmeaService& nmea() { return nmea_; }
     ScreenService& screen() { return screen_; }
@@ -250,6 +155,8 @@ class Product {
     diagnostics::Recorder& diagnostics() { return diagnostics_; }
 
    private:
+    friend class common::Shell<Product>;
+
     // Which part answered, for the three footprints LilyGO ships more than one
     // part against. Everything here comes from the bring-up probes
     // (ports/inventory.h), never from what the image was compiled expecting, which
@@ -283,21 +190,11 @@ class Product {
         return barometer_part_;
     }
 
-    power::BootCell read_boot_cell() {
-        power::BootCell cell{};
-        if (!ports::has(board_.capabilities(), ports::Capability::Battery)) return cell;
-        uint16_t raw_mv = 0;
-        cell.valid = platform_.read_divider_mv(raw_mv);
-        cell.cell_mv = power::calibrated_mv(raw_mv, settings_.battery_offset_mv);
-        cell.external_power = platform_.external_power();
-        return cell;
-    }
-
     void take_went_dark_flat() {
         ports::SystemPower& retained = platform_.system_power();
         went_dark_flat_ =
             glass_remembered_ == power::CellOnGlass::Flat || retained.went_dark_flat();
-        retained.set_went_dark_flat(boot_path_ == power::BootPath::SleepAgain && went_dark_flat_);
+        retained.set_went_dark_flat(boot_path() == power::BootPath::SleepAgain && went_dark_flat_);
     }
 
     void remember_glass() {
@@ -312,23 +209,17 @@ class Product {
         screen_.park_for_flat_cell();
     }
 
-    void guard_cell(uint32_t now_ms) {
-        board_.poll_battery(now_ms);
-        power_.tick(now_ms);
-        if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
-    }
-
     // INFO: fc 14nov26 a menu is a tap away from the self-test page, so the bus is scanned before
     // it draws
     void scan_for_self_test() {
         const bool on_page = screen_.mode() == Mode::Page && screen_.page() == Page::SelfTest;
         if (screen_.mode() != Mode::Menu && !on_page) return;
         if (!board_.take_bus_inventory()) return;
-        draw_self_test();
+        take_self_test();
         if (on_page) screen_.mark_dirty();
     }
 
-    void draw_self_test() {
+    void take_self_test() {
         const ports::Capabilities fitted = board_.capabilities();
         for (int i = 0; i < kSelfTestPartCount; i++) {
             const SelfTestPartSpec& spec = kSelfTestParts[i];
@@ -341,142 +232,63 @@ class Product {
         }
 
         self_test_snapshot_.address = state_.activation.address();
-        self_test_snapshot_.reset_reason = power::to_string(reset_reason_);
+        self_test_snapshot_.reset_reason = power::to_string(reset_reason());
         self_test_snapshot_.went_dark_flat = went_dark_flat_;
         self_test_snapshot_.parts = self_test_parts_;
         self_test_snapshot_.part_count = kSelfTestPartCount;
-        self_test_snapshot_.flyable = flyable_;
-        self_test_snapshot_.battery_valid = boot_cell_.valid;
-        self_test_snapshot_.battery_mv = boot_cell_.cell_mv;
+        self_test_snapshot_.flyable = flyable();
+        self_test_snapshot_.battery_valid = boot_cell().valid;
+        self_test_snapshot_.battery_mv = boot_cell().cell_mv;
         const ports::Inventory& found = board_.inventory();
         for (uint8_t i = 0; i < found.i2c_count; i++)
             i2c_roles_[i] = boards::t_echo_plus::i2c_role(found.i2c_addresses[i]);
         self_test_snapshot_.i2c_addresses = found.i2c_addresses;
         self_test_snapshot_.i2c_roles = i2c_roles_;
         self_test_snapshot_.i2c_address_count = found.i2c_count;
-        go::draw_self_test(self_test_page_, self_test_snapshot_);
     }
 
-    void drive_shutdown(uint32_t now_ms) {
-        const power::ShutdownPhase phase = shutdown_.phase();
-        if (phase == acted_phase_) return;
-        acted_phase_ = phase;
-        if (phase == power::ShutdownPhase::Off && installing()) {
-            config_link_.install();
-            return;
+    void park_glass() {
+        switch (shutdown().reason()) {
+            case power::ShutdownReason::Install: screen_.park_for_install(); return;
+            case power::ShutdownReason::Recovery:
+                screen_.park_for_recovery(roles_.dfu.recovery_path());
+                return;
+            case power::ShutdownReason::Stow: screen_.park_for_stow(); return;
+            case power::ShutdownReason::LowBattery: park_flat_cell(); return;
+            default: break;
         }
-        if (phase != power::ShutdownPhase::Parking) return;
-        park_radio();
-        if (power::ends_switched_off(shutdown_.reason(), recovery_powers_off()))
-            alarm_.sign_off(now_ms);
-        else
-            park_outputs(now_ms);
-        // And now that nothing is armed, the second is nobody's: a settings change
-        // still waiting for a free phase (core/timing/durable_write.h) goes to
-        // flash here rather than dying with the rails. From this point the service
-        // loop no longer runs, so this is the last chance there is.
-        config_link_.flush_settings(now_ms);
-        power_.record_last_pass(now_ms);
-        capture_.park(now_ms);
-        if (installing())
-            screen_.park_for_install();
-        else if (recovering())
-            screen_.park_for_recovery(roles_.dfu.recovery_path());
-        else if (stowing())
-            screen_.park_for_stow();
-        else if (cell_ran_out())
-            park_flat_cell();
-        else if (cell_needs_charge())
+        if (power::needs_charge(state_.power.level))
             screen_.park_for_low_cell();
         else
             screen_.set_power(false);
     }
 
-    // INFO: fc 13nov26 a refused boot parks these at once, and a switch-off parks the outputs once
-    // its sign ends
-    void park_parts(uint32_t now_ms) {
-        park_radio();
-        park_outputs(now_ms);
-    }
+    void settle_glass(uint32_t now_ms) { screen_.settle_park(now_ms); }
+    bool glass_parking() const { return screen_.parking(); }
 
-    // The radio goes first. An armed dwell keeps the receiver and the PA
-    // alive right through the seconds the panel takes to park.
+    // INFO: fc 19nov26 the radio parks first, since an armed dwell keeps the PA up through a park
     void park_radio() {
         roles_.rf.abort();
         roles_.rf.sleep();
         publish_radio_asleep();
     }
 
-    void park_outputs(uint32_t now_ms) {
-        // Every peripheral that can be left driven is switched off by the owner
-        // that drives it, because from here the service loop no longer runs: a
-        // buzzer mid-pattern would sound until the rails drop.
-        alarm_.park(now_ms);
-        // The haptic is a part on a bus, so silence is not enough: a DRV2605 that
-        // answered is put in standby and its enable held low before the rail it
-        // shares with the flash goes, and the enable of one that never answered is
-        // released, since bring-up raised it on every board.
-        board_.park();
-    }
-
-    void finish_sign_off(uint32_t now_ms) {
-        if (!alarm_.signing()) return;
-        alarm_.advance_sign(now_ms);
-        if (!alarm_.signing()) park_outputs(now_ms);
-    }
-
-    bool recovery_powers_off() const {
-        return roles_.dfu.recovery_path() == ports::RecoveryPath::PowerOffToFinish;
-    }
-
-    bool ready_but_for_radio() const {
-        return shutdown_.ready_to_power_off() && !installing() && !screen_.parking() &&
-               !alarm_.signing() &&
-               (!recovering() || recovery_taken_ == ports::RecoveryPath::PowerOffToFinish);
-    }
-
-    // INFO: fc 08nov26 a radio that never parks must not keep a switched-off unit awake, so the
-    // wait is bounded
-    void await_radio_park(uint32_t now_ms, bool waiting) {
-        if (!waiting || roles_.rf.parked()) {
-            radio_waited_since_ms_.reset();
-            return;
-        }
-        if (!radio_waited_since_ms_) radio_waited_since_ms_ = now_ms;
-        if (now_ms - *radio_waited_since_ms_ >= kRadioParkCeilingMs) roles_.rf.abandon();
-    }
-
-    void enter_recovery_once_parked() {
-        if (!recovering() || recovery_taken_ || !shutdown_.ready_to_power_off()) return;
-        if (screen_.parking()) return;
-        recovery_taken_ = roles_.dfu.enter_recovery();
-    }
-
-    void record_loop(uint32_t now_ms) {
-        const diagnostics::Instant at = context_.instant(now_ms);
-        if (at.at_s == loop_window_s_) return;
-        loop_window_s_ = at.at_s;
-        const diagnostics::Loop window = meter_.take();
-        if (diagnostics_.armed()) diagnostics_.record(window, at);
-    }
+    ports::Rf& radio_part() const { return roles_.rf; }
 
     void publish_radio_asleep() {
         state_.rf.plan = timing::SlotPlan{};
         state_.rf.dwell = timing::DwellPhase{};
     }
 
-    bus::Bus bus_{};
+    bus::GoBus bus_{};
     bus::State state_{};
     diagnostics::Recorder diagnostics_{};
     Settings settings_{};
-    Glass self_test_page_{};
     SelfTestSnapshot self_test_snapshot_{};
     Platform& platform_;
     Board board_;
     ports::Roles roles_{board_.roles()};
     runtime::Context context_{roles_, bus_, state_, diagnostics_};
-    runtime::LoopMeter meter_{roles_.clock};
-    uint32_t loop_window_s_{0};
     common::RecordPool pool_{context_, book_flash_in_dwell};
     common::RecordStore flights_store_{pool_, store::SectorOwner::Flights};
     common::RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};
@@ -490,16 +302,17 @@ class Product {
     common::ConfigLinkService config_link_{
         context_,     settings_store_,          power_.cutoff_monitor(),
         "skyBlip Go", identity::bluetooth_name, dfu::Product::Go};
-    common::OwnshipService ownship_{context_, settings_.aircraft_type};
+    common::OwnshipService ownship_{context_, settings_.aircraft_type, &bus_.accelerometer};
     RadioService radio_{context_, settings_};
-    common::TrafficService traffic_{context_, kFeatures, settings_.aircraft_address};
-    common::AlarmService alarm_{context_, kFeatures, common::AlarmSettings{settings_.alarm}};
-    common::NmeaService nmea_{context_, kFeatures, config_link_.config()};
+    TrafficService traffic_{context_, bus_.rf, settings_.aircraft_address};
+    common::AlarmService alarm_{context_, common::AlarmSettings{settings_.alarm}};
+    common::NmeaService nmea_{context_, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,
                                          config_link_.config()};
     common::CaptureService capture_{context_, capture_store_, flights_store_, capture_settings_,
                                     config_link_.config()};
-    BravoService bravo_{context_, settings_, config_link_.config(), board_.central(), alarm_};
+    BravoService bravo_{context_,         settings_,           config_link_.config(),
+                        board_.central(), bus_.central_events, alarm_};
     ScreenService screen_{context_, settings_,           config_link_.config(),
                           alarm_,   self_test_snapshot_, bravo_};
 
@@ -522,7 +335,8 @@ class Product {
         {&capture_, diagnostics::LoopService::Capture},
         {&screen_, diagnostics::LoopService::Screen},
         {&bravo_, diagnostics::LoopService::Bravo}};
-    runtime::Loop loop_{services_, kServiceCount};
+    runtime::Loop loop_{services_};
+    common::Shell<Product> shell_{*this, kRadioParkCeilingMs};
 
     SelfTestPart self_test_parts_[kSelfTestPartCount]{};
     // The barometer's address as the page prints it. A member and not a local:
@@ -530,20 +344,12 @@ class Product {
     // has returned.
     char barometer_part_[10]{};
     const char* i2c_roles_[ports::Inventory::kMaxI2cAddresses]{};
-    power::ShutdownSequencer shutdown_{};
-    power::ShutdownPhase acted_phase_{power::ShutdownPhase::Running};
-    power::ResetReason reset_reason_{power::ResetReason::Unknown};
-    power::BootPath boot_path_{power::BootPath::Run};
-    power::BootCell boot_cell_{};
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};
-    std::optional<ports::RecoveryPath> recovery_taken_{};
     uint32_t refusal_since_ms_{0};
-    std::optional<uint32_t> radio_waited_since_ms_{};
     power::ButtonRelease refusal_release_{};
     bool refusal_asked_{false};
     power::CellOnGlass glass_remembered_{power::CellOnGlass::None};
     bool went_dark_flat_{false};
-    bool flyable_{false};
 };
 
 }  // namespace skyblip::go

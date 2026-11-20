@@ -4,11 +4,11 @@ The C++ tree: `protocols/` is the radio protocols, each a stack another project 
 
 A file lives in the narrowest layer that decides its content. What a radio protocol's specification decides is `protocols/`, and it includes nothing of skyBlip's ([`protocols/README.md`](protocols/README.md)); a spec, a physical law or arithmetic is otherwise `core/`; what the core needs done for it is `ports/`; a datasheet is `hardware/`; a schematic is `boards/`; which pages exist, what a press means and which settings a pilot gets is the product's; pixels that any product would draw the same way are `ui/`.
 
-A service that more than one product runs lives in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)). It does not go in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone or an alarm. A shared service decides product content: the cadence a phone's map is fed at, which claim turns it on, which settings it reads. That belongs to the products layer, shared by more than one product. No file in `products/common/` includes a product's header. A product hands a shared service what it reads of the product's settings as a small struct the product fills, and the claims it makes as `common::Feature` bits in its own `kFeatures`. The config link also loads and writes the settings, so it takes the product's `common::SettingsStore` instead. The host build, the tuning index and the clang-format job already walk `products/*`, and the device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`. Every later move of a service out of a product follows the same rule.
+A service that more than one product runs lives in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)). It does not go in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone or an alarm. A shared service decides product content: the cadence a phone's map is fed at, which claim turns it on, which settings it reads. That belongs to the products layer, shared by more than one product. No file in `products/common/` includes a product's header. A product hands a shared service what it reads of the product's settings as a small struct the product fills. The config link also loads and writes the settings, so it takes the product's `common::SettingsStore` instead. The host build, the tuning index and the clang-format job already walk `products/*`, and the device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`. Every later move of a service out of a product follows the same rule.
 
 `ports/` is a port layer, not a hardware abstraction layer, and it is named for what it is: it declares the roles the core needs filled, in the core's own vocabulary, and `hardware/` is where a part or a platform fills one. A port is what the core calls; what the world does to a sensor arrives as an `events::` value on a queue instead, and `hardware/README.md` is where that half of the contract is written down. Register code belongs there, never here. `protocols/`, `core/` and `ui/` compile with no framework headers at all, which is what buys the host suite and the WASM simulator; Zephyr is used freely below `ports/` and never above it.
 
-`make test` runs the host suite, the protocol stacks' tests among it, `make test-protocols` builds and runs each stack alone from a copy holding nothing else, `make test-sanitize` runs it again under ASan and UBSan in `build/sanitize/`, `make fuzz` runs the libFuzzer harnesses in `test/fuzz/` with clang, `ABI=ilp32` builds any of them for i386 where `long` is 32 bits as on the nRF52, `make simulator` builds the terminal one, `scripts/build_local.sh` from the repo root builds the device images.
+`make test` runs the host suite, the protocol stacks' tests among it, `make test-protocols` builds and runs each stack alone from a copy holding nothing else, `make test-sanitize` runs it again under ASan and UBSan in `build/sanitize/`, `make fuzz` runs the libFuzzer harnesses in `test/fuzz/` with clang, `ABI=ilp32` builds any of them for i386 where `long` is 32 bits as on the nRF52, `scripts/build_local.sh` from the repo root builds the device images.
 
 `.clang-format` and `.clang-tidy` live here rather than at the root because this is the only C++ in the repository, and both tools read the nearest config above the file they are given. `make tidy` runs the linter over what the host build compiles; CI runs the same target.
 
@@ -30,7 +30,7 @@ This tree is open source, and some of what it compiles in names skyBlip and nobo
 | Bluetooth names `skyBlip Go`, `skyBlip Go+`, `skyBlip Bravo`, with the serial behind them | `CONFIG_BT_DEVICE_NAME` in each `prj.conf`, `products/skyblip_go/product.h`, `products/skyblip_bravo/name.h`, `core/identity/` | names its own product, so a companion app does not take it for a skyBlip |
 | Bluetooth service and characteristic UUIDs, base `69c21300-0187-4204-a91d-02eb8858b440` | `hardware/platform/zephyr/skyblip_uuid.h` | draws its own 128-bit base |
 | MCUboot signing keys | `keys/development.pub.pem`, `keys/production.pub.pem` | signs with keys of its own (`keys/README.md`) |
-| MCUboot image vendor name `skyblip.eu` | `CONFIG_MCUBOOT_IMGTOOL_UUID_VID_NAME` in `products/skyblip_go/prj.conf` and `products/skyblip_bravo/prj.conf` | sets its own domain, from which imgtool derives the image's vendor UUID |
+| MCUboot image vendor name `skyblip.eu` | `CONFIG_MCUBOOT_IMGTOOL_UUID_VID_NAME` in `products/common/prj.conf` | sets its own domain, from which imgtool derives the image's vendor UUID |
 | The skyblip.eu server key, id `8c06724d` | `keys/server.pub`, compiled in by `cmake/skyblip.cmake` | runs its own activation server with its own key, or leaves `CONFIG_SKYBLIP_ACTIVATION` off |
 
 ## Naming a boolean
@@ -122,6 +122,25 @@ Each word below names one thing, in code and in prose. A word that names two thi
 | divider | the resistor divider the ADC reads: the cell off the cable, the USB rail on it. `read_divider_mv()`, `BatterySample::divider_mv` | the cell |
 | park | stop a part and release its lines, ready for the rails to drop | `show(Colour::None)`, which only darkens |
 | pass | one run of the service loop over every service | |
+
+## Naming a test case
+
+A test case states a claim, and [`docs/BEHAVIOR.md`](../docs/BEHAVIOR.md) and the pages under `docs/behavior/` are generated from the claims (`scripts/behavior_index.py`). Name a case `subject: what holds`, as in `button: a stable press emits exactly one event`, because the subject groups the cases on their area's page. Open every test file with a comment that says what it pins down. A comment above a case is quoted under its claim.
+
+A claim is main or it is an edge case. Mark a main case with the `main` test suite, the only one the suite uses, and leave every other case unmarked:
+
+```cpp
+TEST_CASE("button: a stable press emits exactly one event" * doctest::test_suite("main")) {
+```
+
+| Tier | What it covers |
+|---|---|
+| main | what the device does when used as intended, which a pilot, a reviewer or a declaration of conformity relies on: what goes on air and when, what is received and shown, what an alarm means, what the screen and the controls do, what activation, update, pairing and settings do, and the rules a standard imposes on what the device sends. State it as a user or a reviewer would recognize it |
+| edge case or detail | refusals of malformed input that a pilot never sees, that change nothing on air and that no standard requires, boundaries and saturation, clock and counter wraps, recovery mechanics, regressions found by fuzzing, internal mechanics, formatting details and harness checks |
+
+A failure, a refusal or a guard is main when a pilot sees it or relies on it for safety, when it changes what goes on air, or when a standard requires it. How the firmware recovers from it is a detail. When in doubt, leave the case unmarked.
+
+Keep main small, about 10 to 15% of an area's cases. Give a subject a user would recognize at least one main case when one qualifies, and give a purely internal subject none. That rule does not hold on the pages whose cases are named after a clause of a standard: `adsl`, `adsb`, `en300220` and the `protocols-*-conformance` pages, where nearly every subject is a clause. There a case is main when it states a rule of the clause on what the device puts on air or reads off it, and the 10 to 15% still holds. Each area's page lists its main claims first and folds the rest below them, and `docs/BEHAVIOR.md` lists every main claim. `build/skyblip_tests -ts=main` runs the main cases alone. `scripts/behavior_index.py` refuses a name without a subject and a claim on either side of `: `, a file with no opening comment, a test suite other than `main`, and a skipped case marked main, because a skipped case claims nothing.
 
 ## License
 

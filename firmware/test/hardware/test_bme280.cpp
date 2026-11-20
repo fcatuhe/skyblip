@@ -84,8 +84,8 @@ TEST_CASE("bme280: a conversion is dated at the middle of its pressure phase") {
     CHECK(parts::Bme280::kConversionMidpointMs == 21);
 }
 
-TEST_CASE(
-    "bme280: the pressure read is the one the part was given, within six tenths of a pascal") {
+TEST_CASE("bme280: the pressure read is the one the part was given, within six tenths of a pascal" *
+          doctest::test_suite("main")) {
     Bench bench;
 
     for (int16_t temperature_dc : {int16_t{-200}, int16_t{150}, int16_t{452}}) {
@@ -125,7 +125,8 @@ TEST_CASE("bme280: a part strapped to the alternate address is found there") {
     bench.convert();
 }
 
-TEST_CASE("bme280: an address that names another chip is not a barometer") {
+TEST_CASE("bme280: an address that names another chip is not a barometer" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.chip.chip_id = 0x58;
     bench.chip.power_on_reset();

@@ -7,7 +7,7 @@
 #include "core/bus/bus.h"
 #include "core/model/aircraft.h"
 #include "products/common/services/adsb_capture.h"
-#include "products/common/services/traffic.h"
+#include "products/common/traffic_settings.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/own_transponder.h"
 #include "products/skyblip_bravo/transponders.h"
@@ -29,6 +29,8 @@ class AdsbService : public runtime::Service {
           capture_(context) {}
 
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 the receiver wakes nothing, so the queue is drained inside its window
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     uint32_t crc() const { return crc_; }
     uint32_t unsupported() const { return unsupported_; }

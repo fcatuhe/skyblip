@@ -20,16 +20,17 @@ TEST_CASE("product: setup brings the radio to Rx and reports its capabilities") 
     CHECK(rig.setup() == Status::Ok);
     CHECK(rig.state().started);
     CHECK(ports::has(rig.product.capabilities(), ports::Capability::Rf | ports::Capability::Gnss));
-    CHECK(rig.product.degraded() == ports::Capability::None);
+    CHECK(ports::has(rig.product.capabilities(), platform::host::Platform::kFullyFitted));
 }
 
-TEST_CASE("product: a missing optional capability is degraded, a required one refuses") {
+TEST_CASE("product: a missing optional capability flies, a required one refuses") {
     constexpr ports::Capabilities kNoHaptic = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Haptic));
     Rig degraded(kNoHaptic);
     CHECK(degraded.setup() == Status::Ok);
-    CHECK(degraded.product.degraded() == ports::Capability::Haptic);
+    CHECK(degraded.product.flyable());
+    CHECK_FALSE(ports::has(degraded.product.capabilities(), ports::Capability::Haptic));
 
     constexpr ports::Capabilities kNoGnss = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
@@ -137,14 +138,14 @@ TEST_CASE("product: a board with no battery sense says so instead of reporting e
         ~static_cast<uint32_t>(ports::Capability::Battery));
     Rig rig{kNoBattery};
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.product.degraded() == ports::Capability::Battery);
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Battery));
 
     rig.run(0, 12000);
     CHECK_FALSE(rig.state().power.battery.valid);
     CHECK(rig.state().power.battery.percent == 0);
 }
 
-TEST_CASE("product: settings changed over the link are persisted") {
+TEST_CASE("product: settings changed over the link are persisted" * doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().alarm = go::Alarm::Soft;
@@ -182,8 +183,7 @@ TEST_CASE("product: the reset reason is read once at boot and kept") {
     REQUIRE(fresh.setup() == Status::Ok);
     CHECK(fresh.product.reset_reason() == power::ResetReason::PowerOn);
     // Two different boots must not paint the same page.
-    CHECK(fresh.product.self_test_page().count_black() !=
-          rig.product.self_test_page().count_black());
+    CHECK(fresh.self_test_page().count_black() != rig.self_test_page().count_black());
 }
 
 // D5. The panel has the reason at boot and then it is gone; the field diagnosis
@@ -208,7 +208,8 @@ TEST_CASE("product: the link is told at boot why the device came up") {
 // brings the DEVICE up: a unit that charges itself awake in a flight bag arrives
 // flat, and the e-paper holds its last image with the rails down, so nothing about
 // it would look wrong until a pilot needed it.
-TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
+TEST_CASE("product: a charger plugged into a sleeping device is not a boot" *
+          doctest::test_suite("main")) {
     Rig rig;
     rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     CHECK(rig.setup() == Status::Ok);
@@ -217,7 +218,7 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
     // Nothing became a device: no service loop, and not a pixel on the glass -
     // the panel still holds whatever was painted when it was switched off.
     CHECK_FALSE(rig.state().started);
-    CHECK(rig.product.self_test_page().count_black() == 0);
+    CHECK(rig.product.self_test().part_count == 0);
     CHECK(rig.platform.chips().epd.present_count == 0);
     // And the page it would have painted names the cause anyway, for the case a
     // bench eye holds the button and looks.
@@ -288,7 +289,7 @@ TEST_CASE("product: the same charger with the button held is a boot") {
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::Run);
     CHECK(rig.state().started);
-    CHECK(rig.product.self_test_page().count_black() > 0);
+    CHECK(rig.self_test_page().count_black() > 0);
 }
 
 // Every other wake is a device. The one that would be catastrophic and silent is
@@ -476,7 +477,6 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::DieTemperature));
-    CHECK(rig.product.degraded() == ports::Capability::None);
 
     uint32_t now_ms = 0;
     rig.run(now_ms, now_ms + 30000);

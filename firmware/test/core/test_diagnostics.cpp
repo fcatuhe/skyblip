@@ -11,7 +11,8 @@
 using namespace skyblip;
 using namespace skyblip::comms;
 
-TEST_CASE("diagnostics: one group per subsystem, each carrying the counters that already exist") {
+TEST_CASE("diagnostics: one group per subsystem, each carrying the counters that already exist" *
+          doctest::test_suite("main")) {
     const std::string json = frames(busy_device(), 512).joined;
 
     CHECK(has(json, "\"group\":\"system\""));

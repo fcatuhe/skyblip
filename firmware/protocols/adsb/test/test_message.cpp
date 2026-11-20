@@ -76,7 +76,8 @@ TEST_CASE("adsb: the Riddle's identification frame names KLM1023 with no categor
     CHECK(std::strcmp(heard.message.identification.callsign, "KLM1023") == 0);
 }
 
-TEST_CASE("adsb: dump1090's identifications name their callsign and category") {
+TEST_CASE("adsb: dump1090's identifications name their callsign and category" *
+          doctest::test_suite("main")) {
     const Heard medium = hear("8dc063662240f172d71ce01973ee");
     REQUIRE(medium.status == Status::Ok);
     CHECK(std::strcmp(medium.message.identification.callsign, "POE2513") == 0);
@@ -130,7 +131,8 @@ TEST_CASE("adsb: the Riddle's airborne pair reads 38000 ft and both CPR halves")
     CHECK(odd.message.airborne_position.cpr.longitude_cpr == 50194);
 }
 
-TEST_CASE("adsb: dump1090's Q-bit and Gillham frames read 11350 ft and 7800 ft") {
+TEST_CASE("adsb: dump1090's Q-bit and Gillham frames read 11350 ft and 7800 ft" *
+          doctest::test_suite("main")) {
     const Heard q_bit = hear("8dc080d9583de5a6ecabbfe4e2d1");
     REQUIRE(q_bit.status == Status::Ok);
     CHECK(q_bit.message.airborne_position.pressure_altitude_ft == 11350);
@@ -164,7 +166,8 @@ TEST_CASE("adsb: an altitude of all zeros, or a Gillham code no encoder sends, i
 }
 
 // DO-260B draft 4.2 2.2.3.2.3.4.2 codes GNSS height by 2.2.3.2.3.4.3, as pressure altitude is.
-TEST_CASE("adsb: a GNSS height uses the pressure altitude's coding and is no pressure altitude") {
+TEST_CASE("adsb: a GNSS height uses the pressure altitude's coding and is no pressure altitude" *
+          doctest::test_suite("main")) {
     Frame frame = extended_squitter(20);
     set_message_bits(frame, 9, 20, 0xB50);
     const Heard height = hear_sealed(frame);

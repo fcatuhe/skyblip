@@ -12,6 +12,7 @@
 #include "core/fec/crc.h"
 #include "core/power/battery.h"
 #include "core/settings/address.h"
+#include "core/settings/blob.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
@@ -40,7 +41,8 @@ TEST_CASE("settings: blob round-trips through version+crc framing") {
     CHECK(out.units == Units::Metric);
 }
 
-TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships on 4 NM and ALL") {
+TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships on 4 NM and ALL" *
+          doctest::test_suite("main")) {
     Settings settings = defaults();
     CHECK(int(settings.range_step) == kDefaultRangeStep);
     CHECK(settings.plot == RadarPlot::All);
@@ -91,16 +93,13 @@ TEST_CASE("settings: a corrupted blob is detected (CRC), caller falls back") {
     CHECK(from_blob(blob, blob_size(), out) == Status::Crc);
 }
 
-TEST_CASE("settings: wrong version blob is Unsupported (migrate/default)") {
+// Only dev units stored an older layout, so the unit comes up on defaults instead.
+TEST_CASE("settings: a sealed blob of an older layout is Unsupported") {
     Settings settings = defaults();
     uint8_t blob[128];
-    to_blob(settings, blob, sizeof(blob));
-    blob[0] = 99;  // bogus version
-    // recompute crc so it isn't a CRC failure: simulate a real older version
-    // (here we just confirm version mismatch is caught before trusting payload)
+    settings::seal(kBlobVersion - 1, &settings, sizeof(Settings), blob, sizeof(blob));
     Settings out;
-    Status status = from_blob(blob, blob_size(), out);
-    CHECK((status == Status::Unsupported || status == Status::Crc));
+    CHECK(from_blob(blob, blob_size(), out) == Status::Unsupported);
 }
 
 TEST_CASE("settings: the config fields and a set patch round-trip over the link") {
@@ -130,7 +129,7 @@ TEST_CASE("settings: a set patch out of range is refused atomically") {
 }
 
 // Issue #126: the registry assigned prefix 0x00, and the server fills the 16 bits below it.
-TEST_CASE("address: the prefix, then the serial the server signed") {
+TEST_CASE("address: the prefix, then the serial the server signed" * doctest::test_suite("main")) {
     CHECK(address_of(0x0000) == 0x000000u);
     CHECK(address_of(0x012A) == 0x00012Au);
     CHECK(address_of(0xFFFF) == 0x00FFFFu);
@@ -353,21 +352,6 @@ TEST_CASE("settings: a callsign is only what the menu can type, so a comma or a 
         CHECK(apply_patch(settings, patch) == Status::Invalid);
         CHECK(std::string(settings.callsign).empty());
     }
-}
-
-// Older builds took any printable name over the link, and refusing the whole blob lost the trims.
-TEST_CASE("settings: a stored name the menu cannot type is dropped, and the trims beside it kept") {
-    Settings settings = defaults();
-    settings.battery_offset_mv = 120;
-    settings.frequency_trim_e1_ppm = -35;
-    std::strncpy(settings.callsign, "d-kxyz", kCallsignBytes - 1);
-    uint8_t blob[128];
-    to_blob(settings, blob, sizeof(blob));
-    Settings out;
-    REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
-    CHECK(std::string(out.callsign).empty());
-    CHECK(out.battery_offset_mv == 120);
-    CHECK(out.frequency_trim_e1_ppm == -35);
 }
 
 TEST_CASE("settings: a type or an alarm is refused before it is narrowed, never stored wrapped") {

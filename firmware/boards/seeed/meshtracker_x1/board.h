@@ -1,6 +1,9 @@
 #ifndef SKYBLIP_BOARDS_MESHTRACKER_X1_BOARD_H
 #define SKYBLIP_BOARDS_MESHTRACKER_X1_BOARD_H
 
+#include <algorithm>
+
+#include "boards/common/producer.h"
 #include "boards/seeed/meshtracker_x1/pins.h"
 #include "core/bus/bus.h"
 #include "core/bus/state.h"
@@ -40,7 +43,10 @@ class MeshtrackerX1 {
           barometer_(platform.i2c(io::BusId::Sensor)),
           haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), platform.delay(),
                   meshtracker_x1::kHapticEnable, meshtracker_x1::kHapticActuator),
-          capabilities_(platform.capabilities()) {}
+          producer_(platform, bus),
+          capabilities_(platform.capabilities()) {
+        platform_.link().deliver_to(bus);
+    }
 
     // INFO: fc 12nov26 not in the constructor: a global's runs before the watchdog and the wake
     // call
@@ -111,18 +117,6 @@ class MeshtrackerX1 {
         // INFO: fc 12nov26 serves the host annunciator's guards: a test catches an output left on
         platform_.annunciator().service(now_ms);
 
-        events::LinkEvent link_event;
-        while (platform_.link().pop_event(link_event)) bus_.link_events.push(link_event);
-        events::RxFrame frame;
-        while (platform_.link().pop_rx(frame)) {
-            if (frame.endpoint == events::Endpoint::Log)
-                bus_.log_rx.push(frame);
-            else if (frame.endpoint == events::Endpoint::Peer)
-                bus_.peer_rx.push(frame);
-            else
-                bus_.link_rx.push(frame);
-        }
-
         if (ports::has(capabilities_, ports::Capability::Gnss)) {
             gnss_.service(now_ms);
             if (gnss_.poll(now_ms)) {
@@ -134,24 +128,25 @@ class MeshtrackerX1 {
         }
 
         poll_battery(now_ms);
-        publish_contact(platform_.button_down(), now_ms);
-
-        const uint64_t now_us = platform_.clock().microseconds();
-        state.clock.pps_locked = platform_.pps().locked();
-        state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
+        button_active_ = producer_.publish_contact(events::Contact::Button, button_,
+                                                   platform_.button_down(), now_ms);
+        producer_.publish_clock(state);
         poll_barometer(state.clock, now_ms);
-        timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
-        state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
     }
 
-    void poll_battery(uint32_t now_ms) {
-        if (!ports::has(capabilities_, ports::Capability::Battery)) return;
-        if (now_ms - last_battery_ms_ < runtime::kBatteryPeriodMs) return;
-        last_battery_ms_ = now_ms;
-        uint16_t divider_mv = 0;
-        // INFO: fc 12nov26 refused or not, the reading and VBUS go out: core/power judges it
-        platform_.read_divider_mv(divider_mv);
-        bus_.battery.push(events::BatterySample{divider_mv, platform_.external_power()});
+    void poll_battery(uint32_t now_ms) { producer_.poll_battery(capabilities_, now_ms); }
+
+    // INFO: fc 19nov26 the loop sleeps until the earliest of these, or until an edge wakes it
+    uint32_t due_in_ms(const timing::ClockState& clock, uint32_t now_ms) const {
+        const bool gnss_bringing_up = ports::has(capabilities_, ports::Capability::Gnss) &&
+                                      !gnss_.configured() && !gnss_.degraded();
+        if (button_active_ || gnss_bringing_up || barometer_converting_)
+            return runtime::kServicePassCeilingMs;
+        const uint32_t barometer_ms =
+            ports::has(capabilities_, ports::Capability::Barometer)
+                ? boards::barometer_due_in_ms(clock, now_ms - last_barometer_ms_)
+                : runtime::kServiceRestCeilingMs;
+        return std::min(producer_.battery_due_in_ms(capabilities_, now_ms), barometer_ms);
     }
 
     typename Platform::AdsbReceiver& receiver() { return receiver_; }
@@ -169,7 +164,7 @@ class MeshtrackerX1 {
             collect_barometer(now_ms);
             return;
         }
-        if (!barometer_due(clock, now_ms)) return;
+        if (!barometer_due(clock, now_ms - last_barometer_ms_)) return;
         last_barometer_ms_ = now_ms;
         barometer_triggered_ms_ = now_ms;
         barometer_converting_ = barometer_.trigger();
@@ -188,21 +183,6 @@ class MeshtrackerX1 {
         if (now_ms - barometer_triggered_ms_ < runtime::kBarometerConversionCeilingMs) return;
         barometer_converting_ = false;
         barometer_faults_++;
-    }
-
-    bool barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
-        const uint32_t since_published_ms = now_ms - last_barometer_ms_;
-        if (since_published_ms < runtime::kBarometerPublishPeriodMs / 2) return false;
-        if (!clock.pps_locked) return since_published_ms >= runtime::kBarometerPublishPeriodMs;
-        return clock.since_edge_ms < runtime::kBarometerPpsWindowMs ||
-               since_published_ms >= 2 * runtime::kBarometerPublishPeriodMs;
-    }
-
-    void publish_contact(bool level, uint32_t now_ms) {
-        const input::Contact::Edge edge = button_.update(level, now_ms);
-        if (edge == input::Contact::Edge::None) return;
-        bus_.input.push(events::ContactEvent{
-            events::Contact::Button, edge == input::Contact::Edge::Down, button_.edge_ms()});
     }
 
     void establish_haptic() {
@@ -227,13 +207,14 @@ class MeshtrackerX1 {
     parts::Drv2605 haptic_;
     input::Contact button_{meshtracker_x1::kButtonHoldMs};
     ports::NullRoles null_{};
+    Producer<Platform> producer_;
+    bool button_active_{false};
     ports::Capabilities capabilities_;
     bool probed_{false};
     uint32_t last_barometer_ms_{0};
     uint32_t barometer_triggered_ms_{0};
     uint32_t barometer_faults_{0};
     bool barometer_converting_{false};
-    uint32_t last_battery_ms_{0};
 };
 
 }  // namespace skyblip::boards

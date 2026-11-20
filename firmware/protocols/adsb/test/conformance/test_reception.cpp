@@ -39,7 +39,8 @@ Status receive_frame(const adsb::Squitter& frame, Message& message) {
 
 }
 
-TEST_CASE("DO-260B 2.2.4.3.4.5: every valid DF17 message with a zero PI overlay is decoded") {
+TEST_CASE("DO-260B 2.2.4.3.4.5: six DF17 examples with a zero PI overlay decode" *
+          doctest::test_suite("main")) {
     for (const adsb::Squitter& frame :
          {position(), standard::velocity(1), standard::velocity(3),
           adsb::identification(standard::kAddress, 5, 4, 1, "KLM1023"),
@@ -101,7 +102,8 @@ TEST_CASE("DO-260B 2.2.4.4.3.2: no sliding window repairs a wrong bit, which is 
     CHECK(receive_frame(frame, message) == Status::Crc);
 }
 
-TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is read") {
+TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is read" *
+          doctest::test_suite("main")) {
     const adsb::Squitter frame = sealed(position());
     Message message;
     REQUIRE(receive_frame(frame, message) == Status::Ok);
@@ -128,7 +130,8 @@ TEST_CASE("DO-260B 2.2.6: the reception function hands each message on, decoded 
     CHECK(receive(frame, kFrameBytes - 1, Reception{}, message) == Status::Invalid);
 }
 
-TEST_CASE("DO-260B 2.2.6.1: version 0, 1 and 2 formats decode, and a target keeps its version") {
+TEST_CASE("DO-260B 2.2.6.1: version 0, 1 and 2 formats decode, and a target keeps its version" *
+          doctest::test_suite("main")) {
     receiver::Bravo bravo;
     REQUIRE(bravo.hear(adsb::operational_status(receiver::kAddress, 0, 0, 0), 0));
     CHECK(bravo.heard.version_valid);

@@ -42,7 +42,8 @@ bool glass_shows(Rig& rig, uint32_t& now_ms, const go::Glass& expected) {
 
 }  // namespace
 
-TEST_CASE("product: a press opens the menu of the page a pilot is standing on") {
+TEST_CASE("product: a press opens the menu of the page a pilot is standing on" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -144,10 +145,10 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
 
     CHECK(rig.product.screen().page() == go::Page::SelfTest);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
-    CHECK(std::memcmp(rig.product.screen().framebuffer().data(),
-                      rig.product.self_test_page().data(), go::Glass::kBytes) == 0);
+    CHECK(std::memcmp(rig.product.screen().framebuffer().data(), rig.self_test_page().data(),
+                      go::Glass::kBytes) == 0);
     CHECK(rig.platform.chips().epd.framebuffer().count_black() ==
-          rig.product.self_test_page().count_black());
+          rig.self_test_page().count_black());
 
     // A tap goes back to the page whose menu opened it, not on to a fourth picture.
     rig.tap(now_ms);
@@ -173,7 +174,8 @@ TEST_CASE("product: the settings page reaches the glass, drawn from what the dev
     CHECK(expected.count_black() > 200);
 }
 
-TEST_CASE("product: the alarm a pilot sets on the glass is the one that survives a boot") {
+TEST_CASE("product: the alarm a pilot sets on the glass is the one that survives a boot" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -232,7 +234,8 @@ TEST_CASE("product: the range and the plot a pilot picks on the glass survive a 
     CHECK(again.settings().plot == go::RadarPlot::ToScale);
 }
 
-TEST_CASE("product: the aircraft type set on the glass is the one that goes on the air") {
+TEST_CASE("product: the aircraft type set on the glass is the one that goes on the air" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -259,7 +262,8 @@ TEST_CASE("product: the aircraft type set on the glass is the one that goes on t
 
 // G3 again, for the one setting that is text: a pilot with no phone can name
 // their own aircraft, on the glass, with a pad and a button.
-TEST_CASE("product: a callsign typed on the glass is stored and put on the air") {
+TEST_CASE("product: a callsign typed on the glass is stored and put on the air" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -376,7 +380,8 @@ TEST_CASE("product: walking the rows without changing one writes nothing at all"
     CHECK(rig.product.screen().page() == go::Page::Nearby);
 }
 
-TEST_CASE("product: a page nobody presses gives the traffic picture back on its own") {
+TEST_CASE("product: a page nobody presses gives the traffic picture back on its own" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;

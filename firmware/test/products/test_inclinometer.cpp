@@ -42,7 +42,8 @@ TEST_CASE("inclinometer: a hub that boots gives the six-pack its cage and its ba
     CHECK(rig.state().slip.lateral_mg == 0);
 }
 
-TEST_CASE("inclinometer: the ball goes the way the pilot slides, and the rudder follows") {
+TEST_CASE("inclinometer: the ball goes the way the pilot slides, and the rudder follows" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     fly_uncoordinated(rig, -150);
@@ -107,7 +108,8 @@ TEST_CASE("inclinometer: the hub runs no gyroscope, and the turn rate comes off 
     CHECK(rig.state().own.turn_cdps == 0);
 }
 
-TEST_CASE("inclinometer: a unit with no hub keeps the dial empty rather than centred") {
+TEST_CASE("inclinometer: a unit with no hub keeps the dial empty rather than centred" *
+          doctest::test_suite("main")) {
     constexpr ports::Capabilities kNoImu = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Inclinometer));
@@ -133,9 +135,9 @@ constexpr ports::Capabilities kPlainTEcho =
 
 const go::SelfTestPart& imu_row(Rig& rig) {
     for (int i = 0; i < go::kSelfTestPartCount; i++)
-        if (std::string(rig.product.self_test_rows()[i].name) == "IMU")
-            return rig.product.self_test_rows()[i];
-    return rig.product.self_test_rows()[0];
+        if (std::string(rig.product.self_test().parts[i].name) == "IMU")
+            return rig.product.self_test().parts[i];
+    return rig.product.self_test().parts[0];
 }
 
 std::string update_frame(Rig& rig, uint32_t at_ms) {

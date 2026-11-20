@@ -110,7 +110,8 @@ struct Desk {
 
 }  // namespace
 
-TEST_CASE("trusted browsers: a set a press confirms trusts the browser that proved its key") {
+TEST_CASE("trusted browsers: a set a press confirms trusts the browser that proved its key" *
+          doctest::test_suite("main")) {
     Desk desk;
     CHECK(desk.connect_as(kBrowserSeed) == kUntrusted);
     desk.say(kSet);
@@ -146,7 +147,8 @@ TEST_CASE(
     CHECK(desk.config.upload_allowed());
 }
 
-TEST_CASE("trusted browsers: a trusted browser sets in flight, and still starts no dfu there") {
+TEST_CASE("trusted browsers: a trusted browser sets in flight, and still starts no dfu there" *
+          doctest::test_suite("main")) {
     Desk desk;
     desk.enroll(kBrowserSeed);
     REQUIRE(desk.connect_as(kBrowserSeed) == kTrusted);

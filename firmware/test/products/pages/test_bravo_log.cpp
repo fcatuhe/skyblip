@@ -34,7 +34,8 @@ BravoLogEntry folded(uint32_t address, const char* callsign) {
 
 }  // namespace
 
-TEST_CASE("bravo log page: the head says the tag, the state, the firmware, the cell and the rate") {
+TEST_CASE("bravo log page: the head says the tag, the state, the firmware, the cell and the rate" *
+          doctest::test_suite("main")) {
     comms::PeerHealth health{};
     std::strcpy(health.firmware, "0.4.1+1702");
     health.battery_percent = 80;

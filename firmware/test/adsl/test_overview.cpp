@@ -201,7 +201,8 @@ Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int sp
 
 // Through RadioService: category 15 goes as Issue 1's rotorcraft beside an Issue 1 client, alone as
 // itself.
-TEST_CASE("ADS-L.4.SRD860.B.5: the version transmitted is one every close neighbour can read") {
+TEST_CASE("ADS-L.4.SRD860.B.5: the version transmitted is one every close neighbour can read" *
+          doctest::test_suite("main")) {
     const Flown beside = flown(kHeavyRotorcraft, true);
     CHECK(beside.sent > 10);
     CHECK(beside.held == 0);
