@@ -295,7 +295,6 @@ TEST_CASE("product: a unit with no status LED flies and lights nothing") {
     Rig rig{kNoLamp};
     REQUIRE(rig.setup() == Status::Ok);
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Indicator));
-    CHECK(ports::has(rig.product.degraded(), ports::Capability::Indicator));
 
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     uint32_t now_ms = 0;

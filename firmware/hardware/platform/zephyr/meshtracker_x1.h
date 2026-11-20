@@ -16,6 +16,7 @@
 #include "hardware/platform/zephyr/flash_region.h"
 #include "hardware/platform/zephyr/io.h"
 #include "hardware/platform/zephyr/link.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/meshtracker_x1_lines.h"
 #include "hardware/platform/zephyr/meshtracker_x1_power.h"
 #include "hardware/platform/zephyr/random.h"
@@ -40,6 +41,7 @@ class MeshtrackerX1 {
     Status begin() {
         system_power_.arm_supply_monitor();
         if (lines_.begin() != Status::Ok) return Status::Down;
+        (void)wake_on_edges(button_, button_edges_);
         if (!device_is_ready(radio_spi_device_)) return Status::Down;
         (void)gnss_.begin();
         // TODO: fc 12nov26 P0.09 powers the YSN8900 per SoftRF and Seeed, unverified until #169
@@ -97,6 +99,8 @@ class MeshtrackerX1 {
     const struct device* radio_spi_device_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
     const struct device* gnss_uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
     struct gpio_dt_spec radio_cs_ = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(radio_spi), cs_gpios, 0);
+    struct gpio_dt_spec button_ = GPIO_DT_SPEC_GET(DT_ALIAS(button), gpios);
+    struct gpio_callback button_edges_{};
     struct gpio_dt_spec radio_irq_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_irq_gpio), gpios);
     struct gpio_dt_spec rtc_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(rtc_enable), gpios);
     Spi radio_spi_{radio_spi_device_, kSpiConfig, radio_cs_};

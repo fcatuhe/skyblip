@@ -8,6 +8,7 @@
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
+#include "test/support/confirmed.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -135,7 +136,7 @@ TEST_CASE("comms prompt cap: a prompt that stands still expires 30 s after it wa
     CHECK(desk.config.pending() == Pending::None);
     CHECK(desk.last() == refusal("expired"));
     desk.config.confirm();
-    CHECK_FALSE(desk.config.recovery_requested());
+    CHECK_FALSE(taken(desk.config));
 }
 
 // One press is the pilot saying no, and a sender that asks again at once is not taking it.

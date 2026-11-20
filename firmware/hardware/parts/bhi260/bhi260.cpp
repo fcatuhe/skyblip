@@ -81,6 +81,11 @@ void Bhi260::service(uint32_t now_ms) {
     }
 }
 
+uint32_t Bhi260::read_due_in_ms(uint32_t now_ms) const {
+    const uint32_t since_ms = now_ms - polled_ms_;
+    return since_ms >= kSamplePeriodMs ? 0 : kSamplePeriodMs - since_ms;
+}
+
 bool Bhi260::poll() {
     const bool fresh = sample_fresh_;
     sample_fresh_ = false;

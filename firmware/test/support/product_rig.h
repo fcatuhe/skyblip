@@ -35,6 +35,12 @@ struct Rig {
                  std::optional<uint16_t> serial = platform::host::Identity::kSerial)
         : platform(fitted, serial) {}
 
+    go::Glass self_test_page() const {
+        go::Glass page{};
+        go::draw_self_test(page, product.self_test());
+        return page;
+    }
+
     Status setup() {
         const Status status = product.setup();
         if (barometer_by_hand_) platform.barometer().fitted = false;

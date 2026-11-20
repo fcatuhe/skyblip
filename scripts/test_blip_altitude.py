@@ -3,9 +3,8 @@
 
     python3 scripts/test_blip_altitude.py
 
-test_blip.py loads this file, so CI runs it under that name. The hex strings are the
-bytes the firmware's host suite pins its encoders to, so the two layouts are held to
-each other: firmware/test/products/test_adsb_capture.cpp,
+The hex strings are the bytes the firmware's host suite pins its encoders to, so the two
+layouts are held to each other: firmware/test/products/test_adsb_capture.cpp,
 firmware/test/core/diagnostics/test_diagnostics_decided.cpp and
 firmware/test/core/test_log_events.cpp.
 """

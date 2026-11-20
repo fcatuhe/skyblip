@@ -493,7 +493,7 @@ TEST_CASE("flight log: with no storage the device flies and logs nothing") {
         ~static_cast<uint32_t>(ports::Capability::Storage));
     Rig rig{kNoStorage};
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.product.degraded() == ports::Capability::Storage);
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Storage));
     CHECK_FALSE(rig.product.flight_log().available());
 
     uint32_t now_ms = 0;
