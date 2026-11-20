@@ -45,10 +45,36 @@ struct Rig {
 
     go::Settings& settings() { return product.settings(); }
 
+    // One pass of the loop, with the receiver talking on its UART once the case brought it up.
+    void pass(uint32_t now_ms) {
+        if (receiver_live_) platform.chips().gnss.tick(now_ms);
+        product.run_pass(now_ms);
+    }
+
+    // The L76K model brought up to 2 Hz at 115200 by the driver, as on the device, before any
+    // fix. From then on the timed fixes a case flies are the model's own, reported through the
+    // driver as on the device, so the Go transmits.
+    void bring_receiver_up(uint32_t& now_ms) {
+        models::L76k& chip = platform.chips().gnss;
+        platform.retune_gnss_port(true);
+        chip.fix_valid = false;
+        receiver_live_ = true;
+        for (int step = 0; step < 400 && !product.board().gnss().holds_rate(); step++) {
+            platform.clock().set_milliseconds(now_ms);
+            pass(now_ms);
+            if (world) world(now_ms);
+            now_ms += 50;
+        }
+        REQUIRE(product.board().gnss().holds_rate());
+        now_ms = (now_ms / 1000 + 1) * 1000;
+    }
+
+    bool receiver_live_{false};
+
     void run(uint32_t from_ms, uint32_t to_ms, uint32_t step_ms = 50) {
         for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += step_ms) {
             platform.clock().set_milliseconds(now_ms);
-            product.run_pass(now_ms);
+            pass(now_ms);
             if (world) world(now_ms);
         }
     }
@@ -90,6 +116,10 @@ struct Rig {
     // A solution as a receiver reports one in flight: moving, timed, solved in 3D, and
     // referenced to both datums. core/flight decides what it means.
     void push_timed_fix(int32_t speed_mm_s, int32_t altitude_msl_m) {
+        if (receiver_live_) {
+            fly_receiver(speed_mm_s, altitude_msl_m);
+            return;
+        }
         gnss::GnssSolution solution{};
         solution.fix_valid = true;
         solution.utc_valid = true;
@@ -106,6 +136,21 @@ struct Rig {
         solution.vdop_e2 = 150;
         solution.sentences = ++fix_updates;
         product.bus().gnss.push(solution);
+    }
+
+    // INFO: fc 19nov26 push_timed_fix's solution, set as the model's truth for its next solve
+    void fly_receiver(int32_t speed_mm_s, int32_t altitude_msl_m) {
+        models::L76k& chip = platform.chips().gnss;
+        chip.fix_valid = true;
+        chip.latitude_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
+        chip.longitude_1e7 = 85000000;
+        chip.geoid_separation_m = gnss::kDefaultGeoidSeparationMm / 1000;
+        chip.altitude_m = altitude_msl_m + chip.geoid_separation_m;
+        chip.speed_mm_s = speed_mm_s;
+        chip.track_deg = 90;
+        chip.date = "020826";
+        chip.utc_seconds_of_day = (kBaseUtcS + utc_offset_s) % 86400;
+        ++fix_updates;
     }
 
     // One second of the world: a solution, then the passes that follow it.
@@ -142,7 +187,7 @@ struct Rig {
     void run_span(uint32_t& now_ms, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
             platform.clock().set_milliseconds(now_ms);
-            product.run_pass(now_ms);
+            pass(now_ms);
             now_ms += step_ms;
         }
     }
@@ -155,7 +200,7 @@ struct Rig {
     void run_span_from_us(uint64_t& now_us, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
             platform.clock().set_microseconds(now_us);
-            product.run_pass(platform.clock().milliseconds());
+            pass(platform.clock().milliseconds());
             now_us += static_cast<uint64_t>(step_ms) * 1000;
         }
     }
@@ -187,7 +232,7 @@ struct Rig {
     void settle(uint32_t& now_ms) {
         for (int i = 0; i < 2; i++) {
             platform.clock().set_milliseconds(now_ms);
-            product.run_pass(now_ms);
+            pass(now_ms);
             if (world) world(now_ms);
             now_ms += 40;
         }

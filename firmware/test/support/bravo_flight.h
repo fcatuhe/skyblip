@@ -45,6 +45,10 @@ inline std::string level_target(uint32_t second, uint16_t into_ms, int32_t north
            ",\"altitude_age_ms\":0,\"flight_state\":\"airborne\",\"flight_state_age_ms\":0" + more;
 }
 
+// INFO: fc 19nov26 the Go flies on its L76K model at 2 Hz, so it transmits (Rig::bring_receiver_up)
+struct LiveReceiver {};
+constexpr LiveReceiver kLiveReceiver{};
+
 struct Flight {
     Tango tango;
     std::vector<uint16_t> tones{};
@@ -52,6 +56,14 @@ struct Flight {
     explicit Flight(std::vector<BravoStub::Recorded> recording = {}, bool paired = true)
         : tango(std::move(recording)) {
         begin(paired);
+    }
+
+    // INFO: fc 19nov26 the receiver's bring-up takes 8 s, so the flight and its frames start later
+    static constexpr uint32_t kLiveReceiverDelayMs = 10000;
+
+    Flight(std::vector<BravoStub::Recorded> recording, LiveReceiver)
+        : tango(delayed(std::move(recording))) {
+        begin(true, true);
     }
 
     Flight(std::vector<BravoStub::Recorded> recording, BarometerByHand barometer)
@@ -76,16 +88,23 @@ struct Flight {
     }
 
    private:
-    void begin(bool paired) {
+    void begin(bool paired, bool live_receiver = false) {
         tango.bravo.health.aircraft_address_set = true;
+        if (live_receiver) go().bring_receiver_up(tango.now_ms);
         if (paired) tango.pair();
         go().long_touch(tango.now_ms);
         REQUIRE(go().product.screen().page() == go::Page::Radar);
         go().raise_link(1);
-        REQUIRE(tango.now_ms < kFlyFromMs);
-        go().run(tango.now_ms, kFlyFromMs - 50);
-        tango.now_ms = kFlyFromMs;
+        const uint32_t fly_from_ms = kFlyFromMs + (live_receiver ? kLiveReceiverDelayMs : 0);
+        REQUIRE(tango.now_ms < fly_from_ms);
+        go().run(tango.now_ms, fly_from_ms - 50);
+        tango.now_ms = fly_from_ms;
         listen_for_tones();
+    }
+
+    static std::vector<BravoStub::Recorded> delayed(std::vector<BravoStub::Recorded> recording) {
+        for (BravoStub::Recorded& frame : recording) frame.at_ms += kLiveReceiverDelayMs;
+        return recording;
     }
 
     void listen_for_tones() {

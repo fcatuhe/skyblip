@@ -112,8 +112,27 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
     CHECK(flight.reads("B DLH4AB", go::kNearbyScale));
 }
 
-// The figures come off Bravo's health and the table's sources, so they stop once the link does.
-TEST_CASE("bravo traffic: nearby's Bravo row reads its health and its ADS-B, until the link goes") {
+// The figures come off each unit's health and the table's sources: the Go's own radio and Bravo's.
+TEST_CASE("bravo traffic: nearby's Go and Bravo rows read their health and their own traffic") {
+    Flight flight(named_target_every_second(2, 40), kLiveReceiver);
+    flight.tango.bravo.health.status_fields =
+        "\"battery_percent\":64,\"charging\":false,\"power_level\":\"normal\","
+        "\"gnss_stage\":\"fixed\",\"satellites\":9";
+    flight.fly(gnss::kFirstFixSettleMs / 1000 + 2);
+    REQUIRE(flight.state().transmit.transmits());
+    flight.go().tap(flight.tango.now_ms);
+    REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
+    flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
+
+    constexpr int kBravoY = go::kNearbyUnitY + go::kNearbyLineHeight;
+    CHECK(unit_reads(flight.glass(), go::kNearbyBatteryEnd, kBravoY, "64", "%"));
+    CHECK(unit_reads(flight.glass(), go::kNearbySatellitesEnd, kBravoY, "9", "SAT"));
+    CHECK(unit_reads(flight.glass(), go::kNearbyRelativeAltitudeEnd, kBravoY, "1", "TFC"));
+    CHECK(unit_reads(flight.glass(), go::kNearbyRelativeAltitudeEnd, go::kNearbyUnitY, "0", "TFC"));
+}
+
+// Bravo's figures stop once the link does, because a figure read before it went stopped moving.
+TEST_CASE("bravo traffic: nearby's Bravo row reads NO LINK and no cell once the link goes") {
     Flight flight(named_target_every_second(2, 40));
     flight.tango.bravo.health.status_fields =
         "\"battery_percent\":64,\"charging\":false,\"power_level\":\"normal\","
@@ -124,11 +143,7 @@ TEST_CASE("bravo traffic: nearby's Bravo row reads its health and its ADS-B, unt
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
 
     constexpr int kBravoY = go::kNearbyUnitY + go::kNearbyLineHeight;
-    CHECK(unit_reads(flight.glass(), go::kNearbyBatteryEnd, kBravoY, "64", "%"));
-    CHECK(unit_reads(flight.glass(), go::kNearbySatellitesEnd, kBravoY, "9", "SAT"));
     CHECK(unit_reads(flight.glass(), go::kNearbyRelativeAltitudeEnd, kBravoY, "1", "TFC"));
-    CHECK(flight.state().traffic.count() == flight.state().traffic.count_of(model::Source::Adsb));
-
     flight.tango.air.set_in_range(false);
     flight.tango.air.drop();
     flight.fly(6);
