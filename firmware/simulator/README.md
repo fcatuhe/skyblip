@@ -58,7 +58,7 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - `"category"` is the emitter category, `A0` to `C7`, in the shorthand of `core/protocol/README.md`: the letter is the identification's type code, A for 4, B for 3 and C for 2, and the digit is the category. Any other value refuses the file.
 - `"phase_ms"` and `"slot"` pin where in the second, and on which M-band channel, an aircraft transmits. Left out, it picks its own instant as a conforming transmitter does.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
-- The event `"pps": 0` stops the pulse and `1` brings it back. The Go stops transmitting on the first second 1.2 s after the last edge, shows `NO TX PPS` 10 s later, and keeps hearing traffic on the held edge through the 60 s holdover (`pps_loss.json`, `../core/timing/README.md`, A burst is timed only from a fresh edge). The pulse is the only fault a scenario forces. The suite forces the others from the part models.
+- The event `"pps": 0` stops the pulse and `1` brings it back. The Go stops transmitting 1.2 s after the last edge, on the first second without one, shows `NO TX PPS` 10 s later, and keeps hearing traffic on the held edge through the 60 s holdover (`pps_loss.json`, `../core/timing/README.md`, A burst is timed only from a fresh edge). The pulse is the only fault a scenario forces. The suite forces the others from the part models.
 - In a paired file, an event with `"unit": "bravo"` acts on Bravo, which takes `fix` and `companion`, and `"bravo_link": 0` or `1` loses or restores the link between them. A file that uses either outside a pair, or gives Bravo another event, is refused.
 
 ## The browser
