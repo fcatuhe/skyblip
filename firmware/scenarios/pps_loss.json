@@ -1,0 +1,14 @@
+{
+  "name": "PPS lost past its holdover, NO TX PPS, then back",
+  "mode": "device",
+  "speed_kt": 90,
+  "duration_ms": 110000,
+  "aircraft": [
+    {"north_m": 2500, "east_m": 800, "up_m": 60, "speed_mps": 30, "track_deg": 250}
+  ],
+  "events": [
+    {"at_ms": 8000, "expect_traffic_minimum": 1},
+    {"at_ms": 20000, "pps": 0},
+    {"at_ms": 100000, "pps": 1}
+  ]
+}
