@@ -9,10 +9,7 @@ namespace skyblip::flight {
 
 namespace {
 
-// ISA troposphere barometric formula, tabulated:
-//   h = 44330.77 * (1 - (p/101325)^0.190263)   [ICAO standard atmosphere]
-// 500 Pa steps, altitude in centimetres. Worst linear-interpolation error
-// between entries is 24 cm, which is under the noise of any real sensor.
+// INFO: fc 20nov26 ICAO troposphere, h = 44330.77 * (1 - (p/101325)^0.190263), in cm, within 24 cm
 constexpr uint32_t kTableLowestPa = 26000;
 constexpr uint32_t kStepPa = 500;
 
@@ -59,7 +56,6 @@ int32_t pressure_to_altitude_mm(uint32_t pressure_mpa) {
     const uint32_t fraction = offset_mpa % kStepMpa;
     if (fraction == 0) return altitude_mm_at(i);
 
-    // Table descends with pressure, so the step is negative. Interpolate on it.
     const int64_t span = altitude_mm_at(i + 1) - altitude_mm_at(i);
     return altitude_mm_at(i) +
            static_cast<int32_t>(wire::divide_rounded<int64_t>(span * fraction, kStepMpa));
@@ -85,7 +81,7 @@ uint32_t altitude_mm_to_pressure_mpa(int32_t altitude_mm) {
     while (high - low > 1) {
         const uint32_t middle = low + (high - low) / 2;
         if (pressure_to_altitude_mm(middle) > altitude_mm)
-            low = middle;  // still too high up: raise the pressure
+            low = middle;
         else
             high = middle;
     }
