@@ -1,8 +1,7 @@
 // What the panel's limits do to the refresh policy: held hot, stopped on a dying rail, parked.
 #include "test/support/screen_rig.h"
 
-// go::Glass rated 0..50 C; the Go's soak case is 72.4 C,
-// project/research/enclosure-and-mount-go.md.
+// go::Glass is rated 0 to 50 C, and the Go is designed against a 72.4 C parked-cockpit soak.
 TEST_CASE("screen policy: a panel too hot to drive is left unrefreshed, with its rails down") {
     ScreenRig rig;
     uint32_t now_ms = 0;
