@@ -13,31 +13,29 @@ Status Drv2605::begin() {
     power_up();
     if (enable_pin_ >= 0) delay_.wait_at_least_us(kPowerUpUs);
 
-    // The address has to answer before a register read means anything: a
-    // zero-length write is the bus's own presence question, and on a bus with
-    // nothing on it every read would otherwise return the pull-ups' 0xFF.
+    // INFO: fc 20nov26 a zero-length write asks for presence, since an empty bus reads the
+    // pull-ups' 0xFF
     if (!bus_.write(kAddress, nullptr, 0)) return Status::Down;
 
     uint8_t status = 0;
     if (!read_register(kRegisterStatus, status)) return Status::Down;
     device_id_ = static_cast<uint8_t>(status >> 5);
     switch (device_id_) {
-        case 3:  // DRV2605
-        case 4:  // DRV2604
-        case 5:  // DRV2605X
-        case 6:  // DRV2604L
-        case 7:  // DRV2605L
-            break;
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7: break;
         default: return Status::Unsupported;
     }
 
-    // Out of software standby first: every register below is only writable with
-    // the part awake.
+    // INFO: fc 20nov26 out of software standby first, because the registers below are writable only
+    // awake
     if (!write_register(kRegisterMode, kModeInternalTrigger)) return Status::Down;
     write_register(kRegisterRealTimePlaybackInput, 0x00);
     write_register(kRegisterLibrary, actuator_ == Actuator::Lra ? kLraLibrary : kErmLibraryA);
     write_register(kRegisterWaveSequence1, 0x01);
-    write_register(kRegisterWaveSequence2, 0x00);  // the terminator: a sequence with no end runs on
+    write_register(kRegisterWaveSequence2, 0x00);
     write_register(kRegisterOverdrive, 0x00);
     write_register(kRegisterSustainPositive, 0x00);
     write_register(kRegisterSustainNegative, 0x00);
@@ -49,8 +47,7 @@ Status Drv2605::begin() {
         configure_erm();
     }
 
-    // Configured and idle. Standby rather than awake: this device counts
-    // microamps in a flight bag, and an idle driver stage is milliamps.
+    // INFO: fc 20nov26 idle in standby, because an awake driver stage costs milliamps
     write_register(kRegisterMode, kModeStandby);
     ready_ = true;
     return Status::Ok;
@@ -67,9 +64,8 @@ void Drv2605::stop() {
     if (!ready_) return;
     driving_ = false;
     write_register(kRegisterRealTimePlaybackInput, 0x00);
-    // GO is cleared too, so a part left mid-sequence by anything else - a reset
-    // in the middle of a pulse, a ROM effect from a bench session - is silent
-    // when the alarm releases it.
+    // INFO: fc 20nov26 GO is cleared too, so a part left mid-sequence by a reset or a bench effect
+    // falls silent
     write_register(kRegisterGo, 0x00);
     write_register(kRegisterMode, kModeStandby);
 }

@@ -1,17 +1,3 @@
-// What is actually on this board's sensor bus.
-//
-// One loop, so nothing downstream has to guess. Before this, the self-test page
-// could say "BARO" but not which of the two declared BME280 addresses answered
-// (the devicetree declares both because our BOM and LilyGO's own README
-// disagree), the haptic driver's presence was a special case nobody had written,
-// and the RTC that project/2-DEVICES.md:73 says is fitted had no evidence behind
-// it at all.
-//
-// A zero-length write is the probe: it addresses the part and stops, which is
-// what Zephyr's own i2c shell scan does and what every Arduino
-// beginTransmission/endTransmission pair the references use amounts to
-// (SoftRF platform/nRF52.cpp:1128-1163 probes the RTC, the IMU and the DRV2605
-// exactly this way).
 #ifndef SKYBLIP_BOARDS_T_ECHO_PLUS_I2C_SCAN_H
 #define SKYBLIP_BOARDS_T_ECHO_PLUS_I2C_SCAN_H
 
@@ -26,10 +12,8 @@
 
 namespace skyblip::boards::t_echo_plus {
 
-// Everything this board is documented to carry, so the page can name what it
-// found rather than printing hex at a pilot. Sources: project/2-DEVICES.md's
-// hardware matrix, and SoftRF platform/nRF52.h:136-151 for the same three parts.
-constexpr uint8_t kRtcAddress = 0x51;  // PCF8563, deliberately undriven
+// INFO: fc 20nov26 the PCF8563 RTC, fitted and deliberately undriven
+constexpr uint8_t kRtcAddress = 0x51;
 
 constexpr const char* i2c_role(uint8_t address) {
     switch (address) {
@@ -43,8 +27,6 @@ constexpr const char* i2c_role(uint8_t address) {
     return nullptr;
 }
 
-// Every address on the bus, in one pass. 112 probes at 100 kHz is about 20 ms of
-// bus time, once, when the self-test page first needs it.
 inline void scan_i2c(io::I2c& bus, ports::Inventory& inventory) {
     io::scan_i2c(bus, inventory);
     inventory.rtc_fitted = inventory.has_i2c_address(kRtcAddress);

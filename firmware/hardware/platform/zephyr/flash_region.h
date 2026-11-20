@@ -10,12 +10,8 @@
 
 namespace skyblip::platform::zephyr {
 
-// A devicetree partition on the external SPI NOR, on spi1: log_partition or imu_image_partition.
-//
-// Not the radio's bus (the SX1262 has spi3) and not the internal NVMC, whose
-// erases and writes halt the CPU while the flash controller owns the bus. A
-// program here costs a DMA burst out of SPIM1 and then the part is busy on its
-// own time, so a dwell armed against a PPS deadline is never waiting on it.
+// INFO: fc 20nov26 the external NOR on spi1, so a program never stalls the CPU as the NVMC does or
+// blocks the radio's bus
 class FlashRegion : public ports::FlashRegion {
    public:
     explicit FlashRegion(uint8_t partition_id) : partition_id_(partition_id) {}
@@ -25,9 +21,8 @@ class FlashRegion : public ports::FlashRegion {
         const struct device* controller = flash_area_get_device(area_);
         if (controller == nullptr || !device_is_ready(controller)) return Status::Down;
         struct flash_pages_info info;
-        // SFDP told the driver the geometry at boot; asking it is how one image
-        // serves both candidate parts. The constant is the fallback, not the
-        // assertion.
+        // INFO: fc 20nov26 SFDP gives the geometry, so one image serves both candidate parts, and
+        // the constant is only the fallback
         sector_bytes_ = flash_get_page_info_by_offs(controller, area_->fa_off, &info) == 0
                             ? static_cast<uint32_t>(info.size)
                             : flight::kLogSectorBytes;

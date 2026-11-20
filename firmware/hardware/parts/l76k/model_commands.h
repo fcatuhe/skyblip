@@ -1,4 +1,3 @@
-// hardware/parts/l76k/model_commands.h: what the L76K model does with each $PCAS sentence it hears.
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_COMMANDS_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_COMMANDS_H
 
@@ -15,8 +14,7 @@ inline void L76k::apply_command() {
     for (int i = 1; i < command_length_ && i < 7; i++) heard_ += command_[i];
     heard_ += ',';
 
-    // The version banner is the part naming itself, not a setting: a
-    // receiver that obeys nothing still answers it.
+    // INFO: fc 20nov26 a receiver that obeys nothing still names itself
     if (starts_with(command_, command_length_, "$PCAS06,")) {
         if (answers_identification) emit_version();
         return;
@@ -83,9 +81,8 @@ inline void L76k::apply_sentence_set() {
     sentence_set_applied = true;
 }
 
-// $PCAS10,n: 0 hot, 1 warm, 2 cold, 3 factory. The module reboots either
-// way; a cold start also throws the orbit data away, and a factory reset
-// takes every setting we applied with it.
+// INFO: fc 20nov26 $PCAS10 takes 0 hot, 1 warm, 2 cold and 3 factory, and the module reboots for
+// each
 inline void L76k::apply_restart(int kind) {
     restarts++;
     last_restart_kind = kind;

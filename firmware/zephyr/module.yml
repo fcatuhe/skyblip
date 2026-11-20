@@ -1,10 +1,8 @@
-# west hands the manifest repository to Zephyr's module scanner like any other
-# project, so this file is where the tree says where its boards live.
+# Zephyr's module scanner reads this to find the tree's boards and Kconfig.
 name: skyblip
 
 build:
-  # Zephyr and twister both append boards/ to this, so one line serves west
-  # build, sysbuild's MCUboot image and twister.
+  # Zephyr and twister append boards/ to this, for west build, sysbuild's MCUboot and twister alike.
   settings:
     board_root: .
   # The options the shared layers read, whichever product builds them.

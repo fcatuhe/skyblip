@@ -1,16 +1,3 @@
-// TI DRV2605 haptic driver, I2C 0x5A, with its enable line on a GPIO.
-//
-// This part exists because P0.08 on the T-Echo Plus is NOT a motor drive. LilyGO
-// and Meshtastic call it PIN_DRV_EN / PIN_MOTOR_EN, and SoftRF identifies the
-// Plus by finding a DRV2605 at 0x5A next to the BHI260AP
-// (platform/nRF52.cpp:1158-1163, address at platform/nRF52.h:136). Driving that
-// pin high brings the driver out of hardware standby and produces no pulse at
-// all: the part needs a mode and a drive value over I2C before the motor moves
-// (nRF52.cpp:2112-2133 configures it, 3383-3385 plays an effect, 2901 stops it).
-//
-// Register map and the ERM open-loop bring-up follow SensorLib's driver, which
-// is the vendor library SoftRF uses: HapticDriver_DRV2605_Reg.hpp for the
-// addresses and HapticDriver_DRV2605.cpp:410-456 for the sequence.
 #ifndef SKYBLIP_HARDWARE_PARTS_DRV2605_H
 #define SKYBLIP_HARDWARE_PARTS_DRV2605_H
 
@@ -22,8 +9,6 @@ namespace skyblip::parts {
 
 class Drv2605 : public ports::Haptic {
    public:
-    // SoftRF platform/nRF52.h:136 (DRV2605_ADDRESS), and the datasheet's only
-    // address: the part has no address-select pin.
     static constexpr uint8_t kAddress = 0x5A;
 
     enum class Actuator : uint8_t { Erm, Lra };
@@ -45,37 +30,26 @@ class Drv2605 : public ports::Haptic {
     Drv2605(io::I2c& bus, io::Gpio& gpio, io::Delay& delay, int enable_pin, Actuator actuator)
         : bus_(bus), gpio_(gpio), delay_(delay), enable_pin_(enable_pin), actuator_(actuator) {}
 
-    // The enable line, raised before anything on the bus is believed. SoftRF
-    // configures the part over I2C first and raises the pin afterwards, which is
-    // evidence that the chip answers with this pin undriven - it found 0x5A at
-    // nRF52.cpp:1158 long before nRF52.cpp:2130 drove the pin. We raise it
-    // first anyway: it costs one register write, and it is the order that also
-    // works if the line turns out to gate the motor's supply rather than the
-    // driver's standby.
+    // INFO: fc 20nov26 the enable goes up before the bus is believed, in case it gates the motor's
+    // supply: README.md
     void power_up();
 
-    // Identify and configure, or report absent. Never asserts presence from the
-    // pin: the address has to answer and the part has to name itself.
+    // INFO: fc 20nov26 presence needs the address to answer and the part to name itself, never the
+    // pin alone
     Status begin();
 
-    // ports::Haptic. Real-time playback, not a ROM effect: the drive value is a
-    // register that holds until it is cleared, so the motor runs exactly as long
-    // as the caller keeps it on, and no entry in the effect ROM has to be trusted to
-    // last a particular number of milliseconds. The ROM route (setWaveform +
-    // GO, which is what SoftRF plays) gives the effect's own length, which is
-    // not the length core/annunciation asked for.
+    // INFO: fc 20nov26 real-time playback, so the motor runs as long as the caller asks, not a ROM
+    // effect's length
     void start() override;
     void stop() override;
 
     // TODO: fc 12nov26 smoke image only, as a boot buzz reads as traffic, until #169 stores results
     void calibrate();
 
-    // Standby and the enable line held low, for the way down. The enable of a
-    // part that never answered is released instead.
     void park();
 
     bool ready() const { return ready_; }
-    // STATUS[7:5]. 3 DRV2605, 4 DRV2604, 5 DRV2605X, 6 DRV2604L, 7 DRV2605L.
+    // INFO: fc 20nov26 STATUS[7:5]: 3 DRV2605, 4 DRV2604, 5 DRV2605X, 6 DRV2604L, 7 DRV2605L
     uint8_t device_id() const { return device_id_; }
     bool otp_programmed() const { return otp_programmed_; }
     const Calibration& calibration() const { return calibration_; }
@@ -130,21 +104,15 @@ class Drv2605 : public ports::Haptic {
     static constexpr uint8_t kLraControl4 = 0x30;
     // TODO: fc 12nov26 SLOS854D 8.6.25 default, auto open loop off, until #169 benches the motor
     static constexpr uint8_t kLraControl5 = 0x80;
-    // MODE bit 6. Software standby: the bus stays alive, the driver stage does
-    // not, which is where the part belongs between pulses.
     static constexpr uint8_t kModeStandby = 0x40;
-    // FEEDBACK bit 7 clear selects ERM rather than an LRA; CONTROL3 bit 5 is
-    // ERM_OPEN_LOOP. Open loop because the fitted motor is not in any datasheet
-    // we have: closed loop needs a rated voltage and a back-EMF the part can
-    // trust, and an unknown motor gives neither.
+    // INFO: fc 20nov26 the T-Echo's ERM runs open loop, because its unknown motor gives no rated
+    // voltage or back-EMF
     static constexpr uint8_t kFeedbackLraSelect = 0x80;
     static constexpr uint8_t kControl3ErmOpenLoop = 0x20;
-    // ERM library A. Not used by real-time playback, but a library has to be
-    // selected for the part to be in a defined state, and 1 is what both
-    // SoftRF (nRF52.cpp:2121) and SensorLib pick for an ERM.
+    // INFO: fc 20nov26 real-time playback ignores the library, but one must be selected for a
+    // defined state
     static constexpr uint8_t kErmLibraryA = 0x01;
-    // Signed full scale in RTP mode: DATA_FORMAT_RTP defaults to signed, so
-    // 0x7F is 100% drive in one direction.
+    // INFO: fc 20nov26 DATA_FORMAT_RTP defaults to signed, so 0x7F is full drive in one direction
     static constexpr uint8_t kRealTimePlaybackFullScale = 0x7F;
     static constexpr uint8_t kAudioMaximumInputDefault = 0x64;
 

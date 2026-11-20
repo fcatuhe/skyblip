@@ -1,40 +1,4 @@
-// boards/lilygo/t_echo_plus/board.c: bring up the gated peripheral rails.
-//
-// This lives at BOARD level, not in the application, because MCUboot needs it
-// too. `boards/CMakeLists.txt` does add_subdirectory(${BOARD_DIR}) for every
-// Zephyr image built for the board, so this SYS_INIT is linked into the
-// bootloader as well as into skyBlip.
-//
-// It has to be: the secondary image slot lives on the external flash, and on
-// T-Echo REV_2 and later that part sits behind the same switched rail as the
-// e-paper, GNSS and sensors (SoftRF iomap/LilyGO_TEcho.h:80 lists
-// "REV_2: FLASH, GNSS, SENSOR" against this pin). Without this, MCUboot reads
-// an unpowered flash and every update silently fails to verify.
-//
-// It also parks the flash's WP# and HOLD# lines high. In quad mode those are
-// IO2/IO3 and pinctrl owns them; we drive the part in SINGLE-LINE mode, where
-// they are real inputs and a floating one can write-protect the chip or stall a
-// transfer. They belong here rather than in the application for the same reason
-// the rail does: MCUboot needs them before it touches the secondary slot.
-//
-// The L76K's own two lines are raised here as well. They are not MCUboot's
-// business, but they are the board's: the receiver pulls both up internally
-// (Quectel L76K Hardware Design 4.2.1-4.2.2), and driving them high at boot
-// matches SoftRF, which drives reset then wake high for REV_2 and the Plus
-// (platform/nRF52.cpp:1589-1593).
-//
-// INFO: fc 08nov26 P0.13 enables U11, the regulator feeding this SoC and the
-// radio (T-Echo schematic), so nothing lowers it
-//
-// INFO: fc 06aug26 P1.05 and P1.02 agree across SoftRF's iomap and meshcore's
-// variant for this board, and neither has been read on ours. This is the one
-// change on this branch that can make a working unit stop working: it should be
-// strictly better than a floating reset line, so if a bench unit comes up with no
-// receiver, these two pins are the first suspects.
-//
-// PRE_KERNEL_1 at KERNEL_INIT_PRIORITY_DEVICE (50) is after the nRF GPIO driver
-// (GPIO_INIT_PRIORITY defaults to KERNEL_INIT_PRIORITY_DEFAULT, 40) and well
-// before the SPI NOR driver, which initialises at POST_KERNEL.
+// INFO: fc 20nov26 at board level because MCUboot needs the external flash's rail too: README.md
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
@@ -44,9 +8,8 @@
 #include <string.h>
 
 enum {
-	// MX25R1635F tVSL (VCC to device operational), Macronix datasheet rev 1.6;
-	// the same 5 ms appears as start_up_time_us in Adafruit_SPIFlash
-	// flash_devices.h:219. The ZD25WQ16B alternative specifies less.
+	// INFO: fc 20nov26 MX25R1635F tVSL, Macronix datasheet rev 1.6, which the ZD25WQ16B
+	// alternative undercuts
 	FLASH_STARTUP_US = 5000,
 	RAIL_RAMP_US = 5000,
 };
@@ -64,9 +27,8 @@ BUILD_ASSERT(BOARD_GPIO_PIN(DT_NODELABEL(epd_mosi_gpio)) ==
 BUILD_ASSERT(BOARD_GPIO_PIN(DT_NODELABEL(buzzer_sense_gpio)) ==
 	     BOARD_PSEL_PIN(DT_CHILD(DT_NODELABEL(pwm0_default), group1), 0));
 
-// Every pin below is declared once, in the board devicetree's
-// board_power_gpios node, so this file and the shutdown path cannot disagree
-// about which pin is which.
+// INFO: fc 08nov26 the regulator enable, P0.13, feeds this SoC and the radio through U11, so
+// nothing lowers it
 static const struct gpio_dt_spec board_power_pins[] = {
 	GPIO_DT_SPEC_GET(DT_ALIAS(peripheral_rail), gpios),
 	GPIO_DT_SPEC_GET(DT_ALIAS(regulator_enable), gpios),
@@ -74,13 +36,11 @@ static const struct gpio_dt_spec board_power_pins[] = {
 	GPIO_DT_SPEC_GET(DT_ALIAS(flash_hold), gpios),
 };
 
-// Raised after the rail, because the receiver has to have a supply before it is
-// let out of reset. Reset first, then wake, which is SoftRF's order.
+// INFO: fc 20nov26 raised after the rail, reset then wake as SoftRF does, because the receiver
+// needs a supply first
 static const struct gpio_dt_spec gnss_reset = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_reset), gpios);
 static const struct gpio_dt_spec gnss_wake = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_wake), gpios);
 
-// Defined below: the two things this board has to read off its own pins before
-// any driver claims them. A no-op in MCUboot.
 static void board_probe_fitted_parts(void);
 
 static int board_power_up_gated_rails(void)
@@ -90,7 +50,6 @@ static int board_power_up_gated_rails(void)
 			return -ENODEV;
 		}
 
-		// GPIO_ACTIVE_HIGH throughout, so ACTIVE is the pin high.
 		int error = gpio_pin_configure_dt(&board_power_pins[i], GPIO_OUTPUT_ACTIVE);
 
 		if (error != 0) {
@@ -104,8 +63,8 @@ static int board_power_up_gated_rails(void)
 		return -ENODEV;
 	}
 
-	// The reset line is GPIO_ACTIVE_LOW in the devicetree, so INACTIVE releases
-	// the part; the wake line is active high.
+	// INFO: fc 20nov26 the reset line is active low in the devicetree, so INACTIVE releases
+	// the part
 	int error = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_INACTIVE);
 
 	if (error != 0) {
@@ -118,51 +77,29 @@ static int board_power_up_gated_rails(void)
 		return error;
 	}
 
-	// Last, and in this function rather than in a SYS_INIT of its own: the panel
-	// cannot be asked anything before it has a supply, and one init entry cannot
-	// be reordered against another by a priority arithmetic mistake.
+	// INFO: fc 20nov26 here, not in its own SYS_INIT, so no priority mistake can probe the
+	// panel before its supply
 	board_probe_fitted_parts();
 	return 0;
 }
 
 SYS_INIT(board_power_up_gated_rails, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE);
 
-// ---------------------------------------------------------------------------
-// The two questions only this file can ask.
-//
-// LilyGO fits more than one part behind the same footprint, so two facts have to
-// be READ rather than declared: which e-paper is glued on, and whether the
-// buzzer pin is capable of swinging anything. Both need pins that a Zephyr
-// driver owns from POST_KERNEL onwards - the e-paper ID is clocked out
-// over MOSI with the line reversed (this board's SPI MISO is a placeholder: the
-// panel is write-only in normal operation), and the buzzer pin has to be read
-// high-Z while the PWM peripheral is not driving it. PRE_KERNEL_1 is the one
-// moment both are true, which is why this lives at board level and not in the
-// panel driver: a driver that could only be called during board init would be a
-// driver nothing could call.
-//
-// Read once, into two words the application asks for later
-// (hardware/platform/zephyr/t_echo_plus.h declares both as board hooks).
-//
-// Skipped in MCUboot: the bootloader has no use for either answer and no reason
-// to pay a quarter of a second for them.
-// ---------------------------------------------------------------------------
+// INFO: fc 20nov26 read at PRE_KERNEL_1, the one moment no driver owns these pins, and skipped
+// in MCUboot: README.md
 #if !defined(CONFIG_MCUBOOT)
 
 enum {
-	// SoftRF's own ident sequence: reset low for 20 ms, released, then 200 ms
-	// before the panel will answer (platform/nRF52.cpp:3785-3792). It doubles as
-	// the panel's power-on settle, which nothing else on this board pays for.
+	// INFO: fc 20nov26 SoftRF's ident timing, nRF52.cpp:3785-3792, whose 200 ms also settles
+	// the panel's power-on
 	PANEL_RESET_LOW_US = 20000,
 	PANEL_SETTLE_US = 200000,
-	// Half a bit at about 500 kHz. The panel's controller has no minimum clock.
+	// INFO: fc 20nov26 half a bit at about 500 kHz, since the panel's controller has no
+	// minimum clock
 	PANEL_CLOCK_HALF_US = 1,
-	// The internal pull-up is ~13 kOhm (nRF52840 PS v1.8, GPIO electrical
-	// specification). A 9x9 mm SMD piezo is tens of nanofarads, so 1 ms is
-	// several time constants and a pin that still reads low is held low by
-	// something. SoftRF waits the same 1 ms (platform/nRF52.cpp:1271).
+	// INFO: fc 20nov26 several time constants of the 13 kOhm pull-up into a piezo's tens of
+	// nanofarads
 	BUZZER_PULLUP_SETTLE_US = 1000,
-	// Between the two registers, as the reference does (delay(1)).
 	PANEL_INTER_REGISTER_US = 1000,
 	PANEL_ID_2D_BYTES = 11,
 	PANEL_ID_2E_BYTES = 10,
@@ -186,8 +123,7 @@ static uint8_t panel_id[PANEL_ID_BYTES];
 static bool panel_id_read;
 static bool buzzer_pin_low_against_pullup;
 
-// Mode 0, MSB first, half duplex: the panel's one data line is the host's MOSI,
-// so the same pin carries the command out and the answer back.
+// INFO: fc 20nov26 mode 0, MSB first, half duplex: MOSI carries the command out and the answer back
 static void panel_clock_out(uint8_t value)
 {
 	for (int bit = 7; bit >= 0; bit--) {
@@ -219,13 +155,13 @@ static uint8_t panel_clock_in(void)
 static void panel_read_register(uint8_t register_address, uint8_t *out, size_t bytes)
 {
 	gpio_pin_configure_dt(&epd_mosi, GPIO_OUTPUT_INACTIVE);
-	gpio_pin_set_dt(&epd_dc, 0); /* command */
-	gpio_pin_set_dt(&epd_cs, 1); /* active low in the devicetree: 1 selects */
+	gpio_pin_set_dt(&epd_dc, 0);
+	gpio_pin_set_dt(&epd_cs, 1);
 
 	panel_clock_out(register_address);
 
 	gpio_pin_configure_dt(&epd_mosi, GPIO_INPUT);
-	gpio_pin_set_dt(&epd_dc, 1); /* data */
+	gpio_pin_set_dt(&epd_dc, 1);
 
 	for (size_t i = 0; i < bytes; i++) {
 		out[i] = panel_clock_in();
@@ -236,8 +172,6 @@ static void panel_read_register(uint8_t register_address, uint8_t *out, size_t b
 	gpio_pin_set_dt(&epd_cs, 0);
 }
 
-// No critical section, unlike the reference, which wraps each register in
-// taskENTER_CRITICAL: at PRE_KERNEL_1 there is no scheduler to be preempted by.
 static void board_read_panel_id(void)
 {
 	if (!gpio_is_ready_dt(&epd_cs) || !gpio_is_ready_dt(&epd_dc) ||
@@ -249,13 +183,10 @@ static void board_read_panel_id(void)
 	gpio_pin_configure_dt(&epd_dc, GPIO_OUTPUT_ACTIVE);
 	gpio_pin_configure_dt(&epd_sck, GPIO_OUTPUT_INACTIVE);
 
-	// The panel's reset is active low and the devicetree declares the pin
-	// ACTIVE_HIGH, because the display driver drives raw levels through io::Gpio.
-	// So INACTIVE here is the pin low, which is the part held in reset.
+	// INFO: fc 20nov26 the devicetree declares this pin active high for io::Gpio, so INACTIVE
+	// holds the panel in reset
 	gpio_pin_configure_dt(&epd_reset, GPIO_OUTPUT_INACTIVE);
 	k_busy_wait(PANEL_RESET_LOW_US);
-	// Released to a pull-up rather than driven high, which is what the reference
-	// does: the line is shared with nothing, and the panel's own pull decides.
 	gpio_pin_configure_dt(&epd_reset, GPIO_INPUT | GPIO_PULL_UP);
 	k_busy_wait(PANEL_SETTLE_US);
 	gpio_pin_configure_dt(&epd_busy, GPIO_INPUT);
@@ -282,7 +213,6 @@ static void board_probe_buzzer_pin(void)
 	k_busy_wait(BUZZER_PULLUP_SETTLE_US);
 	const int against_pullup = gpio_pin_get_dt(&buzzer_sense);
 
-	// Left as a plain input: pwm0's pinctrl takes the pin at POST_KERNEL.
 	gpio_pin_configure_dt(&buzzer_sense, GPIO_INPUT);
 
 	buzzer_pin_low_against_pullup = high_impedance == 0 && against_pullup == 0;

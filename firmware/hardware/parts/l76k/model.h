@@ -1,9 +1,3 @@
-// hardware/parts/l76k/model.h: a model of the L76K GNSS receiver at the io::Uart
-// seam, so the REAL parser runs against it unchanged: it emits genuine NMEA-0183
-// $GPRMC/$GPGGA sentences (production formatters + nmea_finish checksum) and it
-// consumes genuine $PCAS configuration sentences, checksum first.
-// Nothing is stubbed at the state level: moving the aircraft here exercises the
-// whole chain: NMEA -> parser -> own-ship state -> screens/alarms/protocol.
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_H
 
@@ -17,13 +11,10 @@
 
 namespace skyblip::models {
 
-// The model is the receiver AND the wire to it: io::UartRate is the seam the
-// platform's UART fills on silicon, and here it is the rate the MCU end is set
-// to. Bytes crossing a rate mismatch are framing errors in both directions,
-// which is what "the receiver came up at 38400" actually looks like.
+// INFO: fc 20nov26 the model is also the wire, so a rate mismatch frames rubbish both ways, as on
+// silicon
 class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssTruth {
    public:
-    // Modelled receiver state, driven by the caller.
     bool fix_valid{true};
     uint8_t satellites{9};
     bool emit_geoid_separation{true};
@@ -35,28 +26,18 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     uint16_t vdop_e2{150};
     uint16_t pdop_e2{180};
 
-    // INFO: gn 09Jun25 The AT6558 core in the L76K takes $PCAS configuration
-    // sentences and never acknowledges them: the only evidence they landed is
-    // the receiver's own behaviour changing (oss/SoftRF-lyusupov
-    // .../src/driver/GNSS.cpp:1029-1057). This model behaves the same way.
+    // INFO: gn 09Jun25 the AT6558 never acknowledges a $PCAS sentence, so only its changed
+    // behaviour shows it landed
     static constexpr int kGsaSlots = 12;
     static constexpr uint32_t kFactoryPeriodMs = 1000;
     static constexpr uint8_t kAviationDynamicModel = 6;
 
-    // A receiver that hears every command and obeys none: a dead TX line, a
-    // clone with a different command set, a module held in a firmware-update mode.
     bool accepts_commands{true};
 
-    // INFO: fc 03aug26 The L76K wakes on UART activity and is deaf for about
-    // half a second afterwards, which is why SoftRF spends a byte and 500 ms
-    // before it says anything that matters (oss/SoftRF-lyusupov
-    // .../src/driver/GNSS.cpp:1383-1387). Default false: a receiver already
-    // running is the ordinary case, and `asleep = true` is the cold one.
+    // INFO: fc 03aug26 the L76K wakes on UART activity and stays deaf for about half a second
     static constexpr uint32_t kWakeMs = 500;
     bool asleep{false};
 
-    // The rate the receiver itself is talking at. The MCU end is set through
-    // io::UartRate, and the two only agree because someone made them.
     uint32_t baud{parts::L76k::kFactoryBaudRate};
     bool refuses_baud_command{false};
     bool refuses_fast_rate{false};
@@ -75,15 +56,13 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     int reset_pin{-1};
     uint32_t hardware_resets{0};
 
-    // INFO: fc 03aug26 $PCAS06 is answered with the CASIC firmware banner. A
-    // clone that takes $PCAS sentences but never introduces itself is exactly
-    // what the handshake exists to expose.
+    // INFO: fc 03aug26 $PCAS06 is answered with the CASIC firmware banner, which a clone may never
+    // send
     bool answers_identification{true};
     const char* firmware_version{"URANUS5,V5.1.0.0"};
 
-    // A cold start throws the orbit data away, and the receiver is blind until
-    // it has decoded a fresh almanac. This is the twenty minutes a pilot reads
-    // as a broken device, compressed to the datasheet's cold TTFF.
+    // INFO: fc 20nov26 a cold start blinds the receiver until a fresh almanac, compressed here to
+    // the datasheet's cold TTFF
     static constexpr uint32_t kColdStartTtffMs = 30000;
     static constexpr uint32_t kRebootMs = 300;
 
@@ -118,8 +97,6 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     uint32_t baud_changes{0};
     uint32_t restarts{0};
     uint32_t factory_resets{0};
-    // Which $PCAS10 argument arrived last, so a test can tell a hot restart from
-    // the cold start that is the whole point of asking.
     int last_restart_kind{-1};
 
     struct Solved {
@@ -140,13 +117,8 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     bool gsa_enabled() const { return gsa_every != 0; }
     bool gsv_enabled() const { return gsv_every != 0; }
 
-    // Everything the receiver heard, in the order it heard it: "WAKE,PCAS06,...".
-    // A driver that sends the right sentences in the wrong order configures a
-    // receiver that was not listening yet.
     const std::string& heard() const { return heard_; }
 
-    // io::UartRate: the MCU end of the link retunes. Always possible here;
-    // whether it is possible on silicon is the platform's answer, not the chip's.
     bool set(uint32_t rate) override {
         if (port_baud_ == rate) return true;
         port_baud_ = rate;
@@ -162,9 +134,6 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
 
     size_t write(const uint8_t* data, size_t bytes) override {
         for (size_t i = 0; i < bytes; i++) {
-            // A rate mismatch is not silence: the bits arrive and frame as
-            // rubbish, which fails the checksum and is therefore indistinguishable
-            // from nothing having been said.
             if (port_baud_ != baud) {
                 garbled_bytes++;
                 continue;
@@ -176,7 +145,7 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
                 deaf_ = true;
                 wake_bytes++;
                 heard_ += "WAKE,";
-                continue;  // the byte that wakes it is the byte it loses
+                continue;
             }
             if (deaf()) {
                 deaf_bytes++;
@@ -197,9 +166,8 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
         return bytes;
     }
     size_t read(uint8_t* out, size_t capacity) override {
-        // It is talking and we cannot frame a byte of it: the sentences went
-        // past on the wire and are gone, they are not queued up waiting for
-        // someone to fix the rate.
+        // INFO: fc 20nov26 sentences sent at a mismatched rate are lost, not queued until the rate
+        // is fixed
         if (port_baud_ != baud) {
             pending_.clear();
             return 0;
@@ -214,9 +182,8 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     // INFO: fc 18nov26 solutions fall where the receiver's UTC is a whole multiple of its period
     void tick(uint32_t now_ms) {
         last_tick_ms_ = now_ms;
-        // First tick only anchors the clock. Anchoring on `last_ms_ == 0`
-        // instead would re-anchor on every call made at t=0, which is a legal
-        // timestamp, not an "unset" marker.
+        // INFO: fc 20nov26 a flag, not last_ms_ == 0, marks the first tick, because t=0 is a legal
+        // timestamp
         if (!armed_) {
             armed_ = true;
             last_ms_ = now_ms;
@@ -247,12 +214,8 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
 
     char command_[kCommandBytes]{};
     int command_length_{0};
-    // Three windows, each a START instant plus a flag rather than an end instant.
-    // core/../ports/clock.h states the rule and section M found the bug it prevents:
-    // an end instant compared with `<` inverts across the 49.7-day wrap, and here
-    // it would invert PERMISSIVELY - a window that ends immediately is a model
-    // that answers when the real part would not, which is the one direction a
-    // test double must never fail in.
+    // INFO: fc 20nov26 start instants and flags, not end instants, because an end compared with <
+    // inverts across the 49.7-day wrap
     uint32_t last_tick_ms_{0};
     uint32_t deaf_since_ms_{0};
     uint32_t reboot_since_ms_{0};
@@ -276,8 +239,6 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     std::string saying_;
     bool solving_now_{false};
 
-    // A receiver nobody has spoken to yet is not producing, and one that is
-    // rebooting after $PCAS10 has nothing to say either.
     void solve(uint32_t at_ms) {
         if (asleep || rebooting() || hung || held_in_reset_) return;
         saying_.clear();

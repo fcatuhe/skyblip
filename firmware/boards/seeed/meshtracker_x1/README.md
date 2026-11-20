@@ -1,6 +1,6 @@
 # Seeed SenseCAP MeshTracker X1
 
-The board skyBlip Bravo runs on. The owner read the factory bootloader's files off his first unit on 12 November 2026 (`factory/README.md`). They confirm the SoftDevice and the flash boundaries at 0x27000 and 0xEA000, and they name the bootloader source that shows what it does with the button. No unit has shown that yet. Every other pin, address, boundary and timing below comes from the sources listed here, and each one stays unverified until #169 benches a unit. A tagged `TODO` in `meshtracker_x1.dts`, `board.c`, `pins.h`, `Kconfig.meshtracker_x1`, `meshtracker_x1_defconfig` and the X1's platform points back here.
+The board skyBlip Bravo runs on. The factory bootloader's files, read off a unit (`factory/README.md`), confirm the SoftDevice and flash boundaries at 0x27000 and 0xEA000 and name the bootloader source. Every other pin, address, boundary and timing below comes from the sources listed here and stays unverified until #169 benches a unit. A tagged `TODO` in the board files and the X1's platform points back here.
 
 ## Sources
 
@@ -18,7 +18,7 @@ SoftRF and Meshtastic are GPL-3.0 and were read for facts only. No code is copie
 
 | Function | Pin | Sources | Notes |
 |---|---|---|---|
-| Button | P0.06, high when pressed, pull-down | SoftRF, Meshtastic, Meshtastic bootloader, Seeed | Seeed's block diagram also feeds the button and the USB-C detect into a NAND gate on nRST. What that gate does on a press or a cable is #169's to measure. |
+| Button | P0.06, high when pressed, pull-down | SoftRF, Meshtastic, Meshtastic bootloader, Seeed | Seeed's block diagram also feeds the button and the USB-C detect into a NAND gate on nRST, which #169 measures. |
 | LED red, green, blue | P0.03, P0.24, P0.28, active high | SoftRF (`nRF52.h:45-55` for the polarity), Meshtastic (`LED_STATE_ON 1`), Meshtastic bootloader, Seeed | |
 | Buzzer | P0.25, PWM | SoftRF, Meshtastic, Seeed | SoftRF and Meshtastic park it as an input with a pull-down when idle. |
 | Sensor rail | P1.07, active high | SoftRF, Meshtastic (`PIN_3V3_EN`), Seeed | Powers the barometer, the IMU, the magnetometer, the buzzer and the haptic driver, per SoftRF's note on the pin. |
@@ -33,13 +33,13 @@ SoftRF and Meshtastic are GPL-3.0 and were read for facts only. No code is copie
 | GNSS UART | nRF TX P0.13, nRF RX P0.14, 115200 baud | SoftRF, Meshtastic, Seeed | The AG3335, for #171 and #176. |
 | GNSS control | enable P1.11, reset P0.08 high to reset, RTC supply P1.13, sleep P0.30, RTC wake P0.29, PPS P0.04 | SoftRF, Meshtastic, Seeed | Meshtastic's comment calls P0.04 `VCC_ADC`. SoftRF and Seeed call it the PPS. |
 | Sensor I2C | SDA P1.15, SCL P1.14 | SoftRF, Meshtastic, Seeed | |
-| RTC I2C | SDA P0.26, SCL P0.27, enable P0.09, interrupt P0.31 | SoftRF, Seeed | P0.09 is an NFC pin, so the devicetree sets `nfct-pins-as-gpios`, as Meshtastic's build does (`-DCONFIG_NFCT_PINS_AS_GPIOS=1`). The factory bootloader is built with `CONFIG_NFCT_PINS_AS_GPIOS` (`Makefile:356-358` at `b93789fe`), so its first boot already set `UICR.NFCPINS` to GPIO, and ours writes nothing there. |
+| RTC I2C | SDA P0.26, SCL P0.27, enable P0.09, interrupt P0.31 | SoftRF, Seeed | P0.09 is an NFC pin, so the devicetree sets `nfct-pins-as-gpios`, as Meshtastic does. The factory bootloader is built with `CONFIG_NFCT_PINS_AS_GPIOS` (`Makefile:356-358` at `b93789fe`), so its first boot already set `UICR.NFCPINS`, and ours writes nothing there. |
 | IMU and magnetometer interrupts | P1.02, P1.12 | SoftRF, Seeed | |
 | Reset | P0.18 | SoftRF, Meshtastic bootloader | The bootloader keeps it as nRESET. Nothing drives it. |
 
-On the case, the LED sits just above the button, as the owner confirmed on 18 November 2026.
+On the case, the LED sits just above the button.
 
-SoftRF lists a console UART on P0.16 and P0.17, and Meshtastic names it `SERIAL2`. SoftRF also says the X1 does not expose it (`nRF52.cpp:3885-3893`), so the devicetree leaves it out. The smoke image below declares a USB CDC console in its own overlay, and the board declares none.
+SoftRF lists a console UART on P0.16 and P0.17, and also says the X1 does not expose it (`nRF52.cpp:3885-3893`), so the devicetree leaves it out. The board declares no console. The smoke image declares a USB CDC console in its own overlay.
 
 ## Parts
 
@@ -53,9 +53,9 @@ SoftRF lists a console UART on P0.16 and P0.17, and Meshtastic names it `SERIAL2
 | GD25Q64E NOR, 8 MiB | QSPI | JEDEC `c8 40 17` | Seeed names a GD25Q64ENIGR. GigaDevice's GD25Q64E datasheet, DS-00484 Rev 1.4, gives that JEDEC ID, as does the GD25Q64C entry of Adafruit_SPIFlash `flash_devices.h` that SoftRF probes it with. |
 | Charger | | | SoftRF names an SGM40571. Seeed's block diagram names a BQ24045. #169 reads the part. |
 
-The NOR runs single-line at 8 MHz, with `quad-enable-requirements = "NONE"`, so the driver never writes a status register. Two Bluetooth updates failed on slot1's contents at 32 MHz on standard-drive pads (#278): the application found slot1 damaged once, and MCUboot rejected a slot1 the application had matched once. So the clock is the Go's NOR clock and the QSPI pads run high drive, which nrfx's own pin setup applies (`nrfx_qspi.c:63-72`) and Zephyr's pinctrl leaves to the board. Single-line at 8 MHz moves about 1 MB/s, far above the Bluetooth upload's 8 KB/s, and page programs and sector erases take the part's own time at any clock. MCUboot takes both settings from this devicetree, so only a `.uf2` changes them on a unit: an update over the air changes the application alone. The datasheet puts QE at S9, written with 31h, which no driver setting here needs. The devicetree sets `has-dpd` with the datasheet's tDP of 3 us and tRES1 of 20 us, so the driver releases a part a previous firmware left in deep power-down before it reads the JEDEC ID. `board.c` raises the NOR's enable, and the sensor rail outside MCUboot, then waits the 30 ms SoftRF waits (`nRF52.cpp:934-942`).
+The NOR runs single-line at 8 MHz, the Go's NOR clock, on high-drive QSPI pads, because two Bluetooth updates read slot1 corrupt at 32 MHz on standard-drive pads (#278). nrfx's own pin setup applies high drive (`nrfx_qspi.c:63-72`) and Zephyr's pinctrl leaves it to the board. 8 MHz single-line moves about 1 MB/s, far above the Bluetooth upload's 8 KB/s. With `quad-enable-requirements = "NONE"` the driver never writes a status register. MCUboot takes these settings from this devicetree, so only a `.uf2` changes them on a unit. The devicetree sets `has-dpd` with the datasheet's tDP of 3 us and tRES1 of 20 us, so the driver wakes a part a previous firmware left in deep power-down before it reads the JEDEC ID. `board.c` raises the NOR's enable, and outside MCUboot the sensor rail, then waits the 30 ms SoftRF waits (`nRF52.cpp:934-942`).
 
-A NOR that fails its JEDEC check leaves MCUboot without slot1: `flash_area_open` returns `-ENODEV`, MCUboot stops at `FIH_PANIC`, and it has no console to say so. A unit that shows nothing on USB after the smoke image is installed failed there. Recover it with the bootloader's 3 s hold and a fresh drag-and-drop, or with #169's SWD restore.
+A NOR that fails its JEDEC check leaves MCUboot without slot1: `flash_area_open` returns `-ENODEV` and MCUboot stops at `FIH_PANIC`, with no console to say so. A unit that shows nothing on USB after the smoke image is installed failed there. Recover it with the bootloader's 3 s hold and a fresh drag-and-drop, or with #169's SWD restore.
 
 The nRF52840 package is QIAA, read off the chip in Seeed's block diagram. The 32 kHz crystal is Meshtastic's `USE_LFXO`. REG1 stays on the LDO the SoC resets into, because no source says the DC-DC inductor is fitted.
 
@@ -73,17 +73,25 @@ The factory UF2 bootloader stays. It chain-loads MCUboot from the application or
 | `slot1_partition`, on the NOR | 0x0 | 0xB5000 | The secondary slot, the same size as slot0, as on the Go. |
 | `log_partition`, on the NOR | 0xB5000 | 0x200000 | The flights and the capture, 512 sectors of 4 KB, which is `store::kMaxPoolSectors`. The NOR's last 5.3 MiB are unused. |
 
-`USER_FLASH_END` is `BOOTLOADER_REGION_START - DFU_APP_DATA_RESERVED` = 0xF4000 - 10 * 4096 = 0xEA000 in the factory bootloader (`uf2cfg.h:25-26`, `Makefile:139`, `linker/nrf52840.ld:14`), and the unit's `CURRENT.UF2` covers 0x1000..0xEA000 and nothing above (`factory/README.md`). SoftRF tells an X1 by finding the string `MeshTracker-X1` in the bootloader region at 0xF4000 (`nRF52.cpp:771-879`), which agrees on where the bootloader sits. The unit has not shown that address itself: #169's SWD session reads it from `UICR`. The owner's first unit reports `nRF52840-MeshTracker-X1-v1`, and another unit may ship another bootloader. Meshtastic-Android's `maintenance_uf2.json` lists two Board-IDs, `nRF52840-MeshTracker-X1-v1` and `nRF52840-MeshTracker-X1`, and a third-party tool, `mikecarper/meshfirmware` `web/src/bootloader-info.js`, calls the `-v1` one the factory's. `scripts/mkuf2.py` holds every `.uf2` to this window, and `scripts/test_mkuf2.py` reads the window back from this devicetree.
+`USER_FLASH_END` is `BOOTLOADER_REGION_START - DFU_APP_DATA_RESERVED` = 0xF4000 - 10 * 4096 = 0xEA000 in the factory bootloader (`uf2cfg.h:25-26`, `Makefile:139`, `linker/nrf52840.ld:14`), and the unit's `CURRENT.UF2` covers 0x1000..0xEA000 and nothing above (`factory/README.md`). SoftRF finds the string `MeshTracker-X1` in the bootloader region at 0xF4000 (`nRF52.cpp:771-879`), which agrees on where the bootloader sits. #169's SWD session reads that address from `UICR`. Another unit may ship another bootloader: Meshtastic-Android's `maintenance_uf2.json` lists the Board-IDs `nRF52840-MeshTracker-X1-v1`, which our unit reports, and `nRF52840-MeshTracker-X1`. `scripts/mkuf2.py` holds every `.uf2` to this window, and `scripts/test_mkuf2.py` reads the window back from this devicetree.
 
 MCUboot uses swap-using-offset, as on the Go. A Go image starts at 0x26000, inside S140 7.3.0, and `mkuf2.py` refuses to build one for this board.
 
-The factory bootloader enters UF2 mode once the button has been held for about 3 s through boot, and lights the LED white. It holds the start while the button stays down, up to those 3 s, so the application reads a shorter wake press as already up. With GPREGRET at `0x6d` it skips the button, so the X1 writes `0x00` at switch-off. It has no line that puts a VBUS wake back to sleep, unlike the T-Echo's bootloader (`../../lilygo/t_echo_plus/factory/README.md`). `factory/README.md` cites the source for each.
+The factory bootloader enters UF2 mode once the button has been held about 3 s through boot, and lights the LED white. It holds the start while the button stays down, up to those 3 s, so the application reads a shorter wake press as already up. With GPREGRET at `0x6d` it skips the button, so the X1 writes `0x00` at switch-off. Unlike the T-Echo's bootloader (`../../lilygo/t_echo_plus/factory/README.md`), it does not send a VBUS wake back to sleep. `factory/README.md` cites the source for each.
 
 ## The board composition
 
-`board.h` is the X1 assembled once, a template over the platform as the T-Echo's is: `hardware/platform/zephyr/meshtracker_x1.h` on silicon, `hardware/platform/host/meshtracker_x1.h` on the host. `pins.h` holds the four lines the parts' own drivers drive as `io::Gpio` numbers, and on silicon a `static_assert` holds each to the devicetree. The constructor touches no part: the product is a global, and a global's constructor runs before `main()` arms the watchdog and before the product has decided whether a wake runs. `probe()` does the work once both hold, and the product then copies the capabilities into its roles. The roles' references are chosen at construction and depend on no probe: the annunciator is always the platform's, and a DRV2605 the probe finds attaches to it. In `probe()`, the LR2021 answering its version grants `Capability::AdsbReceiver`, the SPA06 answering its chip id `Capability::Barometer`, and the DRV2605 answering and identifying itself `Capability::Haptic` and `Capability::HapticDriver`, which it then attaches to the annunciator. The LR2021's receiver pushes each frame into the `bus::AdsbQueue` the product hands the board. The board polls the AG3335, the battery, the button and the PPS edge as the T-Echo's does, and triggers the SPA06 once a second on the PPS edge, because the part has no filter (`../../../hardware/parts/spa06/README.md`).
+`board.h` is the X1 assembled once, a template over the platform as the T-Echo's is: `hardware/platform/zephyr/meshtracker_x1.h` on silicon, `hardware/platform/host/meshtracker_x1.h` on the host. `pins.h` holds the four lines the parts' drivers drive as `io::Gpio` numbers, and on silicon a `static_assert` holds each to the devicetree.
 
-The board scans no bus and keeps no inventory: each part answers its own probe, and nothing on Bravo reads the YSN8900, so nothing probes it.
+The constructor touches no part, because the product is a global whose constructor runs before `main()` arms the watchdog and before the product decides whether a wake runs. `probe()` does the work later, and the product then copies the capabilities into its roles. The roles' references are fixed at construction: the annunciator is always the platform's, and a DRV2605 the probe finds attaches to it.
+
+| Answers in `probe()` | Grants |
+|---|---|
+| the LR2021, its version | `Capability::AdsbReceiver` |
+| the SPA06, its chip id | `Capability::Barometer` |
+| the DRV2605, identifying itself | `Capability::Haptic` and `Capability::HapticDriver` |
+
+The LR2021's receiver pushes each frame into the `bus::AdsbQueue` the product hands the board. The board polls the AG3335, the battery, the button and the PPS edge as the T-Echo's does, and triggers the SPA06 once a second on the PPS edge, because the part has no filter ([`hardware/parts/spa06/README.md`](../../../hardware/parts/spa06/README.md)). It scans no bus and keeps no inventory. Nothing on Bravo reads the YSN8900, so nothing probes it.
 
 ## The way down
 
@@ -107,4 +115,4 @@ GPREGRET is written first: `0x00`, which leaves the factory bootloader's button 
 
 `firmware/test/twister/meshtracker_x1` is MCUboot and a minimal signed application, built by sysbuild. CI builds it, holds it to slot0 with `size_check.py`, wraps it with `mkuf2.py meshtracker_x1` and uploads `meshtracker-x1-smoke.uf2`. It is signed with MCUboot's published development key, so it is a bench image only.
 
-At boot it lights red, green and blue, sounds the buzzer and pulses the haptic once. Each time a host opens its USB CDC port, which raises DTR, it prints its capabilities, whether the DRV2605 answered and every address that answers on both I2C buses, and runs the outputs again. While the port is open it prints the battery, VBUS, both charger lines and the button every second. A 2 s hold switches it off: it parks the outputs, drops the sensor rail, writes `0x00` to GPREGRET and arms the button as the wake, and it stays on if any of those fails. The radio and the NOR stay powered and the GNSS enable is left undriven, so the off current it leaves is not the product's.
+At boot it lights red, green and blue, sounds the buzzer and pulses the haptic once. Each time a host opens its USB CDC port, it prints its capabilities, whether the DRV2605 answered and every address on both I2C buses, and runs the outputs again. While the port is open it prints the battery, VBUS, both charger lines and the button every second. A 2 s hold switches it off: it parks the outputs, drops the sensor rail, writes `0x00` to GPREGRET and arms the button as the wake, and stays on if any of those fails. The radio and the NOR stay powered and the GNSS enable is left undriven, so its off current is not the product's.

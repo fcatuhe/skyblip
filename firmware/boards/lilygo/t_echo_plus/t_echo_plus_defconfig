@@ -3,17 +3,7 @@ CONFIG_HW_STACK_PROTECTION=y
 CONFIG_GPIO=y
 CONFIG_CLOCK_CONTROL=y
 CONFIG_SERIAL=y
-# Link into the `zephyr,code-partition` chosen in the board devicetree rather
-# than at flash base 0. Without this, CONFIG_FLASH_LOAD_OFFSET defaults to 0
-# (Kconfig.zephyr:133) and both the ELF and the generated .uf2 target 0x0:
-# which would overwrite the factory MBR + SoftDevice. The upstream promicro_
-# nrf52840 uf2 variant sets this explicitly for the same reason; the Adafruit
-# feather uf2 variant forgets to, and is wrong.
+# Link into slot0, the devicetree's code partition, never at 0x0 over the factory MBR and SoftDevice.
 CONFIG_USE_DT_CODE_PARTITION=y
 
-# CONFIG_BUILD_OUTPUT_UF2 is deliberately NOT set, even though the T-Echo's
-# install path is a .uf2. It would convert the UNSIGNED zephyr.bin, producing a
-# build/firmware/zephyr/zephyr.uf2 that looks like the artifact to flash and that
-# MCUboot will refuse to boot. scripts/mkuf2.py is the single source of the real
-# .uf2: it merges the bootloader and the signed, confirmed application and range-
-# checks the result against the factory bootloader's write window.
+# No CONFIG_BUILD_OUTPUT_UF2: it would wrap the unsigned image MCUboot refuses, and scripts/mkuf2.py builds the real .uf2.

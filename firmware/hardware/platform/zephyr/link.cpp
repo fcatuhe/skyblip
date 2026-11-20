@@ -39,14 +39,12 @@ static struct bt_uuid_16 hm10_characteristic_uuid = BT_UUID_INIT_16(0xFFE1);
 
 static struct bt_uuid_128 skyblip_service_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kSkyblipServiceId));
 static struct bt_uuid_128 config_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kConfigCharacteristicId));
-// The log offload is thousands of small round trips. On its own characteristic
-// it cannot starve the one the pilot's prompts travel on, and an app that does
-// not want logs simply never subscribes.
+// INFO: fc 20nov26 the log offload gets its own characteristic so its round trips cannot starve the
+// pilot's prompts
 static struct bt_uuid_128 log_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kLogCharacteristicId));
 
-// INFO: fc 04aug26 The ATT notification header - opcode plus value handle. What
-// is left of the ATT_MTU is what one notification may carry, which is why 185
-// (an iPhone's usual answer) is 182 bytes of payload and not 185.
+// INFO: fc 04aug26 opcode and value handle, so an iPhone's ATT_MTU of 185 carries 182 bytes of
+// payload
 constexpr uint16_t kNotifyHeaderBytes = 3;
 
 bus::Bus* g_bus = nullptr;
@@ -129,11 +127,8 @@ void forward_events() {
     while (g_bus != nullptr && g_sessions.pop(event)) (void)g_bus->link_events.push(event);
 }
 
-// INFO: fc 04aug26 The inbound half of the same rule. With an ATT_MTU of 498 a
-// central can write more than events::RxFrame carries, and a command cut to
-// 256 bytes is not a command - a truncated "set" would apply the fields that
-// survived. So it is refused with the ATT error that says exactly that, which the
-// central sees, instead of being half-obeyed.
+// INFO: fc 04aug26 a write longer than RxFrame is refused with an ATT error, because a truncated
+// set would half-apply
 constexpr size_t kMaxInboundBytes = sizeof(RxFrame::data);
 bool too_long(uint16_t bytes) { return bytes > kMaxInboundBytes; }
 
@@ -334,10 +329,8 @@ void recycled() { resume_advertising(); }
 BT_CONN_CB_DEFINE(connection_callbacks) = {
     .connected = connected, .disconnected = disconnected, .recycled = recycled};
 
-// An ATT_EXCHANGE_MTU_REQ answered, the central's or the unit's own, landing after
-// the connection is up: this is where the payload figure is actually learnt, so it
-// is where the refreshed figure goes onto the bus. tx is our side of the pair -
-// what a notification we send may carry.
+// INFO: fc 20nov26 the payload is learnt here, when an MTU exchange lands after connect, and tx is
+// what our notifications may carry
 void mtu_updated(struct bt_conn* connection, uint16_t tx, uint16_t /*rx*/) {
     if (g_connections[bt_conn_index(connection)] != connection) return;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
@@ -346,9 +339,8 @@ void mtu_updated(struct bt_conn* connection, uint16_t tx, uint16_t /*rx*/) {
     k_spin_unlock(&g_lock, key);
     g_loop_wake.wake();
 }
-// Registered rather than section-defined, unlike the connection callbacks above:
-// bt_gatt_cb is a runtime list, and this is the call every Zephyr release offers
-// for it.
+// INFO: fc 20nov26 registered at runtime, because bt_gatt_cb is a runtime list, unlike the
+// connection callbacks
 struct bt_gatt_cb gatt_callbacks = {.att_mtu_updated = mtu_updated};
 
 }  // namespace

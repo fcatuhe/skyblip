@@ -1,4 +1,3 @@
-// boards/lilygo/t_echo_plus/pins.h: LilyGO T-Echo Plus (nRF52840) pin map.
 #ifndef SKYBLIP_BOARDS_T_ECHO_PLUS_PINS_H
 #define SKYBLIP_BOARDS_T_ECHO_PLUS_PINS_H
 
@@ -24,12 +23,8 @@ constexpr int kEpdReset = pin_number(0, 2);
 constexpr int kEpdBusy = pin_number(0, 3);
 constexpr int kEpdBacklight = pin_number(1, 11);
 
-// NOT a motor drive. This is the DRV2605's enable line: raising it brings the
-// waveform driver out of standby and moves nothing on its own, because the pulse
-// itself is a mode and a drive value over I2C 0x5A
-// (hardware/parts/drv2605/). SoftRF identifies a Plus by that part answering
-// (platform/nRF52.cpp:1158-1163) and drives this pin only after configuring it
-// (2112-2133). The name is Meshtastic's PIN_DRV_EN.
+// INFO: fc 20nov26 the DRV2605's enable, Meshtastic's PIN_DRV_EN, and not a motor drive:
+// hardware/parts/drv2605/README.md
 constexpr int kHapticEnable = pin_number(0, 8);
 
 // INFO: fc 18nov26 LilyGO T-Echo utilities.h and Meshtastic t-echo-plus variant.h name P1.05
@@ -42,8 +37,6 @@ constexpr uint32_t kPadSettleMs = 30;
 // INFO: fc 12nov26 the factory bootloader enters USB DFU on a press held at boot: factory/README.md
 constexpr power::DfuButton kFactoryDfuButton = power::DfuButton::PressEntersDfu;
 
-// What this board's virtual wiring needs to know: which pin belongs to which
-// part. The silicon platform ignores it and reads the devicetree instead.
 constexpr io::PinRole kPinRoles[] = {
     {io::PinFunction::RadioBusy, kRadioBusy},       {io::PinFunction::RadioReset, kRadioReset},
     {io::PinFunction::RadioDio1, kRadioDio1},       {io::PinFunction::EpdDc, kEpdDc},
