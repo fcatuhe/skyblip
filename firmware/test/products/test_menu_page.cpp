@@ -154,10 +154,9 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
         std::string("L76K ") + ports::to_string(rig.product.board().gnss().config_stage());
     CHECK(reads_in(glass, receiver.c_str(), 0, go::self_test_row_y(1), go::kGlassWidth,
                    go::self_test_row_y(2)));
-    CHECK(std::memcmp(
-              glass.data() + go::self_test_row_y(2) * go::Glass::kStride,
-              rig.self_test_page().data() + go::self_test_row_y(2) * go::Glass::kStride,
-              go::Glass::kBytes - go::self_test_row_y(2) * go::Glass::kStride) == 0);
+    CHECK(std::memcmp(glass.data() + go::self_test_row_y(2) * go::Glass::kStride,
+                      rig.self_test_page().data() + go::self_test_row_y(2) * go::Glass::kStride,
+                      go::Glass::kBytes - go::self_test_row_y(2) * go::Glass::kStride) == 0);
 
     // A tap goes back to the page whose menu opened it, not on to a fourth picture.
     rig.tap(now_ms);

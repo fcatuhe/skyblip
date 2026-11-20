@@ -22,7 +22,7 @@ NoTx TransmitGate::shown_now(uint32_t now_ms) const {
     if (unmet_ == NoTx::None)
         return met_since_ms_ && now_ms - *met_since_ms_ >= kNoTxHoldMs ? NoTx::None : shown_;
     if (shown_ != NoTx::None) return unmet_;
-    const bool held = now_ms - *unmet_since_ms_ >= kNoTxHoldMs;
+    const bool held = unmet_since_ms_ && now_ms - *unmet_since_ms_ >= kNoTxHoldMs;
     return held && judged(now_ms) ? unmet_ : NoTx::None;
 }
 
