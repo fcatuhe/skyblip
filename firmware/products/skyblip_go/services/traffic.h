@@ -16,12 +16,7 @@
 
 namespace skyblip::go {
 
-// Owns state.traffic: radio events become targets. The dwell that heard a burst
-// names the system it belongs to (core/protocol/air.h), so nothing here guesses:
-// one M-band dwell reports two systems and the frame names itself out of its
-// sync tail, while a burst from the O-band dwell is a ground station's uplink
-// frame. A frame that fails CRC after forward correction is counted and dropped,
-// never shown.
+// INFO: fc 20nov26 the dwell and the sync tail name the system of a burst (core/protocol/air.h)
 class TrafficService : public runtime::Service {
    public:
     TrafficService(runtime::Context& context, bus::RfQueue& rf, common::TrafficSettings settings)
