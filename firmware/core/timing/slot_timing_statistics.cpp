@@ -39,9 +39,7 @@ void SlotTimingStatistics::record_edge(uint64_t edge_us, bool locked) {
     const int64_t delta_us =
         static_cast<int64_t>(edge_us) - static_cast<int64_t>(previous_edge_us_);
     previous_edge_us_ = edge_us;
-    // A clock that ran backwards or skipped an edge is not describable against
-    // the nominal second at all: holdover, so it cannot masquerade as an
-    // enormous phase error in the histogram below.
+    // INFO: fc 20nov26 an edge that ran back or skipped is holdover, never a huge phase error
     if (delta_us <= 0 || delta_us > kHoldoverGapUs) {
         holdover_events_++;
         return;

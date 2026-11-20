@@ -144,8 +144,7 @@ void ConfigService::send_registration() {
     (void)reply(frame, bytes);
 }
 
-// INFO: fc 14nov26 no prompt: the unit signs only its own firmware, under a label nothing else
-// signs
+// INFO: fc 14nov26 no prompt: the unit signs only its own firmware, under a label of its own
 void ConfigService::attest(const cbor::Reader& frame) {
     if (identity_refused_in_flight()) return;
     identity::Unit& unit = identity_->unit();

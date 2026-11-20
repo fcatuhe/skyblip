@@ -153,8 +153,7 @@ int format_log_count(uint8_t* out, int capacity, uint32_t sessions, bool truncat
     if (!named_store(writer, link::log_key::kLog, store)) return 0;
     writer.add_boolean(link::log_key::kAcknowledge, true);
     writer.add_unsigned(link::log_key::kSessions, sessions);
-    // The partition holds more flights than the index offers. Said out loud,
-    // because a tablet that shows sixteen when there are twenty has lied.
+    // INFO: fc 20nov26 said out loud, as a tablet that shows sixteen of twenty flights has lied
     writer.add_boolean(link::log_key::kTruncated, truncated);
     return writer.finish();
 }
@@ -167,12 +166,8 @@ int format_log_session(uint8_t* out, int capacity, uint32_t index, uint32_t coun
     if (!named_store(writer, link::session_key::kLog, store)) return 0;
     writer.add_unsigned(link::session_key::kIndex, index);
     writer.add_unsigned(link::session_key::kOf, count);
-    // The session's opening UTC second: its name, and the base every one of its
-    // records is timed against.
     writer.add_unsigned(link::session_key::kSession, session_id);
     writer.add_unsigned(link::session_key::kRecords, records);
-    // False means the log stops where the power did. The tablet says so instead
-    // of presenting a truncated flight as a complete one.
     writer.add_boolean(link::session_key::kClosed, closed);
     // INFO: fc 20sep26 the session opened in a sector the ring recycled: a suffix, not the run
     writer.add_boolean(link::session_key::kTruncated, truncated);

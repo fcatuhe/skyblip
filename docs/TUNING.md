@@ -40,8 +40,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kPromptCeilingMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Ceiling | A prompt is an open authorisation standing on the glass, so it is not allowed to stand there forever: a device left on a wing with an unanswered "confirm firmware upload" is a device a stranger can walk up to. |
-| `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | Long enough to upload ~730 KB over BLE on a slow phone, short enough that a device left on a bench does not stay writable all afternoon. |
+| `kPromptCeilingMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Ceiling | an unanswered prompt is an open authorisation a stranger can walk up to |
+| `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | ~730 KB over BLE on a slow phone, short of a bench writable all afternoon |
 | `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | refreshed every second, because the link may ask at any instant |
 | `kNonceForgetMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Forget | #126: long enough to reach the server and back, short of a forgotten tab |
 | `kIntoCeilingMs` | 999 | milliseconds | Ceiling | schemas/link.v1.json, observation: 0 to 999 milliseconds into at_s |
@@ -177,13 +177,13 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kWindowMs` | `en300220::kDutyCycleWindowMs` = 3600000 (60 min) | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
 | `kBucketMs` | `kWindowMs / kBuckets` = 514285 (8.57142 min) | milliseconds | - | - |
 | `kBudgetMs` | `kWindowMs / 1000 * kLimitPermille` = 36000 (36 s) | milliseconds | - | - |
-| `kWordWriteUs` | 41 | microseconds | - | nRF52840 PS v1.8, NVMC chapter, "Electrical specification": tWRITE = 41 us to write one 32-bit word, tERASEPAGE = 85 ms to erase one 4 kB page. |
+| `kWordWriteUs` | 41 | microseconds | - | nRF52840 PS v1.8 NVMC: tWRITE a word, tERASEPAGE a page, both stall the core |
 | `kPageEraseMs` | 85 | milliseconds | - | - |
-| `kWorstWriteMs` | `kPageEraseMs + (kBlobWords * kWordWriteUs + 999) / 1000` = 91 | milliseconds | - | - |
-| `kPartialEraseMs` | 4 | milliseconds | - | The longest SINGLE stall inside that worst case, which is a different number: |
-| `kSettleMs` | 750 | milliseconds | Settle | How long the policy waits for a stream of changes to stop before it writes the one blob they add up to. |
-| `kDeferCeilingMs` | 3000 (3 s) | milliseconds | Ceiling | The hard bound, measured from the FIRST unwritten change rather than the last: a setting a pilot changed that is still not on flash when the cell dies is a setting they will believe they changed. |
-| `kViewStaleMs` | 100 | milliseconds | Stale | A published view older than this is not evidence about where the second is any more, so it refuses rather than guesses. |
+| `kWorstWriteMs` | `kPageEraseMs + (kBlobWords * kWordWriteUs + 999) / 1000` = 91 | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kPartialEraseMs` | 4 | milliseconds | - | the longest single stall, prj.conf's partial erase slice |
+| `kSettleMs` | 750 | milliseconds | Settle | PromptAnswer::kAnswerSettleMs and a pass, so six quick taps make one write |
+| `kDeferCeilingMs` | 3000 (3 s) | milliseconds | Ceiling | from the first unwritten change: a dying cell loses only the one in progress |
+| `kViewStaleMs` | 100 | milliseconds | Stale | ten passes: refuse a radio that stopped publishing rather than guess |
 | `kUplinkWindowMs` | `{210, 440}` | milliseconds | Window | each window is heard in full: the uplink on O, ALP-TAS's two frames on A and B |
 | `kWindowAMs` | `{450, 820}` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
 | `kWindowBMs` | `{830, 1200}` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
@@ -197,10 +197,10 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kPpsLockTailMs` | 3000 (3 s) | milliseconds | - | a pulse reads locked this long past its last edge, so one missed edge keeps it |
 | `kPpsEdgeMaxAgeMs` | `static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms)` | milliseconds | MaxAge | C.5: the latest instant a burst planned from an edge keys at, window B's close |
-| `kRetuneUs` | 30 | microseconds | - | - |
+| `kRetuneUs` | 30 | microseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kSwitchMarginUs` | `kSwitchMarginMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kSwitchRetuneUs` | `kSwitchRetuneMs * 1000` = 5000 (5 ms) | microseconds | - | - |
-| `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
+| `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | under two seconds and over any jitter, so a gap this wide lost an edge |
 | `kAirTimeMs` | `adsl::kAirTimeMs` = 5 | milliseconds | - | - |
 | `kStatusPeriodS` | `adsl::kStatusPeriodS` = 20 | seconds | Period | - |
 | `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |

@@ -44,7 +44,7 @@ class BrowserLink {
         return proven_ && peer == peer_ && !trusted_.holds(key_);
     }
 
-    // INFO: fc 13nov26 a press on a set or a dfu is what turns a proven key into a trusted one
+    // INFO: fc 20nov26 a press on a set, a dfu, a register or a pair turns a proven key trusted
     bool remember(const events::Peer& peer) {
         if (!enrolls(peer)) return false;
         trusted_.store(key_, label_);

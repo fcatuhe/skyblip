@@ -36,7 +36,6 @@ class Transmitter {
         int at_ms{0};
         uint32_t frequency_hz{0};
         Payload payload{Payload::Position};
-        // The one refusal that is not a rate rule: the hour's air time is spent.
         bool over_budget{false};
         // INFO: fc 18nov26 a position owed here whose solution would be too old on air, at at_ms
         bool stale{false};
@@ -51,11 +50,7 @@ class Transmitter {
 
     void configure(uint32_t address) { address_ = address; }
 
-    // The instant this device transmits in the second `utc_s`, or go=false. Pure:
-    // calling it twice with the same arguments gives the same answer. fix_lag_ms
-    // is how far the solution lags the top of that second, negative when it was
-    // solved inside it.
-    // fix_in_hand_ms is when own-ship had that solution, from the same top of the second.
+    // INFO: fc 20nov26 fix_lag_ms is the fix's lag behind the top of utc_s, negative inside it
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms, Payload payload,
                     int32_t fix_in_hand_ms = kFixInHandEarlyMs) const;
@@ -100,9 +95,7 @@ class Transmitter {
     uint32_t cycle_second(uint32_t utc_s) const;
     bool scheduled_on(int slot, uint32_t utc_s, bool airborne) const;
     bool due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne) const;
-    // Uniform over the slot's usable width and decorrelated between devices:
-    // two aircraft with different addresses do not collide every second, and
-    // one aircraft's instant is reproducible in a test.
+    // INFO: fc 20nov26 hashed on address and second, so two aircraft never collide every second
     int instant_in(Payload payload, int slot, uint32_t utc_s) const;
     // INFO: fc 19nov26 drawn like instant_in over what of the window the late fix leaves
     std::optional<int> redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,

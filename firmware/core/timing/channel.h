@@ -18,8 +18,7 @@ struct PoliteAccess {
     static constexpr uint32_t kDeadTimeCeilingUs = 2000;
     // INFO: fc 14nov26 4) the deferral unit is one ADS-L burst, as 5.21.1's note asks
     static constexpr uint32_t kDeferralUnitUs = adsl::kAirTimeMs * 1000;
-    // INFO: fc 18nov26 3) and 5) deferral_draw picks 3 to 50 units, §C.2's 15 to 250 ms, in the
-    // window
+    // INFO: fc 18nov26 3) and 5) deferral_draw picks 3 to 50 units, §C.2's 15 to 250 ms
     static constexpr uint32_t kDeferralUnits = 50;
     static constexpr uint32_t kDeferralFloorUs = adsl::kMBandBackoff.floor_us;
     static constexpr uint32_t kDeferralCeilingUs = kDeferralUnits * kDeferralUnitUs;
@@ -84,8 +83,6 @@ class ChannelLevel {
     static int8_t mean_dbm(const int8_t* samples, uint8_t count);
 };
 
-// Sixty one-minute buckets on a ring that turns by elapsed time, so a bucket that
-// fell out of the window contributes nothing without anything having to sweep it.
 class AirTime {
    public:
     static constexpr uint32_t kWindowMs = en300220::kDutyCycleWindowMs;
@@ -107,13 +104,7 @@ class AirTime {
 
    private:
     uint32_t bucket_ms_[kBuckets]{};
-    // The bucket now_ms falls in, and the instant it opened. The ring turns by
-    // ELAPSED time and every age below is an unsigned difference from that
-    // instant, because a bucket numbered now_ms / kBucketMs is not a bucket: that
-    // number restarts at zero when the counter wraps, and 2^32 ms is not a whole
-    // number of minutes either, so numbered buckets throw the whole hour away at
-    // the wrap and let the hour straddling it spend the band's allowance twice
-    // (ports/clock.h, rule 1).
+    // INFO: fc 20nov26 buckets age by elapsed time, as ports/README.md, clock rule 1 asks
     uint32_t head_start_ms_{0};
     uint8_t head_{0};
     bool started_{false};

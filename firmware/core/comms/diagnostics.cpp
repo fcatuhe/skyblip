@@ -23,9 +23,7 @@ DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, link::Comma
     build(diagnostics, &only);
 }
 
-// THE TABLE. The link carries this list in this order. Every value is a plain
-// read of something the device already keeps: nothing here computes, samples or
-// clears anything.
+// INFO: fc 20nov26 the link carries this list in this order, each value a plain read
 void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only) {
     const bool system = only == nullptr || *only == Group::System;
     const bool radio = only == nullptr || *only == Group::Radio;
@@ -65,10 +63,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Radio, link::diagnostics_key::kTxKeyedUs, Kind::Unsigned,
             diagnostics.tx_keyed_us);
         add(Group::Radio, link::diagnostics_key::kTxSpanUs, Kind::Unsigned, diagnostics.tx_span_us);
-        // The range gate's refusals read out with the radio and not with the
-        // table, because what they measure is this receiver's link budget: a rate
-        // that climbs is a decoder correcting a frame into a position no radio
-        // this size could have heard (core/traffic/sanity.h).
+        // INFO: fc 20nov26 range refusals measure this radio's link budget, so they read out here
         add(Group::Radio, link::diagnostics_key::kRangeRefused, Kind::Unsigned,
             diagnostics.range_refused);
         add(Group::Radio, link::diagnostics_key::kDio1Armed, Kind::Boolean,
@@ -114,8 +109,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Gnss, link::diagnostics_key::kFixes, Kind::Unsigned, diagnostics.gnss_fixes);
         add(Group::Gnss, link::diagnostics_key::kValid, Kind::Boolean,
             diagnostics.fix_valid ? 1 : 0);
-        // A receiver silently at another rate is a GNSS-less device that looks
-        // fitted, and it is the top support case this part will generate.
+        // INFO: fc 20nov26 a receiver silently at another rate looks fitted, the top support case
         add(Group::Gnss, link::diagnostics_key::kBaud, Kind::Unsigned, diagnostics.gnss_baud);
         add(Group::Gnss, link::diagnostics_key::kConfig, Kind::Unsigned,
             static_cast<int64_t>(diagnostics.gnss_config));
@@ -136,8 +130,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             static_cast<int64_t>(diagnostics.gnss_reject));
         add(Group::Gnss, link::diagnostics_key::kRejected, Kind::Unsigned,
             diagnostics.gnss_rejected);
-        // Absent rather than zero: a device with no two consecutive fixes has no
-        // residual, and 0 m is what a perfect one reports.
+        // INFO: fc 20nov26 absent rather than zero, since 0 m is what a perfect residual reports
         if (diagnostics.residual_valid)
             add(Group::Gnss, link::diagnostics_key::kResidualM, Kind::Unsigned,
                 diagnostics.residual_m);
@@ -161,7 +154,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.supply_warnings);
         add(Group::Power, link::diagnostics_key::kImplausible, Kind::Unsigned,
             diagnostics.battery_implausible);
-        // No reading is no key, never a zero, because 0.0 C is a plausible hangar morning.
+        // INFO: fc 20nov26 no reading is no key, as 0.0 C is a plausible hangar morning
         if (diagnostics.die_valid)
             add(Group::Power, link::diagnostics_key::kDieTemperatureC, Kind::Integer,
                 whole_celsius(diagnostics.die_dc));
@@ -270,9 +263,7 @@ int DiagnosticsReport::field_bytes(const Field& field) const {
     return 0;
 }
 
-// Asked before the first frame goes out, so the answer is all or nothing: a host
-// holding four frames of a five-frame dump, with no fifth one coming, has been
-// told a fault it cannot see is absent.
+// INFO: fc 20nov26 asked before the first frame, so a host never holds a dump missing one
 bool DiagnosticsReport::fits(int payload_bytes) const {
     int widest_field = 0;
     for (int i = 0; i < count_; i++) widest_field = std::max(field_bytes(fields_[i]), widest_field);

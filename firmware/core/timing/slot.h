@@ -1,5 +1,4 @@
-// The single-radio dwell map of ADS-L 4 SRD-860 issue 2 §C.5 (time
-// multiplexing), §C.2 (M-band channels) and §C.4 (O-band HDR).
+// INFO: fc 20nov26 the single-radio dwell map of ADS-L 4 SRD-860 issue 2 §C.5, §C.2 and §C.4
 #ifndef SKYBLIP_CORE_TIMING_SLOT_H
 #define SKYBLIP_CORE_TIMING_SLOT_H
 
@@ -61,7 +60,6 @@ constexpr uint32_t kPpsLockTailMs = 3000;
 // INFO: fc 20nov26 C.5: the latest instant a burst planned from an edge keys at, window B's close
 constexpr uint32_t kPpsEdgeMaxAgeMs = static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms);
 
-// One name for the band, spelled where a received burst can carry it.
 using model::Band;
 
 // INFO: fc 17nov26 a switch state is the retune into the next dwell, and plans that dwell

@@ -34,11 +34,7 @@ void TimingReport::add(uint32_t key, Kind kind, int64_t value, const uint32_t* b
     fields_[count_++] = Field{key, kind, value, buckets};
 }
 
-// pps_us and dwell_us are the two histograms in kBuckets order: the SX1262's own
-// retune time, core/timing::kSwitchMarginMs and core/timing::kSwitchRetuneMs on each
-// side of the centre bucket (core/timing/slot_timing_statistics.h). holdover_events, missed and
-// refused are counted apart from both, on purpose: a fault a histogram cannot
-// bound must not be folded into one that can.
+// INFO: fc 20nov26 holdovers, misses and refusals stay out of the histograms: no bucket bounds them
 TimingReport::TimingReport(const timing::SlotTimingStatistics& statistics) {
     for (int i = 0; i < kBuckets; i++) {
         pps_buckets_[i] = statistics.pps_bucket(i);

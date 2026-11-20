@@ -56,37 +56,20 @@ struct Confirmed {
 // INFO: fc 16nov26 a Go asks an untrusted browser's pair on its glass, Bravo has none to ask on
 enum class PairingSide : uint8_t { None, Go, Bravo };
 
-// What a prompt says it is, and what confirming it will do. The panel and the
-// phone read the same two strings, so a pilot pressing the button and a pilot
-// reading the app cannot be looking at two different descriptions of the same
-// authorisation.
+// INFO: fc 20nov26 the glass and the phone read these same strings, so both name one authorisation
 const char* pending_title(Pending pending);
 const char* pending_detail(Pending pending);
 int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version);
 int format_capture_detail(char* out, CaptureProfile profile, uint32_t evicts_flights);
 int format_pair_detail(char* out, uint16_t tag);
 
-// INFO: cf 02aug26 A prompt is an open authorisation standing on the glass, so
-// it is not allowed to stand there forever: a device left on a wing with an
-// unanswered "confirm firmware upload" is a device a stranger can walk up to.
-// Long enough to put a phone down and reach the button, and no longer.
-// | 10nov26 counted from the staging, because no command renews a standing prompt.
+// INFO: cf 02aug26 an unanswered prompt is an open authorisation a stranger can walk up to
 constexpr uint32_t kPromptCeilingMs = 30u * 1000u;
 
-// INFO: cf 02aug26 A push exists so a tablet does not have to poll a gauge that
-// barely moves between polls. Pushing on every millivolt reading would just
-// move the polling onto the link instead of removing it, so a push is earned
-// only by a step this wide, a charging flip, or a level change - three signals
-// a pilot actually cares about, not the ADC's noise floor.
+// INFO: cf 02aug26 a push is earned by a step this wide, never by ADC noise, or it polls the link
 constexpr uint8_t kBatteryPushStepPercent = 5;
 
-// INFO: fc 04aug26 The smallest ATT payload a single-frame reply is built to fit.
-// An iOS central commonly settles at ATT_MTU 185, three of which are the
-// notification header, so 182 is the narrowest real phone in the field and every
-// reply that a pilot's app depends on is sized under it at its worst case rather
-// than against a local buffer. ports::kMinimumLinkPayloadBytes (20) is lower still and
-// is what BLE guarantees; a link that comes up there gets a counted refusal, not
-// a notification the controller will fail.
+// INFO: fc 04aug26 an iPhone's usual ATT_MTU 185 less the header: replies a pilot needs fit it
 constexpr int kSmallestSupportedPayloadBytes = 182;
 
 constexpr int kPromptDetailBytes = 128;
@@ -101,11 +84,6 @@ class ConfigService {
     void set_flight_state(flight::FlightState state);
     flight::FlightState flight_state() const { return flight_state_; }
 
-    // The durable-write policy's own counters, read out beside the dwell
-    // histograms because they are measurements of the same second: a write that
-    // could not be placed inside its bound is a stall that landed where the slot
-    // map did not budget for one, and it must not be silent. Wired by the product
-    // that owns the write (products/common/services/config_link.h).
     void set_durable_writes(const timing::DurableWriteWindow* writes) { durable_writes_ = writes; }
 
     // INFO: fc 18oct26 challenge, register, unlock live in identity_link.cpp, else unknown_command
@@ -120,12 +98,11 @@ class ConfigService {
     void note_browsers_changed() { browsers_dirty_ = true; }
     void clear_browsers_dirty() { browsers_dirty_ = false; }
 
-    // Drives the upload-window timeout. Called once per App::step().
     void tick(uint32_t now_ms);
 
     // INFO: fc 25sep26 a reply the link refused with WouldBlock goes out here, and a report resumes
     void resume_replies(uint32_t now_ms);
-    // While true the next command waits on the bus: its answer would have nowhere to go.
+    // INFO: fc 20nov26 while true the next command waits on the bus: its answer has nowhere to go
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
     // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window the pilot opened
@@ -142,59 +119,27 @@ class ConfigService {
         return frame.connection != 0 && frame.connection == link_.connection(frame.session_id);
     }
 
-    // Whether anyone is listening. Exported because it is the one fact about
-    // this service that no reply reveals until the gauge happens to move, and a
-    // product test has to be able to assert that a connection reached it.
     bool link_up() const { return connected_count_ > 0; }
     bool status_push_due() const { return status_push_due_; }
     const LinkClaim& claim() const { return claim_; }
     bool claim_link(const events::Peer& peer) { return claim_.grant(peer); }
     uint16_t claim_holder() const { return claim_.holder(); }
 
-    // The values core/power already decided: state of charge, the millivolt
-    // reading, whether the charger is holding the rail, and the level
-    // core/power's cutoff rule made of the same samples. This service carries
-    // them to the link, it does not re-derive what a low cell is. While a link
-    // is up, a charging flip, a level change or a step-sized move in percent
-    // pushes an unsolicited status so the tablet's gauge moves without a poll.
     void set_battery_state(const power::BatteryState& battery, power::PowerLevel level);
 
-    // How warm the silicon is, in tenths of a degree, and whether anybody has
-    // actually read one. Invalid is not zero: a board with no sensor, a driver
-    // that refused a measurement and a device at freezing are three different
-    // things, and 0.0 C is a plausible hangar morning - so an invalid reading
-    // leaves the key out of the reply altogether rather than publishing a number
-    // nobody measured.
     void set_die_temperature(int16_t die_dc, bool valid) {
         diagnostics_.die_dc = die_dc;
         diagnostics_.die_valid = valid;
     }
 
-    // The status dump, held here because this is the one service that can put it
-    // on a link (core/comms/diagnostics.h). Everything above writes its own half
-    // of it, so the reply, the unsolicited push and the dump report one set of
-    // numbers rather than a copy each; the product's collector
-    // fills the other half through this door, once a second.
     Diagnostics& diagnostics() { return diagnostics_; }
     const Diagnostics& diagnostics() const { return diagnostics_; }
 
-    // Receptions core/traffic refused because the position they claimed was
-    // further away than this radio can hear. The number a support case opens
-    // with: it says whether the range gate fires once a week or once a second,
-    // and the second one is a decoder or a link budget, not a sky full of
-    // aircraft.
     void set_range_refused(uint32_t count) { diagnostics_.range_refused = count; }
 
-    // The nRF52840's power-failure comparator has fired, latched by core/power.
-    // Kept beside the level because the two feed one rule
-    // (core/power/cutoff.h::may_write) and this service is the door that rule
-    // has to be enforced at.
     void set_supply_warned(bool warned) { supply_warned_ = warned; }
 
-    // Whether a settings change may be accepted at all. A "set" refused here is
-    // refused to the phone, with a reason, rather than accepted and quietly not
-    // written: below the low-battery warning the settings sector is not touched,
-    // and a companion app that patched a value per keystroke has to be told so.
+    // INFO: fc 20nov26 a refused set is told to the phone, never accepted and quietly not written
     bool settings_writable() const {
         return power::may_write(diagnostics_.power_level, supply_warned_,
                                 power::DurableWrite::Settings);
@@ -221,11 +166,7 @@ class ConfigService {
 
     void set_radio_protocols(Span<const RadioProtocol> protocols) { radio_protocols_ = protocols; }
 
-    // INFO: cf 02aug26 BLE pairing is off on this product (encrypted GATT
-    // characteristics break Web Bluetooth on Windows), so physical presence is
-    // what stands in for it: nothing sensitive happens without a gesture made
-    // on the device itself. These two are the only doors, and only ui/input's
-    // confirmation gesture, the prompt timeout and a dropped link may knock.
+    // INFO: cf 02aug26 BLE pairing is off, so these two doors take only a gesture on the device
     void confirm();
     void cancel();
 
@@ -248,8 +189,6 @@ class ConfigService {
     // INFO: fc 10nov26 one writer stores the blob, on this flag, so the panel and a phone agree
     void note_settings_changed() { settings_dirty_ = true; }
 
-    // Why the device came up. Read once at boot by the shell, reported here so
-    // a watchdog bite in the field is diagnosable without the panel in hand.
     void set_reset_reason(power::ResetReason reason) { diagnostics_.reset = reason; }
     power::ResetReason reset_reason() const { return diagnostics_.reset; }
     void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
@@ -260,8 +199,7 @@ class ConfigService {
     // INFO: fc 19nov26 the reason the glass shows beside NO TX, pushed when it changes
     void set_no_tx(timing::NoTx reason);
 
-    // INFO: fc 12nov26 only Bravo arms a capture over the link: every other product answers
-    // unknown_command
+    // INFO: fc 20nov26 a product that never calls this answers capture unknown_command
     void serve_captures() { serves_captures_ = true; }
     void set_capture(bool available, bool armed) {
         capture_available_ = available;
@@ -272,8 +210,7 @@ class ConfigService {
     void serve_pairing(PairingSide side) { pairing_side_ = side; }
     void set_paired_tag(std::optional<uint16_t> tag) { paired_tag_ = tag; }
     std::optional<uint16_t> take_pair_request();
-    // INFO: fc 16nov26 the Go's verdict goes unasked to the browser that asked, while it is
-    // connected
+    // INFO: fc 16nov26 the Go's verdict goes unasked to the browser that asked, while connected
     void pairing_ended(link::Reason verdict);
 
     // INFO: fc 19nov26 an erase destroys a pilot's evidence, so only a press on the unit allows it
@@ -287,10 +224,7 @@ class ConfigService {
         return taken;
     }
 
-    // INFO: fc 04aug26 Every frame this service could not put on the link: one
-    // that would not fit the negotiated payload, one the controller refused, and
-    // one a writer left incomplete. Silence towards a phone is a fault worth a
-    // number, and the pilot-facing push is the one path that also retries.
+    // INFO: fc 04aug26 every frame the link did not take, since silence towards a phone is a fault
     uint32_t link_drops() const { return diagnostics_.link_drops; }
 
    private:
@@ -315,20 +249,8 @@ class ConfigService {
     void send_defaults();
     void push_status();
     int format_status(uint8_t* out, int capacity);
-    // The bench's plug-in-and-read for G6: the same on_rx dispatch that
-    // answers "get" and "status" answers "timing" from the one accumulator
-    // core/timing::SlotTimingStatistics keeps, over the link the phone already has
-    // open - no second channel, no panel real estate a histogram would not
-    // fit on anyway.
     void send_timing();
-    // The same door, one more question: what the durable-write policy did with the
-    // settings changes it was handed (core/timing/durable_write.h).
     void send_flash();
-    // And the radio's own half of the same bench: the dump's radio subsystem, on
-    // its own, because a companion page that only draws the air picture should not
-    // have to read the receiver's firmware string to get the noise floor. Not four
-    // more keys on "status": that reply is the one this service PUSHES
-    // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
     void send_update();
     void send_install_report();
@@ -337,8 +259,6 @@ class ConfigService {
     bool carries(RadioProtocol protocol) const;
     void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
-    // And the whole dump: one frame per subsystem where the payload allows it, more where it does
-    // not, and never a frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
     bool answers(link::Command command) const;
     void challenge();
@@ -446,8 +366,7 @@ class ConfigService {
     identity::Variant variant_{identity::Variant::Standard};
     Span<const RadioProtocol> radio_protocols_{};
 
-    // Long enough to upload ~730 KB over BLE on a slow phone, short enough that
-    // a device left on a bench does not stay writable all afternoon.
+    // INFO: fc 20nov26 ~730 KB over BLE on a slow phone, short of a bench writable all afternoon
     static constexpr uint32_t kUploadWindowMs = 10u * 60u * 1000u;
 };
 

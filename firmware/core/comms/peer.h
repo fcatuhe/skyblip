@@ -25,8 +25,7 @@ constexpr int kPeerClaimWidestBytes = 82;
 // INFO: fc 17nov26 schemas/link.v1.json: protocol_version 2, the Go grading traffic for both units
 constexpr uint32_t kPeerProtocolVersion = 2;
 
-// INFO: fc 17nov26 schemas/link.v1.json alarm: off to loud, common::Alarm's codes, which core
-// cannot name
+// INFO: fc 17nov26 the alarm codes off to loud are common::Alarm's, which core cannot name
 constexpr uint8_t kAlarmCodeCeiling = 3;
 
 std::optional<uint32_t> draw_boot_epoch(ports::Random& random);
