@@ -4,7 +4,7 @@ nav_title: Radar
 description: "Read the skyBlip Go traffic display, symbols and Nearby list. Understand alerts within 3 km and 300 m and how PLOT ALL shows distant traffic."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -24,9 +24,7 @@ updated_on: "2026-11-19"
       <p>
         You are in the middle, track up. The picture stays that way as the sky
         turns around you. Traffic drawn to the upper right is traffic to look
-        for off the right of the nose, with nothing to convert. Nothing
-        is written across the top of the screen, because that is the half you are
-        flying into.
+        for off the right of the nose, with nothing to convert. The top of the screen is kept clear because that is the half you are flying into. The only exception is <span class="mono">NO TX</span> and its reason in the top-left corner.
       </p>
       <p>
         Each aircraft is a shape that tells you where to look.
@@ -211,31 +209,17 @@ updated_on: "2026-11-19"
   </div>
   <div class="feature">
     <div>
-      <h3 id="no-tx">When Go does not transmit, <span class="highlight">every page says why</span>.</h3>
+      <h3 id="no-tx">When Go stops transmitting, <span class="highlight">it keeps warning you</span>.</h3>
       <p>
-        Go transmits your position only while it has everything it needs to meet
-        ADS-L: an activated address, a radio that answers and listens before it
-        transmits, a position, UTC time and the receiver&rsquo;s pulse per second.
-        It also needs the GPS receiver solving twice a second, which is how Go
-        keeps every position it sends fresh enough for ADS-L. When one fails, Go stops transmitting at
-        once and keeps receiving, warning you and feeding your navigation app.
+        Go keeps receiving traffic, warning you, feeding your navigation app and recording your flight when it stops transmitting your position. After 10&nbsp;s without meeting a transmission requirement, every page shows <span class="mono">NO TX</span> above a reason word, white on black in the top-left corner. <span class="mono">RADIO</span> means the radio is not answering or listening before transmission. <span class="mono">GNSS</span> means the GPS receiver is not calculating positions twice a second, on the second and half-second. <span class="mono">FIX</span> means no valid position. <span class="mono">UTC</span> means no valid UTC time to synchronise the radio. <span class="mono">PPS</span> means no pulse from the GPS receiver for the current second. If several requirements fail, Go shows the first in that order.
       </p>
       <p>
-        After 10&nbsp;s, the top-left corner of every page shows
-        <span class="mono">NO TX</span> above the reason:
-        <span class="mono">RADIO</span>, <span class="mono">GNSS</span>,
-        <span class="mono">FIX</span>, <span class="mono">UTC</span> or
-        <span class="mono">PPS</span>. In flight, Go vibrates once when the mark
-        appears. The mark disappears when transmission resumes. Before the first
-        position, the radar shows the receiver&rsquo;s progress instead. The self
-        test page shows which part stops transmission, and
-        <%= link_to "Briefing", briefing_root_path %> shows the same reason while
-        it is connected.
+        Transmission stops as soon as a requirement fails and resumes on its own when all requirements hold again. The mark stays until all have held for 10&nbsp;s, so it can remain briefly after transmission resumes. It does not appear over menus or prompts. In flight, Go vibrates once when the mark appears, or on takeoff if it is already shown. Before the first position, the radar shows the receiver&rsquo;s progress instead. Radio faults are checked from start-up. The self test page marks the part preventing transmission with <span class="mono">NO TX</span>. The status page&rsquo;s traffic row shows <span class="mono">TX OFF</span> and the reason without waiting 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> shows the same reason as the corner mark while connected.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "no-tx.png", alt: "The radar page with NO TX above PPS in its top-left corner, white on black: the receiver's pulse per second stopped more than a minute ago" %>
-      <figcaption>No pulse for over a minute</figcaption>
+      <%= screen_image_tag "no-tx.png", alt: "The radar page with NO TX above PPS in the top-left corner, white on black, 15 seconds after the GPS receiver's last pulse. Traffic remains visible." %>
+      <figcaption>15&nbsp;s after the last GPS pulse: receiving, not transmitting</figcaption>
     </figure>
   </div>
 </section>

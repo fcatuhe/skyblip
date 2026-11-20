@@ -5,7 +5,7 @@ slug: radar
 description: "Leggi il radar del traffico di skyBlip Go, i simboli e la lista Nearby. Scopri gli avvisi entro 3 km e 300 m e come PLOT ALL mostra il traffico lontano."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -25,9 +25,7 @@ updated_on: "2026-11-19"
       <p>
         Sei al centro, con la rotta al suolo verso l&rsquo;alto. La vista resta orientata così mentre il cielo
         gira intorno a te. Il traffico disegnato in alto a destra va cercato
-        a destra del muso, senza dover convertire nulla. Nella parte alta
-        dello schermo non ci sono scritte, perché è la metà verso cui
-        stai volando.
+        a destra del muso, senza dover convertire nulla. La parte alta dello schermo resta libera, perché è la metà verso cui stai volando. L&rsquo;unica eccezione è <span class="mono">NO TX</span> con il motivo nell&rsquo;angolo in alto a sinistra.
       </p>
       <p>
         Ogni aeromobile ha una forma che ti dice dove guardare.
@@ -212,33 +210,17 @@ updated_on: "2026-11-19"
   </div>
   <div class="feature">
     <div>
-      <h3 id="no-tx">Quando il Go non trasmette, <span class="highlight">ogni pagina dice perché</span>.</h3>
+      <h3 id="no-tx">Quando il Go smette di trasmettere, <span class="highlight">continua ad avvisarti</span>.</h3>
       <p>
-        Il Go trasmette la tua posizione solo finché ha tutto ciò che serve per
-        rispettare l&rsquo;ADS-L: un indirizzo attivato, una radio che risponde e
-        ascolta prima di trasmettere, una posizione, l&rsquo;ora UTC e l&rsquo;impulso al
-        secondo del ricevitore. Gli serve anche un ricevitore GPS che calcola due
-        soluzioni al secondo: è così che il Go mantiene ogni posizione trasmessa
-        abbastanza recente per l&rsquo;ADS-L. Se
-        uno manca, il Go smette subito di trasmettere, ma continua a ricevere, ad
-        avvisarti e ad alimentare la tua app di navigazione.
+        Il Go continua a ricevere il traffico, ad avvisarti, a inviare dati alla tua app di navigazione e a registrare il volo quando smette di trasmettere la tua posizione. Se una condizione necessaria per trasmettere manca per 10&nbsp;s, ogni pagina mostra <span class="mono">NO TX</span> sopra una parola che ne indica il motivo, in bianco su nero nell&rsquo;angolo in alto a sinistra. <span class="mono">RADIO</span> indica che la radio non risponde o non ascolta prima di trasmettere. <span class="mono">GNSS</span> indica che il ricevitore GPS non calcola due posizioni al secondo, al secondo intero e al mezzo secondo. <span class="mono">FIX</span> significa che manca una posizione valida. <span class="mono">UTC</span> indica che manca un&rsquo;ora UTC valida per sincronizzare la radio. <span class="mono">PPS</span> significa che manca l&rsquo;impulso del ricevitore GPS per il secondo in corso. Se mancano più condizioni, il Go mostra la prima in quest&rsquo;ordine.
       </p>
       <p>
-        Dopo 10&nbsp;s, l&rsquo;angolo in alto a sinistra di ogni pagina mostra
-        <span class="mono">NO TX</span> sopra il motivo:
-        <span class="mono">RADIO</span>, <span class="mono">GNSS</span>,
-        <span class="mono">FIX</span>, <span class="mono">UTC</span> o
-        <span class="mono">PPS</span>. In volo, il Go vibra una volta quando il segno
-        appare. Il segno sparisce quando la trasmissione riprende. Prima della prima
-        posizione, il radar mostra invece l&rsquo;avanzamento del ricevitore. La
-        pagina dell&rsquo;autotest indica quale componente blocca la trasmissione, e
-        <%= link_to "Briefing", briefing_root_path %> mostra lo stesso motivo finché
-        è collegato.
+        La trasmissione si interrompe appena manca una condizione e riprende da sola non appena sono tutte soddisfatte. Il segno resta finché tutte le condizioni non sono soddisfatte da 10&nbsp;s, quindi può rimanere visibile per poco anche dopo la ripresa della trasmissione. Non compare sopra i menu o le richieste di conferma. In volo, il Go vibra una volta quando compare il segno, oppure al decollo se è già visibile. Prima della prima posizione, il radar mostra invece l&rsquo;avanzamento del ricevitore. La radio viene controllata fin dall&rsquo;avvio. La pagina di autotest contrassegna con <span class="mono">NO TX</span> il componente che impedisce di trasmettere. La riga del traffico nella pagina di stato mostra <span class="mono">TX OFF</span> e il motivo senza attendere 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> mostra lo stesso motivo del segno nell&rsquo;angolo finché è collegato.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "no-tx.png", alt: "La pagina radar con NO TX sopra PPS nell'angolo in alto a sinistra, bianco su nero: l'impulso al secondo del ricevitore si è fermato più di un minuto fa" %>
-      <figcaption>Nessun impulso da oltre un minuto</figcaption>
+      <%= screen_image_tag "no-tx.png", alt: "La pagina radar con NO TX sopra PPS nell'angolo in alto a sinistra, in bianco su nero, 15 secondi dopo l'ultimo impulso del ricevitore GPS. Il traffico resta visibile." %>
+      <figcaption>15&nbsp;s dopo l&rsquo;ultimo impulso GPS: riceve, ma non trasmette</figcaption>
     </figure>
   </div>
 </section>

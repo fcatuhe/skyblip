@@ -5,7 +5,7 @@ slug: gps
 description: "Wie skyBlip Go GPS-Positionsfixes prüft, auf stabile Werte wartet, die Zeit per PPS bestimmt und anhand der Geschwindigkeit über Grund den Flug erkennt."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -59,7 +59,7 @@ updated_on: "2026-11-19"
   </figure>
 
   <h3 id="pps">PPS markiert den Sekundenbeginn.</h3>
-  <p class="lede">Der Empfänger liefert einen Impuls pro Sekunde, kurz PPS. Ein Interrupt erfasst seine Flanke, ohne auf den nächsten Takt des Betriebssystems zu warten. Diese Flanke markiert den Beginn der UTC-Sekunde, an dem sich jedes <%= link_to_page "timing", label: "Funkzeitfenster" %> orientiert. Jede Lösung erhält den Zeitstempel der Flanke, nicht den ihres letzten Datensatzes. Fallen die Impulse aus, laufen die Funkzeitfenster und das Senden ab der letzten Flanke für 60&nbsp;s weiter. Die Uhr von Go weicht in dieser Minute um höchstens 10&nbsp;ms ab, deshalb hält Go jede Aussendung mindestens so weit von den Rändern ihres Fensters entfernt. Nach der Minute hört Go auf zu senden, und 10&nbsp;s später zeigt jede Seite <span class="mono">NO TX PPS</span> (<%= link_to_page "radar", label: "Sendet Go nicht", anchor: "no-tx" %>).</p>
+  <p class="lede">Der GPS-Empfänger liefert einen Impuls pro Sekunde, kurz PPS. Jeder Impuls markiert den Beginn einer UTC-Sekunde und dient als Bezugspunkt für jedes <%= link_to_page "timing", label: "Funkzeitfenster" %>. Fallen die Impulse aus, hört Go 1,2&nbsp;s nach dem letzten Impuls auf zu senden, in der ersten Sekunde ohne Impuls. Die Funkzeitfenster laufen ab dem letzten Impuls 60&nbsp;s lang weiter, nur für den Empfang. Kehrt kein Impuls zurück, zeigt jede Seite 11,2&nbsp;s nach dem letzten Impuls <span class="mono">NO TX</span> über <span class="mono">PPS</span>, also 10&nbsp;s nach dem Sendestopp (<%= link_to_page "radar", label: "Sendet Go nicht", anchor: "no-tx" %>). Ein einzelner fehlender Impuls unterbricht das Senden für diese Sekunde, ohne dass die Markierung erscheint. Das Senden setzt wieder ein, wenn die Impulse zurückkehren und die übrigen Voraussetzungen erfüllt sind.</p>
   <p class="lede">Ob der L76K auch ohne Fix Impulse liefert, ist noch nicht geprüft. Die Dokumentation beschreibt den Impuls, sagt aber nicht, was bei Fixverlust geschieht. Der Chip unterstützt beides und Go konfiguriert dies nicht. Ein Test auf der Werkbank muss zeigen, was bei Fixverlust passiert.</p>
 </section>
 

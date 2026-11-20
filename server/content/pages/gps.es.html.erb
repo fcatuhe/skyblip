@@ -5,7 +5,7 @@ nav_title: "GPS"
 description: "Cómo valida y estabiliza skyBlip Go la posición GPS, se sincroniza con PPS y detecta el vuelo solo por la velocidad respecto al suelo."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -59,7 +59,7 @@ updated_on: "2026-11-19"
   </figure>
 
   <h3 id="pps">El PPS marca el inicio del segundo.</h3>
-  <p class="lede">El receptor da un pulso por segundo, o PPS. Una interrupción capta su flanco sin esperar al siguiente ciclo del sistema operativo. Ese flanco marca el inicio del segundo UTC desde el que se mide cada <%= link_to_page "timing", label: "ventana de radio" %>. Cada solución se fecha en ese flanco, no al llegar su última trama. Si cesan los pulsos, las ventanas de radio y las transmisiones siguen durante 60&nbsp;s a partir del último flanco. El reloj del Go se desvía como mucho 10&nbsp;ms en ese minuto, así que mantiene cada transmisión al menos a esa distancia de los bordes de su ventana. Pasado el minuto, deja de transmitir y 10&nbsp;s después cada página muestra <span class="mono">NO TX PPS</span> (<%= link_to_page "radar", label: "Cuando el Go no transmite", anchor: "no-tx" %>).</p>
+  <p class="lede">El receptor GPS da un pulso por segundo, o PPS. Cada pulso marca el inicio de un segundo UTC y sirve de referencia para cada <%= link_to_page "timing", label: "ventana de radio" %>. Si cesan los pulsos, el Go deja de transmitir 1,2&nbsp;s después del último pulso, en el primer segundo sin pulso. Las ventanas de radio siguen funcionando a partir del último pulso durante 60&nbsp;s, solo para recibir. Si no vuelve ningún pulso, cada página muestra <span class="mono">NO TX</span> sobre <span class="mono">PPS</span> 11,2&nbsp;s después del último pulso, es decir, 10&nbsp;s después de detenerse la transmisión (<%= link_to_page "radar", label: "Cuando el Go no transmite", anchor: "no-tx" %>). Un solo pulso ausente pausa la transmisión durante ese segundo sin que aparezca la marca. La transmisión se reanuda cuando vuelven los pulsos, siempre que se cumplan los demás requisitos.</p>
   <p class="lede">Aún no se ha comprobado si el L76K sigue dando pulsos sin posición. La documentación describe el pulso, pero no dice si se interrumpe al perder la posición. El chip admite ambos comportamientos y el Go no lo configura. Hace falta una prueba en banco para saber qué ocurre cuando se pierde la posición.</p>
 </section>
 

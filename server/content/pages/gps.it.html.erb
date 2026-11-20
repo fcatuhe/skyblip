@@ -5,7 +5,7 @@ slug: gps
 description: "Come skyBlip Go ricava un fix dalle frasi GPS, attende che si stabilizzi, tiene il tempo con il PPS e decide se è in volo dalla sola velocità al suolo."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -59,7 +59,7 @@ updated_on: "2026-11-19"
   </figure>
 
   <h3 id="pps">Il PPS segna l&rsquo;inizio del secondo.</h3>
-  <p class="lede">Il ricevitore fornisce un impulso al secondo, o PPS. Un interrupt ne cattura il fronte senza attendere il successivo tick del sistema operativo. Quel fronte segna l&rsquo;inizio del secondo UTC da cui si misura ogni <%= link_to_page "timing", label: "finestra radio" %>. Ogni soluzione viene datata al fronte, non quando arriva la sua ultima frase. Se gli impulsi si fermano, le finestre radio e le trasmissioni proseguono dall&rsquo;ultimo fronte per 60&nbsp;s. L&rsquo;orologio del Go deriva al massimo di 10&nbsp;ms in quel minuto, quindi tiene ogni trasmissione almeno a quella distanza dai bordi della sua finestra. Passato il minuto, smette di trasmettere e 10&nbsp;s dopo ogni pagina mostra <span class="mono">NO TX PPS</span> (<%= link_to_page "radar", label: "Quando il Go non trasmette", anchor: "no-tx" %>).</p>
+  <p class="lede">Il ricevitore GPS fornisce un impulso al secondo, o PPS. Ogni impulso segna l&rsquo;inizio di un secondo UTC e fa da riferimento per ogni <%= link_to_page "timing", label: "finestra radio" %>. Se gli impulsi si fermano, il Go smette di trasmettere 1,2&nbsp;s dopo l&rsquo;ultimo impulso, nel primo secondo senza impulso. Le finestre radio continuano a seguire l&rsquo;ultimo impulso per 60&nbsp;s, solo per ricevere. Se non torna alcun impulso, ogni pagina mostra <span class="mono">NO TX</span> sopra <span class="mono">PPS</span> 11,2&nbsp;s dopo l&rsquo;ultimo impulso, cioè 10&nbsp;s dopo l&rsquo;interruzione della trasmissione (<%= link_to_page "radar", label: "Quando il Go non trasmette", anchor: "no-tx" %>). Un solo impulso mancante sospende la trasmissione per quel secondo senza far comparire il segno. La trasmissione riprende quando tornano gli impulsi, purché siano soddisfatte anche le altre condizioni.</p>
   <p class="lede">Non è ancora verificato se il L76K continui a produrre impulsi senza un fix. La sua documentazione descrive l&rsquo;impulso ma non dice se la perdita del fix lo interrompa. Il chip supporta entrambi i comportamenti e il Go non lo configura. Serve una prova al banco per stabilire cosa accade quando si perde il fix.</p>
 </section>
 
