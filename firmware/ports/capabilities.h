@@ -5,6 +5,7 @@
 
 namespace skyblip::ports {
 
+// INFO: fc 20nov26 append bits: products/skyblip_go/product.h asserts each self-test row's shift
 enum class Capability : uint32_t {
     None = 0,
     Rf = 1u << 0,
@@ -18,16 +19,8 @@ enum class Capability : uint32_t {
     Dfu = 1u << 8,
     Contacts = 1u << 9,
     Battery = 1u << 10,
-    // The SoC's own die sensor (ports/die_temperature.h). Next free shift, and the
-    // existing eleven are not renumbered: nothing persists this bitset, but
-    // products/skyblip_go/product.h asserts it row by row on the self-test page,
-    // and a shift that moved would move a row with it.
     DieTemperature = 1u << 11,
     HapticDriver = 1u << 12,
-    // A status lamp (ports/indicator.h). E-paper holds its last image with the
-    // rails down, so on a board without this the device has no way at all to say
-    // it is alive. It is granted from the devicetree, not from the board being a
-    // Plus: absent, the same table in core/indication runs and lights nothing.
     Indicator = 1u << 13,
     Inclinometer = 1u << 14,
     AdsbReceiver = 1u << 15,
