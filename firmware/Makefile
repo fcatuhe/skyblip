@@ -1,31 +1,10 @@
-# Host unit-test + simulator build. Depends on nothing but a C++ compiler.
-#
-#   make test        build + run all host doctest suites
-#   make test-protocols  each protocols/ stack built and tested alone, from a copy
-#   make test-sanitize  the same suites under ASan + UBSan, in build/sanitize/
-#   make fuzz        every libFuzzer harness in turn, in build/fuzz/ (clang)
-#   make fuzz-nmea   one of them: nmea, air, adsb, adsb_assembly or link
-#   make ... ABI=ilp32  any of the above for i386, where long is 32 bits as on the nRF52
-#   make tidy        clang-tidy the sources the host build compiles
-#   make browser     compile the WASM the browser page drives
-#   make watch       incremental rebuild on save (WATCH=browser|test)
-#
-# The page that drives it is the Rails app's /briefing/simulator, which loads the
-# WASM from a release. This file compiles; it does not serve.
-#   make clean
-#
-# core/ and ui/ must compile with NO framework headers. The device image is built
-# by Zephyr/west, not here.
+# Host test and simulator build, with nothing but a C++ compiler: README.md lists the targets.
 
 # 155 translation units and no ccache: serial, a full rebuild is five minutes.
 MAKEFLAGS += -j$(shell nproc 2>/dev/null || echo 4)
 
 CXX      ?= c++
-# -Wconversion is intentionally OFF: fixed-point bit-math (variable range/adsl) truncates
-# by design. Keep the high-signal warnings on and treat them as errors.
-# -MMD -MP: emit header dependency files so editing a shared header (e.g. a
-# device model's struct) recompiles every TU that includes it. Without this, stale
-# objects with mismatched layouts link and crash non-deterministically.
+# -Wconversion stays off for the fixed-point bit math, and -MMD -MP rebuild every object a header touches.
 CXXFLAGS := -std=c++17 -O1 -g -Wall -Wextra -Wshadow -Werror \
             -fno-exceptions -fno-rtti -I. -Ivendor -MMD -MP \
             -DDOCTEST_CONFIG_NO_EXCEPTIONS_BUT_WITH_ALL_ASSERTS
@@ -65,9 +44,7 @@ CXX := $(FUZZ_CXX)
 CXXFLAGS += $(SANITIZE_FLAGS) -fsanitize=fuzzer-no-link
 endif
 
-# Every layer is globbed: a file that exists is a file that is compiled and
-# tested. Zephyr-only sources are inert on the host (guarded by __ZEPHYR__) and
-# the silicon platform + product entry point are excluded outright.
+# Every layer is globbed, so a file that exists is compiled and tested, the silicon platform and main.cpp aside.
 SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard protocols/*/*.cpp core/*/*.cpp ui/*.cpp ui/*/*.cpp \
        hardware/parts/*/*.cpp runtime/*.cpp products/*/*.cpp products/*/pages/*.cpp products/*/services/*.cpp \
        simulator/world/*.cpp))
@@ -77,8 +54,7 @@ SRC := $(filter-out products/%/main.cpp %/test_%.cpp,$(SRC))
 VENDOR_SRC := $(wildcard vendor/monocypher/*.c)
 VENDOR_OBJ := $(patsubst %.c,$(BUILD)/%.o,$(VENDOR_SRC))
 
-# Test sources (mirrored tree): one folder per layer, tests never live beside
-# the code they test.
+# Tests mirror the tree in test/, never beside the code they test, except each protocol stack's own.
 TEST_SRC := $(filter-out test/fuzz/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp)) \
             $(wildcard protocols/*/test/*.cpp protocols/*/test/*/*.cpp)
 
@@ -98,9 +74,7 @@ EMXX ?= em++
 WEB_SRC := $(SRC) simulator/frontends/browser.cpp
 WEB_DIST := $(BUILD)/browser
 WEB_OUT := $(WEB_DIST)/skyblip_simulator.js
-# Incremental browser build: compile to objects under build/web/ and link, so
-# editing one file rebuilds one file (a single emcc pass over all sources costs
-# ~30 s every save; this makes the edit->reload loop a couple of seconds).
+# Objects under build/web/, so a save rebuilds one file in seconds rather than every source in 30 s.
 WEB_BUILD := $(BUILD)/web
 WEB_STAMP := $(BUILD)/web/emsdk-version
 WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC)) $(patsubst %.c,$(WEB_BUILD)/%.o,$(VENDOR_SRC))
@@ -115,9 +89,7 @@ test: $(BIN)
 test-sanitize:
 	@UBSAN_OPTIONS=print_stacktrace=1 $(MAKE) --no-print-directory test SANITIZE=1
 
-# Each stack is copied with protocols/common and vendor/doctest and nothing else, then built and
-# run there: an include that reaches outside fails to compile, as it would in another project.
-# A stack that extends another is copied with it, without the extended stack's tests.
+# Each stack is built alone with protocols/common, doctest and any stack it extends, so a stray include fails.
 PROTOCOLS_BUILD := $(BUILD)/protocols-alone
 PROTOCOL_STACKS := $(filter-out common,$(patsubst protocols/%/,%,$(wildcard protocols/*/)))
 PROTOCOLS_CXXFLAGS := $(filter-out -I. -Ivendor -MMD -MP,$(CXXFLAGS))
@@ -156,9 +128,7 @@ fuzz-%:
 $(BUILD)/fuzz_%: $(BUILD)/test/fuzz/fuzz_%.o $(patsubst %.cpp,$(BUILD)/%.o,$(SRC)) $(VENDOR_OBJ)
 	$(CXX) $(CXXFLAGS) -fsanitize=fuzzer $^ -o $@ $(LDFLAGS)
 
-# Same $(SRC) the host build compiles, so no workflow ever restates the list, and
-# the same flags less the ones that write dependency files. clang-tidy cannot
-# guess the macOS SDK; without a stdlib it exits 1 rather than passing silently.
+# The host build's sources and flags, with the macOS SDK named, because clang-tidy cannot guess it.
 TIDY      ?= clang-tidy
 TIDY_SDK  := $(shell xcrun --show-sdk-path 2>/dev/null)
 TIDY_ARGS := $(filter-out -MMD -MP -Werror,$(CXXFLAGS)) $(if $(TIDY_SDK),-isysroot $(TIDY_SDK))
@@ -169,8 +139,7 @@ tidy:
 $(BIN): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $@ $(LDFLAGS)
 
-# WASM build, with the Emscripten .github/pins/action.yml pins: ../scripts/emsdk.rb installs it
-# when $(EMCC) runs another version. Objects sit under the version, and the stamp relinks on a switch.
+# The WASM, built with the Emscripten version .github/pins/action.yml pins, which ../scripts/emsdk.rb installs.
 browser:
 	@pinned=$$(ruby ../scripts/emsdk.rb "$(EMCC)") && set -- $$pinned && mkdir -p $(dir $(WEB_STAMP)) && \
 	  { echo "$$1" | cmp -s - $(WEB_STAMP) || echo "$$1" > $(WEB_STAMP); } && \
@@ -207,13 +176,7 @@ $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -x c++ -c $< -o $@
 
-# dev loop
-# C++ has no hot-module-reload: a change always means a recompile. These make
-# the loop automatic instead of manual.
-#
-#   make watch            rebuild + rerun host tests on every save (default)
-#   make watch WATCH=browser    recompile the WASM on every save
-#
+# Rebuilds on every save, the host tests by default and the WASM with WATCH=browser.
 WATCH ?= test
 WATCH_SRC := core ui ports hardware boards runtime products simulator test
 
@@ -238,8 +201,7 @@ watch:
 clean:
 	rm -rf $(BUILD)
 
-# Header dependencies for every object tree. Without the web half, editing a .h
-# left the stale .o in place and the browser kept running old code.
+# Header dependencies for every object tree, the browser's included.
 -include $(OBJ:.o=.d)
 -include $(FUZZ_OBJ:.o=.d)
 -include $(WEB_OBJ:.o=.d)
