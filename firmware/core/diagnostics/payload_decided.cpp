@@ -300,8 +300,7 @@ bool read(const Record& record, End& out) {
 
 Record record_of(const Duty& value, const Instant& at) {
     Record record = framed(Type::Duty, at);
-    // INFO: fc 21sep26 the low half, not clamp_uint16: readers subtract, and a clamp loses the
-    // delta
+    // INFO: fc 21sep26 the low half, not clamp_uint16: readers subtract, and a clamp loses deltas
     wire::put_uint16(record.payload + 0, static_cast<uint16_t>(value.panel_partial_refreshes));
     wire::put_uint16(record.payload + 2, static_cast<uint16_t>(value.panel_full_refreshes));
     wire::put_uint16(record.payload + 4, static_cast<uint16_t>(value.backlight_ms));
