@@ -237,7 +237,7 @@ function namedAndFlying(device) {
   return flying(setCallsign(device, OWN_CALLSIGN));
 }
 const CRUISE = { kt: 95, ft: 3911, track: 0, fpm: 0, dps: 0 };
-const PPS_LOST_SHOWN_MS = 75_000;
+const PPS_LOST_SHOWN_MS = 15_000;
 const LEG_MS = 47 * 60_000;
 const HEARD_MS = 20_000;
 
@@ -483,7 +483,7 @@ const scenes = [
     shot: device =>
       device.fly(CRUISE).run(20_000).openMenu(PAGE.Nearby, NEARBY_MENU.SelfTest).press()
   },
-  // The pulse gone past its 60 s holdover, and the 10 s the mark waits: every page wears NO TX PPS.
+  // The pulse gone for its 3 s lock tail and the 10 s the mark waits: every page wears NO TX PPS.
   {
     name: "no-tx",
     page: PAGE.Radar,
