@@ -1,6 +1,6 @@
 # ADS-L questions for EASA
 
-The readings of ADS-L 4 SRD-860 Issue 2 that the text does not settle, and that skyBlip's ADS-L stack and its coming 1.0.0 rest on. Each one is flown as written here. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions), but for question 3, which concerns payload 66 outside the ADS-L stack.
+The readings of ADS-L 4 SRD-860 Issue 2 that the text does not settle, and that skyBlip's ADS-L 1.0.0 rests on. Each one is flown as written here. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions), but for question 3, which concerns payload 66 outside the ADS-L stack.
 
 | # | Clause | Status |
 |---|---|---|

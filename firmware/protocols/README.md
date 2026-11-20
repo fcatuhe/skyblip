@@ -24,7 +24,7 @@ Each product lists its stacks in `products/<product>/PROTOCOLS`. Every release n
 
 A version covers its stack and the `protocols/common/` files it includes. A frozen stack's `version.lock` holds the SHA-256 of every file under the roots its conformance rests on, and `scripts/check_protocol_freeze.py` fails in CI when one changed without a reseal. Run `python3 scripts/check_protocol_freeze.py --reseal <stack>` after moving `kVersion`, or after a change that leaves what goes on air and comes off it as it was, and say which in the pull request.
 
-ADS-L is sealed at 0.1.0, and until it is declared 1.0.0 a change to a sealed file is resealed without a bump. Its roots are the stack, both halves of its conformance suite, the EN 300 220-1 suite and the device files that set what goes on air. The rest of the firmware decides what the Go sends inside the rules, and the sealed cases in `test/adsl/` hold it to them.
+ADS-L is frozen at 1.0.0: a change to a sealed file moves the version by the rule above, and the lock is resealed at the new version. Its roots are the stack, both halves of its conformance suite, the EN 300 220-1 suite and the device files that set what goes on air. The rest of the firmware decides what the Go sends inside the rules, and the sealed cases in `test/adsl/` hold it to them.
 
 `adsl_edge/` is not frozen, and `PROTOCOLS` leaves it out because no declaration covers payload 66. When an ADS-L issue defines the payload, its record moves into the ADS-L stack.
 
