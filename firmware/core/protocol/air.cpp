@@ -10,7 +10,7 @@ namespace skyblip::protocol {
 namespace {
 
 constexpr uint32_t kTailMask = sync_tail(0xFFFFFFFFu);
-// A dead chip pair decodes to a wrong bit, and the tail is only 23 of them.
+// INFO: fc 20nov26 a dead chip pair decodes to a wrong bit, so the short tail allows one
 constexpr int kSyncTailErrorsCeiling = 1;
 
 uint32_t tail_of(const uint8_t* data) {
@@ -89,9 +89,7 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     shift_left(out.data, kRxFrameBytes, kSyncTailBits);
     shift_left(out.erasures, kRxFrameBytes, kSyncTailBits);
     out.bytes = out.system == System::AdslDirect ? adsl_bytes : frame_bytes(out.system);
-    // A dwell reads for the longer of the two frames, so the shorter one is
-    // followed by chips no transmitter sent. Counting those as damage would call
-    // every ADS-L frame broken.
+    // INFO: fc 20nov26 chips past the shorter frame were never sent, so they are not damage
     for (uint8_t i = 0; i < out.bytes; i++)
         out.bad_chips = static_cast<uint16_t>(out.bad_chips + __builtin_popcount(out.erasures[i]));
     return true;
