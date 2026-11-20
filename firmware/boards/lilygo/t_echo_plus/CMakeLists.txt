@@ -1,6 +1,3 @@
-# Compiled into EVERY Zephyr image built for this board, MCUboot included:
-# zephyr/boards/CMakeLists.txt does add_subdirectory(${BOARD_DIR}). That is the
-# point: board.c powers the rail the external secondary slot hangs off, and the
-# bootloader needs it before the application exists.
+# Every image built for this board links board.c, MCUboot included, because MCUboot reads slot1 off the NOR it powers.
 zephyr_library()
 zephyr_library_sources(board.c)
