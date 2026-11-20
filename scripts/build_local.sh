@@ -4,13 +4,9 @@
 #   scripts/build_local.sh [product...]     skyblip_go when none is named
 #   scripts/build_local.sh skyblip_go skyblip_bravo
 #
-# What the `product-image` CI job does, on this machine and on any ref: both
-# end in scripts/build_image.sh. The first run bootstraps a Zephyr workspace and downloads the SDK into
-# ~/.local/opt, which takes a while; every run after that is just the build.
-#
-# The tree it builds is a detached worktree of SKYBLIP_REF, never the checkout
-# you are editing: an image that boots is worth a commit anyway, and the west
-# workspace then has somewhere to live that is not the repo you work in.
+# It runs what the product-image CI job runs, through scripts/build_image.sh. The first run
+# bootstraps a Zephyr workspace and the SDK in ~/.local/opt. It builds a detached worktree of
+# SKYBLIP_REF, never the checkout you are editing.
 #
 #   SKYBLIP_REF          what to build (default main, e.g. HEAD, a tag, a sha)
 #   SKYBLIP_WORKSPACE    worktree + west workspace (default ~/.cache/skyblip/west)
@@ -29,7 +25,7 @@ workspace=${SKYBLIP_WORKSPACE:-$HOME/.cache/skyblip/west}
 key=${SKYBLIP_SIGNING_KEY:-$HOME/.config/skyblip/local-signing.pem}
 west=$workspace/.venv/bin/west
 python=$workspace/.venv/bin/python3
-# One of the places Zephyr's CMake searches for an SDK, so the build needs no path to it.
+# INFO: fc 20nov26 Zephyr's CMake searches here for an SDK, so the build needs no path to it
 sdk_base=$HOME/.local/opt
 
 require_host_tools() {
@@ -44,8 +40,7 @@ require_host_tools() {
   fi
 }
 
-# Resolved in the checkout you ran this from: HEAD in the worktree is the tree it
-# built last time, which is how a build silently ships the previous commit.
+# INFO: fc 20nov26 resolve the ref in this checkout, because the worktree's HEAD is the previous build's commit
 checkout_ref() {
   local commit
   commit=$(git -C "$repo" rev-parse --verify "$ref^{commit}")
@@ -57,8 +52,7 @@ checkout_ref() {
   fi
 }
 
-# west and everything Zephyr's build imports live in the workspace, so a system
-# python upgrade cannot take the toolchain with it.
+# INFO: fc 20nov26 west lives in the workspace's venv so a system python upgrade cannot break the toolchain
 install_west() {
   [ -x "$west" ] && return
   echo "== creating the build virtualenv"
@@ -66,8 +60,7 @@ install_west() {
   "$python" -m pip install --quiet --upgrade pip west
 }
 
-# Zephyr and the modules are pinned, so the only thing that can make them stale
-# is the manifest: keyed on it, a rebuild costs no network at all.
+# INFO: fc 20nov26 Zephyr and its modules are pinned, so the update is keyed on the manifest's hash
 update_workspace() {
   [ -d "$workspace/.west" ] || "$west" init -l "$workspace/firmware"
   local stamp=$workspace/.west/skyblip-manifest.sha256 manifest
@@ -76,18 +69,14 @@ update_workspace() {
     return
   fi
   echo "== west update (long on a first run: it clones Zephyr and its modules)"
-  # Shallow and narrow: the pinned tag and its modules, not a decade of history.
   (cd "$workspace" && "$west" update --narrow --fetch-opt=--depth=1)
-  # base only: the rest of Zephyr's requirements are twister, coverage and
-  # compliance tooling, none of which builds an image.
   "$python" -m pip install --quiet \
     -r "$workspace/zephyr/scripts/requirements-base.txt" \
     -r "$workspace/bootloader/mcuboot/scripts/requirements.txt"
   echo "$manifest" > "$stamp"
 }
 
-# What `west sdk install` does, minus the SDK's setup.sh, which refuses to run
-# without wget. The release's own sha256.sum vouches for both archives.
+# INFO: fc 20nov26 this is west sdk install without setup.sh, which refuses to run without wget
 install_sdk() {
   local version sdk_dir host release downloads minimal toolchain file
   version=$(cat "$workspace/zephyr/SDK_VERSION")
@@ -116,9 +105,7 @@ install_sdk() {
   rm -rf "$downloads"
 }
 
-# MCUboot's own sample key is published, so a signature against it proves
-# nothing. This one is local and kept: a unit takes an OTA only from the key
-# that signed what is already on it.
+# INFO: fc 20nov26 keep this key, because a unit takes an update only from the key that signed its image
 create_signing_key() {
   [ -f "$key" ] && return
   mkdir -p "$(dirname "$key")"
@@ -135,7 +122,7 @@ update_workspace
 install_sdk
 create_signing_key
 
-# build_image.sh empties out/ for each product, so each is copied before the next is built.
+# INFO: fc 20nov26 build_image.sh empties out/ for each product, so copy each before building the next
 mkdir -p "$repo/builds"
 for product in "${products[@]}"; do
   slug=${product//_/-}

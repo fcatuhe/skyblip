@@ -4,13 +4,9 @@
     ./scripts/blip.py fetch --log diagnostics --all --out run.ndjson
     python3 scripts/power_budget.py run.ndjson --pack-mah 2400
 
-No current is sensed anywhere on the board (firmware/core/power/README.md), so
-nothing here measures milliamps. Two halves meet instead. The Duty records say
-how long each consumer was on, the table below says what one costs, and the
-Power records say how far the cell actually fell. The difference between the
-modelled draw and the measured one is the table's error, and printing it is the
-point of the tool: no current in the table was metered on this board, and the
-rows marked (est) do not even have a datasheet figure behind them.
+The board senses no current (firmware/core/power/README.md). The Duty records say how
+long each consumer was on, CONSUMERS what one costs, and the Power records how far the
+cell fell, so the gap between modelled and measured draw is the table's error.
 scripts/README.md says how to run one.
 """
 import argparse
@@ -81,7 +77,6 @@ FULL_PERCENT = 99
 
 
 class Run:
-    """One session out of a capture, as the budget reads it."""
 
     def __init__(self, session):
         self.session = session
@@ -90,7 +85,6 @@ class Run:
 
     @property
     def profile(self):
-        """The capture the boot record names, or None from a build older than the field."""
         for record in self.records:
             if record["type"] == "boot" and "profile" in record:
                 return record["profile"]
@@ -102,7 +96,6 @@ class Run:
 
     @property
     def capabilities(self):
-        """What the unit found fitted at boot, or None when no Boot record survived."""
         boots = [record for record in self.records if record["type"] == "boot"]
         return boots[0]["capabilities"] if boots else None
 
@@ -116,7 +109,6 @@ class Run:
 
 
 def read(path):
-    """Every diagnostics session in an NDJSON capture, in the order fetched."""
     runs = {}
     order = []
     for line in records.read_ndjson(path):
@@ -140,13 +132,11 @@ def read(path):
 
 
 def stamp(record):
-    """Seconds, UTC when a fix dated the record and since boot when not."""
     phase = record["into_ms"] / 1000.0 if record.get("phase_valid") else 0.0
     return record["at_s"] + phase
 
 
 def delta(before, after, field):
-    """A counter's movement, across the wrap the firmware chose over saturation."""
     return (after[field] - before[field]) % WRAP
 
 
@@ -155,7 +145,6 @@ def on_battery_alone(power):
 
 
 def refused(before, after, between):
-    """Why this pair of Duty records cannot be subtracted, or None."""
     if after["index"] - before["index"] - 1 > len(between):
         return "indices are missing inside the interval"
     if any(record.get("error") for record in between):
@@ -176,12 +165,11 @@ def refused(before, after, between):
 
 
 def superseded(duty, following):
-    """A Duty the parking capture wrote again within the same instant says less than its repeat."""
+    # INFO: fc 20nov26 the parking capture rewrites a Duty within the same instant, and the repeat says more
     return duty["utc_dated"] == following["utc_dated"] and stamp(duty) == stamp(following)
 
 
 def duty_pairs(run):
-    """Each Duty record with the next one and every record between them."""
     at = [position for position, record in enumerate(run.records) if record["type"] == "duty"]
     at = [current for current, following in zip(at, at[1:])
           if not superseded(run.records[current], run.records[following])] + at[-1:]
@@ -190,12 +178,11 @@ def duty_pairs(run):
 
 
 def fitted(consumer, capabilities):
-    """A part the unit did not find at boot draws nothing; an unknown unit is charged everything."""
+    # INFO: fc 20nov26 a part the unit did not find at boot draws nothing, and an unknown unit is charged everything
     return consumer.fitted is None or capabilities is None or bool(capabilities & consumer.fitted)
 
 
 def interval_charge(before, after, seconds, capabilities=None):
-    """Milliamp-seconds per consumer over one interval."""
     charge = {}
     for consumer in CONSUMERS:
         if not fitted(consumer, capabilities):
@@ -213,7 +200,6 @@ def interval_charge(before, after, seconds, capabilities=None):
 
 
 def posture(before, after, seconds, simulating=False):
-    """Airborne or parked, read off the air the transmitter spent, a flight run's ground apart."""
     keyed_per_minute = delta(before, after, "tx_keyed_ms") * 60.0 / seconds
     if keyed_per_minute >= AIRBORNE_KEYED_MS_PER_MINUTE:
         return AIRBORNE
@@ -221,14 +207,12 @@ def posture(before, after, seconds, simulating=False):
 
 
 def unsent_transmit_milliamps(simulated_s, seconds):
-    """What a flier keys over a flight run's grounded intervals, averaged over the whole span."""
     transmit = next(consumer for consumer in CONSUMERS if consumer.counter == on_ms("tx_keyed_ms"))
     keyed_share = FLIGHT_RUN_UNSENT_BURSTS_PER_MINUTE * BURST_KEYED_MS / 60000.0
     return transmit.milliamps * keyed_share * simulated_s / seconds
 
 
 def model(run):
-    """The modelled draw over every interval the corpus can vouch for."""
     charge = {consumer.name: 0.0 for consumer in CONSUMERS}
     held = {AIRBORNE: 0.0, PARKED: 0.0, SIMULATED: 0.0}
     simulating = run.profile == "flight_run"
@@ -248,7 +232,6 @@ def model(run):
 
 
 def discharge(run):
-    """The Power records of the last stretch on battery alone and on one clock."""
     stretch = []
     for power in (record for record in run.records if record["type"] == "power"):
         if not on_battery_alone(power):
@@ -261,7 +244,6 @@ def discharge(run):
 
 
 def short_of_whole(stretch):
-    """Why this stretch is not a run from full to cutoff, or None when it is one."""
     readings = [record for record in stretch if record["battery_valid"]]
     if not readings:
         return "no believable reading on battery alone"
@@ -274,7 +256,6 @@ def short_of_whole(stretch):
 
 
 def measure(run, pack_mah):
-    """What the cell says it spent, or None and why not: the pack's capacity comes from outside."""
     if pack_mah is None:
         return None, "pass --pack-mah, the device cannot know the pack it runs on"
     stretch = discharge(run)

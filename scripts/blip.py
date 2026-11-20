@@ -10,11 +10,8 @@
     ./scripts/blip.py fetch --log diagnostics --all --out capture.ndjson
     ./scripts/blip.py decode capture.ndjson --summary
 
-The shebang runs it through uv, which installs bleak into a throwaway
-environment, so there is no venv to create and nothing to keep up to date.
-macOS talks to the radio through CoreBluetooth and asks for Bluetooth
-permission the first time; Linux talks to BlueZ over D-Bus, and Linux is the
-side to use for anything that needs two centrals at once.
+The shebang runs it through uv, which installs bleak. Use Linux for anything that
+needs two centrals at once (scripts/README.md).
 """
 import argparse
 import asyncio
@@ -147,7 +144,6 @@ async def run_command(args):
 
 
 async def reply_and_verdict(link, body, timeout, say):
-    """The reply to one command, and the press's verdict when it staged a prompt on the unit."""
     sent = time.monotonic()
     replies = await link.command(body, timeout)
     if replies[-1][1].get("pending"):
@@ -176,7 +172,6 @@ async def run_capture(args):
 
 
 def command_fields(text):
-    """The command a person typed, refused here when the unit could not be sent it."""
     try:
         fields = json.loads(text)
         frames.encode_frame(fields)
@@ -280,7 +275,7 @@ def resume_of(args):
 
 
 async def refuse_if_renumbered(link, args, sessions, kept):
-    """An index names a record only until the ring recycles the session's oldest sector."""
+    # INFO: fc 20nov26 an index names a record only until the ring recycles the session's oldest sector
     session_id, index = kept["session"], kept["index"]
     if session_id not in [entry["session"] for entry in sessions]:
         return
@@ -297,7 +292,6 @@ async def refuse_if_renumbered(link, args, sessions, kept):
 
 
 def sessions_to_fetch(sessions, args, resume):
-    """Which sessions, and the index each starts at once a dead fetch is taken into account."""
     chosen = sessions
     if args.session is not None:
         chosen = [entry for entry in sessions if entry["session"] == args.session]
@@ -320,7 +314,6 @@ def sessions_to_fetch(sessions, args, resume):
 
 
 def first_of(session):
-    """The index of the first record the session still holds: absent before the device kept it."""
     return session.get("first", 0)
 
 
@@ -329,12 +322,10 @@ def end_of(session):
 
 
 def held_back(args, session):
-    """The tail a fetch would drop as torn again, so a resume with nothing past it fetches nothing."""
     return 1 if records.tail_cannot_be_vouched_for(args.log, session) else 0
 
 
 def sessions_from(sessions, resume):
-    """The session a resume point names and every one after it, or none if it is not listed."""
     ids = [entry["session"] for entry in sessions]
     if resume is not None and resume[0] in ids:
         return sessions[ids.index(resume[0]):]
@@ -391,7 +382,6 @@ def line_writer(out):
 
 
 async def read_window(link, args, session_id, at, window=None):
-    """One read command, and exactly the chunk frames the device answers it with."""
     asked = chunks_per_read(args.window if window is None else window)
     await link.write({"command": "read", "log": args.log, "session": session_id,
                       "from": at, "count": asked})
@@ -407,7 +397,7 @@ async def read_window(link, args, session_id, at, window=None):
 
 
 def chunks_per_read(window):
-    """The device's own clamp, so the host waits for the frames this read brings and no others."""
+    # INFO: fc 20nov26 the device's own clamp, so the host waits for exactly the frames this read brings
     if window <= 0:
         return 1
     return min(window, LOG_READ_CHUNKS_MAX)
@@ -452,7 +442,7 @@ def nmea_checksum_ok(line):
 
 
 class LineAssembler:
-    """A notification is a slice of a byte stream, not a sentence."""
+    # INFO: fc 20nov26 a notification is a slice of a byte stream, not a sentence
 
     def __init__(self):
         self.held = ""
@@ -470,7 +460,7 @@ def host_time(monotonic_at):
 
 
 def bleak_scanner():
-    """Imported on demand so the decoders and the tests run without bleak installed."""
+    # INFO: fc 20nov26 imported here so the decoders and the tests run without bleak installed
     from bleak import BleakScanner
 
     return BleakScanner
@@ -500,7 +490,6 @@ async def find(args):
 
 
 class Link:
-    """One connected device: the NMEA stream, the config endpoint and the log endpoint."""
 
     def __init__(self, client, connect_ms):
         self.client = client
@@ -548,7 +537,7 @@ class Link:
         self.log_frames.put_nowait(bytes(data))
 
     async def command(self, body, timeout):
-        """Every frame of one config reply, decoded, ended by its own more flag and not by a count."""
+        # INFO: fc 20nov26 a reply ends on its own more flag, not on a frame count
         sent = time.monotonic()
         await self.client.write_gatt_char(CONFIG_CHAR, frames.encode_frame(body), response=True)
         out = []

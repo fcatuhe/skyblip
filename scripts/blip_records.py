@@ -1,16 +1,10 @@
 """Decode the 24-byte records a skyBlip offloads, and read the NDJSON they are kept in.
 
-Byte-exact against firmware/core/diagnostics/record.h with firmware/core/diagnostics/payload.h
-(the diagnostics capture) and firmware/core/flight/log_record.h (the flights
-log). Field names and enum spellings follow schemas/diagnostics_log.v1.schema.json
-and schemas/flight_log.v1.schema.json.
-
-Importable on its own: an analysis script wants these tables without the BLE
-transport in blip.py.
-
-The console's capture panel decodes the diagnostics half again in the browser,
-server/app/javascript/skyblip/diagnostics.js, and its test runs this module to
-hold the two to the same NDJSON: change both together.
+The tables match firmware/core/diagnostics/payload.h and firmware/core/flight/log_record.h
+byte for byte, with the names of schemas/diagnostics_log.v1.schema.json and
+schemas/flight_log.v1.schema.json. server/app/javascript/skyblip/diagnostics.js decodes the
+diagnostics half again in the browser, and its test holds the two to the same NDJSON, so
+change both together.
 """
 import datetime
 import json
@@ -62,7 +56,6 @@ def enum8(at, names):
 
 
 def vouched_enum8(at, bit, names):
-    """An ordinal read only when a flag bit says the firmware wrote it, and absent otherwise."""
 
     def read(raw, flags):
         if not flags & (1 << bit):
@@ -82,17 +75,15 @@ def bits(at, shift, mask):
 
 
 def valid_only(inner, bit):
-    """A value read only when its validity bit is set, and absent otherwise."""
     return lambda raw, flags: inner(raw, flags) if flags & (1 << bit) else None
 
 
 def vouched_flag(recorded, bit):
-    """A validity bit read only when a second bit says the firmware wrote it, and absent otherwise."""
     return lambda raw, flags: bool(flags & (1 << bit)) if flags & (1 << recorded) else None
 
 
 def unless_unknown(inner, recorded, valid):
-    """A value a vouched validity bit calls unknown is absent: older records, which wrote none, keep it."""
+    # INFO: fc 20nov26 older records wrote no vouching bit, so they keep the value
 
     def read(raw, flags):
         if flags & (1 << recorded) and not flags & (1 << valid):
@@ -124,7 +115,7 @@ def div_round(numerator, denominator):
 
 
 def track_degrees(at):
-    """Cordic9 back to whole degrees, the way core/units/units.h rounds it."""
+    # INFO: fc 20nov26 rounds as core/units/units.h does
 
     def read(raw, flags):
         centi = div_round(int.from_bytes(raw[at:at + 2], "little") * 36000, 512)
@@ -303,7 +294,6 @@ FLIGHT_EVENTS = {
 
 
 def flight_enum_fields():
-    """Every flights field an ordinal is read through, as (field, names) pairs."""
     for field, read in FLIGHT_FIELDS:
         names = getattr(read, "names", None)
         if names is not None:
@@ -316,7 +306,6 @@ def flight_enum_fields():
 
 
 def enum_fields():
-    """Every diagnostics field an ordinal is read through, as (field, names) pairs."""
     for _, fields in DIAGNOSTICS_TYPES.values():
         for field, read in fields:
             names = getattr(read, "names", None)
@@ -393,7 +382,6 @@ def crc16_ccitt(data, crc=0):
 
 
 def decode_chunk(store, raw, base_utc_s, first_index):
-    """One chunk's raw records, decoded, each stamped with its own index."""
     if len(raw) % RECORD_BYTES:
         raise ValueError("chunk of %d bytes is not whole records" % len(raw))
     out = []
@@ -412,7 +400,6 @@ TORN_TAIL_REASON = "the last record of a session the device did not close may be
 
 
 def is_note(line):
-    """A line about a session rather than a record out of one."""
     return line.get("type") in NOTE_TYPES
 
 
@@ -441,7 +428,6 @@ def tail_cannot_be_vouched_for(log, session):
 
 
 class SessionSink:
-    """One session as NDJSON: what the device said of it, its records, and a tail nobody vouches for."""
 
     def __init__(self, log, session, emit):
         self.log = log
@@ -485,7 +471,6 @@ def read_ndjson(path):
 
 
 def last_kept(path):
-    """The line of the last record a previous fetch kept, passing over the notes, or None."""
     last = None
     try:
         for line in read_ndjson(path):
@@ -497,7 +482,7 @@ def last_kept(path):
 
 
 def stamp_of(record):
-    """into_ms reaches 1200 on a slot 1 burst, so it is printed beside the second, not inside it."""
+    # INFO: fc 20nov26 into_ms reaches 1200 on a slot 1 burst, so it is printed beside the second
     if "utc_s" in record:
         return utc_text(record["utc_s"])
     second = utc_text(record["at_s"]) if record.get("utc_dated") else "+%ds" % record.get("at_s", 0)
@@ -521,7 +506,6 @@ def render(record):
 
 
 def summarise(lines_in):
-    """Counts per type, the span, and every hole: an invisible hole teaches a wrong number."""
     counts = {}
     stamped = []
     gaps = []
@@ -565,7 +549,6 @@ def summarise(lines_in):
 
 
 def caveat_lines(notes, records):
-    """What an analysis must not assume about these records, before it is handed any count."""
     kept = {(record.get("session"), record.get("index")) for record in records}
     out = []
     for note in notes:

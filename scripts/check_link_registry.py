@@ -3,14 +3,12 @@
 
     python3 scripts/check_link_registry.py
 
-Every generated file is compared byte for byte: the JavaScript module as generated, the
-C++ files as generated and then put through clang-format (CLANG_FORMAT names it), which
-is how scripts/link_registry.py writes them. Every frame and every key must carry a
-description. The status frame, the one the unit pushes unasked, is written by one
-function, ConfigService::format_status in firmware/core/comms/config_reports.cpp, one
-`writer.add_<type>(link::status_key::k<Name>, ...)` per key, and must match the registry:
+Every generated file must be byte for byte what scripts/link_registry.py writes, the C++
+after clang-format (CLANG_FORMAT names it). Every frame and key must carry a description.
+ConfigService::format_status in firmware/core/comms/config_reports.cpp must write the
+status frame as the registry gives it:
 
-  keys      it writes every key the registry gives the frame, and nothing more
+  keys      every key of the frame, and nothing more
   order     in ascending key number
   required  a key written under an `if` may be absent, every other one is required
   types     each add_<type> writes the registry type it is named after
@@ -51,7 +49,6 @@ def main():
 
 
 def undescribed(registry):
-    """Every frame and key, by name, that the registry leaves without a description."""
     missing = []
     for frame in registry["frames"]:
         if not frame.get("description"):
