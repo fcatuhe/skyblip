@@ -30,8 +30,7 @@ struct OnAir {
     uint8_t address_mapping_table;
 };
 
-// INFO: fc 14nov26 ADS-L F.2.3: a set aircraft address is our address on every payload, once
-// activated
+// INFO: fc 20nov26 ADS-L F.2.3: an activated unit sends a set aircraft address on every payload
 constexpr OnAir on_air(AirAddress unit, uint32_t aircraft_address) {
     return unit && icao_assignable(aircraft_address)
                ? OnAir{aircraft_address, adsl::kAddressTableIcao}
