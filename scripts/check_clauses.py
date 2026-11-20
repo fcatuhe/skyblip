@@ -3,16 +3,14 @@
 
     python3 scripts/check_clauses.py
 
-STANDARDS holds one entry per suite. ADS-L's clauses are the `ADS-L.4.SRD860.x.y` headings of the
-committed specification. ETSI and RTCA do not let EN 300 220 and DO-260B be committed
-(docs/reference/README.md), so a `clauses.txt` beside the suite stands in, one line per clause,
-`<clause> <heading>`, and each heading is checked against the fetched document when it is present.
+STANDARDS holds one entry per suite. ADS-L's clauses are the `ADS-L.4.SRD860.x.y`
+headings of the committed specification. EN 300 220 and DO-260B cannot be committed
+(docs/reference/README.md), so a `clauses.txt` beside the suite lists `<clause> <heading>`,
+checked against the fetched document when it is present.
 
-Every clause must have a case, every case is named `<clause>: what holds`, and a clause the firmware
-does not meet still gets one, marked doctest::skip(). A skipped case fails with a message that opens
-on its kind: "not implemented:" for a clause the firmware should meet and does not, "prose:" for
-nothing to execute, "paperwork:" for a manufacturer's duty, "optional:" for a clause a device may
-leave out, and "unmeasured:" for a radio figure no bench has measured yet.
+Every clause must have a case named `<clause>: what holds`. A clause the firmware does not
+meet gets a doctest::skip() case whose message opens on its kind: "not implemented:",
+"prose:", "paperwork:", "optional:" or "unmeasured:".
 """
 import dataclasses
 import functools
@@ -164,7 +162,6 @@ def suite_clauses(standard):
 
 
 def unheaded(standard, clauses):
-    """The listed clauses a fetched document has no such heading for, and the parts not fetched."""
     texts, absent = {}, []
     for part, path in standard.documents.items():
         if os.path.exists(path):

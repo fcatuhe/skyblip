@@ -31,6 +31,7 @@ The driver never settles for less than the product asked. A part that refuses 2 
 - The driver enters `DEGRADED` and counts the round in `L76k::recoveries()`, the dump's `receiver_recoveries`.
 - After a backoff of `kRecoveryBackoffMs`, 10 s, then 30 s, then every 60 s, it holds RESET_N low and configures the part again from step 1. A board with no reset line starts again from the wake byte.
 - It never gives up, so a part that keeps refusing shows as `DEGRADED` and a climbing count, never as a unit quietly at 1 Hz. The backoff restarts from 10 s once the part holds the asked rate.
+- Quectel lists 500 ms and Go 000001's part took it in every run, so a part that falls silent after `$PCAS02,500` is reset and asked again, never left at 1 Hz.
 
 `L76k::holds_rate()` is true only while the part is ready at the asked rate.
 

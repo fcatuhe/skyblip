@@ -1,31 +1,13 @@
 #!/usr/bin/env python3
 """Generate docs/BEHAVIOR.md and docs/behavior/: what the host suite says the firmware does.
 
-Nothing here is authored twice. Four things already in the tree are collected:
+It runs the suite through doctest's xml reporter, so only cases that ran are documented, and
+reads each case's prose back out of the sources: the comment heading a test file or a case.
+A case's tier is the name of the TestSuite element around it.
 
-  the case name        `TEST_CASE("button: a stable press emits exactly one event")`
-  the subject          the `button` half of that name, which groups the cases
-  the tier             `* doctest::test_suite("main")` on the case, or nothing
-  the prose            the comment heading a test file, or heading one case
-
-doctest's xml reporter gives each case's name, file, line and test suite, so the suite
-is run rather than listed, and only cases that actually ran are documented. The run nests
-each case in a TestSuite element, and opens a new one each time the suite changes in run
-order, so a case's tier is the name of the element around it. An unnamed suite has no name
-attribute, and a skipped case is reported with skipped="true". The prose is read back out of
-the sources.
-
-docs/behavior/ has one page per area of the tree: its main claims, then the others
-folded, then its test files. docs/BEHAVIOR.md is the index: the areas with their counts,
-and every main claim.
-
-Four rules are enforced, because a doc generated from a suite is only as good as what
-the suite says about itself. Every name must read `subject: what holds`, every test file
-must open with a comment saying what it pins down, the only test suite is "main", and a
-skipped case is never main. A skipped case claims nothing, so it cannot be a main claim.
-
-The script writes over and removes only files whose first line is its MARKER, so a draft
-beside the pages stays, even one that quotes the marker.
+It fails unless every name reads `subject: what holds`, every test file opens with a comment,
+the only test suite is "main", and no skipped case is main. It writes over and removes only
+files whose first line is its MARKER.
 """
 import os
 import re
@@ -112,7 +94,7 @@ def run_suite():
     if not os.path.exists(TEST_BINARY):
         report(f"no test binary at {os.path.relpath(TEST_BINARY, ROOT)}: run `make test` first")
         sys.exit(1)
-    # cwd is firmware/ because the scenario cases open scenarios/*.json by relative path.
+    # INFO: fc 20nov26 scenario cases open scenarios/*.json by relative path, so this runs in firmware/
     run = subprocess.run(
         [TEST_BINARY, "--reporters=xml"],
         cwd=FIRMWARE,
@@ -305,7 +287,6 @@ CASE_NOTE = re.compile(rf"^({COMMENT_BLOCK})TEST_CASE\(\s*\"((?:[^\"\\]|\\.)*)\"
 
 
 def read_prose(path):
-    """The file's opening comment, and the comment heading each documented case."""
     with open(os.path.join(FIRMWARE, path), encoding="utf-8") as source:
         text = source.read()
     intro = FILE_INTRO.match(text)

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/power/battery.h"
+#include "core/timing/slot.h"
 #include "core/util/sha256.h"
 #include "core/util/span.h"
 #include "hardware/parts/bme280/bme280.h"
@@ -192,14 +193,24 @@ class Pps {
    public:
     explicit Pps(const Clock& clock) : clock_(clock) {}
 
-    bool locked() const { return locked_; }
-    void set_locked(bool on) { locked_ = on; }
+    // INFO: fc 19nov26 zephyr/pps.h calls a pulse locked until kPpsLockTailMs after its last edge
+    bool locked() const {
+        return locked_ ||
+               (held_edge_us_ != 0 && timing::since_edge_us(held_edge_us_, clock_.microseconds()) <
+                                          uint64_t{timing::kPpsLockTailMs} * 1000);
+    }
+    // INFO: fc 19nov26 a pulse that stops leaves its last edge latched, as the silicon's does
+    void set_locked(bool on) {
+        if (locked_ && !on) held_edge_us_ = last_edge_us();
+        locked_ = on;
+    }
     uint32_t since_edge_ms(uint64_t now_us) const {
-        return locked_ ? static_cast<uint32_t>(now_us / 1000 % 1000) : 0;
+        if (locked_) return static_cast<uint32_t>(now_us / 1000 % 1000);
+        return static_cast<uint32_t>(timing::since_edge_us(held_edge_us_, now_us) / 1000);
     }
 
     uint64_t last_edge_us() const {
-        if (!locked_) return 0;
+        if (!locked_) return held_edge_us_;
         const uint64_t now_us = clock_.microseconds();
         return now_us - now_us % kSecondUs;
     }
@@ -209,6 +220,7 @@ class Pps {
 
     const Clock& clock_;
     bool locked_{true};
+    uint64_t held_edge_us_{0};
 };
 
 class Platform {

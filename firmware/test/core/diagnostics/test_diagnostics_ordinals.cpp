@@ -125,7 +125,7 @@ uint8_t wire(diagnostics::Refusal value) {
         case diagnostics::Refusal::None: return 0;
         case diagnostics::Refusal::OverBudget: return 1;
         case diagnostics::Refusal::Unarmed: return 2;
-        case diagnostics::Refusal::Unsettled: return 3;
+        case diagnostics::Refusal::GateClosed: return 3;
         case diagnostics::Refusal::OffSchedule: return 4;
         case diagnostics::Refusal::HeldForFix: return 5;
     }

@@ -46,8 +46,6 @@ int ConfigService::format_status(uint8_t* out, int capacity) {
     writer.add_boolean(link::status_key::kCharging, battery.charging);
     writer.add_code(link::status_key::kPowerLevel, diagnostics_.power_level);
     writer.add_boolean(link::status_key::kWentDarkFlat, went_dark_flat_);
-    if (diagnostics_.die_valid)
-        writer.add_integer(link::status_key::kDieTemperatureC, whole_celsius(diagnostics_.die_dc));
     if (bravo_ != BravoState::Unpaired) writer.add_code(link::status_key::kBravo, bravo_);
     const OwnTransponderHeard heard = own_transponder_.value_or(OwnTransponderHeard{});
     char registration[kPeerCallsignBytes]{};
@@ -57,6 +55,7 @@ int ConfigService::format_status(uint8_t* out, int capacity) {
         writer.add_text(link::status_key::kOwnTransponderCallsign, registration);
     if (heard.aircraft_category != 0)
         writer.add_unsigned(link::status_key::kOwnTransponderCategory, heard.aircraft_category);
+    if (no_tx_ != timing::NoTx::None) writer.add_code(link::status_key::kNoTx, no_tx_);
     return writer.finish();
 }
 

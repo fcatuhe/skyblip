@@ -54,7 +54,8 @@ class FlightLogService : public runtime::Service {
     bool drain_events(uint32_t now_ms);
     void serve_link(uint32_t now_ms);
     void abandon_reads();
-    // While true the next command waits on the bus: its answer would have nowhere to go.
+    // INFO: fc 20nov26 while true the next command waits on the bus, since its answer would have
+    // nowhere to go
     bool replying() const;
     void handle(const comms::LogRequest& request);
     void record_link(diagnostics::LinkAction action, uint16_t session, uint16_t frame_bytes,

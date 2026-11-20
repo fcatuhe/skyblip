@@ -4,10 +4,8 @@
     python3 scripts/conformance.py adsl
     python3 scripts/conformance.py adsb
 
-The ADS-L report follows the specification and adds EN 300 220 and the stack's own tests.
-The ADS-B report follows the DO-260B receive-side clause listing. The generator runs the
-selected suite twice through doctest's JUnit reporter. The normal run must pass. The second
-run uses --no-skip to read the failure message that explains each skip.
+It runs the suite twice through doctest's JUnit reporter: the normal run must pass, and a
+--no-skip run reads the message that explains each skip.
 """
 import argparse
 import dataclasses
@@ -286,7 +284,6 @@ def skipped_line(path, name, message):
 
 
 def spec_sections(spec):
-    """The SUBPART and APPENDIX sections in order, each with its clauses and their titles."""
     sections, titles = [], {}
     for line in spec.splitlines():
         section = SECTION.match(line)

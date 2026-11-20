@@ -5,7 +5,7 @@ slug: radar
 description: "Lesen Sie Radar, Symbole und die Liste NEARBY auf skyBlip Go. Warnungen gelten innerhalb von 3 km und 300 m. PLOT ALL zeigt auch entfernten Verkehr."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -23,7 +23,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="heading-up">Der Verkehr erscheint so, <span class="highlight">wie Sie ihn vor sich sehen</span>.</h3>
       <p>
-        Sie sind in der Mitte, Ihre Flugrichtung zeigt nach oben. Das bleibt auch in der Kurve so. Verkehr rechts oben suchen Sie rechts vor der Nase, ohne umzurechnen. Über der oberen Hälfte steht kein Text, denn in diese Richtung fliegen Sie.
+        Sie sind in der Mitte, Ihre Flugrichtung zeigt nach oben. Das bleibt auch in der Kurve so. Verkehr rechts oben suchen Sie rechts vor der Nase, ohne umzurechnen. Die obere Hälfte des Bildschirms bleibt frei, denn in diese Richtung fliegen Sie. Die einzige Ausnahme sind <span class="mono">NO TX</span> und der Grund dafür in der linken oberen Ecke.
       </p>
       <p>
         Die Form jedes Luftfahrzeugs zeigt, wohin Sie schauen sollten. Eine Spitze nach oben bedeutet über Ihnen, eine nach unten unter Ihnen. Eine Raute bedeutet auf Ihrer Höhe. Ein kleiner Winkel zeigt Steig- oder Sinkflug. Die Linie am Symbol endet an der Position des Luftfahrzeugs in einer Minute.
@@ -163,6 +163,21 @@ updated_on: "2026-11-18"
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "Ansicht NEARBY: eine Zeile für Go mit 92% Akkustand, 9 Satelliten und 5 empfangenen Luftfahrzeugen. Dann folgen fünf Luftfahrzeuge, die auf Ihrer Höhe zuerst. Jeweils ein Buchstabe für die Quelle, das Rufzeichen oder klein gedruckt die Funkadresse, die horizontale Entfernung und die relative Höhe." %>
       <figcaption>NEARBY</figcaption>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="no-tx">Wenn Go nicht mehr sendet, <span class="highlight">warnt es Sie weiter</span>.</h3>
+      <p>
+        Go empfängt weiter Verkehr, warnt Sie, versorgt Ihre Navigations-App mit Daten und zeichnet Ihren Flug auf, wenn es Ihre Position nicht mehr sendet. Fehlt eine Sendevoraussetzung 10&nbsp;s lang, zeigt jede Seite links oben <span class="mono">NO TX</span> über einem Wort für den Grund, weiß auf schwarz. <span class="mono">RADIO</span> bedeutet, dass das Funkteil nicht antwortet oder vor dem Senden nicht hört. <span class="mono">GNSS</span> bedeutet, dass der GPS-Empfänger nicht zweimal pro Sekunde eine Position berechnet, zur vollen und zur halben Sekunde. <span class="mono">FIX</span> bedeutet, dass eine gültige Position fehlt. <span class="mono">UTC</span> bedeutet, dass keine gültige UTC-Zeit zur Synchronisierung des Funks vorliegt. <span class="mono">PPS</span> bedeutet, dass der Impuls des GPS-Empfängers für die laufende Sekunde fehlt. Fehlen mehrere Voraussetzungen, zeigt Go die erste in dieser Reihenfolge.
+      </p>
+      <p>
+        Go hört sofort auf zu senden, wenn eine Voraussetzung fehlt, und sendet von selbst wieder, sobald alle erfüllt sind. Die Markierung bleibt, bis alle Voraussetzungen 10&nbsp;s lang erfüllt waren. Sie kann deshalb nach der Wiederaufnahme des Sendens kurz stehen bleiben. Über Menüs oder Eingabeaufforderungen erscheint sie nicht. Im Flug vibriert Go einmal, wenn die Markierung erscheint, oder beim Start, wenn sie bereits angezeigt wird. Vor der ersten Position zeigt das Radar stattdessen den Fortschritt des Empfängers. Das Funkteil wird schon beim Einschalten geprüft. Die Selbsttest-Seite kennzeichnet das Bauteil, das das Senden verhindert, mit <span class="mono">NO TX</span>. Die Verkehrszeile der Statusseite zeigt <span class="mono">TX OFF</span> und den Grund, ohne 10&nbsp;s zu warten. <%= link_to "Briefing", briefing_root_path %> zeigt bei bestehender Verbindung denselben Grund wie die Markierung in der Ecke.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-tx.png", alt: "Die Radarseite mit NO TX über PPS links oben, weiß auf schwarz, 15 Sekunden nach dem letzten Impuls des GPS-Empfängers. Der Verkehr bleibt sichtbar." %>
+      <figcaption>15&nbsp;s nach dem letzten GPS-Impuls: Empfang ohne Senden</figcaption>
     </figure>
   </div>
 </section>

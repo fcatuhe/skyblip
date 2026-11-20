@@ -47,10 +47,22 @@ void carry_utc_to_edge(ClockState& clock, uint64_t edge_us) {
     clock.utc_edge_us = edge_us;
 }
 
+void take_edge(ClockState& clock, uint64_t edge_us, uint64_t now_us) {
+    const bool edged = clock.pps_locked || edge_us != 0;
+    clock.since_edge_ms = edged ? static_cast<uint32_t>(since_edge_us(edge_us, now_us) / 1000) : 0;
+    carry_utc_to_edge(clock, edge_us);
+}
+
 bool in_pps_holdover(const ClockState& clock) {
     return clock.utc_valid && !clock.pps_locked && clock.pps_edge_us != 0 &&
            clock.since_edge_ms <= kPpsHoldoverMs;
 }
+
+bool pps_fresh(const ClockState& clock) {
+    return clock.pps_locked && clock.since_edge_ms < kPpsEdgeMaxAgeMs;
+}
+
+bool pps_anchored(const ClockState& clock) { return clock.pps_locked || in_pps_holdover(clock); }
 
 std::optional<uint64_t> utc_ms(const ClockState& clock) {
     if (!clock.pps_locked || clock.utc_s == 0 || clock.since_edge_ms >= 1000) return std::nullopt;
@@ -78,7 +90,8 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
     phase_ms = std::max(phase_ms, 0) % 1000;
     const Dwell& dwell = dwell_at(phase_ms);
     const Window span = dwell_of(dwell.window);
-    const bool anchored = clock.utc_valid && clock.pps_locked;
+    const bool anchored = clock.utc_valid && pps_anchored(clock);
+    const bool latched = clock.utc_valid && clock.pps_locked;
 
     SlotPlan slot_plan{};
     slot_plan.state = state_at(phase_ms);
@@ -86,8 +99,8 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
     slot_plan.frequency_hz = dwell.frequency_hz;
     slot_plan.start_ms = span.start_ms;
     slot_plan.end_ms = span.end_ms;
-    slot_plan.tx_allowed = anchored && dwell.band == Band::M;
-    slot_plan.listen_only = !anchored && !in_pps_holdover(clock);
+    slot_plan.tx_allowed = latched && dwell.band == Band::M;
+    slot_plan.listen_only = !anchored;
     return slot_plan;
 }
 

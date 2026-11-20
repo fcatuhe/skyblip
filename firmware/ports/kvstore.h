@@ -1,4 +1,3 @@
-// ports/kvstore.h: capability port: durable key/value blob storage (settings, update record)
 #ifndef SKYBLIP_PORTS_KVSTORE_H
 #define SKYBLIP_PORTS_KVSTORE_H
 

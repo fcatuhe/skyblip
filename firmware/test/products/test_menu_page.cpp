@@ -15,6 +15,7 @@
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/glass_text.h"
 #include "test/support/menu_rig.h"
 #include "test/support/product_rig.h"
 
@@ -145,10 +146,17 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
 
     CHECK(rig.product.screen().page() == go::Page::SelfTest);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
-    CHECK(std::memcmp(rig.product.screen().framebuffer().data(), rig.self_test_page().data(),
-                      go::Glass::kBytes) == 0);
-    CHECK(rig.platform.chips().epd.framebuffer().count_black() ==
-          rig.self_test_page().count_black());
+    // Boot's rows, each with how its part works now: the radio listens, the receiver comes up.
+    const go::Glass& glass = rig.product.screen().framebuffer();
+    CHECK(reads_in(glass, "SX1262 CCA OK", 0, go::self_test_row_y(0), go::kGlassWidth,
+                   go::self_test_row_y(1)));
+    const std::string receiver =
+        std::string("L76K ") + ports::to_string(rig.product.board().gnss().config_stage());
+    CHECK(reads_in(glass, receiver.c_str(), 0, go::self_test_row_y(1), go::kGlassWidth,
+                   go::self_test_row_y(2)));
+    CHECK(std::memcmp(glass.data() + go::self_test_row_y(2) * go::Glass::kStride,
+                      rig.self_test_page().data() + go::self_test_row_y(2) * go::Glass::kStride,
+                      go::Glass::kBytes - go::self_test_row_y(2) * go::Glass::kStride) == 0);
 
     // A tap goes back to the page whose menu opened it, not on to a fourth picture.
     rig.tap(now_ms);

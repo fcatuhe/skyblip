@@ -1,11 +1,11 @@
 # core/units
 
-The one place a measurement changes unit, and the reason every conversion in it rounds.
+The one place a measurement changes unit. Every conversion here rounds.
 
-A device measures in the units of its instruments and transmits in the units of a protocol, and the two are never the same. The receiver resolves hundredths of a degree of track, ADS-L G.1.10 carries nine bits for the whole circle. The barometer resolves millimetres of altitude, G.1.7 carries metres. Own-ship state therefore holds what the instruments resolve, and a conversion to a coarser unit happens once, at the edge that needs it: the protocol encoder, the screen, the NMEA output, the flight log.
+Own-ship state holds what the instruments resolve, such as hundredths of a degree of track and millimetres of altitude. The protocol carries coarser units: nine bits for the circle (ADS-L G.1.10), whole metres of altitude (G.1.7). Convert to a coarser unit once, at the edge that needs it: the protocol encoder, the screen, the NMEA output, the flight log.
 
-Truncation is the trap this file exists to close. `(mm * 19685) / 100000` on a 1.524 m/s climb gives 299 fpm for a rate the pilot set to 300, and nothing downstream can tell that the missing foot was arithmetic rather than air. Worse, a truncated value fed back into a control path biases it: a turn rate truncated to whole degrees read 2 deg/s in a standard rate turn, which is a third low. Every conversion here uses `divide_rounded` from `core/util/intmath.h`, and so should any conversion elsewhere.
+Round, never truncate. Truncated, `(mm * 19685) / 100000` turns a 1.524 m/s climb into 299 fpm, and a turn rate truncated to whole degrees reads a third low in a standard rate turn. Use `divide_rounded` (`protocols/common/geometry.h`) for any conversion, here or elsewhere.
 
-Going up in precision is exact and needs no rounding: `to_mm_s(QuarterMetresPerSecond)` multiplies by 250. That is the direction a received frame travels, and it is why the geometry the alarm computes can be done in millimetres whatever the wire carried. Going down rounds and clamps, and that is the direction a transmitted frame travels.
+Going up in precision is exact: `to_mm_s(QuarterMetresPerSecond)` multiplies by 250. A received frame goes that way, so the alarm's geometry works in millimetres whatever the wire carried. Going down rounds and clamps, which is the way a transmitted frame goes.
 
-The wire units are named for what they are, not for their size: `QuarterMetresPerSecond` is ADS-L G.1.8's ground speed, `EighthMetresPerSecond` is G.1.9's climb rate, `Cordic9` is the 512-unit circle of G.1.10. A field that carries one of those is holding a protocol value, and holding a protocol value in the middle of a calculation is the bug.
+The wire units are named for what they are: `QuarterMetresPerSecond` is ADS-L G.1.8's ground speed, `EighthMetresPerSecond` is G.1.9's climb rate, `Cordic9` is G.1.10's 512-unit circle. Never hold one of them in the middle of a calculation.

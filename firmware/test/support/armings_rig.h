@@ -16,6 +16,7 @@
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
+#include "test/support/receiver_at_rate.h"
 
 namespace skyblip {
 
@@ -53,7 +54,18 @@ struct Armings {
             return refuse ? Status::OutOfRange : Status::Ok;
         }
         void abort() override { aborts++; }
+        // INFO: fc 19nov26 each plan armed is a dwell entered and a channel read, unless told
+        ports::RfCarrier carrier() const override {
+            return ports::RfCarrier{-110, deaf ? 0 : arms};
+        }
+        ports::RfSwitching switching() const override {
+            ports::RfSwitching started{};
+            started.switches = stalled ? 0 : arms;
+            started.refused = refused_dwells;
+            return started;
+        }
         Status withdraw(uint64_t tx_at_us) override {
+            if (listening) return Status::WouldBlock;
             withdrawn++;
             withdrawn_at_us = tx_at_us;
             return Status::Ok;
@@ -70,12 +82,18 @@ struct Armings {
         uint32_t withdrawn{0};
         uint64_t withdrawn_at_us{0};
         bool refuse{false};
+        bool deaf{false};
+        bool stalled{false};
+        // INFO: fc 19nov26 the executor already reading the channel, so the burst is its own
+        bool listening{false};
+        uint32_t refused_dwells{0};
     } rf{};
     bus::Bus bus{};
     bus::State state{};
     platform::host::Identity identity{platform::host::Identity::kSerial};
     platform::host::Random random{};
     ports::NullRoles null{};
+    ReceiverAtRate receiver{};
     ports::Roles roles{clock,
                        rf,
                        null.link,
@@ -86,7 +104,7 @@ struct Armings {
                        null.dfu,
                        null.die_temperature,
                        null.indicator,
-                       null.gnss,
+                       receiver,
                        identity,
                        random,
                        ports::Capability::Rf};

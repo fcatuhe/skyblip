@@ -9,8 +9,7 @@ namespace skyblip::model {
 enum class Source : uint8_t { AdslDirect = 0, AdslUplink = 1, Alptas = 2, Own = 3, Adsb = 4 };
 enum class ClimbSource : uint8_t { Unknown = 0, Gnss = 1, Barometric = 2 };
 
-// What the station log calls a system where it has a column six characters wide,
-// and what nearby abbreviates to one where it has a glyph.
+// INFO: fc 20nov26 the station log gives this word a six-character column
 constexpr const char* source_word(Source source) {
     switch (source) {
         case Source::AdslDirect: return "ADS-L";

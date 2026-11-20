@@ -190,15 +190,6 @@ int format_pgrmz(char* out, size_t capacity, int32_t altitude_ft, bool fix_valid
     return deliver(out, capacity, sentence, written);
 }
 
-// Field order, from the LK8000 definition and the three senders that agree on
-// it (SoftRF lyusupov src/protocol/data/NMEA.cpp:246-256, SoftRF MB
-// src/driver/Baro.cpp:404-415, GXAirCom src/main.cpp:4370-4385):
-//   1 raw pressure, pascals (a hundredth of a millibar)
-//   2 altitude, metres on the 1013.25 datum - a consumer that got field 1
-//     recomputes this for itself and ignores what is here
-//   3 vertical speed, centimetres per second
-//   4 temperature, degrees Celsius
-//   5 battery: volts below 1000, percent plus 1000 at or above it
 int format_lk8ex1(char* out, size_t capacity, const Lk8Ex1& reading) {
     char sentence[kScratchBytes];
     const uint32_t pressure = reading.pressure_valid ? (reading.pressure_pa > kLk8PressureCeilingPa
@@ -236,10 +227,7 @@ int format_lk8ex1(char* out, size_t capacity, const Lk8Ex1& reading) {
 
 namespace {
 
-// The inverse of the epoch core/gnss/nmea.cpp builds from a $GPRMC date and
-// time: own.utc_s keeps no calendar fields of its own, so writing one back out
-// means undoing the conversion. Howard Hinnant's civil_from_days, exact over
-// the whole range a uint32_t epoch can name.
+// INFO: fc 20nov26 Howard Hinnant's civil_from_days, undoing the epoch core/gnss/nmea.cpp builds
 void civil_from_epoch(uint32_t utc_s, int& year, int& month, int& day) {
     const int64_t days_since_march_epoch = static_cast<int64_t>(utc_s / 86400u) + 719468;
     const int64_t era =
@@ -284,7 +272,6 @@ int format_gprmc(char* out, size_t capacity, const model::Ownship& own) {
     sentence[written++] = ',';
     written += format_nmea_longitude(sentence + written, own.longitude_1e7);
     sentence[written++] = ',';
-    // Ground speed is knots on this sentence, kept to one decimal.
     const uint32_t knots_e1 = static_cast<uint32_t>(
         wire::divide_rounded<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
     written += format_unsigned(sentence + written, knots_e1, 1, 1);

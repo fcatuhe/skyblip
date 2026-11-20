@@ -1,24 +1,13 @@
 #!/usr/bin/env python3
 """Rasterise the skyBlip wordmark into ui/widgets/wordmark.cpp.
 
-The panel is 1-bit and 200x200, so the wordmark cannot be a font at runtime:
-this bakes the site's display face (Fira Sans Bold, the same woff2 the website
-serves) plus the mark - dotless i, blip dot, two ping arcs - into one bitmap.
-
   python3 scripts/make_wordmark.py
   python3 scripts/make_wordmark.py --size 44 --preview /tmp/wm.png
 
-1 bit has no grey to soften an edge, so fidelity is won before the threshold.
-The glyphs are rasterised 16x oversampled and box-filtered to pixel COVERAGE,
-then two things are searched rather than assumed: the sub-pixel origin, where
-the least quantisation error wins (that is what snaps stems onto whole columns
-instead of smearing each over two), and the cut, where the threshold that keeps
-the same total ink as the outline wins (a 50% cut thins a bold face's curves,
-and the wordmark reads lighter than the site's).
-
-Geometry is the brand sheet's, in units of the font size (56 px there):
-dot r 5.5 at 42.5 above the baseline, arcs r 14 and 22, stroke 3.5, +/-46 deg
-about vertical, all concentric with the dot.
+The panel is 1-bit, so the site's Fira Sans Bold and the mark are baked into one bitmap.
+The glyphs are rasterised 16x oversampled to pixel coverage, then the sub-pixel origin with
+the least quantisation error and the threshold that keeps the outline's ink are searched.
+The geometry is the brand sheet's, in units of the font size (56 px there).
 """
 import argparse
 import os
@@ -32,7 +21,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "firmware", "ui", "widgets", "wordmark.cpp")
 FONT = os.path.join(ROOT, "server", "app", "assets", "fonts", "FiraSans-Bold.woff2")
 
-TEXT = "skyBl\u0131p"  # dotless i: the tittle is the blip
+# INFO: fc 20nov26 a dotless i, because the blip dot is its tittle
+TEXT = "skyBl\u0131p"
 REFERENCE_SIZE = 56.0
 DOT_R = 5.5
 DOT_ABOVE_BASELINE = 42.5
@@ -40,11 +30,10 @@ ARC_R = (14.0, 22.0)
 ARC_W = 3.5
 ARC_HALF_ANGLE = 46.0
 SUPERSAMPLE = 16
-SUBPIXEL_STEPS = 8  # offsets tried per axis, in 1/8 px
+SUBPIXEL_STEPS = 8
 
 
 def coverage(font, size, w, h, baseline, dx, dy):
-    """Ink coverage per final pixel, in [0, 1], for one sub-pixel origin."""
     s = SUPERSAMPLE
     unit = size / REFERENCE_SIZE
     img = Image.new("L", (w * s, h * s), 0)
@@ -52,13 +41,11 @@ def coverage(font, size, w, h, baseline, dx, dy):
     ox, oy = dx * s, baseline * s + dy * s
     draw.text((ox, oy), TEXT, font=font, fill=255, anchor="ls")
 
-    # The mark sits over the dotless i: the glyph's own advance names the centre.
     dot_cx = ox + font.getlength("skyBl") + font.getlength("\u0131") / 2
     dot_cy = oy - DOT_ABOVE_BASELINE * unit * s
     r = DOT_R * unit * s
     draw.ellipse([dot_cx - r, dot_cy - r, dot_cx + r, dot_cy + r], fill=255)
-    # Round caps, as the brand sheet draws them: PIL's arc() cuts its ends
-    # square, which quantises to a pixel or two of grit at each tip.
+    # INFO: fc 20nov26 round caps, because PIL's arc() cuts its ends square into grit at each tip
     stroke = max(1, int(round(ARC_W * unit * s)))
     for arc_r in ARC_R:
         rr = arc_r * unit * s
@@ -87,8 +74,6 @@ def render(font_path, size, verbose=False):
     w = int(np.ceil(font.getlength(TEXT) / s)) + 2
     h = int(np.ceil(baseline + descent)) + 1
 
-    # The offset that quantises with the least error is the one whose stems and
-    # bowls already sit on pixel boundaries.
     best = None
     for i in range(SUBPIXEL_STEPS):
         for j in range(SUBPIXEL_STEPS):
@@ -99,8 +84,7 @@ def render(font_path, size, verbose=False):
                 best = (error, dx, dy, cov)
     error, dx, dy, cov = best
 
-    # Weight before edges: of the cuts that keep the outline's ink area, take
-    # the one that also quantises best.
+    # INFO: fc 20nov26 a 50% cut thins a bold face, so take the cut that keeps the outline's ink
     area = cov.sum()
     cut = min((abs((cov >= t).sum() - area), np.abs((cov >= t) - cov).sum(), t)
               for t in np.arange(0.34, 0.67, 0.01))[2]
@@ -108,8 +92,7 @@ def render(font_path, size, verbose=False):
     if verbose:
         print("origin dx=%.3f dy=%.3f, cut %.2f, ink %d px vs outline %.1f px, error %.1f px"
               % (dx, dy, cut, bits.sum(), area, np.abs(bits - cov).sum()))
-    # Trim to ink, and keep the x-height band's midline: that is what the eye
-    # reads as the middle of the word, not the block that the arcs stretch.
+    # INFO: fc 20nov26 centre on the x-height midline, which the eye reads as the word's middle
     cols = np.nonzero(bits.any(axis=0))[0]
     rows = np.nonzero(bits.any(axis=1))[0]
     x0, x1, y0, y1 = cols.min(), cols.max() + 1, rows.min(), rows.max() + 1
@@ -173,7 +156,6 @@ def emit(w, h, stride, rows, anchor, font_path, size):
 
 
 def stem_report(bits):
-    """Widths of the vertical stems, row by row: they should all match."""
     h, w = bits.shape
     y = h // 2
     runs, start = [], None
@@ -202,7 +184,7 @@ def main():
     w, h, stride, rows = pack(bits)
     with open(args.out, "w") as fh:
         fh.write(emit(w, h, stride, rows, anchor, args.font, args.size))
-    # CI formats what is committed, so the generator hands over formatted code.
+    # INFO: fc 20nov26 CI checks the committed file's format, so the generator writes it formatted
     formatter = shutil.which("clang-format") or "/opt/homebrew/opt/llvm@21/bin/clang-format"
     if os.path.exists(formatter):
         subprocess.run([formatter, "-i", args.out], check=False)

@@ -91,12 +91,13 @@ PEER_FRAMES_AT_THEIR_WIDEST = (
 
 
 class Registry(unittest.TestCase):
-    def test_the_widest_status_is_these_twenty_two_bytes(self):
+    def test_the_widest_status_without_the_transponder_is_these_twenty_bytes(self):
         frame = {"command": "status", "flight": "airborne", "upload": False,
                  "battery_percent": 100, "charging": False, "power_level": "critical",
-                 "went_dark_flat": False, "die_temperature_c": -3277, "bravo": "no_utc"}
+                 "went_dark_flat": False, "bravo": "no_utc", "no_tx": "pps"}
         encoded = frames.encode_frame(frame)
-        self.assertEqual(encoded.hex(), "a900050102" "02f4031864" "04f40502" "06f407390ccc" "0805")
+        self.assertEqual(len(encoded), 20)
+        self.assertEqual(encoded.hex(), "a900050102" "02f4031864" "04f40502" "06f4" "0805" "0c06")
         self.assertEqual(frames.decode_frame(encoded), frame)
 
     # The same bytes firmware/test/products/test_peer_frames.cpp pins, which a Go and a Bravo will speak.

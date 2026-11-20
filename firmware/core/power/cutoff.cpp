@@ -31,11 +31,6 @@ uint8_t lengthened(uint8_t run) {
 
 }  // namespace
 
-// A flight log record is written whatever the level says, and that is the point
-// of the rule rather than an exception to it: it is the one write whose value is
-// highest exactly when the cell is lowest. It is also the cheap one - an append
-// to the external SPI NOR log region, not a rewrite of an NVS sector that
-// garbage-collects the flash the image runs from.
 bool may_write(PowerLevel level, bool supply_warned, DurableWrite kind) {
     if (kind == DurableWrite::FlightRecord) return true;
     if (supply_warned) return false;

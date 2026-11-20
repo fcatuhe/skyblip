@@ -13,6 +13,7 @@
 #include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
+#include "test/support/receiver_at_rate.h"
 
 namespace skyblip {
 
@@ -30,6 +31,7 @@ struct Pass {
     bus::State state{};
     platform::host::Rf rf{radio, platform.clock(), bus.rf};
     ports::NullRoles null{};
+    ReceiverAtRate receiver{};
     ports::Roles roles{platform.clock(),
                        rf,
                        null.link,
@@ -40,7 +42,7 @@ struct Pass {
                        null.dfu,
                        null.die_temperature,
                        null.indicator,
-                       null.gnss,
+                       receiver,
                        platform.identity(),
                        platform.random(),
                        ports::Capability::Rf};
@@ -67,8 +69,7 @@ struct Pass {
     void poll_clock(uint64_t now_us) {
         platform.clock().set_microseconds(now_us);
         state.clock.pps_locked = platform.pps().locked();
-        state.clock.since_edge_ms = platform.pps().since_edge_ms(now_us);
-        state.clock.pps_edge_us = platform.pps().last_edge_us();
+        timing::take_edge(state.clock, platform.pps().last_edge_us(), now_us);
     }
 
     void whole_pass(uint64_t now_us) {

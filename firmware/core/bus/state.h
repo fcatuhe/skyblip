@@ -23,6 +23,7 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
 #include "core/timing/slot_timing_statistics.h"
+#include "core/timing/transmit_gate.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -34,10 +35,7 @@ struct AircraftTransponder {
     bool adsb_out{false};
 };
 
-// Where the radio believes it is inside the second it is arming, stamped with
-// the pass it said so on. The radio service is the only writer; whoever needs
-// to know whether the core may be stalled reads it here rather than deriving
-// the phase a second time (core/timing/durable_write.h).
+// INFO: fc 20nov26 read the dwell phase here to know if the core may stall, never derive it again
 struct RfState {
     timing::SlotPlan plan{};
     timing::DwellPhase dwell{};
@@ -98,9 +96,7 @@ struct RfState {
 
 struct PowerState {
     power::BatteryState battery{};
-    // What the cutoff monitor made of the same samples the gauge saw. Whoever
-    // draws a low cell reads this rather than comparing millivolts again: the
-    // debounce, the charger and the sanity floor are decided once.
+    // INFO: fc 20nov26 the cutoff monitor's verdict: read it rather than comparing millivolts again
     power::PowerLevel level{power::PowerLevel::Unknown};
     power::ChargeCondition charge{power::ChargeCondition::Unknown};
     bool supply_warned{false};
@@ -221,6 +217,8 @@ struct State {
     traffic::CallsignTable callsigns{};
     radio::Log radio_log{};
     RfState rf{};
+    // INFO: fc 19nov26 judged once a pass by the Go's RadioService, read by every transmit path
+    timing::TransmitGate transmit{};
     PowerState power{};
     FlightState flight{};
     GnssState gnss{};
@@ -274,15 +272,7 @@ struct State {
         uint32_t tx_ok{0};
         uint32_t tx_lost{0};
         uint32_t tx_named{0};
-        // INFO: fc 05aug26 The O-band uplink is its own path and is counted apart
-        // from the M band's: every frame that arrived in the uplink dwell, the ones
-        // Reed-Solomon refused, and the aircraft the rest of them put in the table.
-        // The third is smaller than the aircraft the frames carried whenever the
-        // ground station relayed one back that the table refuses - own-ship, or an
-        // aircraft we are hearing better first-hand. Until 2026-08-05 an uplink
-        // frame reached protocol::receive_m_band, failed to frame as either M-band
-        // system and landed in rx_bad: the whole feature was absent and its absence
-        // looked like radio noise, which is what hid it.
+        // INFO: fc 05aug26 the O-band uplink counts apart, so its failures never pass for noise
         uint32_t uplink_frames{0};
         uint32_t uplink_bad{0};
         uint32_t uplink_targets{0};
@@ -292,10 +282,11 @@ struct State {
     bool panel_presented{false};
     bool started{false};
 
-    // The traffic table's single time base. Mixing GNSS epoch seconds with
-    // boot-relative seconds underflows uint32 and ages every target out at once.
+    // INFO: fc 20nov26 one time base: mixing GNSS and boot seconds ages every target out
     uint32_t traffic_now_s(uint32_t now_ms) const {
-        if (clock.pps_locked && clock.utc_s != 0) return clock.utc_s;
+        // INFO: fc 19nov26 a second with no edge yet, locked or held, counts on from the last edge
+        if (timing::pps_anchored(clock) && clock.utc_s != 0)
+            return clock.utc_s + clock.since_edge_ms / 1000;
         return own.utc_valid ? own.utc_s : now_ms / 1000;
     }
 };

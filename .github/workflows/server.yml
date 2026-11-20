@@ -190,7 +190,7 @@ jobs:
         run: |
           version=$(ruby ../scripts/upstream_pins.rb version emscripten-core/emsdk)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      # The briefing draws a phone's prompt with the firmware's own page, compiled to WASM, rebuilt only when its sources change.
+      # The briefing draws a phone's prompt with the firmware's own page, compiled to WASM.
       - name: Restore the simulator the prompt is drawn with
         id: simulator
         uses: actions/cache@v6

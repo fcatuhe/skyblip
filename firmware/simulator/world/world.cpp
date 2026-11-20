@@ -58,9 +58,8 @@ void World<Platform>::service_button(uint32_t now_ms) {
         press_since_ms_ = now_ms;
         pressing_ = true;
     }
-    // A start instant and a flag, not an end instant: ports/clock.h's rule, and the
-    // same shape as the wrap bug section M found in the transmitter. A simulator
-    // that models a button with arithmetic nobody may copy is worse than useless.
+    // INFO: fc 20nov26 a start instant and a flag, not an end instant, as ports/clock.h requires
+    // for the counter's wrap
     set_button_down(platform_, button_held_ || (pressing_ && now_ms - press_since_ms_ < kPressMs));
 }
 
@@ -194,18 +193,15 @@ void Sky::move_aircraft(uint32_t now_ms) {
     }
 }
 
-// The accelerometer feels the ball and the wing load, and nothing here reads a
-// rate: the hub's gyroscope is never subscribed to (hardware/parts/bhi260).
+// INFO: fc 20nov26 no rate is modelled, because the hub's gyroscope is never subscribed to
+// (hardware/parts/bhi260)
 template <class Platform>
 void World<Platform>::update_inertial() {
     lean(platform_, kLevelFlightUpMg, static_cast<int16_t>(-slip_mg_));
 }
 
-// Every aircraft transmits once per second, at its own instant of the direct
-// slot and on the channel that slot carries (ADS-L 4 SRD-860 issue 2 §C.2.5,
-// §C.5). Scheduling the whole second up front is what a real transmitter's
-// clock does, and it keeps the emission instant independent of how coarsely the
-// simulation is stepped.
+// INFO: fc 20nov26 the whole second is scheduled up front, as a transmitter's clock does, so the
+// step size never moves an emission
 void Sky::schedule_second(uint64_t epoch_us, const model::Ownship& own) {
     for (auto& aircraft : aircraft_) {
         if (!aircraft.used || (aircraft.system != protocol::System::AdslDirect &&
@@ -236,8 +232,6 @@ uint32_t drawn(uint32_t address, uint32_t transmissions) {
 
 }  // namespace
 
-// What the ground station heard of one aircraft, which G.3 forwards as a whole
-// Traffic payload: the aircraft's own address, place, height and motion.
 model::AircraftObservation Sky::as_relayed(const VirtualAircraft& aircraft,
                                            const model::Ownship& own) const {
     model::AircraftObservation observation{};
@@ -259,11 +253,8 @@ model::AircraftObservation Sky::as_relayed(const VirtualAircraft& aircraft,
     return observation;
 }
 
-// One skyPost, one frame a second, carrying every aircraft it heard: §C.5's
-// uplink slot is 200..450 ms and our own ground station is on air from 210,
-// finishing well before the dwell closes at 442 (core/timing/slot.h). A relay
-// costs the aircraft nothing - it never transmits on the O band - so this is
-// scheduled apart from the direct transmitters rather than per aircraft.
+// INFO: fc 20nov26 one skyPost frame a second from 210 ms, inside C.5's 200 to 450 ms uplink slot
+// and before the dwell closes at 442
 void Sky::relay(uint64_t epoch_us, const model::Ownship& own) {
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     int relayed_count = 0;
@@ -289,8 +280,8 @@ void Sky::relay(uint64_t epoch_us, const model::Ownship& own) {
               adsl::kUplinkChipRateBps);
 }
 
-// Free-space-ish: a burst 100 m away lands at -40 dBm and every decade of
-// distance costs 20 dB, which puts a 10 km target near the receiver's floor.
+// INFO: fc 20nov26 -40 dBm at 100 m and 20 dB a decade, so a 10 km target sits near the receiver
+// floor
 int8_t Sky::rssi_at(double range_m) {
     const double clamped_range_m = range_m < 10.0 ? 10.0 : range_m;
     const double rssi_dbm = -40.0 - 20.0 * std::log10(clamped_range_m / 100.0);
@@ -369,8 +360,8 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
     const int32_t latitude_1e7 = latitude_1e7_of(aircraft);
     const int32_t longitude_1e7 = longitude_1e7_of(aircraft);
 
-    // ALP-TAS keys its frames on the UTC second, so a transmitter has to use the
-    // second the receiver is in, not the simulation's own count of seconds.
+    // INFO: fc 20nov26 ALP-TAS keys on the UTC second, so the transmitter uses the receiver's
+    // second, not the simulation's count
     const uint32_t utc_s = own.utc_valid ? own.utc_s : static_cast<uint32_t>(epoch_us / 1000000);
     const int32_t altitude_m =
         to_metres(Millimetres(own.altitude_hae_mm)).value + static_cast<int32_t>(aircraft.up_m);
@@ -385,8 +376,8 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
     if (slot < 0)
         slot = aircraft.phase_ms >= 0 ? (timing::Scheduler::slot_of(aircraft.phase_ms) == 1 ? 1 : 0)
                                       : static_cast<int>(aircraft.transmissions & 1u);
-    // A pinned phase inside window B's spill belongs to the dwell that opened in the
-    // previous second, so its burst is 830..1200 ms after that second, not this.
+    // INFO: fc 20nov26 a pinned phase inside window B's spill belongs to the previous second's
+    // dwell, 830 to 1200 ms after it
     const bool tail = aircraft.phase_ms >= 0 && aircraft.phase_ms < timing::kWindowBSpillMs;
     int phase_ms = aircraft.phase_ms;
     if (phase_ms < 0) {
@@ -407,8 +398,8 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
     name_itself(aircraft, epoch_us, utc_s, range_m);
 }
 
-// What a skyBlip or an OGN tracker adds to its position bursts: its registration,
-// in slot 1's tail, in the one second of ten its own address owns.
+// INFO: fc 20nov26 the registration goes in slot 1's tail, in the one second of ten the address
+// owns
 void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
                       double range_m) {
     if (aircraft.callsign[0] == 0) return;

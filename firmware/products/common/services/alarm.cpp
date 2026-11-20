@@ -21,6 +21,7 @@ void AlarmService::tick(uint32_t now_ms) {
         sign_on_pending_ = false;
         sign_.begin(indication::kSignOn, now_ms);
     }
+    if (stopped_transmitting_in_flight()) sign_.begin(indication::kSignNoTx, now_ms);
     const annunciation::Command command = annunciation_.update(situation, now_ms);
     if (annunciation_.voice() == annunciation::Voice::Traffic) sign_.cancel();
     const indication::Signal signal = sign_.update(now_ms);
@@ -45,6 +46,15 @@ bool AlarmService::lost_go() {
     const bool lost = following_go_ && !following && settings_.paired && airborne;
     following_go_ = following;
     return lost;
+}
+
+// INFO: fc 19nov26 one pulse as the NO TX mark and flight first stand together, a takeoff included
+bool AlarmService::stopped_transmitting_in_flight() {
+    const bool shown = context_.state.transmit.shown() != timing::NoTx::None;
+    const bool airborne = context_.state.flight.confirmed_state == flight::FlightState::Airborne;
+    const bool stopped = shown && airborne && !no_tx_in_flight_;
+    no_tx_in_flight_ = shown && airborne;
+    return stopped;
 }
 
 void AlarmService::sign_off(uint32_t now_ms) {
@@ -89,19 +99,14 @@ void AlarmService::park(uint32_t now_ms) {
     const annunciation::Command command = annunciation_.update(situation, now_ms);
     if (command.tone_changed) drive_buzzer(command);
     drive_motor(false);
-    // Dark first, through the same table that lit it, and only then let go of the
-    // pins. The order matters on silicon: these LEDs are active-low, so dark is a
-    // pin driven high, and releasing before darkening would leave the last colour
-    // lit on a floating line for as long as the rail lasts.
+    // INFO: fc 20nov26 the LEDs are active-low, so the lamp goes dark before the pins are released
+    // or the last colour stays lit
     drive_lamp(now_ms, /*running=*/false, indication::Signal{});
     context_.roles.indicator.park();
 }
 
-// Everything the table reads is already published on bus::State by the service
-// that owns it - the cell and its level by PowerService, the fix by
-// OwnshipService, the worst standing level by this one's AlarmGrader. Nothing
-// is derived a second time here, which is what keeps the lamp saying LOW at
-// exactly the voltage the glass and the tablet do.
+// INFO: fc 20nov26 reads only what other services published, so the lamp says LOW at the voltage
+// the glass and the tablet do
 void AlarmService::drive_lamp(uint32_t now_ms, bool running, indication::Signal signal) {
     indication::Situation situation{};
     situation.running = running;

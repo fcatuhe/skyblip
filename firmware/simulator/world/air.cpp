@@ -12,8 +12,8 @@ namespace skyblip::simulator {
 namespace {
 const char* kEventName[] = {"TX  ", "RX  ", "DEAF", "COLL"};
 
-// The radio reports the frequency its PLL word resolves to, a few hertz off the
-// channel it was asked for.
+// INFO: fc 20nov26 the radio reports the frequency its PLL word resolves to, a few hertz off the
+// channel asked for
 const char* channel_name(uint32_t frequency_hz) {
     if (Air::tuned_to(frequency_hz, adsl::kOBandHz)) return "869.525";
     if (Air::tuned_to(frequency_hz, adsl::kMBand1Hz)) return "868.400";
@@ -64,8 +64,8 @@ void Air::step(uint64_t now_us, models::Sx1262& radio) {
     for (Burst& burst : bursts_) {
         if (!burst.used || burst.started || now_us < burst.at_us) continue;
         burst.started = true;
-        // A receiver has to be tuned to the channel when the preamble arrives,
-        // not when the frame ends.
+        // INFO: fc 20nov26 the receiver must be tuned when the preamble arrives, not when the frame
+        // ends
         burst.heard = !burst.from_ownship && radio.receiving &&
                       tuned_to(radio.frequency_hz, burst.frequency_hz) &&
                       burst.rssi_dbm > kSensitivityDbm;
@@ -93,8 +93,8 @@ void Air::step(uint64_t now_us, models::Sx1262& radio) {
     set_carrier(now_us, radio);
 }
 
-// Own-ship's burst is air like any other: it occupies the channel, it collides,
-// and the radio only reports TxDone once it has actually been sent.
+// INFO: fc 20nov26 own-ship's burst occupies the channel and collides like any other, and TxDone
+// comes once it is sent
 void Air::take_own_transmission(uint64_t now_us, models::Sx1262& radio) {
     uint8_t chips[protocol::kTxChipBytes] = {0};
     uint8_t bytes = 0;
@@ -124,8 +124,8 @@ void Air::log(const Burst& burst, AirEvent event) {
     AirRecord& record = records_[count_ % kMaxRecords];
     record.at_us = burst.at_us;
     record.frequency_hz = burst.frequency_hz;
-    // The phase belongs to the burst's own instant. Taking it at log time, which
-    // is when the burst ENDS, dates a burst at 995 ms into the next second.
+    // INFO: fc 20nov26 the phase of the burst's start, since the log time is its end and would date
+    // it into the next second
     record.phase_ms = static_cast<uint16_t>(burst.at_us / 1000 % 1000);
     record.event = event;
     record.rssi_dbm = burst.rssi_dbm;
@@ -160,10 +160,8 @@ void Air::clear() {
     tx_in_flight_ = false;
 }
 
-// One line per burst, framed and decoded the way a receiver on the shared sync
-// window would: name the system, then read what that system puts in the clear.
-// ALP-TAS codes position against the receiver's own, which a channel log does
-// not have, so it shows the address the frame carries unencrypted.
+// INFO: fc 20nov26 ALP-TAS codes position against the receiver's own, which a channel log lacks, so
+// a line shows its clear address
 int Air::format(int index, char* out, int capacity) const {
     if (index < 0 || index >= record_count()) {
         if (capacity > 0) out[0] = 0;
@@ -177,9 +175,6 @@ int Air::format(int index, char* out, int capacity) const {
 
     const size_t left = static_cast<size_t>(capacity - head);
 
-    // The O band carries one thing and it is not Manchester-coded, so it is read
-    // its own way: how many aircraft the ground station put in the frame, which
-    // is the number a relay is worth judging by.
     if (tuned_to(record.frequency_hz, adsl::kOBandHz)) {
         uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
         if (!framed_uplink(record, packet))

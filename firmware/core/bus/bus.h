@@ -59,15 +59,9 @@ using AccelerometerQueue = Queue<events::AccelerometerSample, 2>;
 struct Bus {
     Queue<gnss::GnssSolution, 2> gnss;
     Queue<events::BarometerSample, 2> barometer;
-    // The connection itself, ahead of the bytes that travel over it: the config
-    // service is the single reader, because it is the one that holds what a link
-    // being up or gone means (a standing prompt, an upload window, the gauge it
-    // pushes unsolicited).
     Queue<events::LinkEvent, 4> link_events;
     Queue<events::RxFrame, 4> link_rx;
-    // One writer, one reader, per §5.3: the config service drains link_rx with a
-    // while-pop, so a log command sharing that queue would be read and dropped
-    // by the wrong service.
+    // INFO: fc 20nov26 config drains link_rx with a while-pop, so log frames need their own queue
     Queue<events::RxFrame, 2> log_rx;
     // INFO: fc 11nov26 the peer endpoint: the Go's BravoService drains it, and Bravo's PeerService
     Queue<events::RxFrame, 4> peer_rx;

@@ -6,7 +6,6 @@ namespace skyblip::flight {
 
 namespace {
 constexpr int32_t kHalfTurnC9 = kTrackC9Turn / 2;
-// 512 cordic9 units to 360 degrees: 45/64 of a degree each.
 constexpr int32_t kDegreesPerTurnNumerator = 45;
 constexpr int32_t kDegreesPerTurnDenominator = 64;
 }  // namespace

@@ -3,8 +3,7 @@
     ./scripts/blip.py --name "skyBlip Bravo" capture power_run
     ./scripts/blip.py --name "skyBlip Go" capture stop
 
-The unit asks on its glass, or a Bravo on its lamp, and waits for a press
-on its button, so this waits for that verdict as long as the prompt stands.
+It waits for the press that answers the unit's prompt for as long as the prompt stands.
 """
 import blip_frames as frames
 
@@ -24,7 +23,6 @@ def add_parser(sub, run):
 
 
 async def run(link, profile, timeout, say=print, decode=frames.decode_frame):
-    """The unit's verdict on one capture command, said as it comes."""
     await link.write_config({"command": "capture", "profile": profile})
     frame = await next_acknowledgement(link, timeout, decode)
     if frame.get("pending"):
@@ -34,12 +32,11 @@ async def run(link, profile, timeout, say=print, decode=frames.decode_frame):
 
 
 async def next_acknowledgement(link, timeout, decode):
-    """The next acknowledgement, past the status and update frames the unit pushes unasked."""
     return await frames.next_frame(link, ("acknowledgement",), timeout, "verdict", decode)
 
 
 async def press_verdict(link, timeout, decode):
-    """The verdict of a press, past a pending acknowledgement the link delivered twice."""
+    # INFO: fc 20nov26 the link can deliver a pending acknowledgement twice, so wait past every one
     while True:
         frame = await next_acknowledgement(link, timeout, decode)
         if not frame.get("pending"):

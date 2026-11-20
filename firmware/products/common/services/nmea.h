@@ -1,13 +1,3 @@
-// products/common/services/nmea.h: the traffic picture and ownship position
-// a paired tablet draws, in the sentences every EFB already speaks, and the
-// single writer of events::Endpoint::Nmea.
-//
-// core/protocol/nmea_out.h has formatted $PFLAA/$PFLAU/$PGRMZ since the first
-// week of the project and nothing in the product ever called it: the
-// characteristic existed, the endpoint was routed, and a pilot who paired a
-// tablet with a skyBlip Go saw an empty map. This is the producer. It owns the
-// cadence, the rotation and the framing; it owns no geometry - relative position
-// comes from core/protocol, the level from what core/traffic already decided.
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_NMEA_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_NMEA_H
 
@@ -21,56 +11,35 @@ namespace skyblip::common {
 
 class NmeaService : public runtime::Service {
    public:
-    // INFO: nm 04aug26 The cadence is what a moving map needs to draw a target
-    // as flying rather than teleporting, and it is not a radio figure. An EFB
-    // holds the last position it was given and redraws the symbol there, so the
-    // symbol's step is speed times this period: at 1 Hz a 50 m/s aircraft moves
-    // 50 m between draws, which reads as motion. Halving it buys nothing - the
-    // transmitters on the other side of this are ADS-L and ALP-TAS, both of
-    // which key once a second, so a second sentence inside the same second
-    // repeats a position that has not changed and spends a notification saying
-    // it. Doubling it makes a 100 m jump on the map and delays by a second any
-    // alarm the tablet raises for itself. Both SoftRF forks export at exactly
-    // this rate (SoftRF.ino isTimeToExport(), 1000 ms, in both trees).
+    // INFO: nm 04aug26 ADS-L and ALP-TAS key once a second, so a faster pass repeats a position and
+    // a slower one makes the map jump
     static constexpr uint32_t kMovingTargetRedrawPeriodMs = 1000;
 
-    // INFO: nm 04aug26 What the rotation below guarantees: every target in the
-    // table reaches the tablet inside this. It is core/traffic's own freshness
-    // rule (kAlertMaxAgeMs), because a target the device would no longer alarm
-    // on is exactly a target whose position on the tablet has gone stale - the
-    // two pictures must not be allowed to disagree by more than the device's own
-    // patience with a target.
+    // INFO: nm 04aug26 core/traffic's freshness rule, so the tablet never holds a target longer
+    // than the device would alarm on it
     static constexpr uint32_t kTargetRefreshCeilingMs = traffic::kAlertMaxAgeMs;
     static constexpr int kPassesPerRefreshCeiling =
         static_cast<int>(kTargetRefreshCeilingMs / kMovingTargetRedrawPeriodMs);
 
-    // A full table divided over those passes, rounded up: the cap on $PFLAA per
-    // pass that makes the bound arithmetic rather than hope.
     static constexpr int kTargetsPerPass =
         (traffic::TrafficTable::kMaxTargets + kPassesPerRefreshCeiling - 1) /
         kPassesPerRefreshCeiling;
     static_assert(kTargetsPerPass * kPassesPerRefreshCeiling >= traffic::TrafficTable::kMaxTargets,
                   "a full table would not be refreshed inside its bound");
 
-    // INFO: nm 04aug26 A pass is formatting and a handful of notifications, none
-    // of which stalls the core the way a flash write does
-    // (core/timing/durable_write.h), but own-ship keying the transmitter is the
-    // one window in the second that owes the radio something. A pass due while a
-    // burst is armed waits, and never longer than this, so the cadence above
-    // stays a cadence.
+    // INFO: nm 04aug26 a pass waits while own-ship's burst is armed, never longer than this, so the
+    // cadence stays a cadence
     static constexpr uint32_t kPassDeferralCeilingMs = 100;
 
-    // INFO: nm 04aug26 One BLE frame at its largest: 251 bytes of link-layer
-    // payload, less four for L2CAP and three for the notification header. A
-    // central that negotiates more than this is still served in frames this
-    // size, because no controller puts more than this in one air packet anyway.
+    // INFO: nm 04aug26 the largest BLE frame: 251 bytes of link-layer payload, less 4 for L2CAP and
+    // 3 for the notification header
     static constexpr int kFrameBytes = 244;
 
-    // Wider than the worst case test/core/test_nmea_out.cpp pins for these three
-    // sentences, and checked at the point of use rather than assumed.
+    // INFO: fc 20nov26 wider than the worst case test_nmea_out.cpp pins, and checked where it is
+    // used
     static constexpr int kSentenceBytes = 128;
 
-    // PFLAU, RMC, GGA, PGRMZ and LK8EX1, then the rotation's targets.
+    // INFO: fc 20nov26 the 5 are $PFLAU, $GPRMC, $GPGGA, $PGRMZ and $LK8EX1
     static constexpr int kMaxPassSentences = 5 + kTargetsPerPass;
     static constexpr int kPassBytes = kMaxPassSentences * kSentenceBytes;
 
@@ -81,8 +50,6 @@ class NmeaService : public runtime::Service {
     void tick(uint32_t now_ms) override;
     uint32_t due_in_ms(uint32_t now_ms) const override;
 
-    // Frames the link would not take. Silence towards a phone is a fault worth a
-    // number, the way core/comms counts its own (ConfigService::link_drops).
     uint32_t link_drops() const { return link_drops_; }
     bool enabled() const { return enabled_; }
 
@@ -98,7 +65,6 @@ class NmeaService : public runtime::Service {
     void drain();
     void abandon_pass();
 
-    // Where the rotation resumes once the pass has gone out up to `end`.
     struct Resume {
         int end;
         int cursor;
@@ -114,8 +80,8 @@ class NmeaService : public runtime::Service {
     uint32_t last_pass_ms_{0};
     uint32_t link_drops_{0};
     int payload_{ports::kMinimumLinkPayloadBytes};
-    // Where the rotation resumes. It advances only past a target that actually
-    // went out, so a pass cut short by a refusing link resends its tail first.
+    // INFO: fc 20nov26 advances only past a target that went out, so a pass a link cut short
+    // resends its tail first
     int cursor_{0};
     bool passed_once_{false};
     bool enabled_{false};

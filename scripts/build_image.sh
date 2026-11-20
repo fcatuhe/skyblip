@@ -3,16 +3,10 @@
 #
 #   scripts/build_image.sh <product> <signing-key.pem> [public-key.pem]
 #
-# What build_local.sh, the product-image job and the release job share. They
-# differ in where the workspace and the key come from, never in what an image
-# has to pass before it leaves. With a public key, the image must verify
-# against it: that is how CI knows it signed with the key the units trust.
-#
-# A product with a sensor hub lands two images of one commit in firmware/build/out/:
-# the base .signed.bin, which leaves the BHI260AP image on the external flash, and the
-# .full.signed.bin, which carries it. The .uf2 is always the full one. A product with
-# no hub, CONFIG_SKYBLIP_IMU_IMAGE unset in its prj.conf, builds the one image. A
-# .version line lands beside them.
+# build_local.sh, the product-image job and the release job share it. With a public
+# key, the image must verify against it. A product with a sensor hub lands a base
+# .signed.bin and a .full.signed.bin that carries the BHI260AP image in firmware/build/out/,
+# and the .uf2 is always the full one.
 #
 #   SKYBLIP_CHANNEL     development (default): MCUboot takes any image signed by its key
 #                       production: products/common/release/ adds the refusal of an older one
@@ -31,7 +25,7 @@ tree=${SKYBLIP_TREE:-$(git -C "$(dirname "$0")" rev-parse --show-toplevel)}
 python=${PYTHON:-python3}
 west=${WEST:-west}
 firmware=$tree/firmware
-# One build directory per product: west refuses a directory configured for another application.
+# INFO: fc 20nov26 one build directory per product, because west refuses one configured for another application
 build=$firmware/build/image/$product
 base_build=$firmware/build/image-base/$product
 app=$build/$product/zephyr
@@ -40,7 +34,6 @@ hub_image=$firmware/hardware/parts/bhi260/firmware/BHI260AP.fw
 out=$firmware/build/out
 topdir=$(cd "$firmware" && "$west" topdir)
 imgtool=$topdir/bootloader/mcuboot/scripts/imgtool.py
-# What tells mkuf2.py where Zephyr's uf2conv.py is, outside a `west build` env.
 export ZEPHYR_BASE=${ZEPHYR_BASE:-$topdir/zephyr}
 
 main() {
@@ -74,7 +67,6 @@ main() {
     "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
     "$python" "$tree/scripts/check_imu_image.py" "$base_app/zephyr.signed.bin" "$hub_image" base
   fi
-  # A unit refuses an upload naming another product, and takes none while it runs an image naming none.
   signed=("$app/zephyr.signed.bin" "$app/zephyr.signed.confirmed.bin")
   if has_hub; then signed+=("$base_app/zephyr.signed.bin"); fi
   for image in "${signed[@]}"; do
@@ -85,10 +77,7 @@ main() {
   stage_artifacts "$version"
 }
 
-# The build number orders two images of one release and is NOT in the VERSION
-# file: Zephyr rejects a tweak above 255 (cmake/modules/version.cmake:79-81).
-# Commit count: it only ever goes up on a branch that only moves forward.
-# Every product carries firmware/VERSION, and Zephyr reads it through the product's link to it.
+# INFO: fc 20nov26 the build number is the commit count, not a VERSION tweak, because Zephyr rejects a tweak above 255
 image_version() {
   local file=$firmware/VERSION link=$firmware/products/$product/VERSION triple build major minor patch
   test -f "$firmware/products/$product/CMakeLists.txt" || { echo "FAIL: no such product: $product" >&2; exit 1; }
@@ -104,7 +93,7 @@ image_version() {
     -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
   test -n "${triple//./}" || { echo "FAIL: no version triple in $file" >&2; exit 1; }
   build=$(git -C "$tree" rev-list --count HEAD)
-  # The update frame fits one notification on the narrowest phone only up to dfu::kWidestVersion.
+  # INFO: fc 20nov26 the update frame fits one notification on the narrowest phone only up to dfu::kWidestVersion
   IFS=. read -r major minor patch <<< "$triple"
   if [ "$major" -gt 9 ] || [ "$minor" -gt 99 ] || [ "$patch" -gt 99 ] || [ "$build" -gt 99999 ]; then
     echo "FAIL: $triple+$build is wider than 9.99.99+99999, the widest version the update frame fits" >&2
@@ -113,7 +102,6 @@ image_version() {
   echo "$triple+$build"
 }
 
-# The board is a fact about the SKU, declared by the product, never passed in.
 declared_board() {
   local declared
   declared=$(sed -n 's/^skyblip_product_board(\(.*\))$/\1/p' \
@@ -122,18 +110,16 @@ declared_board() {
   echo "$declared"
 }
 
-# The hub's image is pinned by the product's prj.conf, and only a product that pins one has a base build.
 has_hub() {
   grep -q '^CONFIG_SKYBLIP_IMU_IMAGE=y' "$firmware/products/$product/prj.conf"
 }
 
-# A full image and a base one: SB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED (products/<product>/Kconfig.sysbuild).
 build_image() {
   local version=$1 dir=$2 linked=$3 conf=$firmware/build-conf
   mkdir -p "$conf"
   echo "SB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$(bootloader_key_files)\"" > "$conf/signing.conf"
   echo "CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"$version\"" > "$conf/version.conf"
-  # Passed every time, sysbuild/mcuboot.conf too: a -D replaces it, and a list left out stays cached.
+  # INFO: fc 20nov26 pass every conf each time, because a -D replaces the cached list and one left out stays cached
   local release=$firmware/products/common/release
   local app_conf=$conf/version.conf
   local mcuboot_conf=$firmware/products/$product/sysbuild/mcuboot.conf
@@ -147,7 +133,6 @@ build_image() {
 
   if [ "${SKYBLIP_PRISTINE:-0}" = 1 ]; then rm -rf "$dir"; fi
   drop_build_of_moved_sdk "$dir"
-  # -D<image>_ is sysbuild's namespace for one image, named after the app dir.
   (cd "$firmware" && "$west" build -b "$board" -d "$dir" "products/$product" --sysbuild \
     -- -DSB_EXTRA_CONF_FILE="$conf/signing.conf" \
        -D"${product}"_EXTRA_CONF_FILE="$app_conf" \
@@ -155,7 +140,7 @@ build_image() {
        "${hub_flag[@]}")
 }
 
-# The first key signs. A development bootloader also verifies releases, so a development unit installs either over the air.
+# INFO: fc 20nov26 the first key signs, and a development bootloader also trusts the production key
 bootloader_key_files() {
   if [ "$channel" = production ]; then
     realpath "$key"
@@ -164,7 +149,6 @@ bootloader_key_files() {
   fi
 }
 
-# A unit installs over the air only what its MCUboot verifies, and reads those keys off MCUboot itself.
 assert_bootloader_keys() {
   local dir=$1 signing=$firmware/build-conf/signing.pub.pem trusted
   "$python" "$imgtool" getpub -k "$key" -e pem > "$signing"
@@ -173,8 +157,7 @@ assert_bootloader_keys() {
   "$python" "$tree/scripts/check_bootloader_keys.py" "$dir/mcuboot/zephyr/zephyr.bin" "${trusted[@]}"
 }
 
-# CMake caches the compiler by absolute path, so a build configured against an SDK
-# that has since moved can only fail to configure.
+# INFO: fc 20nov26 CMake caches the compiler by absolute path, so a build against a moved SDK cannot configure
 drop_build_of_moved_sdk() {
   local dir=$1 cache=$1/$product/CMakeCache.txt sdk
   [ -f "$cache" ] || return 0
@@ -185,8 +168,7 @@ drop_build_of_moved_sdk() {
   fi
 }
 
-# 0.0.0+0 is what gets signed whenever the VERSION file stops being picked up,
-# and it silently disables downgrade prevention on every unit that takes it.
+# INFO: fc 20nov26 an unstamped 0.0.0+0 image would silently disable downgrade prevention on every unit
 assert_version_stamped() {
   local version=$1 image=$2 stamped
   stamped=$("$python" "$imgtool" verify "$image/zephyr.signed.bin" | sed -n 's/^Image version: //p')
@@ -194,8 +176,7 @@ assert_version_stamped() {
     || { echo "FAIL: signed ${stamped:-nothing}, expected $version"; exit 1; }
 }
 
-# The bootloader enforces the rule and the app predicts it: the two disagreeing is
-# an app that promises an install its bootloader then throws away.
+# INFO: fc 20nov26 the app predicts what the bootloader enforces, so a mismatch promises installs it throws away
 assert_downgrade_rule() {
   local dir=$1 image=$2 in_bootloader in_app expected=n
   [ "$channel" = production ] && expected=y
@@ -212,8 +193,7 @@ assert_signed_by() {
   echo "$2/zephyr.signed.bin: signed by the key in $1"
 }
 
-# A slot0 written straight by the bootloader never swaps, so it never gets to
-# mark itself good: unconfirmed, the image is reverted on the second boot.
+# INFO: fc 20nov26 a slot0 the bootloader writes never swaps, so an unconfirmed image reverts on the second boot
 assert_confirmed_image_differs() {
   test -f "$app/zephyr.signed.confirmed.hex" \
     || { echo "FAIL: no confirmed hex, is CONFIG_MCUBOOT_GENERATE_CONFIRMED_IMAGE still y?"; exit 1; }
@@ -221,7 +201,7 @@ assert_confirmed_image_differs() {
     || { echo "FAIL: the confirmed hex is byte-identical to the unconfirmed one"; exit 1; }
 }
 
-# The full image only: the base one is the same RAM and less flash.
+# INFO: fc 20nov26 only the full image is checked, because the base one has the same RAM and less flash
 check_budgets() {
   "$python" "$tree/scripts/size_check.py" "$app/zephyr.elf"
   if has_hub; then
@@ -231,10 +211,7 @@ check_budgets() {
   fi
 }
 
-# The application image must be the CONFIRMED one: a slot0 written directly
-# never swaps, so it never marks itself good and the bootloader reverts it.
-# mkuf2 leaves its intermediate .merged.hex beside the .uf2, so it writes into
-# the build directory and out/ takes the copy.
+# INFO: fc 20nov26 mkuf2 leaves a .merged.hex beside the .uf2, so it writes in the build directory
 stage_artifacts() {
   local version=$1
   "$python" "$tree/scripts/mkuf2.py" "$board" "$build/$slug.uf2" \

@@ -1,4 +1,5 @@
 import { compareVersions, parseVersion } from "#skyblip/image"
+import { noTxMark } from "#skyblip/settings"
 import { say } from "controllers/briefing/words"
 
 const DATE = { day: "numeric", month: "short", year: "numeric" }
@@ -55,7 +56,7 @@ export function factsOf(unit) {
   const phase = unit.state?.phase
   if (unit.linked) {
     const { status, running: version, image } = unit.state
-    return [say("words.connected"), battery(status), flight(status), running(version, trackOf(image))].filter(Boolean)
+    return [say("words.connected"), noTxMark(status), battery(status), flight(status), running(version, trackOf(image))].filter(Boolean)
   }
   if (phase === "rebooting") return [say("words.restarting")]
   if (phase === "connecting") return [say("words.connecting")]

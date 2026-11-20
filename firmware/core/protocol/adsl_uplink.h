@@ -18,10 +18,7 @@ class AdslUplink {
     struct DecodeStatistics {
         int targets{0};
         int corrected{0};
-        // Records the frame carried and the decoder refused. Reed-Solomon can
-        // correct to a valid codeword that is not the one that was sent, so a
-        // frame that passes parity can still hold nonsense: what it holds is
-        // checked before any of it becomes traffic.
+        // INFO: fc 20nov26 parity can pass on a wrong Reed-Solomon codeword, so records are checked
         int rejected{0};
         // INFO: fc 13nov26 G.3: older than 10 s or dated in the future, so not forwarded as current
         int stale{0};

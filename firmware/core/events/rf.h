@@ -10,18 +10,12 @@ namespace skyblip::events {
 // INFO: fc 14nov26 Busy: the assessment before a burst found the channel taken, and nothing keyed
 enum class RfEventType : uint8_t { RxDone, CrcError, TxDone, Missed, Busy };
 
-// INFO: fc 05aug26 The longest burst any dwell reads is the O-band uplink frame,
-// an RS(255,223) codeword (§C.4, core/protocol/adsl_uplink.h), and this event is
-// where the executor copies what the radio reported. A buffer shorter than the
-// codeword truncates it, and Reed-Solomon then reports damage the air never did.
-// core/protocol/adsl_uplink.h static_asserts the frame still fits.
+// INFO: fc 05aug26 fits the uplink's RS(255,223) codeword (§C.4): truncation reads as damage
 constexpr int kRfEventBytes = 255;
 
 struct RfEvent {
     RfEventType type;
-    // Which dwell reported this, which is what names the system it belongs to.
-    // M by default so a queue entry nobody stamped reads as the band that
-    // carries two systems and is framed rather than trusted.
+    // INFO: fc 20nov26 M by default, so an unstamped entry is framed rather than trusted
     model::Band band;
     uint8_t bytes;
     int8_t rssi_dbm;
