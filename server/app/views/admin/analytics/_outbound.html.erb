@@ -1,0 +1,34 @@
+<%# locals: (links:, visitors:, filter_params:) %>
+<section class="admin-card analytics-outbound">
+  <h2><%= t("analytics.overview.outbound.title") %></h2>
+  <% if links.any? %>
+    <div class="table-scroll admin-table">
+      <table>
+        <thead>
+          <tr>
+            <th><%= analytics_filter_label(:outbound) %></th>
+            <th class="admin-number"><%= t("analytics.overview.visitors") %></th>
+            <th class="admin-number"><%= t("analytics.overview.outbound.clicks") %></th>
+            <th class="admin-number"><%= t("analytics.overview.outbound.conversion") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% links.each do |link| %>
+            <tr>
+              <th>
+                <%= link_to analytics_outbound_label(link.href), analytics_path_with(admin_analytics_path, filter_params.merge(outbound: link.href)),
+                      class: "admin-truncate", title: link.href %>
+                <%= analytics_outbound_detail(link) %>
+              </th>
+              <td class="admin-number"><%= number_with_delimiter(link.visitors) %></td>
+              <td class="admin-number"><%= number_with_delimiter(link.clicks) %></td>
+              <td class="admin-number"><%= analytics_conversion(link.visitors, of: visitors) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="note"><%= t("analytics.no_results") %></p>
+  <% end %>
+</section>

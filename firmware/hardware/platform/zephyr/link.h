@@ -4,6 +4,7 @@
 
 #include <zephyr/bluetooth/conn.h>
 
+#include "core/bus/bus.h"
 #include "core/events/link.h"
 #include "ports/link.h"
 
@@ -30,15 +31,8 @@ class Link : public ports::Link {
     bool central_of(const events::Peer& peer, events::BluetoothAddress& out) const override;
     int phones() const override;
 
-    // Non-blocking: pop one queued inbound frame (config writes). The shell
-    // drains this into App::on_link_rx(). Returns false when empty.
-    bool pop_rx(events::RxFrame& out);
-
-    // The same handover for the connection itself: the Bluetooth callbacks fill
-    // a comms::LinkSession, the board drains it onto bus.link_events beside the
-    // frames. The board calls this on both platforms, so a port that stops
-    // offering it stops building.
-    bool pop_event(events::LinkEvent& out);
+    // INFO: fc 19nov26 before begin(): the callbacks push frames and link events onto this bus
+    void deliver_to(bus::Bus& bus);
 
    private:
     static Status advertise_within_ceiling(Status status, bool admits);

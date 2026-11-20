@@ -176,25 +176,25 @@ void ConfigService::confirm() {
     } else if (pending_ == Pending::Recovery) {
         pending_ = Pending::None;
         upload_window_open_ = false;
-        recovery_requested_ = true;
+        confirmed_ = Action::Recovery;
         acknowledge(true, link::Reason::Recovery);
     } else if (pending_ == Pending::PowerOff) {
         pending_ = Pending::None;
         upload_window_open_ = false;
-        power_off_requested_ = true;
+        confirmed_ = Action::PowerOff;
         acknowledge(true, link::Reason::PowerOff);
     } else if (pending_ == Pending::EraseLog) {
         pending_ = Pending::None;
-        log_erase_requested_ = true;
+        confirmed_ = Action::EraseLog;
         log_erase_peer_ = claim_.peer();
         acknowledge(true, link::Reason::EraseLog);
     } else if (pending_ == Pending::GnssColdStart) {
         pending_ = Pending::None;
-        gnss_cold_start_requested_ = true;
+        confirmed_ = Action::GnssColdStart;
         acknowledge(true, link::Reason::GnssColdStart);
     } else if (pending_ == Pending::Capture) {
         pending_ = Pending::None;
-        capture_requested_ = staged_capture_;
+        confirmed_ = Action::Capture;
         acknowledge(true, link::Reason::Capture);
     }
 }

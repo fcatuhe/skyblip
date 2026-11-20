@@ -9,12 +9,13 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
 
+#include "core/bus/bus.h"
 #include "core/comms/link_sessions.h"
 #include "core/events/link.h"
 #include "core/identity/activation.h"
-#include "core/util/fifo.h"
 #include "hardware/platform/zephyr/att_budget.h"
 #include "hardware/platform/zephyr/bluetooth_address.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/skyblip_uuid.h"
 
 namespace skyblip::platform::zephyr {
@@ -48,10 +49,8 @@ static struct bt_uuid_128 log_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kLogCharacter
 // (an iPhone's usual answer) is 182 bytes of payload and not 185.
 constexpr uint16_t kNotifyHeaderBytes = 3;
 
-Fifo<RxFrame, 8> g_rx;
-// The same lock the inbound frames use, because it guards the same handover: a
-// Bluetooth callback writes, the service loop reads, and a lifecycle event
-// interleaved with a frame must not tear either of them.
+bus::Bus* g_bus = nullptr;
+// INFO: fc 19nov26 every callback pushes onto the bus under this lock, so the stack is one producer
 struct k_spinlock g_lock;
 comms::LinkSessions g_sessions;
 struct bt_conn* g_connections[CONFIG_BT_MAX_CONN] = {};
@@ -118,9 +117,16 @@ Status push_rx(struct bt_conn* connection, Endpoint endpoint, const void* data, 
     for (uint16_t i = 0; i < frame.bytes; i++) frame.data[i] = incoming[i];
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     frame.connection = g_sessions.connection(frame.session_id);
-    const Status queued = g_rx.push(frame);
+    const bool queued = g_bus != nullptr && g_bus->deliver(frame);
     k_spin_unlock(&g_lock, key);
-    return queued;
+    g_loop_wake.wake();
+    return queued ? Status::Ok : Status::Full;
+}
+
+// INFO: fc 19nov26 called under g_lock, after the sessions raised an Up or a Down
+void forward_events() {
+    LinkEvent event{};
+    while (g_bus != nullptr && g_sessions.pop(event)) (void)g_bus->link_events.push(event);
 }
 
 // INFO: fc 04aug26 The inbound half of the same rule. With an ATT_MTU of 498 a
@@ -290,12 +296,7 @@ void resume_advertising() {
     if (admits) (void)start_advertising();
 }
 
-// INFO: le 04aug26 The three callbacks are the whole producer side, and none of
-// them touches a service: they hand the connection to comms::LinkSession under
-// the spinlock exactly as a config write is handed to g_rx, and the board drains
-// both onto the bus from the service loop. A Bluetooth callback runs on the host
-// stack's own thread, so calling into a service from here would be a second path
-// into core/ with no critical section around it.
+// INFO: le 04aug26 the callbacks touch no service, they push onto the bus and wake the loop
 // INFO: fc 25sep26 Zephyr drops a gone link's sent callbacks, so a new link starts at zero
 // INFO: fc 11nov26 a phone past the ceiling a paired Bravo leaves is disconnected, never served
 void connected(struct bt_conn* connection, uint8_t error) {
@@ -307,7 +308,9 @@ void connected(struct bt_conn* connection, uint8_t error) {
         g_sessions.connected(session_of(connection), payload_from_mtu(bt_gatt_get_mtu(connection)),
                              address_of(bt_conn_get_dst(connection)));
     if (admitted) g_connections[index] = bt_conn_ref(connection);
+    forward_events();
     k_spin_unlock(&g_lock, key);
+    g_loop_wake.wake();
     if (!admitted) {
         (void)bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_LOW_RESOURCES);
         return;
@@ -321,7 +324,9 @@ void disconnected(struct bt_conn* connection, uint8_t reason) {
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     g_connections[index] = nullptr;
     g_sessions.disconnected(session_of(connection), reason);
+    forward_events();
     k_spin_unlock(&g_lock, key);
+    g_loop_wake.wake();
     bt_conn_unref(connection);
 }
 // INFO: fc 18sep26 Advertising stops on connect, and only recycled() has a free connection object.
@@ -337,7 +342,9 @@ void mtu_updated(struct bt_conn* connection, uint16_t tx, uint16_t /*rx*/) {
     if (g_connections[bt_conn_index(connection)] != connection) return;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     g_sessions.payload_changed(session_of(connection), payload_from_mtu(tx));
+    forward_events();
     k_spin_unlock(&g_lock, key);
+    g_loop_wake.wake();
 }
 // Registered rather than section-defined, unlike the connection callbacks above:
 // bt_gatt_cb is a runtime list, and this is the call every Zephyr release offers
@@ -499,21 +506,7 @@ Status Link::send_to(const events::Peer& peer, Endpoint endpoint, ConstByteSpan 
     return sent;
 }
 
-bool Link::pop_rx(RxFrame& out) {
-    k_spinlock_key_t key = k_spin_lock(&g_lock);
-    Result<RxFrame> popped = g_rx.pop();
-    k_spin_unlock(&g_lock, key);
-    if (!popped.ok()) return false;
-    out = popped.value();
-    return true;
-}
-
-bool Link::pop_event(LinkEvent& out) {
-    k_spinlock_key_t key = k_spin_lock(&g_lock);
-    const bool got = g_sessions.pop(out);
-    k_spin_unlock(&g_lock, key);
-    return got;
-}
+void Link::deliver_to(bus::Bus& bus) { g_bus = &bus; }
 
 Link& link() {
     static Link instance;

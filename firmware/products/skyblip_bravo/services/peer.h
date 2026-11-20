@@ -43,6 +43,7 @@ class PeerService : public runtime::Service {
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     bool answer(uint32_t now_ms);
     // INFO: fc 16nov26 the Go a trusted browser named, whose request Bravo answers as a press would
