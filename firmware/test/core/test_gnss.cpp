@@ -45,7 +45,7 @@ TEST_CASE("gnss: a DDMM.mmmm coordinate parses to 1e-7 degrees") {
     CHECK(std::abs(longitude + 115166667) < 30000);
 }
 
-TEST_CASE("gnss: RMC updates fix position, time, speed, track") {
+TEST_CASE("gnss: RMC updates fix position, time, speed, track" * doctest::test_suite("main")) {
     NmeaParser parser;
     const char* rmc = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230825,003.1,W*6B";
     CHECK(parser.parse_line(rmc, static_cast<int>(strlen(rmc))));
@@ -210,7 +210,8 @@ TEST_CASE("gnss: GGA updates altitude and sats") {
 // be added. Across central Europe the separation is 45-48 m, which is squarely
 // inside the vertical alarm window: reporting MSL as if it were HAE puts us that
 // far below every correctly implemented neighbour.
-TEST_CASE("gnss: GGA carries MSL and ellipsoidal height as separate values") {
+TEST_CASE("gnss: GGA carries MSL and ellipsoidal height as separate values" *
+          doctest::test_suite("main")) {
     NmeaParser parser;
     const char* gga = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
     REQUIRE(parser.parse_line(gga, static_cast<int>(strlen(gga))));
@@ -361,7 +362,8 @@ TEST_CASE("gnss: a fix is timestamped before its sentence arrived") {
 }
 
 // A latched PPS edge dates the solution exactly, which no per-chip constant can as the burst grows.
-TEST_CASE("gnss: a locked PPS edge dates the fix, not the stamped latency") {
+TEST_CASE("gnss: a locked PPS edge dates the fix, not the stamped latency" *
+          doctest::test_suite("main")) {
     GnssSolution solution{};
     solution.pps_latency_ms = 333;
 

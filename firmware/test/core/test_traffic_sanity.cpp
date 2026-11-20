@@ -27,7 +27,8 @@ double free_space_loss_db(int32_t range_m) {
 // miscorrections and the count is not zero, and a miscorrected position field
 // decodes to a perfectly well-formed aircraft somewhere it cannot be.
 
-TEST_CASE("traffic: a target further away than the radio can hear is a mis-decode") {
+TEST_CASE("traffic: a target further away than the radio can hear is a mis-decode" *
+          doctest::test_suite("main")) {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);

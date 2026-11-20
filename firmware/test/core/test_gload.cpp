@@ -42,7 +42,8 @@ TEST_CASE("gload: longitudinal is the acceleration, positive forward") {
     CHECK(meter.now().longitudinal_mg == -400);
 }
 
-TEST_CASE("gload: the most and the least of each axis are held, and the first sample is both") {
+TEST_CASE("gload: the most and the least of each axis are held, and the first sample is both" *
+          doctest::test_suite("main")) {
     flight::GMeter meter;
     meter.observe(SpecificForce{0, 1200, 0}, 1000);
     CHECK(meter.most().normal_mg == 1200);

@@ -21,7 +21,8 @@ TEST_CASE("flight timer: nothing has flown until something takes off") {
     CHECK(timer.seconds() == 0);
 }
 
-TEST_CASE("flight timer: the count runs from the takeoff, not from the boot") {
+TEST_CASE("flight timer: the count runs from the takeoff, not from the boot" *
+          doctest::test_suite("main")) {
     FlightTimer timer;
     timer.update(FlightState::Ground, 5 * kMinuteMs);
     timer.update(FlightState::Airborne, 8 * kMinuteMs);
@@ -30,7 +31,8 @@ TEST_CASE("flight timer: the count runs from the takeoff, not from the boot") {
 }
 
 // A touch and go is one hour in the logbook, not two entries the pilot has to add up.
-TEST_CASE("flight timer: a landing holds the figure and the next takeoff carries on from it") {
+TEST_CASE("flight timer: a landing holds the figure and the next takeoff carries on from it" *
+          doctest::test_suite("main")) {
     FlightTimer timer;
     timer.update(FlightState::Airborne, 0);
     timer.update(FlightState::Airborne, 42 * kMinuteMs);

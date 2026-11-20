@@ -28,7 +28,8 @@ TEST_CASE("radio log: an empty log has nothing to read") {
     CHECK(log.count() == 0);
 }
 
-TEST_CASE("radio log: the burst that just happened is the one at the top") {
+TEST_CASE("radio log: the burst that just happened is the one at the top" *
+          doctest::test_suite("main")) {
     radio::Log log;
     log.record(heard(0xAAAAAA, 10));
     log.record(heard(0xBBBBBB, 11));

@@ -135,7 +135,8 @@ TEST_CASE("indication: no row spends more of the pack than the budget it declare
     }
 }
 
-TEST_CASE("indication: traffic outranks everything the device has to say about itself") {
+TEST_CASE("indication: traffic outranks everything the device has to say about itself" *
+          doctest::test_suite("main")) {
     Situation situation = everything_at_once();
     CHECK(condition_for(situation) == Condition::Alarm);
     CHECK(indication_for(Condition::Alarm).lamp == indication::Colour::Red);
@@ -172,7 +173,8 @@ TEST_CASE("indication: the priority order is the table, top row first") {
 
 // The rows a product with no glass lights: a phone's prompt, and a phone connected.
 TEST_CASE(
-    "indication: a prompt yields only to traffic, and a link keeps the fix colour twice as fast") {
+    "indication: a prompt yields only to traffic, and a link keeps the fix colour twice as fast" *
+    doctest::test_suite("main")) {
     Situation situation = everything_at_once();
     situation.prompting = true;
     situation.linked = true;
@@ -236,7 +238,7 @@ TEST_CASE("indication: the cutoff monitor decides what low means, not a second t
     CHECK(condition_for(situation) == Condition::NoFix);
 }
 
-TEST_CASE("indication: alive is a wink, not an LED left on") {
+TEST_CASE("indication: alive is a wink, not an LED left on" * doctest::test_suite("main")) {
     Situation situation{};
     situation.power_level = power::PowerLevel::Normal;
     situation.fix_valid = true;
