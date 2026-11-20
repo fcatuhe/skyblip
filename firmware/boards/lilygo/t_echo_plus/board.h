@@ -285,13 +285,12 @@ class TEchoPlus {
 
         const uint64_t now_us = platform_.clock().microseconds();
         state.clock.pps_locked = platform_.pps().locked();
-        state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
-        poll_barometer_on_pps(state.clock, now_ms);
         // The edge itself, as the surface latched it: whoever reads it later
         // reads an instant that has not gone stale in the meantime. Rebuilding
         // it from the millisecond phase threw away up to a millisecond of the
         // 5 ms retune before the plan was even armed.
-        timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
+        timing::take_edge(state.clock, platform_.pps().last_edge_us(), now_us);
+        poll_barometer_on_pps(state.clock, now_ms);
         // The one place the PPS edge is owned: the bench's interval-error
         // histogram is fed here rather than by a second reader of the pin.
         state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);

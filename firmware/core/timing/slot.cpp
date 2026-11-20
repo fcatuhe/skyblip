@@ -47,6 +47,12 @@ void carry_utc_to_edge(ClockState& clock, uint64_t edge_us) {
     clock.utc_edge_us = edge_us;
 }
 
+void take_edge(ClockState& clock, uint64_t edge_us, uint64_t now_us) {
+    const bool edged = clock.pps_locked || edge_us != 0;
+    clock.since_edge_ms = edged ? static_cast<uint32_t>(since_edge_us(edge_us, now_us) / 1000) : 0;
+    carry_utc_to_edge(clock, edge_us);
+}
+
 bool in_pps_holdover(const ClockState& clock) {
     return clock.utc_valid && !clock.pps_locked && clock.pps_edge_us != 0 &&
            clock.since_edge_ms <= kPpsHoldoverMs;

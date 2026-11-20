@@ -70,8 +70,7 @@ struct Pass {
     void poll_clock(uint64_t now_us) {
         platform.clock().set_microseconds(now_us);
         state.clock.pps_locked = platform.pps().locked();
-        state.clock.since_edge_ms = platform.pps().since_edge_ms(now_us);
-        state.clock.pps_edge_us = platform.pps().last_edge_us();
+        timing::take_edge(state.clock, platform.pps().last_edge_us(), now_us);
     }
 
     void whole_pass(uint64_t now_us) {

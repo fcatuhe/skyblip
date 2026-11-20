@@ -290,9 +290,8 @@ struct State {
     // The traffic table's single time base. Mixing GNSS epoch seconds with
     // boot-relative seconds underflows uint32 and ages every target out at once.
     uint32_t traffic_now_s(uint32_t now_ms) const {
-        if (clock.pps_locked && clock.utc_s != 0) return clock.utc_s;
-        // INFO: fc 19nov26 a held second counts on from the last edge, as the slot map does
-        if (timing::in_pps_holdover(clock) && clock.utc_s != 0)
+        // INFO: fc 19nov26 a second with no edge yet, locked or held, counts on from the last edge
+        if (timing::pps_anchored(clock) && clock.utc_s != 0)
             return clock.utc_s + clock.since_edge_ms / 1000;
         return own.utc_valid ? own.utc_s : now_ms / 1000;
     }

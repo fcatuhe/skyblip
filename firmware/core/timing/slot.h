@@ -65,7 +65,7 @@ constexpr int drift_ms_after(uint32_t held_ms) {
     return static_cast<int>((uint64_t{held_ms} * kRadioClockDriftCeilingPpm + 999999) / 1000000);
 }
 static_assert(drift_ms_after(kPpsHoldoverMs) <= gnss::kStampToleranceMs,
-              "a second held through the whole holdover stays inside G.1.1's 10 ms");
+              "a held second drifts at most the 10 ms each burst keeps from C.5's slot edges");
 
 // One name for the band, spelled where a received burst can carry it.
 using model::Band;
@@ -95,6 +95,9 @@ struct ClockState {
 
 void carry_utc_to_edge(ClockState& clock, uint64_t edge_us);
 
+// INFO: fc 19nov26 one edge read dates the second carried and the time since it
+void take_edge(ClockState& clock, uint64_t edge_us, uint64_t now_us);
+
 // INFO: fc 28sep26 the edge interrupt can land between reading now and reading the edge
 constexpr uint64_t since_edge_us(uint64_t edge_us, uint64_t now_us) {
     return now_us > edge_us ? now_us - edge_us : 0;
@@ -103,10 +106,9 @@ constexpr uint64_t since_edge_us(uint64_t edge_us, uint64_t now_us) {
 // INFO: fc 19nov26 unlocked since an edge recent enough that the slot map still flies on it
 bool in_pps_holdover(const ClockState& clock);
 
-// INFO: fc 19nov26 C.5 and G.1.1: the second is the latched edge, or the last one held
+// INFO: fc 19nov26 C.5: the second is the latched edge, or the last one held
 bool pps_anchored(const ClockState& clock);
 
-// INFO: fc 19nov26 how far a held second may have drifted, none while the edge is latched
 int holdover_drift_ms(const ClockState& clock);
 
 // INFO: fc 12nov26 UTC to the millisecond, none without a PPS lock and a dated second

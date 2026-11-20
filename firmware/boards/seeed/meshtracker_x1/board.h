@@ -138,9 +138,8 @@ class MeshtrackerX1 {
 
         const uint64_t now_us = platform_.clock().microseconds();
         state.clock.pps_locked = platform_.pps().locked();
-        state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
+        timing::take_edge(state.clock, platform_.pps().last_edge_us(), now_us);
         poll_barometer(state.clock, now_ms);
-        timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
         state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
     }
 

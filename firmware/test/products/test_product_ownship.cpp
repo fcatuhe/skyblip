@@ -244,11 +244,11 @@ TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microseco
     CHECK(rebuilt - rig.state().clock.pps_edge_us == 678u);
 
     rig.platform.pps().set_locked(false);
-    rig.platform.clock().set_microseconds(13345678);
-    rig.product.run_pass(13345);
+    rig.platform.clock().set_microseconds(15345678);
+    rig.product.run_pass(15345);
     CHECK_FALSE(rig.state().clock.pps_locked);
     CHECK(rig.state().clock.pps_edge_us == 12000000u);
-    CHECK(rig.state().clock.since_edge_ms == 1345u);
+    CHECK(rig.state().clock.since_edge_ms == 3345u);
 }
 
 TEST_CASE("product: the first fix is announced once, then own-ship settles before it flies") {

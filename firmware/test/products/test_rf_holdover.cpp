@@ -92,3 +92,26 @@ TEST_CASE("rf holdover: a burst on a held second keys at its instant from the he
     CHECK(error_us >= 0);
     CHECK(error_us < 1000);
 }
+
+// The device calls a pulse locked for 3 s past its last edge, and the second has to move on
+// meanwhile.
+TEST_CASE(
+    "rf holdover: in the 3 s a lost pulse still reads locked, the second counts on from the edge") {
+    Pass pass;
+    REQUIRE(pass.begin() == Status::Ok);
+    pass.poll_clock(12'100'000);
+    pass.state.clock.utc_s = 1000;
+    pass.state.clock.utc_edge_us = 12'000'000;
+    pass.platform.clock().set_microseconds(12'500'000);
+    pass.platform.pps().set_locked(false);
+
+    pass.poll_clock(13'200'000);
+    CHECK(pass.state.clock.pps_locked);
+    CHECK(pass.state.traffic_now_s(13200) == 1001);
+    pass.poll_clock(14'600'000);
+    CHECK(pass.state.clock.pps_locked);
+    CHECK(pass.state.traffic_now_s(14600) == 1002);
+    pass.poll_clock(15'100'000);
+    CHECK_FALSE(pass.state.clock.pps_locked);
+    CHECK(pass.state.traffic_now_s(15100) == 1003);
+}

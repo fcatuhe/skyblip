@@ -197,7 +197,12 @@ class Pps {
    public:
     explicit Pps(const Clock& clock) : clock_(clock) {}
 
-    bool locked() const { return locked_; }
+    // INFO: fc 19nov26 zephyr/pps.h calls a pulse locked until 3 s after its last edge
+    bool locked() const {
+        return locked_ ||
+               (held_edge_us_ != 0 &&
+                timing::since_edge_us(held_edge_us_, clock_.microseconds()) < kLockTailUs);
+    }
     // INFO: fc 19nov26 a pulse that stops leaves its last edge latched, as the silicon's does
     void set_locked(bool on) {
         if (locked_ && !on) held_edge_us_ = last_edge_us();
@@ -216,6 +221,7 @@ class Pps {
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
+    static constexpr uint64_t kLockTailUs = 3000000;
 
     const Clock& clock_;
     bool locked_{true};
