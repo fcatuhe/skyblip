@@ -58,7 +58,8 @@ constexpr const char* range_unit(Units units) { return units == Units::Metric ? 
 
 constexpr int16_t angle16_of_degrees(int32_t degrees) {
     int32_t wrapped = ((degrees % 360) + 360) % 360;
-    if (wrapped >= 180) wrapped -= 360;  // keep the cordic value inside int16_t
+    // INFO: fc 20nov26 keeps the cordic value inside int16_t
+    if (wrapped >= 180) wrapped -= 360;
     return static_cast<int16_t>((wrapped * wire::kAngle16PerTurn) / 360);
 }
 

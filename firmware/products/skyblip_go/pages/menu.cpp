@@ -20,7 +20,7 @@ constexpr Menu menu_of(const MenuRow (&rows)[Count]) {
     return Menu{rows, Count};
 }
 
-// CALLSIGN at double height is eight cells, and the row holds fifteen.
+// INFO: fc 20nov26 the row holds fifteen cells and CALLSIGN takes eight, so six of a registration
 constexpr int kCallsignRowCharacters = 6;
 
 // INFO: fc 17nov26 a plain Go's soft and loud sound on its Bravo alone, so the row says so
@@ -208,8 +208,6 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
             }
             break;
         }
-        // The row has the label beside it, so it shows what a registration
-        // is identified by and the field itself shows all nine.
         case MenuRow::Aircraft:
         case MenuRow::Callsign: written = callsign_value(out, values.settings.callsign); break;
         case MenuRow::AircraftAddress:

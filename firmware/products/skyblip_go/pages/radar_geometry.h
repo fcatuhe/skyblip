@@ -9,19 +9,7 @@
 
 namespace skyblip::go::radar {
 
-// The screen is 200x200, an EVEN grid: there is no middle pixel. The centre is
-// the POINT where four pixels meet, so each axis has a near-side and a far-side
-// middle pixel - 99 and 100. Everything on this screen is built around that
-// point rather than around a pixel:
-//
-//   kNear = 99   the pixel just before the centre (left, and above)
-//   kFar  = 100  the pixel just after it (right, and below)
-//
-// A feature at distance d from the centre therefore occupies kNear-(d-1) on one
-// side and kFar+(d-1) on the other. A feature ON the centre is a PAIR of
-// pixels, never one. That makes the own ship exactly centred (its fuselage
-// straddles 99|100), the rings exactly concentric with it, and every target
-// offset measured from the same point in both directions.
+// INFO: fc 20nov26 the centre is the point between 99 and 100, so a centred feature is a pixel pair
 constexpr int kNear = kGlassWidth / 2 - 1;
 constexpr int kFar = kGlassWidth / 2;
 constexpr int kMargin = 4;

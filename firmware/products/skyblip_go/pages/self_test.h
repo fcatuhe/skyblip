@@ -1,6 +1,3 @@
-// Power-on self test, on the glass. The one page worth having on a first flash:
-// it names the part that did not answer, so a device that refuses to fly says
-// why instead of going dark.
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_SELF_TEST_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_SELF_TEST_H
 
@@ -14,18 +11,13 @@
 
 namespace skyblip::go {
 
-// What a part answered at bring-up. Absent is not a failure: a unit built
-// without a barometer is a unit without a barometer, and the page has to be able
-// to say which of the two it is looking at.
+// INFO: fc 20nov26 Absent is not a failure: only a required part missing reads Fail
 enum class PartState : uint8_t { Pass, Absent, Fail };
 
 struct SelfTestPart {
     const char* name{""};
     PartState state{PartState::Absent};
-    // Which part answered, when the footprint takes more than one: the barometer
-    // address that replied, the e-paper lot the panel is from, whether the haptic
-    // is a waveform driver or a pin. Optional, short (the row has to hold a name,
-    // this, and a verdict inside 200 pixels), and never a second verdict.
+    // INFO: fc 20nov26 which part answered a footprint that takes several, never a verdict
     const char* detail{nullptr};
     // INFO: fc 19nov26 how the part works now, after which part answered at boot: CCA OK, 2 HZ
     const char* now{nullptr};
@@ -39,14 +31,11 @@ struct SelfTestSnapshot {
     bool went_dark_flat{false};
     const SelfTestPart* parts{nullptr};
     int part_count{0};
-    // False when a required part is missing. The device stays up and keeps this
-    // page: a glass naming the failure is worth more than a reboot loop.
+    // INFO: fc 20nov26 a unit missing a required part stays up on this page rather than reboot
     bool flyable{true};
     bool battery_valid{false};
     uint16_t battery_mv{0};
-    // Every address that answered the I2C scan, drawn as one more row. The parts
-    // this product deliberately does not drive are in here - the RTC at 0x51, the
-    // IMU at 0x28 - and this page is the only place a bench can see them.
+    // INFO: fc 20nov26 the only place a bench sees parts the product never drives, like the RTC
     const uint8_t* i2c_addresses{nullptr};
     const char* const* i2c_roles{nullptr};
     int i2c_address_count{0};
@@ -57,14 +46,10 @@ struct SelfTestSnapshot {
     uint16_t bravo_tag{0};
 };
 
-// The most rows the page can carry before the last one falls off the glass. The
-// bus scan's row is one of them, and the paired Bravo's another, which the
-// aircraft-address warning takes while the Bravo is not lost.
+// INFO: fc 20nov26 the bus scan and the paired Bravo take a row each, the warning sharing Bravo's
 constexpr int kSelfTestRows = 16;
 
-// The grid the page is set on, exported so a test can read a row back off the
-// glass instead of counting ink: "there is ink on the GNSS row" is not the same
-// claim as "the GNSS row says FAIL".
+// INFO: fc 20nov26 exported so a test reads a row back off the glass instead of counting ink
 constexpr int kSelfTestLeftX = 4;
 constexpr int kSelfTestRightX = kGlassWidth - kSelfTestLeftX;
 constexpr int kSelfTestRowCells = (kGlassWidth - 2 * kSelfTestLeftX) / ui::kCellWidth;

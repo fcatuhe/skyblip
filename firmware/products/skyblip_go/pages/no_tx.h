@@ -1,4 +1,3 @@
-// The mark every page wears while the Go does not transmit ADS-L: NO TX over its reason.
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_NO_TX_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_NO_TX_H
 
