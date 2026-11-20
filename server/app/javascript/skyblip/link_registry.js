@@ -346,11 +346,6 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         },
         {
-          "name": "die_temperature_c",
-          "number": 7,
-          "type": "integer"
-        },
-        {
           "name": "bravo",
           "number": 8,
           "type": "enum",

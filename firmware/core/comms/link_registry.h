@@ -152,7 +152,6 @@ enum : uint32_t {
     kCharging = 4,
     kPowerLevel = 5,
     kWentDarkFlat = 6,
-    kDieTemperatureC = 7,
     kBravo = 8,
     kOwnTransponder = 9,
     kOwnTransponderCallsign = 10,

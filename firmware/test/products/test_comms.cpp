@@ -334,7 +334,21 @@ TEST_CASE("comms: a fired power-failure comparator closes the door on its own") 
 // will not charge, an e-paper panel that ghosts - both look like a fault in the
 // part that gave up rather than in the afternoon that did it.
 
-TEST_CASE("comms: the status reply carries the die temperature, in whole degrees") {
+namespace {
+
+// INFO: fc 19nov26 the whole dump as one text, once the collector has run, which the dump waits for
+std::string dump_of(platform::host::Link& link, ConfigService& config) {
+    config.diagnostics().refreshes = 1;
+    link.clear();
+    config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
+    std::string all;
+    for (const platform::host::Link::Frame& frame : link.sent) all += link_text(frame.bytes);
+    return all;
+}
+
+}  // namespace
+
+TEST_CASE("comms: the dump carries the die temperature, in whole degrees, and status does not") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -342,12 +356,12 @@ TEST_CASE("comms: the status reply carries the die temperature, in whole degrees
     ConfigService config(link, store);
 
     // Nothing has read the sensor yet: the key is absent, not zero.
-    config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link_text(link.last().bytes).find("die_temperature_c") == std::string::npos);
+    CHECK(dump_of(link, config).find("die_temperature_c") == std::string::npos);
 
     config.set_die_temperature(412, /*valid=*/true);
+    CHECK(dump_of(link, config).find("\"die_temperature_c\":41") != std::string::npos);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":41") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("die_temperature") == std::string::npos);
 }
 
 // A board with no sensor, a driver that refused a measurement and a device at
@@ -361,12 +375,10 @@ TEST_CASE("comms: no reading is no key, never a zero") {
     ConfigService config(link, store);
 
     config.set_die_temperature(0, /*valid=*/true);
-    config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":0") != std::string::npos);
+    CHECK(dump_of(link, config).find("\"die_temperature_c\":0") != std::string::npos);
 
     config.set_die_temperature(0, /*valid=*/false);
-    config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link_text(link.last().bytes).find("die_temperature_c") == std::string::npos);
+    CHECK(dump_of(link, config).find("die_temperature_c") == std::string::npos);
 }
 
 TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") {
@@ -379,16 +391,13 @@ TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") 
     // A cold morning must not read one degree warmer than it is, and a hot
     // afternoon must not read one cooler: -20.6 C is -21, +20.6 C is +21.
     config.set_die_temperature(-206, true);
-    config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":-21") != std::string::npos);
+    CHECK(dump_of(link, config).find("\"die_temperature_c\":-21") != std::string::npos);
 
     config.set_die_temperature(206, true);
-    config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":21") != std::string::npos);
+    CHECK(dump_of(link, config).find("\"die_temperature_c\":21") != std::string::npos);
 
     config.set_die_temperature(-4, true);
-    config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":0") != std::string::npos);
+    CHECK(dump_of(link, config).find("\"die_temperature_c\":0") != std::string::npos);
 }
 
 // J and L. A counter a bench reads is not state a pilot's screen reacts to, so it

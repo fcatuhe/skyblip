@@ -161,8 +161,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.supply_warnings);
         add(Group::Power, link::diagnostics_key::kImplausible, Kind::Unsigned,
             diagnostics.battery_implausible);
-        // Same rule as the status reply, and the same key: no reading is no key,
-        // never a zero, because 0.0 C is a plausible hangar morning.
+        // No reading is no key, never a zero, because 0.0 C is a plausible hangar morning.
         if (diagnostics.die_valid)
             add(Group::Power, link::diagnostics_key::kDieTemperatureC, Kind::Integer,
                 whole_celsius(diagnostics.die_dc));
