@@ -185,7 +185,7 @@ wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uin
     return heard;
 }
 
-// ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
+// INFO: fc 20nov26 G.1.14 NACp thresholds, where code 0 is "unknown or HFOM >= 0.5 NM"
 uint8_t Packet::horizontal_accuracy_code(uint32_t hfom_cm) {
     static constexpr uint32_t kLimitCm[] = {300, 1000, 3000, 9260, 18520, 55560, 92600};
     for (int i = 0; i < 7; i++)
@@ -193,7 +193,7 @@ uint8_t Packet::horizontal_accuracy_code(uint32_t hfom_cm) {
     return 0;
 }
 
-// G.1.15, GVA. 3 = VFOM < 10 m, 2 = < 45 m, 1 = < 150 m, 0 = unknown or worse.
+// INFO: fc 20nov26 G.1.15 GVA thresholds, where code 0 is unknown or a VFOM of 150 m or more
 uint8_t Packet::vertical_accuracy_code(uint32_t vfom_cm) {
     if (vfom_cm < 1000) return 3;
     if (vfom_cm < 4500) return 2;
