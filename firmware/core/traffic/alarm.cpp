@@ -16,7 +16,6 @@ namespace skyblip::traffic {
 
 namespace {
 
-// Millimetres a second, north and east, scaled by the cordic one.
 void velocity_north_east(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
     north = static_cast<int64_t>(speed_mm_s) * wire::cosine(angle);
     east = static_cast<int64_t>(speed_mm_s) * wire::sine(angle);
