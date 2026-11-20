@@ -378,7 +378,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSilenceAfterForceUs` | 2000000 (2000 ms) | microseconds | - | §D.3: after a forced transmission "the device may not transmit" for 2000 ms |
 | `kCycleMs` | `static_cast<int64_t>(kTimestampCycleS) * 1000` | milliseconds | - | - |
 | `kAltitudeOffsetM` | 320 | metres | - | - |
-| `kTimestampCycleS` | 15 | seconds | - | The timestamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
+| `kTimestampCycleS` | 15 | seconds | - | G.1.1 counts quarters of a 15 s cycle, and the position must be that quarter's |
 | `kTimestampQuarterMs` | 250 | milliseconds | - | - |
 | `kCloseHorizontalM` | 1000 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kCloseVerticalM` | 800 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |

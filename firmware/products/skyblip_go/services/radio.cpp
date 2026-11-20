@@ -17,9 +17,7 @@ Status RadioService::setup() {
     return Status::Ok;
 }
 
-// The next dwell is handed to the executor as soon as the current one flies, so
-// the edge between them is the executor's to keep, to the microsecond, on its own
-// thread. A pass of this loop only ever notices an edge after it went by.
+// INFO: fc 20nov26 the executor keeps the edge between dwells, since a pass notices it only after
 void RadioService::tick(uint32_t now_ms) {
     pass_us_ = context_.roles.clock.microseconds();
     judge_transmit(now_ms);
@@ -71,11 +69,7 @@ bool RadioService::identified() {
     return address.has_value();
 }
 
-// The one place the phase this service arms against leaves it. core/timing's
-// durable-write policy needs the radio's own view of the second, not a second
-// copy of the slot arithmetic, and it needs to know a burst is in flight - which
-// only the arming code and the outcome collector between them can say. A burst
-// queued on the next dwell is not in flight yet.
+// INFO: fc 20nov26 the one place the dwell phase is published: flash writes read it, never redo it
 void RadioService::publish_dwell(uint32_t now_ms) {
     timing::DwellPhase& dwell = context_.state.rf.dwell;
     // INFO: fc 03oct26 one clock read: milliseconds() is the low 32 bits of microseconds() / 1000
@@ -102,12 +96,6 @@ uint64_t RadioService::armed_between(const Armed& dwell, uint64_t from_us, uint6
 }
 
 // INFO: fc 27sep26 one read per pass: a plan and a promotion read apart straddled the 800 edge
-//
-// Both branches read microseconds(), which is 64-bit and does not wrap. The free-running
-// fallback used to be now_ms % 1000, and that is not a phase: 2^32 ms is not a
-// whole number of seconds, so at the 49.7-day wrap of ports::Clock::milliseconds() the
-// second stepped 705 ms BACKWARDS and one dwell was armed out of order. It only
-// showed with the anchor already lost, which is the worst time to add a fault.
 int RadioService::phase_ms() const { return phase_at(pass_us_); }
 
 int RadioService::phase_at(uint64_t now_us) const {
@@ -117,8 +105,6 @@ int RadioService::phase_at(uint64_t now_us) const {
     return static_cast<int>(now_us / 1000 % 1000);
 }
 
-// The top of the second phase_ms() counts from, to the microsecond: the latched
-// edge a whole number of seconds back, never the phase rounded to a millisecond.
 int64_t RadioService::second_origin_us() const {
     const timing::ClockState& clock = context_.state.clock;
     const uint64_t now_us = pass_us_;
@@ -128,8 +114,7 @@ int64_t RadioService::second_origin_us() const {
     return static_cast<int64_t>(now_us - now_us % kSecondUs);
 }
 
-// Signed, because the tail of slot 1 in the first second after boot belongs to
-// a second that started before the clock did.
+// INFO: fc 20nov26 signed, since slot 1's tail in the first second began before the clock did
 int64_t RadioService::dwell_origin_us() const {
     const int64_t origin_us = second_origin_us();
     const bool in_spill = phase_ms() < timing::kWindowBSpillMs;
@@ -183,11 +168,7 @@ ports::RfMode RadioService::mode_for(const timing::SlotPlan& plan) {
     return plan.band == timing::Band::O ? ports::RfMode::RxOBand : ports::RfMode::RxMBand;
 }
 
-// The M band carries two systems past one sync window. The O band carries the
-// ground station's uplink and nothing else. Both halves of a dwell are set
-// here: what to listen for, and the modulation to listen with - §C.4 runs at
-// twice §C.2's chip rate through a Gaussian filter and a wider receiver, so a
-// dwell that only moved the synthesiser was tuned to the O band and deaf on it.
+// INFO: fc 20nov26 a dwell sets its modulation too, since §C.4 runs at twice §C.2's chip rate
 void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     if (band == timing::Band::O) {
         plan.sync = adsl::kUplinkSync;
@@ -227,8 +208,7 @@ bool RadioService::owes(const Armed& dwell, const timing::SlotPlan& plan, int64_
     });
 }
 
-// The next dwell is queued bare when its burst is not decided yet, and queued
-// again carrying it the pass its gates clear, which is still ahead of its start.
+// INFO: fc 20nov26 queued bare, then again with its burst on the pass its gates clear
 void RadioService::queue_next(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms) {
     if (current_dwell_.mode == ports::RfMode::Idle) return;
     const Upcoming next = upcoming_after(plan, origin_us);
@@ -325,23 +305,18 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
     ports::RfPlan plan{};
     plan.mode = mode_for(slot);
     plan.frequency_hz = slot.frequency_hz;
-    // The one setting on this device that is a property of the unit's own
-    // reference rather than of the pilot: it belongs to every dwell, on both
-    // bands, receiving as well as transmitting (core/settings/settings.h).
+    // INFO: fc 20nov26 the unit's reference trim applies to every dwell, receive and transmit alike
     plan.frequency_correction_e1_ppm = settings_.frequency_trim_e1_ppm;
     listen_for(slot.band, plan);
     plan.end_us = at_us(origin_us, slot.end_ms);
     if (plan.end_us <= now_us) return;
-    // Arming inside the window means the dwell has already started: begin now and
-    // keep the same hard stop, rather than waiting a whole second for the next one.
+    // INFO: fc 20nov26 a dwell armed late begins now and keeps its stop, rather than wait a second
     const uint64_t opens_us = at_us(origin_us, slot.start_ms);
     plan.start_us = role == Role::Next ? opens_us : std::max(opens_us, now_us);
 
     const timing::Transmitter::Attempt first = attempt(slot, origin_us, now_ms);
     over_budget_ = first.over_budget;
-    // The one place this policy's own refusal is decided: a plan the hour's
-    // air-time budget already refused to arm, counted apart from a dwell that
-    // was armed and then missed its outcome.
+    // INFO: fc 20nov26 the budget's refusal counts apart from a dwell armed that missed its outcome
     if (first.over_budget) {
         context_.state.rf.timing_statistics.record_refused();
         if (!held_logged_) {
@@ -439,8 +414,7 @@ void RadioService::collect_outcome(uint32_t now_ms) {
     const bool reported = tx_ok != seen_tx_ok_;
     if (reported) held_logged_ = false;
     for (; seen_tx_ok_ != tx_ok; seen_tx_ok_++) {
-        // A pass slow enough that the queued dwell flew, and its burst went out, before this one
-        // ran.
+        // INFO: fc 20nov26 a pass so slow that the queued dwell flew, burst and all, before it ran
         if (!current_dwell_.carries_any() && next_armed_ && next_dwell_.carries_any() &&
             now_us >= next_dwell_.from_us)
             promote();

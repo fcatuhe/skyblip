@@ -28,8 +28,6 @@ void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int l
     canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
 }
 
-// What own-ship put on air, in the column a reception spends on its sender: the
-// schedule the burst went out on, or the name that is on neither schedule.
 const char* own_burst_word(const radio::Entry& entry) {
     if (entry.callsign) return "CALLSIGN";
     if (entry.status) return "STATUS";

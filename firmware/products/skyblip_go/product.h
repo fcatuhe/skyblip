@@ -39,8 +39,6 @@ constexpr uint32_t kRadioParkCeilingMs = 2000;
 // INFO: fc 19nov26 the Go transmits ADS-L, so it solves on .000 and .500, two of G.1.1's quarters
 constexpr ports::SolutionRate kSolutionRate = ports::SolutionRate::Half;
 
-// skyBlip Go: one board, one service list. The shell around it only decides how
-// often run_pass() is called and where the pixels go.
 template <class Platform>
 class Product {
    public:
@@ -64,12 +62,7 @@ class Product {
         const power::ResetCause causes = shell_.read_reset();
         if (board == Status::Ok) config_link_.load();
 
-        // The wake cause decides whether this boot becomes a device at all
-        // (core/power/wake.h). Answered here, before the panel is painted and
-        // before the loop is set up: a charger plugged into a device in a flight
-        // bag must leave no trace on the glass and start nothing. The shell drops
-        // the rails; every part is already in a known state, which is why this
-        // sits after board_.begin() rather than in front of it.
+        // INFO: fc 20nov26 answered before the panel is painted, so a charger wake leaves no trace
         const power::BootPath path = shell_.read_boot(causes, settings_.battery_offset_mv);
         glass_remembered_ = platform_.system_power().cell_on_glass();
         take_went_dark_flat();
@@ -157,10 +150,7 @@ class Product {
    private:
     friend class common::Shell<Product>;
 
-    // Which part answered, for the three footprints LilyGO ships more than one
-    // part against. Everything here comes from the bring-up probes
-    // (ports/inventory.h), never from what the image was compiled expecting, which
-    // is the whole point of the page.
+    // INFO: fc 20nov26 read the bring-up probes, never what the image was built expecting
     const char* self_test_detail(const SelfTestPartSpec& spec) {
         const ports::Inventory& found = board_.inventory();
         switch (spec.capability) {
@@ -294,8 +284,7 @@ class Product {
     common::RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};
     CaptureSettings capture_settings_{settings_};
 
-    // Declared before the config service, which is handed it: the settings writer
-    // asks core/power whether the cell will survive a write before it makes one.
+    // INFO: fc 20nov26 declared before the config service, which asks it whether a write is safe
     common::PowerService power_{context_, settings_.battery_offset_mv};
     SettingsStore settings_store_{settings_, state_.activation, state_.own_transponder,
                                   roles_.capabilities};
@@ -316,12 +305,7 @@ class Product {
     ScreenService screen_{context_, settings_,           config_link_.config(),
                           alarm_,   self_test_snapshot_, bravo_};
 
-    // The log ticks after own-ship has published the fix and after the radio has
-    // published the slot plan it defers to, and before the screen, which is the
-    // only service that may spend a whole pass pushing pixels.
-    // The tablet is told after the table and the levels for this pass are
-    // settled and after the config service has drained the connection, and
-    // before the two services that may spend a pass on flash or on pixels.
+    // INFO: fc 20nov26 the order is the dataflow (README.md, What a service is), never a preference
     static constexpr int kServiceCount = 11;
     const runtime::Loop::Entry services_[kServiceCount]{
         {&config_link_, diagnostics::LoopService::Config},
@@ -339,9 +323,7 @@ class Product {
     common::Shell<Product> shell_{*this, kRadioParkCeilingMs};
 
     SelfTestPart self_test_parts_[kSelfTestPartCount]{};
-    // The barometer's address as the page prints it. A member and not a local:
-    // SelfTestPart holds a pointer, and the page is drawn after self_test_detail()
-    // has returned.
+    // INFO: fc 20nov26 a member, since SelfTestPart keeps the pointer after self_test_detail()
     char barometer_part_[10]{};
     const char* i2c_roles_[ports::Inventory::kMaxI2cAddresses]{};
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};

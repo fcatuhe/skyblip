@@ -13,14 +13,11 @@ constexpr int kLineHeight = 16;
 using ui::kCellWidth;
 constexpr int column_x(int cell) { return kLeft + cell * kCellWidth; }
 
-// One grid, in character cells: 4 label, 1 space, 5 value, 4 unit, 3 space,
-// 5 value, 4 unit. Every unit string carries its own leading space, which is
-// what keeps a five-character value off it. km/h then runs one cell past the
-// field, which is what it costs to have every unit start in the same column.
+// INFO: fc 20nov26 cells: 4 label, 1 space, 5 value, 4 unit, 3 space, 5 value, 4 unit
 constexpr int kValueX = column_x(5);
 constexpr int kAeronauticalNumberEnd = column_x(10);
 constexpr int kAeronauticalUnitX = column_x(10);
-constexpr int kAeronauticalUnitEnd = column_x(15);  // past a leading space and four characters
+constexpr int kAeronauticalUnitEnd = column_x(15);
 constexpr int kMetricNumberEnd = column_x(22);
 constexpr int kMetricUnitX = column_x(22);
 
@@ -48,7 +45,6 @@ int32_t centi_kilometres_per_hour(int32_t speed_mm_s) {
     return wire::divide_rounded(speed_mm_s * 36, 100);
 }
 
-// Draw "LABEL  value" on one row.
 void row(ui::Canvas& canvas, int y, const char* label, const char* value) {
     canvas.draw_text(kLeft, y, label, true, 1);
     canvas.draw_text(kValueX, y, value, true, 1);
@@ -64,8 +60,6 @@ int length(const char* text) {
     return count;
 }
 
-// The same two columns as the numbers, for the rows whose values are words: the
-// value right-aligned on the column, its unit left-aligned after it.
 void text_row(ui::Canvas& canvas, int y, const char* label, const char* value, const char* unit,
               const char* second_value = "", const char* second_unit = "") {
     canvas.draw_text(kLeft, y, label, true, 1);
@@ -81,8 +75,6 @@ struct Quantity {
     const char* unit{""};
 };
 
-// Aeronautical unit in the first column, SI in the second: the pilot reads the
-// left, the engineer checks the right.
 void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aeronautical, Quantity metric,
               bool plus_sign) {
     char text[16];
@@ -99,7 +91,6 @@ void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aeronautica
     canvas.draw_text(kMetricUnitX, y, metric.unit, true, 1);
 }
 
-// What the sensor reads, to the tenth of a pascal it measures in.
 void pressure_row(ui::Canvas& canvas, int y, uint32_t pressure_mpa) {
     char barometer[12];
     const int written =
@@ -167,7 +158,6 @@ void battery_row(ui::Canvas& canvas, int y, const StatusSnapshot& snapshot) {
         return;
     }
 
-    // Centivolts, so the two decimals a cell is judged on fit the value field.
     char volts[8] = "--";
     char percent[8] = "--";
     if (snapshot.battery_valid) {
@@ -177,8 +167,7 @@ void battery_row(ui::Canvas& canvas, int y, const StatusSnapshot& snapshot) {
         percent[written] = 0;
     }
 
-    // A cell on the cable is not low whatever it reads, so the charger wins the
-    // marker. Off it, the warning is the whole reason this row is on the page.
+    // INFO: fc 20nov26 a cell on the cable is never low, so the charger wins the marker
     const char* mark = snapshot.charge == power::ChargeCondition::TooHot    ? "% HOT"
                        : snapshot.charge == power::ChargeCondition::TooCold ? "% CLD"
                        : snapshot.charging                                  ? "% CHG"
@@ -193,7 +182,6 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
 
     char text[32];
 
-    // Header: device address (the ADS-L identity) + the name the pilot gave it.
     int written = format_string(text, "ID ");
     written += format_air_address(text + written, snapshot.address);
     text[written] = 0;
@@ -202,8 +190,6 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
         right_aligned(canvas, kGlassWidth - kLeft, 8, snapshot.callsign, length(snapshot.callsign));
     canvas.horizontal_line(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
-    // Everything that is one free-form string first, then the block where every
-    // number lines up in its column.
     int y = 27;
 
     written = format_string(text, " ");
@@ -230,13 +216,8 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     }
     y += kLineHeight;
 
-    // Full 1e-7 degrees on both, which is what the fix carries. A signed
-    // three-digit longitude is then 16 cells wide with its label, so the
-    // longitude block is anchored to the right margin rather than to a column:
-    // at seven decimals nothing narrower fits every position on earth.
+    // INFO: fc 20nov26 seven decimals are too wide for the grid, so LON anchors on the right margin
     if (snapshot.fix_valid) {
-        // Ten characters of latitude do not fit a five-cell value field, so it
-        // ends where the first column's unit does: level with TRUE above it.
         written = format_signed(text, snapshot.latitude_1e7, 1, 7, false);
         text[written] = 0;
         canvas.draw_text(kLeft, y, "LAT", true, 1);
@@ -270,9 +251,6 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     text_row(canvas, y, "TFC", count, "", "TX", transmit);
     y += kLineHeight;
 
-    // The aligned block: the pressure the altitudes depend on, the geometric
-    // altitude, and pressure altitude on the 1013.25 hPa standard setting - the
-    // one a flight level counts in hundreds of feet. Then the motion pair.
     if (snapshot.barometer_valid)
         pressure_row(canvas, y, snapshot.pressure_mpa);
     else

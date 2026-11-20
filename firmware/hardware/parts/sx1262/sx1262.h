@@ -1,4 +1,3 @@
-// hardware/parts/sx1262/sx1262.h: the SX1262 radio driver, written ONCE and shared
 #ifndef SKYBLIP_HARDWARE_PARTS_SX1262_H
 #define SKYBLIP_HARDWARE_PARTS_SX1262_H
 
@@ -22,27 +21,19 @@ struct RadioEvent {
     bool rssi_valid{false};
 };
 
-// One dwell's worth of modem: where to tune, how the air is modulated there,
-// what to match and how much to read behind the match. Two bands share this
-// part, and they are two modulations, so nothing here is allowed to be a
-// hard-coded M-band figure.
+// INFO: fc 20nov26 the M and O bands are two modulations, so every modem figure travels in here
 struct RadioConfig {
     uint32_t frequency_hz{868200000};
     uint32_t bitrate{100000};
     uint32_t deviation_hz{50000};
     uint32_t bandwidth_hz{200000};
-    // The Gaussian filter's BT in hundredths. Zero is an unshaped carrier, which
-    // is what the M band asks for and what the part does out of reset.
+    // INFO: fc 20nov26 zero is the unshaped carrier the M band asks for and the part resets to
     uint16_t gaussian_bt_e2{0};
-    // The detector runs on chips, so both of these are chip counts: the pattern
-    // to match and the fixed number of bytes to read behind it.
+    // INFO: fc 20nov26 the detector runs on chips, so the sync and the payload count chips
     const uint8_t* sync{nullptr};
     uint8_t sync_bits{0};
     uint8_t payload_bytes{0};
-    // Tenths of a ppm added to frequency_hz before the PLL word is computed, positive
-    // upwards. Zero is the design intent on a TCXO part; the field exists so a
-    // batch whose reference is out can be corrected in the field instead of
-    // returned. Clamped to sx1262::kFrequencyTrimCeilingE1Ppm either way.
+    // INFO: fc 20nov26 a field trim for an off reference, positive upwards, clamped by trimmed_hz()
     int16_t frequency_correction_e1_ppm{0};
 };
 
@@ -57,8 +48,6 @@ class Sx1262 {
           reset_pin_(reset_pin),
           dio1_pin_(dio1_pin) {}
 
-    // Is there a radio on the other end of this bus at all? Answers only what a
-    // register round-trip can prove, and leaves the chip in standby.
     Status probe();
 
     Status begin();
@@ -70,15 +59,12 @@ class Sx1262 {
     uint32_t air_us(uint8_t bytes) const;
     Status start_receive();
 
-    // The lowest-power state the part has, and the way back out of it.
     void sleep();
     Status wake();
 
     // INFO: fc 15sep26 DS 13.5.2: an instant, and valid only while the receiver is running
     int8_t instant_rssi_dbm();
 
-    // The last command's switch, done: BUSY falls once the part has reached the mode it was sent
-    // to.
     Status wait_ready() { return wait_busy_low(); }
 
     RadioEvent poll(uint8_t* out, uint8_t capacity);
@@ -89,7 +75,6 @@ class Sx1262 {
 
     RadioMode mode() const { return mode_; }
     uint32_t reinitialisations() const { return reinitialisations_; }
-    // A transmission the chip's own SetTx timeout had to end. Never silent.
     uint32_t tx_recovery_count() const { return tx_recovery_count_; }
     uint16_t device_errors() const { return device_errors_; }
 
@@ -159,21 +144,13 @@ constexpr uint8_t kFallbackFrequencySynthesis = 0x40;
 constexpr uint8_t kFallbackStandbyOnCrystalOscillator = 0x30;
 constexpr uint8_t kFallbackStandbyOnRcOscillator = 0x20;
 constexpr uint8_t kSetRegulatorMode = 0x96;
-// DS 13.1.4 regModeParam. The part comes out of reset on its LDO alone and the
-// converter roughly halves the supply current in receive and in transmit, which
-// on a dwell map that arms the receiver through about 980 ms of every second is
-// the largest single power term on the board. DC-DC needs the inductor on
-// DCC_SW to be fitted: SoftRF issues SetRegulatorMode(REGMODE_DCDC) as the first
-// line of its SX126x bring-up on this hardware
-// (libraries/arduino-basicmac/src/lmic/radio-sx126x.c:703, 855), which is the
-// evidence we have that the module carries it. Bench current in receive is what
-// closes it.
+// INFO: fc 20nov26 DS 13.1.4: DC-DC roughly halves the current, and SoftRF selects it on this board
 constexpr uint8_t kRegulatorLdo = 0x00;
 constexpr uint8_t kRegulatorDcDc = 0x01;
 constexpr uint8_t kSetDio3AsTcxoControl = 0x97;
 constexpr uint8_t kSetDio2AsRfSwitch = 0x9D;
 constexpr uint8_t kCalibrate = 0x89;
-constexpr uint8_t kTcxoVoltage1v8 = 0x02;  // DIO3 TCXO 1.8 V (T-Echo Plus)
+constexpr uint8_t kTcxoVoltage1v8 = 0x02;
 constexpr uint8_t kCalibrateImage = 0x98;
 constexpr uint8_t kSetTx = 0x83;
 constexpr uint8_t kSetRx = 0x82;
@@ -187,52 +164,22 @@ constexpr uint8_t kSetDioIrqParameters = 0x08;
 constexpr uint8_t kWriteRegister = 0x0D;
 constexpr uint8_t kReadRegister = 0x1D;
 constexpr uint8_t kSetSleep = 0x84;
-// DS 13.1.2 sleepConfig: bit 0 is the RTC wake-up, bit 2 is warm start. Warm
-// start keeps the configuration in retention, so coming back is an NSS edge and
-// a standby rather than the whole bring-up; the RTC is off because the only
-// thing that wakes this device is the button.
+// INFO: fc 20nov26 DS 13.1.2: bit 2 keeps the configuration, and RTC wake-up stays off
 constexpr uint8_t kSleepWarmStartNoRtc = 0x04;
-// INFO: fc 08nov26 DS 13.1.1 cold start, 160 nA against 600 nA warm, for SYSTEM OFF since every
-// boot reinitialises
+// INFO: fc 08nov26 DS 13.1.1: cold start draws 160 nA against 600 nA, and every boot reinitialises
 constexpr uint8_t kSleepColdStartNoRtc = 0x00;
-constexpr uint16_t kSyncWordRegister = 0x06C0;  // DS 13.4.9, 8 bytes
+// INFO: fc 20nov26 DS 13.4.9: eight bytes of sync word start here
+constexpr uint16_t kSyncWordRegister = 0x06C0;
 
-// DS 9.6 ("Rx Gain") register 0x08AC: 0x94 is the power-saving gain the part
-// comes out of reset on, 0x96 the boosted one. The figures for what the boost
-// buys are the references', not the datasheet's - about 2 mA more supply current
-// in receive for about 3 dB of sensitivity, in SoftRF's own words on the line
-// that writes it (arduino-basicmac/src/lmic/radio-sx126x.c:365-372) - so both
-// halves of that trade are a bench measurement we owe.
-//
-// We take it, and it is a decision rather than an inherited default. 3 dB is
-// about 40% more range on a device whose whole job is to hear an aircraft before
-// it matters, and 2 mA is under a tenth of what the DC-DC converter above just
-// gave back on the same 980 ms of every second. SoftRF writes the boosted value
-// on every SetRx, and openace turns it on in both of its receive paths
-// (src/lib/sx1262/ace/src/sx1262.cpp:216, 380), so the value itself is what this
-// hardware is known to run on.
-//
-// The one caveat we could find is not that SetRx resets the register: it is that
-// 0x08AC is not part of what a warm start retains unless it is added to the
-// retention list at 0x029F (DS 9.6, just below table 9-3, which is the citation
-// RadioLib's SX126x_config.cpp:405-409 carries for the same three bytes). Our
-// sleep IS a warm start, so a radio that slept and came back would be a radio on
-// the power-saving gain again, with no symptom beyond a shorter range. Both
-// halves are therefore written: the retention list once in begin(), and the
-// register itself in every configure_radio() that writes a dwell, which is the
-// standby bracket a retune passes through anyway (register access outside
-// standby is what the model refuses, DS 13.1).
+// INFO: fc 20nov26 DS 9.6: boost buys about 3 dB for 2 mA, and a warm start drops it unless listed
 constexpr uint16_t kRxGainRegister = 0x08AC;
 constexpr uint8_t kRxGainPowerSaving = 0x94;
 constexpr uint8_t kRxGainBoosted = 0x96;
-// DS 9.6: the retention list is three bytes at 0x029F - a count and one 16-bit
-// register address.
+// INFO: fc 20nov26 DS 9.6: the retention list is a count, then one 16-bit register address
 constexpr uint16_t kRetentionListRegister = 0x029F;
 constexpr uint8_t kRetainRxGain[3] = {0x01, static_cast<uint8_t>(kRxGainRegister >> 8),
                                       static_cast<uint8_t>(kRxGainRegister & 0xFF)};
-// Written and read back over the same register to prove the part answers. Two
-// bytes that are each other's complement: a MISO line stuck at either rail, or
-// tied to MOSI, gives back something else.
+// INFO: fc 20nov26 complementary bytes, so a MISO stuck at a rail or tied to MOSI reads back wrong
 constexpr uint8_t kLinkProbePattern[2] = {0xA5, 0x5A};
 constexpr uint8_t kWriteBuffer = 0x0E;
 constexpr uint8_t kReadBuffer = 0x1E;
@@ -258,13 +205,11 @@ constexpr uint16_t kIrqTxDone = 0x0001;
 constexpr uint16_t kIrqRxDone = 0x0002;
 constexpr uint16_t kIrqCrcError = 0x0040;
 constexpr uint16_t kIrqTimeout = 0x0200;
-// INFO: wr 02aug26 DS 13.3.1: IrqMask is 0x0000 out of reset and gates the whole
-// IRQ status register, so an unmasked bit is a bit GetIrqStatus never reports.
+// INFO: wr 02aug26 DS 13.3.1: GetIrqStatus never reports a bit this mask leaves out
 constexpr uint16_t kIrqMask = kIrqTxDone | kIrqRxDone | kIrqCrcError | kIrqTimeout;
 
 constexpr uint32_t kCrystalHz = 32000000;
-// DS 13.4.6 GFSK modulation params: pulse shape and RX bandwidth are table
-// indices. 0x0A is the 234.3 kHz double-sideband entry.
+// INFO: fc 20nov26 DS 13.4.6: pulse shape and RX bandwidth are table indices, not values
 constexpr uint8_t kPulseShapeNone = 0x00;
 constexpr uint8_t kGaussianBt0p3 = 0x08;
 constexpr uint8_t kGaussianBt0p5 = 0x09;
@@ -276,10 +221,7 @@ constexpr uint8_t kRxBandwidth234kHz = 0x0A;
 constexpr uint16_t kTxModulationRegister = 0x0889;
 constexpr uint8_t kTxModulationGfskBit = 0x04;
 
-// DS 13.4.6, the double-sideband RX bandwidth table. The driver picks the
-// narrowest entry that still passes the channel it was asked for: too narrow
-// clips the signal, too wide buys noise. Transcribed from the datasheet in the
-// order the part numbers them, and only over the range these two bands use.
+// INFO: fc 20nov26 DS 13.4.6's double-sideband bandwidths, over the range the two bands use
 struct RxBandwidthEntry {
     uint32_t bandwidth_hz;
     uint8_t index;
@@ -291,8 +233,6 @@ constexpr RxBandwidthEntry kRxBandwidths[] = {
 constexpr int kRxBandwidthCount =
     static_cast<int>(sizeof(kRxBandwidths) / sizeof(kRxBandwidths[0]));
 
-// DS 13.1.14 SetPaConfig for the SX1262 high-power PA. This is also the write
-// that raises the over-current protection to 140 mA.
 constexpr uint8_t kPaConfigHighPower[4] = {0x04, 0x07, 0x00, 0x01};
 // INFO: fc 26sep26 DS table 13-21: those four bytes are the +22 dBm row
 constexpr int8_t kPaConfigHighPowerRatedDbm = 22;
@@ -309,8 +249,7 @@ constexpr uint8_t kOcpLimitSteps = static_cast<uint8_t>(kOcpLimitMa * 2 / 5);
 // INFO: fc 05sep26 DS 15.2.2: the reset clamp costs 5-6 dB into a mismatched antenna
 constexpr uint16_t kTxClampRegister = 0x08D8;
 constexpr uint8_t kTxClampWidenBits = 0x1E;
-// INFO: wr 02aug26 ERC 70-03 annex 1 band h1.4 / EN 300 220: 868.0-868.6 MHz is
-// 25 mW e.r.p., which is 14 dBm. The ceiling, not a chip default.
+// INFO: wr 02aug26 ERC 70-03 annex 1 band h1.4: 868.0-868.6 MHz allows 25 mW e.r.p., 14 dBm
 constexpr int8_t kSrd868ErpLimitDbm = 14;
 
 // INFO: fc 26sep26 e.r.p. is referenced to a half-wave dipole, 2.15 dBi above isotropic
@@ -329,24 +268,13 @@ static_assert(kResultingErpCentiDb <= kSrd868ErpLimitDbm * 100,
 constexpr int16_t kAntennaGainCentiDbd =
     static_cast<int16_t>(kAntennaPeakGainDbiCentiDb - kDbiToDbdCentiDb);
 
-// DS 13.1.12 CalibrateImage, the 863-870 MHz band pair.
+// INFO: fc 20nov26 DS 13.1.12: the CalibrateImage pair for 863-870 MHz
 constexpr uint8_t kImageBand863to870[2] = {0xD7, 0xDB};
 
-// The most the programmed centre frequency may be trimmed, in tenths of a ppm.
-// At 868.2 MHz a tenth of a ppm is 87 Hz, so this is +-8.7 kHz: enough to
-// correct a reference ten times worse than the TCXO this board fits, and small
-// against both the 200 kHz channel and the distance from 868.2 MHz to the edges
-// of ERC 70-03 band h1.4 (868.0-868.6 MHz), so no legal trim moves the carrier
-// out of the band it is licensed in. Kept equal to
-// settings::kFrequencyTrimCeilingE1Ppm, which is the same bound on the stored
-// value; test/hardware/test_sx1262_level.cpp pins the two together.
+// INFO: fc 20nov26 +-8.7 kHz at 868.2 MHz stays in band h1.4, the bound the Go's settings share
 constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
-// Tenths of a ppm are parts in 10^7.
 constexpr int32_t kFrequencyTrimPerUnit = 10000000;
 
-// The frequency actually programmed, once the reference's own error is taken
-// out. Positive trim moves the carrier up, which is what a part measuring low
-// on a counter needs.
 constexpr uint32_t trimmed_hz(uint32_t frequency_hz, int16_t correction_e1_ppm) {
     int32_t correction = correction_e1_ppm;
     correction =
@@ -356,8 +284,7 @@ constexpr uint32_t trimmed_hz(uint32_t frequency_hz, int16_t correction_e1_ppm) 
     return static_cast<uint32_t>(static_cast<int64_t>(frequency_hz) + offset);
 }
 
-// DS 13.4.1: the SetTx timeout counts 15.625 us steps, 24 bits wide. 0 disables
-// it, which is a PA that stays keyed when TxDone never arrives.
+// INFO: fc 20nov26 DS 13.4.1: a zero SetTx timeout leaves the PA keyed when TxDone never comes
 constexpr uint32_t kTimeoutStepNs = 15625;
 constexpr uint32_t kTimeoutTicksCeiling = 0xFFFFFF;
 constexpr uint32_t kTxGuardUs = 25000;
@@ -366,8 +293,7 @@ constexpr uint32_t kTxGuardUs = 25000;
 constexpr uint32_t kResetLowUs = 100;
 // INFO: fc 05sep26 DS 13.1.2: no SPI for 500 us after SetSleep, while the configuration saves
 constexpr uint32_t kSleepSettleUs = 500;
-// §C.2 puts 16 chips of preamble before the sync word. Eight of them are enough
-// for the detector to declare a preamble.
+// INFO: fc 20nov26 ADS-L §C.2 sends 16 preamble chips, and the detector needs 8 of them
 constexpr uint16_t kPreambleChips = 16;
 constexpr uint8_t kPreambleDetect8Chips = 0x04;
 constexpr uint8_t kAddressFilteringOff = 0x00;

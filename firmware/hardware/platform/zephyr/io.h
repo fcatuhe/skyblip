@@ -17,8 +17,6 @@
 
 namespace skyblip::platform::zephyr {
 
-// The drivers use a flat pin int (port*32 + pin). nRF52840 has two GPIO
-// controllers, so the flat int maps onto (controller, pin).
 class Gpio : public io::Gpio {
    public:
     Gpio(const struct device* gpio0, const struct device* gpio1) : port_{gpio0, gpio1} {}
@@ -55,8 +53,7 @@ class Delay : public io::Delay {
     static bool may_sleep_through(uint32_t hold_us) { return hold_us >= kTickUs && k_can_yield(); }
 };
 
-// Manual-CS SPI: the drivers drive CS themselves via select(), so CS stays out
-// of the Zephyr spi_config and the line is toggled here.
+// INFO: fc 20nov26 the drivers drive CS through select(), so CS stays out of spi_config
 class Spi : public io::Spi {
    public:
     Spi(const struct device* spi, const struct spi_config& config, const struct gpio_dt_spec& cs)
@@ -66,7 +63,7 @@ class Spi : public io::Spi {
 
     void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
         static uint8_t zeros[64] = {0};
-        const uint8_t* transmitted = tx ? tx : zeros;  // clock zeros when tx==nullptr
+        const uint8_t* transmitted = tx ? tx : zeros;
         struct spi_buf tx_buffer{const_cast<uint8_t*>(transmitted), bytes};
         struct spi_buf rx_buffer{rx, bytes};
         struct spi_buf_set tx_buffers{&tx_buffer, 1};
@@ -81,21 +78,14 @@ class Spi : public io::Spi {
     struct gpio_dt_spec cs_;
 };
 
-// The sensor bus. Zephyr's own drivers (the barometer) share it through the same
-// device, which is safe: i2c_transfer takes the bus's lock.
-//
-// A zero-length write is an address probe and nothing else, which is how a scan
-// asks "is anything there": it is what Zephyr's own i2c shell does
-// (drivers/i2c/i2c_shell.c, an I2C_MSG_WRITE | I2C_MSG_STOP message of length 0).
-// UNBUILT HERE: on nRF TWIM a zero-length transfer is handled by the driver
-// rather than the peripheral, so this is the one call in the class that has to be
-// confirmed on silicon.
+// INFO: fc 20nov26 Zephyr's barometer driver shares this bus, and i2c_transfer takes its lock
 class I2c : public io::I2c {
    public:
     explicit I2c(const struct device* bus) : bus_(bus) {}
 
     bool write(uint8_t address, const uint8_t* data, size_t bytes) override {
         if (!device_is_ready(bus_)) return false;
+        // TODO: fc 20nov26 confirm on silicon that nRF TWIM sends a zero-length probe
         if (bytes == 0) {
             uint8_t nothing = 0;
             struct i2c_msg probe{&nothing, 0, I2C_MSG_WRITE | I2C_MSG_STOP};
@@ -132,12 +122,7 @@ class Uart : public io::Uart, public io::UartRate {
 
     uint32_t overruns() const override { return overruns_; }
 
-    // Retuning the port, which is what makes the L76K's autobaud recovery more
-    // than a table: a receiver that comes up at a rate the devicetree did not
-    // expect leaves the unit silently GNSS-less, and the driver can only walk its
-    // candidates if something can move the UART with it. False means the port
-    // refused, which is a capability we do not have rather than a call that
-    // quietly did nothing.
+    // INFO: fc 20nov26 the L76K's autobaud recovery retunes through this, and false is a refusal
     bool set(uint32_t baud) override {
         struct uart_config config{};
         if (uart_config_get(uart_, &config) != 0) return false;
@@ -158,7 +143,7 @@ class Uart : public io::Uart, public io::UartRate {
    private:
     // INFO: fc 27sep26 uarte_nrfx_poll_out returns once a byte's DMA starts, not once it has left
     static constexpr uint32_t kBytesOnTheWire = 2;
-    static constexpr uint32_t kBitsPerByte = 10;  // 8N1
+    static constexpr uint32_t kBitsPerByte = 10;
 
     static void drain(uint32_t baud) {
         k_busy_wait(kBytesOnTheWire * kBitsPerByte * 1000000u / baud);

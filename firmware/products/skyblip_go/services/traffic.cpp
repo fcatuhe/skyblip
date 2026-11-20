@@ -24,9 +24,7 @@ bool utc_dated(const bus::State& state) {
 }  // namespace
 
 void TrafficService::tick(uint32_t now_ms) {
-    // The reference the table's range gate measures a claimed position against
-    // (core/traffic/sanity.h), refreshed before this pass drains a single frame:
-    // own-ship has already run this pass, so this is the newest fix there is.
+    // INFO: fc 20nov26 set before any frame drains, from the fix own-ship published this pass
     context_.state.traffic.set_own_reference(context_.state.own);
     // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
     context_.state.traffic.set_own_address(settings::kSkyblipAddressMappingTable,
@@ -170,12 +168,7 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     log(event, stamp, radio::Verdict::Received, &observation);
 }
 
-// One packet from the ground, up to ten aircraft in it (§C.4's higher rate
-// buys the room the M band has no space for), each one an observation in its
-// own right, and each dated by the second it was heard in so G.3's age rule holds.
-// The counters are the uplink's own: a packet Reed-Solomon refuses is not an
-// M-band framing failure, and counting it as one is what let this whole path go
-// missing without a single number moving.
+// INFO: fc 20nov26 the uplink counts apart, so a packet Reed-Solomon refuses is never noise
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
                                uint32_t now_ms) {
     context_.state.air.uplink_frames++;
@@ -194,15 +187,11 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
         return;
     }
 
-    // The relay's own reception is older than this second by however long the
-    // ground station took to compose the frame, and nothing in it says by how
-    // much. Stamping it with the second it arrived in is the only honest
-    // reading, and core/traffic/table.h is what stops that recency from
-    // outranking a direct reception of the same aircraft.
     model::AircraftObservation relay{};
     relay.source = model::Source::AdslUplink;
     log(event, stamp, radio::Verdict::Received, &relay);
 
+    // INFO: fc 20nov26 a relay has no age, so it takes its arrival second (core/traffic/table.h)
     const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
     for (int i = 0; i < statistics.targets; i++) {
         model::AircraftObservation& observation = relayed[i];
@@ -231,8 +220,6 @@ bool TrafficService::names_its_sender(radio::Verdict outcome) {
            outcome == radio::Verdict::Undecoded;
 }
 
-// The Manchester error map travels with the frame, so the forward correction
-// knows which bits the air already told us not to trust.
 radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {

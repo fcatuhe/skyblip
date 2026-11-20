@@ -12,7 +12,8 @@ namespace skyblip::go {
 using namespace radar;
 
 namespace {
-constexpr int kCentreX = kFar;  // only for centring text, which has no such nicety
+// INFO: fc 20nov26 for centring text only, which has no pixel pair to straddle
+constexpr int kCentreX = kFar;
 using ui::kCellWidth;
 constexpr int kSecondsScale = 1;
 constexpr int kSecondsGap = 2;
@@ -340,7 +341,6 @@ void formation_square(ui::Canvas& canvas) {
     }
 }
 
-// One digit per quadrant of own-ship's nose: how many of the formation are over there.
 void formation_counts(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track_angle16) {
     int count[4] = {0, 0, 0, 0};
     for (int i = 0; i < snapshot.target_count; i++) {
