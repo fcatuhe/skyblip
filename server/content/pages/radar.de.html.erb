@@ -169,10 +169,11 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="no-tx">Sendet Go nicht, <span class="highlight">sagt jede Seite warum</span>.</h3>
       <p>
-        Go sendet Ihre Position nur, solange alle Anforderungen von ADS-L erfüllt
-        sind: eine aktivierte Adresse, ein Funkteil, das antwortet und vor dem Senden
-        hört, ein GPS-Empfänger mit zwei Lösungen pro Sekunde, eine Position, die
-        UTC-Zeit und der Impuls pro Sekunde des Empfängers. Fehlt eine davon, hört Go
+        Go sendet Ihre Position nur, solange es alles hat, was es für ADS-L braucht:
+        eine aktivierte Adresse, ein Funkteil, das antwortet und vor dem Senden hört,
+        eine Position, die UTC-Zeit und der Impuls pro Sekunde des Empfängers. Dazu
+        braucht es einen GPS-Empfänger mit zwei Lösungen pro Sekunde: So bleibt jede
+        gesendete Position für ADS-L aktuell genug. Fehlt eine davon, hört Go
         sofort auf zu senden. Es empfängt weiter, warnt Sie weiter und versorgt Ihre
         Navigations-App weiter.
       </p>

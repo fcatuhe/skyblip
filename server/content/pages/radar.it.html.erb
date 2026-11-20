@@ -214,10 +214,12 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="no-tx">Quando il Go non trasmette, <span class="highlight">ogni pagina dice perché</span>.</h3>
       <p>
-        Il Go trasmette la tua posizione solo finché valgono tutti i requisiti
-        dell&rsquo;ADS-L: un indirizzo attivato, una radio che risponde e ascolta prima
-        di trasmettere, un ricevitore GPS che calcola due soluzioni al secondo, una
-        posizione, l&rsquo;ora UTC e l&rsquo;impulso al secondo del ricevitore. Se
+        Il Go trasmette la tua posizione solo finché ha tutto ciò che serve per
+        rispettare l&rsquo;ADS-L: un indirizzo attivato, una radio che risponde e
+        ascolta prima di trasmettere, una posizione, l&rsquo;ora UTC e l&rsquo;impulso al
+        secondo del ricevitore. Gli serve anche un ricevitore GPS che calcola due
+        soluzioni al secondo: è così che il Go mantiene ogni posizione trasmessa
+        abbastanza recente per l&rsquo;ADS-L. Se
         uno manca, il Go smette subito di trasmettere, ma continua a ricevere, ad
         avvisarti e ad alimentare la tua app di navigazione.
       </p>

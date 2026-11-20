@@ -228,10 +228,12 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="no-tx">Quand le Go n&rsquo;émet pas, <span class="highlight">chaque page dit pourquoi</span>.</h3>
       <p>
-        Le Go n&rsquo;émet votre position que si toutes les exigences de l&rsquo;ADS-L
-        sont remplies&nbsp;: une adresse activée, une radio qui répond et écoute avant
-        d&rsquo;émettre, un récepteur GPS qui calcule deux positions par seconde, une
-        position, l&rsquo;heure UTC et l&rsquo;impulsion par seconde du récepteur. Si
+        Le Go n&rsquo;émet votre position que s&rsquo;il a tout ce qu&rsquo;il faut pour
+        respecter l&rsquo;ADS-L&nbsp;: une adresse activée, une radio qui répond et écoute
+        avant d&rsquo;émettre, une position, l&rsquo;heure UTC et l&rsquo;impulsion par
+        seconde du récepteur. Il lui faut aussi un récepteur GPS qui calcule deux
+        positions par seconde&nbsp;: c&rsquo;est ainsi que le Go garde chaque position
+        émise assez récente pour l&rsquo;ADS-L. Si
         l&rsquo;une manque, le Go cesse aussitôt d&rsquo;émettre, mais continue de
         recevoir, de vous alerter et d&rsquo;alimenter votre application de navigation.
       </p>

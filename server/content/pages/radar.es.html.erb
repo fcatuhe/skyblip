@@ -169,10 +169,11 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="no-tx">Cuando el Go no transmite, <span class="highlight">cada página dice por qué</span>.</h3>
       <p>
-        El Go transmite su posición solo mientras se cumplen todos los requisitos de
-        ADS-L: una dirección activada, una radio que responde y escucha antes de
-        transmitir, un receptor GPS que calcula dos soluciones por segundo, una
-        posición, la hora UTC y el pulso por segundo del receptor. Si falla uno, el Go
+        El Go transmite su posición solo mientras tiene todo lo que necesita para
+        cumplir ADS-L: una dirección activada, una radio que responde y escucha antes
+        de transmitir, una posición, la hora UTC y el pulso por segundo del receptor.
+        También necesita un receptor GPS que calcule dos soluciones por segundo: así
+        el Go mantiene cada posición transmitida lo bastante reciente para ADS-L. Si falla uno, el Go
         deja de transmitir al momento, pero sigue recibiendo, avisándole y
         alimentando su aplicación de navegación.
       </p>

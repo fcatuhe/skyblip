@@ -213,10 +213,11 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="no-tx">When Go does not transmit, <span class="highlight">every page says why</span>.</h3>
       <p>
-        Go transmits your position only while every ADS-L requirement holds: an
-        activated address, a radio that answers and listens before it transmits, a
-        GPS receiver solving twice a second, a position, UTC time and the
-        receiver&rsquo;s pulse per second. When one fails, Go stops transmitting at
+        Go transmits your position only while it has everything it needs to meet
+        ADS-L: an activated address, a radio that answers and listens before it
+        transmits, a position, UTC time and the receiver&rsquo;s pulse per second.
+        It also needs the GPS receiver solving twice a second, which is how Go
+        keeps every position it sends fresh enough for ADS-L. When one fails, Go stops transmitting at
         once and keeps receiving, warning you and feeding your navigation app.
       </p>
       <p>
