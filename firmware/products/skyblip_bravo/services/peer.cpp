@@ -52,6 +52,15 @@ void PeerService::tick(uint32_t now_ms) {
     send_observations(choice, utc_valid, now_ms);
 }
 
+uint32_t PeerService::due_in_ms(uint32_t now_ms) const {
+    const bool connected =
+        std::any_of(gos_.begin(), gos_.end(), [](const Go& go) { return go.used; });
+    if (!connected) return runtime::kServiceRestCeilingMs;
+    if (health_owed_) return runtime::kServicePassCeilingMs;
+    return std::min(runtime::remaining_ms(now_ms - health_sent_ms_, kHealthPeriodMs),
+                    ObservationPacer::kTargetUpdateFloorMs);
+}
+
 bool PeerService::answer(uint32_t now_ms) {
     if (!pairing_.answer(now_ms)) return false;
     health_owed_ = true;

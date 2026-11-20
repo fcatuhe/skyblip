@@ -56,6 +56,7 @@ class RecordStore {
 
     void begin_erase();
     bool erasing() const { return erasing_; }
+    bool spare_ready() const { return spare_ready_; }
     void step_erase(uint32_t now_ms);
 
     uint32_t records_written() const { return records_written_; }

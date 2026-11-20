@@ -10,6 +10,7 @@ selected suite twice through doctest's JUnit reporter. The normal run must pass.
 run uses --no-skip to read the failure message that explains each skip.
 """
 import argparse
+import dataclasses
 import os
 import re
 import subprocess
@@ -19,10 +20,11 @@ from collections import Counter, defaultdict
 from itertools import chain
 
 import behavior_index
-import check_adsl_clauses
-import check_do260b_clauses
+import check_clauses
 
-ROOT = check_adsl_clauses.ROOT
+ROOT = check_clauses.ROOT
+ADSL = next(s for s in check_clauses.STANDARDS if s.title.startswith("ADS-L"))
+DO260B = next(s for s in check_clauses.STANDARDS if s.title.startswith("DO-260B"))
 FIRMWARE = os.path.join(ROOT, "firmware")
 TEST_BINARY = os.path.join(FIRMWARE, "build", "skyblip_tests")
 EN300220_CLAUSES = os.path.join(FIRMWARE, "test", "en300220", "clauses.txt")
@@ -38,10 +40,10 @@ SOURCE_ROOTS = {
     "adsb": (ADSB_COMPONENT, ADSB_DEVICE),
 }
 
-APPENDIX = check_adsl_clauses.APPENDIX
+APPENDIX = ADSL.unnumbered[0]
 PERFORMANCE_APPENDIX = "APPENDIX - PERFORMANCE INFORMATION"
 SECTION = re.compile(r"^## ((?:SUBPART|APPENDIX)\b.*)$")
-CLAUSE_HEADING = re.compile(rf"^#+\s+({check_adsl_clauses.CLAUSE})\s+(.*)$")
+CLAUSE_HEADING = re.compile(rf"^#+\s+({ADSL.clause})\s+(.*)$")
 EN300220_CLAUSE = re.compile(r"^(EN 300 220-\d \d+(?:\.\d+)*) (.*)$")
 SEPARATOR = behavior_index.SUBJECT_SEPARATOR
 
@@ -75,10 +77,10 @@ def main():
         prose = {path: behavior_index.read_prose(path)[1] for path in paths}
         version = read(os.path.join(FIRMWARE, "protocols", protocol, "version.h"))
         if protocol == "adsl":
-            document = render_adsl(passed, skipped, prose, read(check_adsl_clauses.SPEC),
+            document = render_adsl(passed, skipped, prose, read(ADSL.spec),
                                    read(EN300220_CLAUSES), version)
         else:
-            clauses = do260b_clauses(check_do260b_clauses.LISTING)
+            clauses = do260b_clauses(DO260B.listing)
             document = render_adsb(passed, skipped, prose, clauses, version)
     except (ValueError, ET.ParseError, OSError, subprocess.CalledProcessError) as error:
         report(str(error))
@@ -110,7 +112,7 @@ def classify_runs(normal, no_skip):
         if (path, name) not in ran:
             if failure is None:
                 raise ValueError(f"a skipped case passes with --no-skip: {path}: {name}")
-            if check_adsl_clauses.kind_of(failure) is None:
+            if check_clauses.kind_of(failure) is None:
                 raise ValueError(f"a skipped case has no recognized reason: {path}: {name}: {failure}")
             skipped.append((path, name, failure))
     return list(ran), skipped
@@ -143,7 +145,7 @@ def junit_cases(xml):
         if error is not None:
             raise ValueError(f"the suite reported an error: {path}: {name}: {error.get('message')}")
         failures = [failure.get("message", "") for failure in case.findall("failure")]
-        message = next((failure for failure in failures if check_adsl_clauses.kind_of(failure)),
+        message = next((failure for failure in failures if check_clauses.kind_of(failure)),
                        failures[0] if failures else None)
         cases.append((path, name, message))
     return cases
@@ -240,7 +242,7 @@ def do260b_section(clause):
 
 
 def do260b_clauses(listing):
-    clauses, malformed = check_do260b_clauses.listed(listing)
+    clauses, malformed = check_clauses.listed(dataclasses.replace(DO260B, listing=listing))
     if malformed:
         raise ValueError("not a DO-260B clause line:\n" + "\n".join(malformed))
     return clauses
@@ -318,8 +320,8 @@ def matching_cases(cases, *roots):
 
 
 def kind_counts(messages):
-    counts = Counter(map(check_adsl_clauses.kind_of, messages))
-    return ", ".join(f"{counts[kind]} {kind}" for kind in check_adsl_clauses.KINDS if counts[kind])
+    counts = Counter(map(check_clauses.kind_of, messages))
+    return ", ".join(f"{counts[kind]} {kind}" for kind in check_clauses.KINDS if counts[kind])
 
 
 def quoted(version_h, name):

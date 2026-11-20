@@ -3,8 +3,7 @@
 
     python3 scripts/test_blip_flight.py
 
-test_blip.py loads this file, so CI runs it under that name. The records are handcrafted
-bytes laid out against firmware/core/flight/log_record.cpp.
+The records are handcrafted bytes laid out against firmware/core/flight/log_record.cpp.
 """
 import json
 import pathlib

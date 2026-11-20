@@ -2,8 +2,6 @@ CONFIG_ARM_MPU=y
 CONFIG_HW_STACK_PROTECTION=y
 CONFIG_GPIO=y
 CONFIG_CLOCK_CONTROL=y
-CONFIG_CONSOLE=y
-CONFIG_UART_CONSOLE=y
 CONFIG_SERIAL=y
 # Link into slot0, the devicetree's code partition, never at 0x0 over the factory MBR and SoftDevice.
 CONFIG_USE_DT_CODE_PARTITION=y

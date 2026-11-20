@@ -39,4 +39,4 @@ ADS-B and ALP-TAS are not frozen yet. These skyBlip files outside each stack cha
 | Version | skyBlip files outside the stack that change what it puts on air or reads off it |
 |---|---|
 | ADS-B | `core/protocol/adsb_observation.*`, `core/protocol/adsb_category.*`, `core/units/units.h`, `arctangent` in `core/util/intmath.*` (the track a velocity gives), `adsl::kAddressTableIcao` where `adsb_observation.cpp` writes it, `hardware/parts/lr2021/`, and `products/skyblip_bravo/services/adsb.*` |
-| ALP-TAS | `core/protocol/alptas.*`, the ALP-TAS half of `core/protocol/air.*`, `adsl_category_to_alptas_type` in `core/protocol/nmea_out.*`, and `products/common/services/traffic.*` (`decode_alptas`) |
+| ALP-TAS | `core/protocol/alptas.*`, the ALP-TAS half of `core/protocol/air.*`, `adsl_category_to_alptas_type` in `core/protocol/nmea_out.*`, and `products/skyblip_go/services/traffic.*` (`decode_alptas`) |

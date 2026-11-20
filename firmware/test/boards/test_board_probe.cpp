@@ -23,7 +23,7 @@ using boards::t_echo_plus::kRtcAddress;
 
 TEST_CASE("board: one scan, taken when the page asks, names everything on the sensor bus") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
     CHECK(board.inventory().i2c_count == 0);
@@ -55,7 +55,7 @@ TEST_CASE("board: one scan, taken when the page asks, names everything on the se
 TEST_CASE("board: a haptic that answers the bus is a capability, and it is the part" *
           doctest::test_suite("main")) {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
 
@@ -78,7 +78,7 @@ TEST_CASE("board: a haptic that answers the bus is a capability, and it is the p
 // The X1 runs an LRA through the same part, and that choice must not leak into this board.
 TEST_CASE("board: the T-Echo Plus drives its motor as an ERM in open loop, uncalibrated") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
     models::Drv2605& chip = platform.chips().haptic;
@@ -92,7 +92,7 @@ TEST_CASE("board: the T-Echo Plus drives its motor as an ERM in open loop, uncal
 // A loop that stalls mid-call would otherwise hold an output on until the watchdog bites.
 TEST_CASE("board: an output left on past its ceiling is cut, the motor and the buzzer both") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
     ports::Roles roles = board.roles();
@@ -117,7 +117,7 @@ TEST_CASE("board: an output left on past its ceiling is cut, the motor and the b
 
 TEST_CASE("board: the guard counts from turn-on: an off re-arms it, a pitch change does not") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
     ports::Roles roles = board.roles();
@@ -156,7 +156,7 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
     // The unit is fitted for a haptic and the part does not answer: an empty pad,
     // a dead chip, a board that turned out to be a plain T-Echo.
     platform.chips().haptic.answers = false;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
 
@@ -173,7 +173,7 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
 TEST_CASE("board: the panel it identified is on the inventory by name") {
     platform::host::Platform platform;
     platform.chips().epd.panel_id = parts::panels::kGdeh0154D67Syx2118;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
 
@@ -183,7 +183,7 @@ TEST_CASE("board: the panel it identified is on the inventory by name") {
 
 TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
 
@@ -200,7 +200,7 @@ TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
 TEST_CASE("board: a buzzer pin held down by its drive stage is a fitted buzzer") {
     platform::host::Platform platform;
     platform.set_buzzer_pin_held_low(true);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
 
@@ -210,7 +210,7 @@ TEST_CASE("board: a buzzer pin held down by its drive stage is a fitted buzzer")
 TEST_CASE("board: a buzzer pin that follows the pull-up is an empty pad, and the haptic stays") {
     platform::host::Platform platform;
     platform.set_buzzer_pin_held_low(false);
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     board.probe();
 
@@ -226,7 +226,7 @@ TEST_CASE("board: a buzzer pin that follows the pull-up is an empty pad, and the
 
 TEST_CASE("board: a barometer at LilyGO's address is the one reported") {
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     // Our BOM says 0x76 and LilyGO's own README says 0x77. This is the unit that
     // came the other way.
     platform.i2c_bus().answer(0x76, false);
@@ -245,7 +245,7 @@ TEST_CASE("board: the status lamp is a devicetree fact, and a board without one 
     // through. Asserted here because a board that dropped the bit would produce a
     // device with a lamp it never lights and no way to tell.
     platform::host::Platform fitted;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board with_a_lamp{fitted, bus};
     with_a_lamp.probe();
     CHECK(ports::has(with_a_lamp.capabilities(), ports::Capability::Indicator));
@@ -254,7 +254,7 @@ TEST_CASE("board: the status lamp is a devicetree fact, and a board without one 
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Indicator));
     platform::host::Platform bare{kNoLamp};
-    bus::Bus bare_bus;
+    bus::GoBus bare_bus;
     Board without{bare, bare_bus};
     without.probe();
     CHECK_FALSE(ports::has(without.capabilities(), ports::Capability::Indicator));

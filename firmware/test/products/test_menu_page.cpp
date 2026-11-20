@@ -145,10 +145,10 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
 
     CHECK(rig.product.screen().page() == go::Page::SelfTest);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
-    CHECK(std::memcmp(rig.product.screen().framebuffer().data(),
-                      rig.product.self_test_page().data(), go::Glass::kBytes) == 0);
+    CHECK(std::memcmp(rig.product.screen().framebuffer().data(), rig.self_test_page().data(),
+                      go::Glass::kBytes) == 0);
     CHECK(rig.platform.chips().epd.framebuffer().count_black() ==
-          rig.product.self_test_page().count_black());
+          rig.self_test_page().count_black());
 
     // A tap goes back to the page whose menu opened it, not on to a fourth picture.
     rig.tap(now_ms);

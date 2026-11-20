@@ -8,7 +8,7 @@ struct Glyph {
     char character;
     char rows[kCharacterHeight][kCharacterWidth + 1];
 };
-const Glyph kFont[] = {
+constexpr Glyph kFont[] = {
     {' ', {".....", ".....", ".....", ".....", ".....", ".....", "....."}},
     {'0', {".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."}},
     {'1', {"..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."}},
@@ -54,11 +54,26 @@ const Glyph kFont[] = {
     {'+', {".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."}},
     {'%', {"##...", "##..#", "...#.", "..#..", ".#...", "#..##", "...##"}},
 };
-const Glyph& find_glyph(char character) {
+constexpr char kFirstCharacter = ' ';
+constexpr char kLastCharacter = 'Z';
+struct PackedFont {
+    uint8_t columns[kLastCharacter - kFirstCharacter + 1][kCharacterWidth];
+};
+constexpr PackedFont pack() {
+    PackedFont packed{};
+    for (const Glyph& glyph : kFont)
+        for (int column = 0; column < kCharacterWidth; column++)
+            for (int row = 0; row < kCharacterHeight; row++)
+                if (glyph.rows[row][column] == '#')
+                    packed.columns[glyph.character - kFirstCharacter][column] |=
+                        static_cast<uint8_t>(1u << row);
+    return packed;
+}
+constexpr PackedFont kPackedFont = pack();
+const uint8_t* columns_of(char character) {
     if (character >= 'a' && character <= 'z') character = static_cast<char>(character - 'a' + 'A');
-    for (const auto& glyph : kFont)
-        if (glyph.character == character) return glyph;
-    return kFont[0];
+    if (character < kFirstCharacter || character > kLastCharacter) character = kFirstCharacter;
+    return kPackedFont.columns[character - kFirstCharacter];
 }
 }
 
@@ -178,10 +193,10 @@ void Canvas::circle(int centre_x, int centre_y, int radius, bool black, bool fil
 }
 
 int Canvas::draw_character(int x, int y, char character, bool black, int scale) {
-    const Glyph& glyph = find_glyph(character);
+    const uint8_t* columns = columns_of(character);
     for (int column = 0; column < kCharacterWidth; column++) {
         for (int row = 0; row < kCharacterHeight; row++) {
-            if (glyph.rows[row][column] == '#') {
+            if (columns[column] & (1u << row)) {
                 for (int block_x = 0; block_x < scale; block_x++)
                     for (int block_y = 0; block_y < scale; block_y++)
                         set_pixel(x + column * scale + block_x, y + row * scale + block_y, black);

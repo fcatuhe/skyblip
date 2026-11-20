@@ -1,6 +1,6 @@
-// The committed scenarios are regression fixtures: the same files the browser and
-// the terminal load are replayed here, and a training scenario's expectations are
-// the assertions. A bug found in flight becomes a file, not a bug report.
+// The committed scenarios are regression fixtures: the same files the browser
+// loads are replayed here, and a training scenario's expectations are the
+// assertions. A bug found in flight becomes a file, not a bug report.
 #include <initializer_list>
 #include <string>
 
