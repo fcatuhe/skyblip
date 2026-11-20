@@ -82,9 +82,7 @@ Status Sx1262::reset_to_standby() {
     return enter_standby();
 }
 
-// BUSY going low proves a pull-down and a power rail, which a radio that is not
-// fitted, not soldered on its MISO pad or held in reset also manages. Only a
-// value that came back out of the part proves the part.
+// INFO: fc 20nov26 an absent radio still lets BUSY fall, so only a register read back proves one
 Status Sx1262::verify_link() {
     write_register(sx1262::kSyncWordRegister, sx1262::kLinkProbePattern,
                    sizeof(sx1262::kLinkProbePattern));
@@ -111,36 +109,30 @@ Status Sx1262::begin() {
     const Status link = verify_link();
     if (link != Status::Ok) return link;
 
-    // First, and before the calibration that runs against it: the reset default
-    // is LDO-only. SoftRF opens its own bring-up with the same command
-    // (radio-sx126x.c:703).
+    // INFO: fc 20nov26 the part resets on its LDO, so select DC-DC before calibrating against it
     uint8_t regulator = sx1262::kRegulatorDcDc;
     command(sx1262::kSetRegulatorMode, &regulator, 1);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
 
-    // T-Echo (Plus) hardware wiring: DIO2 is the RF/antenna switch and DIO3
-    // powers the TCXO at 1.8 V. Without the TCXO control the radio has no clock
-    // and will neither TX nor RX. Enable both, then calibrate.
-    uint8_t rf_switch_control = 0x01;  // DIO2 controls RF switch
+    // INFO: fc 20nov26 DIO2 switches the antenna, and DIO3 powers the TCXO the part needs to run
+    uint8_t rf_switch_control = 0x01;
     command(sx1262::kSetDio2AsRfSwitch, &rf_switch_control, 1);
-    // SetDIO3AsTcxoCtrl: voltage byte + 3-byte startup delay (~5 ms @ 15.625 us).
+    // INFO: fc 20nov26 DS 13.3.6: a 3-byte start delay of 0x140 steps of 15.625 us is 5 ms
     uint8_t tcxo_control[4] = {sx1262::kTcxoVoltage1v8, 0x00, 0x01, 0x40};
     command(sx1262::kSetDio3AsTcxoControl, tcxo_control, 4);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     // INFO: fc 05sep26 DS 13.3.6: a TCXO part raises XOSC_START_ERR here for free
     clear_device_errors();
-    uint8_t calibration = 0x7F;  // calibrate all blocks after switching to the TCXO
+    // INFO: fc 20nov26 0x7F calibrates every block, now on the TCXO's clock
+    uint8_t calibration = 0x7F;
     command(sx1262::kCalibrate, &calibration, 1);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
-    // INFO: wr 02aug26 DS 13.1.12: image rejection is calibrated per band and
-    // only once the TCXO clock the calibration runs on is the chip's clock.
+    // INFO: wr 02aug26 DS 13.1.12: calibrate the image per band, once the TCXO clocks the part
     command(sx1262::kCalibrateImage, sx1262::kImageBand863to870,
             sizeof(sx1262::kImageBand863to870));
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
 
-    // DS 9.6: without this the boosted receive gain is lost on every warm start,
-    // silently and with no symptom but range. Written once, in standby, before
-    // the first sleep can happen.
+    // INFO: fc 20nov26 DS 9.6: listed before the first sleep, or every warm start loses the boost
     write_register(sx1262::kRetentionListRegister, sx1262::kRetainRxGain,
                    sizeof(sx1262::kRetainRxGain));
     configure_rx_gain();
@@ -173,8 +165,7 @@ void Sx1262::write_register(uint16_t address, const uint8_t* data, size_t bytes)
     write_frame(head, sizeof(head), data, bytes);
 }
 
-// DS 13.2.2 ReadRegister: opcode, address, one NOP the chip answers nothing to,
-// then the bytes.
+// INFO: fc 20nov26 DS 13.2.2: one NOP byte sits between the address and the data
 void Sx1262::read_register(uint16_t address, uint8_t* out, size_t bytes) {
     const uint8_t head[4] = {sx1262::kReadRegister, static_cast<uint8_t>(address >> 8),
                              static_cast<uint8_t>(address), 0};
@@ -183,8 +174,6 @@ void Sx1262::read_register(uint16_t address, uint8_t* out, size_t bytes) {
 
 namespace {
 
-// The narrowest entry of DS 13.4.6's table that still passes the channel, or
-// the widest the part has if nothing does.
 uint8_t rx_bandwidth_index(uint32_t bandwidth_hz) {
     for (int i = 0; i < sx1262::kRxBandwidthCount; i++)
         if (sx1262::kRxBandwidths[i].bandwidth_hz >= bandwidth_hz)
@@ -192,8 +181,6 @@ uint8_t rx_bandwidth_index(uint32_t bandwidth_hz) {
     return sx1262::kRxBandwidths[sx1262::kRxBandwidthCount - 1].index;
 }
 
-// DS 13.4.6 pulse shape: an index, not a number, so the BT the caller asked for
-// is matched to the one the part actually has.
 uint8_t pulse_shape_index(uint16_t gaussian_bt_e2) {
     if (gaussian_bt_e2 == 0) return sx1262::kPulseShapeNone;
     if (gaussian_bt_e2 <= 30) return sx1262::kGaussianBt0p3;
@@ -233,8 +220,6 @@ bool Sx1262::hops_to(const RadioConfig& config) const {
     return tuned_ && mode_ != RadioMode::Tx && same_modem(config, config_);
 }
 
-// DS 13.4.6 SetModulationParams, GFSK, in the datasheet's order: bit rate,
-// pulse shape, RX bandwidth, frequency deviation.
 void Sx1262::configure_modulation(const RadioConfig& config) {
     const uint32_t bitrate = config.bitrate != 0 ? config.bitrate : 100000u;
     const uint32_t bitrate_word = static_cast<uint32_t>(32ULL * sx1262::kCrystalHz / bitrate);
@@ -252,7 +237,6 @@ void Sx1262::configure_modulation(const RadioConfig& config) {
     command(sx1262::kSetModulationParameters, parameters, sizeof(parameters));
 }
 
-// About 2 mA for about 3 dB, taken deliberately (sx1262.h, kRxGainBoosted).
 void Sx1262::configure_rx_gain() {
     const uint8_t gain = sx1262::kRxGainBoosted;
     write_register(sx1262::kRxGainRegister, &gain, 1);
@@ -280,8 +264,7 @@ void Sx1262::configure_power() {
     write_register(sx1262::kOcpRegister, &ocp, 1);
 }
 
-// DS 13.3.1 SetDioIrqParams: the global mask, then one mask per DIO. DIO1 is the
-// only interrupt line wired on this board.
+// INFO: fc 20nov26 DS 13.3.1: the global mask, then DIO1's, the only line wired, then the other two
 void Sx1262::configure_irq() {
     const uint8_t mask_high = static_cast<uint8_t>(sx1262::kIrqMask >> 8);
     const uint8_t mask_low = static_cast<uint8_t>(sx1262::kIrqMask);
@@ -295,7 +278,6 @@ void Sx1262::configure_frame(const RadioConfig& config) {
     write_packet_parameters(config.payload_bytes);
 }
 
-// DS 13.4.6 SetPacketParams, GFSK, in the datasheet's order.
 void Sx1262::write_packet_parameters(uint8_t payload_bytes) {
     uint8_t parameters[9] = {0};
     parameters[0] = static_cast<uint8_t>(sx1262::kPreambleChips >> 8);
@@ -311,9 +293,7 @@ void Sx1262::write_packet_parameters(uint8_t payload_bytes) {
     packet_bytes_ = payload_bytes;
 }
 
-// INFO: wr 02aug26 DS 13.1: SetPacketType and SetRfFrequency are standby-only
-// commands, and the previous dwell leaves the chip in continuous RX. Bracket the
-// whole sequence and hand the caller back the mode it had.
+// INFO: wr 02aug26 DS 13.1: SetPacketType and SetRfFrequency need standby, so the mode is restored
 Status Sx1262::configure_radio(const RadioConfig& config) {
     if (!brought_up_) return Status::Down;
     if (holds(config)) return Status::Ok;
@@ -338,7 +318,6 @@ Status Sx1262::configure_radio(const RadioConfig& config) {
     return Status::Ok;
 }
 
-// The same modem on another channel, which is the M-band hop between the two dwells.
 Status Sx1262::retune(const RadioConfig& config, RadioMode was) {
     if (was != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok) return Status::Timeout;
     config_ = config;
@@ -348,9 +327,7 @@ Status Sx1262::retune(const RadioConfig& config, RadioMode was) {
     return Status::Ok;
 }
 
-// The reference's own error is taken out here, at the one place the PLL word
-// is computed, so receive and transmit are trimmed by construction and
-// nothing downstream carries a second copy of the correction.
+// INFO: fc 20nov26 the one place the PLL word is computed, so receive and transmit share the trim
 void Sx1262::write_frequency(const RadioConfig& config) {
     const uint32_t tuned_hz =
         sx1262::trimmed_hz(config.frequency_hz, config.frequency_correction_e1_ppm);
@@ -361,8 +338,7 @@ void Sx1262::write_frequency(const RadioConfig& config) {
     command(sx1262::kSetRfFrequency, pll_bytes, 4);
 }
 
-// Preamble, sync window and payload at the configured bit rate, plus the margin
-// SoftRF uses to decide a burst is never going to end (almic.cpp:510).
+// INFO: fc 20nov26 kTxGuardUs is SoftRF's margin for a burst that never ends (almic.cpp:510)
 uint32_t Sx1262::tx_timeout_ticks(uint8_t bytes) const {
     const uint64_t ticks = (static_cast<uint64_t>(air_us(bytes)) + sx1262::kTxGuardUs) * 1000ULL /
                            sx1262::kTimeoutStepNs;
@@ -423,8 +399,6 @@ Status Sx1262::start_receive() {
     return Status::Ok;
 }
 
-// DS 9.3: warm start keeps the configuration in retention across sleep, so what
-// comes back is the radio that went to sleep and not a chip out of reset.
 // INFO: fc 05sep26 DS 13.1.1: SetSleep is accepted in STDBY only, and a dwell ends in RX
 void Sx1262::sleep() {
     if (mode_ != RadioMode::Standby && enter_standby() != Status::Ok) return;
@@ -435,8 +409,7 @@ void Sx1262::sleep() {
     delay_.wait_at_least_us(sx1262::kSleepSettleUs);
 }
 
-// DS 9.3: a falling edge on NSS is what wakes the part; it comes back in
-// STDBY_RC with everything the warm start retained.
+// INFO: fc 20nov26 DS 9.3: an NSS falling edge wakes the part into STDBY_RC
 Status Sx1262::wake() {
     if (mode_ != RadioMode::Sleep) return Status::Ok;
     spi_.select(true);
@@ -445,7 +418,7 @@ Status Sx1262::wake() {
     return enter_standby();
 }
 
-// DS 13.5.2: the chip reports -2x the signal level in dBm, one byte.
+// INFO: fc 20nov26 DS 13.5.2: the part reports minus twice the level in dBm
 int8_t Sx1262::instant_rssi_dbm() {
     uint8_t reported = 0;
     read_command(sx1262::kGetInstantRssi, &reported, 1);
@@ -517,8 +490,6 @@ RadioEvent Sx1262::poll(uint8_t* out, uint8_t capacity) {
     return event;
 }
 
-// The PA is keyed until something unkeys it. The chip's own SetTx timeout is
-// what notices; this is what puts the radio back where the dwell expects it.
 void Sx1262::recover_tx() {
     tx_recovery_count_++;
     if (enter_standby_on_tcxo() != Status::Ok) return;
