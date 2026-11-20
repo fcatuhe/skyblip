@@ -1,10 +1,16 @@
 # parts/drv2605
 
-The TI DRV2605 haptic driver at I2C 0x5A, with its enable line on a GPIO, driven by `Drv2605` and stood in for by `model.h` on the host. Why the T-Echo Plus pin is an enable and not a motor drive is the header's opening note.
+The TI DRV2605 haptic driver at I2C 0x5A, the datasheet's only address, with its enable line on a GPIO, driven by `Drv2605` and stood in for by `model.h` on the host.
+
+On the T-Echo Plus, P0.08 is the driver's enable, not a motor drive. LilyGO and Meshtastic call it `PIN_DRV_EN` or `PIN_MOTOR_EN`, and SoftRF identifies the Plus by a DRV2605 at 0x5A beside the BHI260AP (`platform/nRF52.cpp:1158-1163`). Raising the pin takes the driver out of hardware standby and moves no motor: the part needs a mode and a drive value over I2C first (SoftRF `nRF52.cpp:2112-2133`). The register map and the ERM open-loop bring-up follow SensorLib, the vendor library SoftRF uses (`HapticDriver_DRV2605_Reg.hpp`, `HapticDriver_DRV2605.cpp:410-456`).
+
+`power_up()` raises the enable before anything on the bus is believed. SoftRF finds the part with the pin undriven (`nRF52.cpp:1158`, long before `:2130` drives it), but enable first costs one write and also works if the line gates the motor's supply.
+
+The motor is driven by real-time playback, not a ROM effect: the drive value holds until it is cleared, so the motor runs exactly as long as `core/annunciation` asks. A ROM effect, which SoftRF plays, lasts its own length.
 
 ## ERM or LRA
 
-The part cannot tell which motor it drives, so the board names it with `Drv2605::Actuator`. The T-Echo Plus passes `Erm` and keeps the bring-up it always had: ERM library A, open loop, no calibration. The X1 passes `Lra` (`kHapticActuator` in its `pins.h`). Meshtastic's X1 variant defines `DRV2605_USE_LRA` (`variants/nrf52840/seeed_mesh_tracker_X1/variant.h:76-78` at `6d41e279`), and the first unit, whose smoke image read device ID 7, a DRV2605L, only buzzed weakly under the ERM drive. No source names the X1's motor part, so its rated voltage and resonant frequency are unknown. Every value below is from TI's DRV2605L datasheet, SLOS854D, and unverified until #169 benches the motor.
+The part cannot tell which motor it drives, so the board names it with `Drv2605::Actuator`. The T-Echo Plus passes `Erm`: ERM library A, as SoftRF (`nRF52.cpp:2121`) and SensorLib pick, open loop because closed loop needs a rated voltage and back-EMF its unknown motor cannot give, and no calibration. The X1 passes `Lra` (`kHapticActuator` in its `pins.h`), because Meshtastic's X1 variant defines `DRV2605_USE_LRA` (`variants/nrf52840/seeed_mesh_tracker_X1/variant.h:76-78` at `6d41e279`) and the first unit, a DRV2605L, buzzed only weakly under the ERM drive. No source names the X1's motor, so its rated voltage and resonant frequency are unknown. Every value below is from TI's DRV2605L datasheet, SLOS854D, and unverified until #169 benches the motor.
 
 `begin()` drives an LRA in closed loop, where the auto-resonance engine tracks the resonant frequency by itself (8.3.2.1). It writes the registers below over whatever another firmware left, since EN low keeps them (8.4.1.3). A part whose OTP is programmed (OTP_STATUS, 8.6.24) keeps its RATED_VOLTAGE, OD_CLAMP, calibration results and FEEDBACK gains, which the datasheet's initialization skips calibration for (9.3.1 step 4), and only gets N_ERM_LRA set.
 
@@ -24,15 +30,13 @@ Real-time playback sends signed 0x7F, which in bidirectional closed loop is full
 
 ## Calibration
 
-`calibrate()` runs the auto-calibration of 8.5.6 on an LRA that `begin()` brought up: MODE 7, GO set, GO polled every 10 ms until it clears, then DIAG_RESULT read from STATUS, which clears on read (8.6.1). It drives the motor for 1000 to 1200 ms (AUTO_CAL_TIME 3, 8.6.24), so only the smoke image calls it: on Bravo that buzz would be felt outside any call, and the motor is reserved for traffic and the signs on and off (`../../../core/annunciation/README.md`). Bravo drives the results the part holds, as Meshtastic does, until #169 records a unit's results and the firmware can write them back at bring-up (8.5.6 step 6b).
+`calibrate()` runs the auto-calibration of 8.5.6 on an LRA that `begin()` brought up: MODE 7, GO set, GO polled every 10 ms until it clears, then DIAG_RESULT read from STATUS, which clears on read (8.6.1). It drives the motor for 1000 to 1200 ms (AUTO_CAL_TIME 3, 8.6.24), so only the smoke image calls it: the motor is reserved for traffic and the signs on and off ([`core/annunciation/README.md`](../../../core/annunciation/README.md)). Bravo drives the results the part holds, as Meshtastic does, until #169 records a unit's results for the firmware to write back at bring-up (8.5.6 step 6b).
 
 `kCalibrationCeilingMs`, 1500 ms, bounds the poll. A GO still set past it is cleared and the calibration counts as failed. Standby, which `calibrate()` always ends in, stops the part at once (8.4.1.4). `calibration()` keeps what the part reported, A_CAL_COMP (0x18), A_CAL_BEMF (0x19) and BEMF_GAIN, even when it failed, so the smoke image can print it. A calibration that fails or hangs writes back the A_CAL_COMP, A_CAL_BEMF and FEEDBACK the part held before it, because A_CAL_BEMF only means something with its own BEMF_GAIN (8.6.19).
 
-The model powers up with the register file of 8.6, Table 3, keeps OTP_STATUS read-only, flags any write of OTP_PROGRAM, and runs a calibration the moment GO is set in mode 7 with the part awake and enabled. A case can make it fail (`calibration_converges`) or hang (`calibration_hangs`).
-
 ## Names
 
-The register constants are spelled in full. The register map follows SensorLib's `HapticDriver_DRV2605_Reg.hpp`, the vendor library SoftRF uses. Where our name differs from the reference's, this is the pair, the right column spelled as this tree's comments or earlier identifiers cited it.
+The register constants are spelled in full. The register map follows SensorLib's `HapticDriver_DRV2605_Reg.hpp`, the vendor library SoftRF uses. Where our name differs, this is the pair.
 
 | Our name | Reference name |
 |---|---|
