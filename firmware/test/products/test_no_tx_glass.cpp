@@ -97,6 +97,45 @@ TEST_CASE("no tx glass: the self test says how the radio and the receiver work n
     CHECK(wears_no_tx(simulator, "PPS"));
 }
 
+TEST_CASE("no tx glass: in flight the Go shakes once as NO TX appears, not again while it stays") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(120);
+    const uint32_t settled_ms = past_settling(simulator);
+    run_on(simulator, settled_ms, 20000);
+    REQUIRE(simulator.product().state().flight.confirmed_state == flight::FlightState::Airborne);
+
+    simulator.world().set_pps_locked(false);
+    const uint32_t lost_ms = settled_ms + 20005;
+    const uint32_t shown_ms = lost_ms + timing::kPpsHoldoverMs + timing::TransmitGate::kNoTxHoldMs;
+    run_on(simulator, lost_ms, shown_ms - lost_ms - 2000);
+    const uint32_t before = simulator.platform().annunciator().motor_starts();
+    const uint32_t cuts = simulator.platform().annunciator().guard_cuts();
+    run_on(simulator, shown_ms - 1995, 4000);
+    REQUIRE(wears_no_tx(simulator, "PPS"));
+    CHECK(simulator.platform().annunciator().motor_starts() == before + 1);
+    run_on(simulator, shown_ms + 2010, 30000);
+    CHECK(simulator.platform().annunciator().motor_starts() == before + 1);
+    CHECK_FALSE(simulator.platform().annunciator().vibrating());
+    CHECK(simulator.platform().annunciator().guard_cuts() == cuts);
+}
+
+TEST_CASE("no tx glass: on the ground NO TX appears without a shake") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(0);
+    const uint32_t settled_ms = past_settling(simulator);
+    REQUIRE(simulator.product().state().flight.confirmed_state != flight::FlightState::Airborne);
+    const uint32_t before = simulator.platform().annunciator().motor_starts();
+    simulator.world().set_pps_locked(false);
+    run_on(simulator, settled_ms,
+           timing::kPpsHoldoverMs + timing::TransmitGate::kNoTxHoldMs + 3000);
+    REQUIRE(wears_no_tx(simulator, "PPS"));
+    CHECK(simulator.platform().annunciator().motor_starts() == before);
+}
+
 TEST_CASE("no tx glass: a radio that stops answering reads NO CCA and NO TX on the self test") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
