@@ -1,55 +1,22 @@
 #!/usr/bin/env python3
-"""Build the drag-and-drop install artifact, and refuse to build a dangerous one.
+"""Build a board's drag-and-drop .uf2 install image, and refuse a dangerous one.
 
     mkuf2.py <board> <out.uf2> <in1.hex> [in2.hex ...]
 
-The inputs are the two images sysbuild builds separately - MCUboot at
-boot_partition and the signed, confirmed application at slot0 - which this script
-merges. Sysbuild CAN merge them itself (SB_CONFIG_MERGED_HEX_FILES, Zephyr
-doc/build/sysbuild/index.rst "Merged hex files"), but it merges each image's
-default hex output, which for the application is the unconfirmed
-`zephyr.signed.hex` - and the whole point here is the CONFIRMED image, see below.
-Merging Intel HEX is a dozen lines on top of the parser this script already needs
-for its range checks, so it does it here rather than taking a dependency on
-`mergehex`.
+It merges MCUboot and the signed, confirmed application. Sysbuild's own merge
+takes the unconfirmed image, which a bootloader-written slot0 would revert on
+the second boot. The .uf2 stays the only install artifact (check_no_dfu_package.py).
 
-The application image must be the *confirmed* one. A slot0 written directly by a
-bootloader never goes through a swap, so it never gets to mark itself good, and an
-unconfirmed image would be reverted on the second boot.
+The factory bootloader writes any address from 0x001000 to 0x0EA000 without
+complaint (Adafruit_nRF52_Bootloader src/usb/uf2/uf2cfg.h), so the image is
+refused against the board's WINDOWS entry when a block falls:
 
-The result is the single file a pilot drops on the bootloader's volume.
-It stays the only install artifact: a Nordic DFU package stores a real
-bank_0_crc, which fails bootloader_app_is_valid() after the first MCUboot swap
-(check_no_dfu_package.py).
+  * below the SoftDevice's end, where it would erase the factory MBR and SoftDevice
+  * at or above USER_FLASH_END, which the bootloader silently drops, truncating the image
+  * at or above the bootloader's start, where it would remove the recovery path
 
-The range assertions are the point of this script. Each board has its own window,
-in WINDOWS, because each factory bootloader sits over its own SoftDevice. The
-Adafruit bootloader writes any address inside
-    USER_FLASH_START .. USER_FLASH_END  =  0x001000 .. 0x0EA000
-(Adafruit_nRF52_Bootloader src/usb/uf2/uf2cfg.h:25-26, ghostfat.c in_app_space),
-and it does so without complaint. So, per board:
-
-  * A block below the SoftDevice's end would land on the factory MBR and
-    SoftDevice. Erasing those makes the device unable to run SoftRF/Meshtastic
-    ever again and breaks the bootloader's own fallback DFU.
-  * A block at or above USER_FLASH_END is SILENTLY REFUSED by the bootloader -
-    the copy appears to succeed and the device is left with a truncated image.
-    The T-Echo's identity page, its unit's unlock code, sits right there.
-  * A block at or above the factory bootloader's start would land on the
-    bootloader itself. Unreachable today (it is past USER_FLASH_END), and checked
-    anyway so that raising the ceiling can never take the recovery path with it:
-    without that bootloader the device installs nothing without a programmer.
-
-All of them are cheap to check here and expensive to discover in the field.
-
-The .uf2 also writes 0xFF over every byte of slot0's last sector that the
-confirmed image leaves out. That sector holds MCUboot's image trailer and the
-swap status before it. The Adafruit bootloader rewrites only the blocks a .uf2
-names, so without this a drag-and-drop keeps the status of an earlier Bluetooth
-swap while the image's own trailer block wipes that swap's size and copy_done.
-MCUboot then resumes a swap of size 0xFFFFFFFF, and its find_last_idx() never
-returns (MCUboot swap_offset.c): the unit hangs in the bootloader for good.
-The firmware image itself is unchanged; only the .uf2 grows by one sector.
+The .uf2 also writes 0xFF over the bytes of slot0's last sector the image leaves
+out, so a stale swap status from a Bluetooth update cannot hang MCUboot.
 """
 import os
 import pathlib
@@ -82,7 +49,6 @@ WINDOWS = {
 
 
 def read_hex(path, into):
-    """Merge an Intel HEX file into an {address: byte} map."""
     offset = 0
     for line in path.read_text().splitlines():
         line = line.strip()
@@ -105,7 +71,6 @@ def read_hex(path, into):
 
 
 def ranges_of(byte_map):
-    """Contiguous [start, end) ranges covered by an {address: byte} map."""
     if not byte_map:
         return []
     ranges = []
@@ -137,10 +102,6 @@ def write_hex(byte_map, path):
 
 
 def prepare_drop(byte_map, window):
-    """Check the merged image is a confirmed slot0 image inside the window, and blank its trailer sector.
-
-    Returns an error message, or None once byte_map is what the .uf2 writes.
-    """
     end = window.user_flash_end
     magic = bytes(byte_map.get(a, 0xFF) for a in range(end - len(MCUBOOT_MAGIC), end))
     if magic != MCUBOOT_MAGIC or byte_map.get(end - IMAGE_OK_FROM_END) != IMAGE_OK_SET:
@@ -159,12 +120,7 @@ def blank_trailer_sector(byte_map, window):
 
 
 def zephyr_uf2conv():
-    """Zephyr already ships the converter; don't vendor a second one.
-
-    ZEPHYR_BASE is exported by `west build` and by the CI setup action. The
-    repo-relative fallbacks cover both west workspace layouts: topdir at the repo
-    root (`west init -l firmware`) and the repo as a subdirectory of the topdir.
-    """
+    # INFO: fc 20nov26 the fallbacks cover both west layouts: topdir at the repo root, or the repo inside the topdir
     candidates = []
     if os.environ.get("ZEPHYR_BASE"):
         candidates.append(pathlib.Path(os.environ["ZEPHYR_BASE"]))
@@ -182,13 +138,6 @@ def zephyr_uf2conv():
 
 
 def check_window(ranges, window):
-    """Refuse a merged image the board's factory bootloader cannot safely write.
-
-    Returns an error message, or None when every byte lands in the writable
-    window. No I/O and no Zephyr: scripts/test_mkuf2.py exercises the guards
-    directly, because they are the only reason this script exists and a
-    partition edit is what silently defeats them.
-    """
     low = min(start for start, _ in ranges)
     high = max(end for _, end in ranges)
     if low < window.softdevice_end:

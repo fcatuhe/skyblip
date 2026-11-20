@@ -3,26 +3,16 @@
 
     python3 scripts/check_spec_markdown.py
 
-Each `.md` beside a reference PDF is generated from `pdftotext -layout` (docs/reference/README.md),
-and the firmware and its conformance suites are written against the markdown. This check reads
-the PDF again and holds the markdown to it:
+The firmware and its conformance suites are written against the markdown, so this reads
+each PDF again (docs/reference/README.md) and checks that:
 
-- Every page of `pdftotext -raw`, the PDF's own reading order, must hold the same characters as
-  the same page of `pdftotext -layout`, so the layout extraction lost nothing.
-- The layout extraction and the markdown must hold the same words in the same order. Every run
-  of words in one and not the other is reported with the markdown clause it falls in.
-- A line that wraps onto the next, on the same page or over a page break, must stay in one
-  markdown block, and so must a table that runs on over a page break.
-- A footnote must appear whole, as a paragraph closing the clause in which its page ends. It is
-  the one thing allowed to move.
+- every page of `pdftotext -raw` holds the same characters as the same page of `-layout`;
+- the layout extraction and the markdown hold the same words in the same order;
+- a line or a table that runs on, within a page or over a page break, stays one markdown block;
+- a footnote appears whole, as a paragraph closing the clause its page ends in.
 
-Before comparing, the check takes out what is not text: the running header and the footer found
-at the top and bottom edge of each page, the footnote separator, and the table of contents. On
-the markdown side it ignores heading marks and code fences. On both, it reads every dash as `-`,
-and joins a word hyphenated over a line break, as `ADS-` and `L.4.SRD860.E.3`, into one.
-
-The two ADS-L issues are committed and always checked. The ETSI standards are not committed, so
-they are checked only once scripts/fetch_etsi.py has put them here, and skipped otherwise.
+Page headers, footers, footnote separators and the table of contents are taken out first.
+The ADS-L issues are always checked, the ETSI standards only once fetch_etsi.py fetched them.
 Needs pdftotext (poppler-utils).
 """
 import collections
@@ -88,7 +78,6 @@ def pdftotext(pdf, *options):
 
 
 def check(layout, raw, markdown):
-    """Every difference between a PDF's two extractions and its markdown, as one line each."""
     pdf = Pdf(layout)
     md = Markdown(markdown)
     findings = reading_findings(layout, raw)
@@ -99,7 +88,6 @@ def check(layout, raw, markdown):
 
 
 class Pdf:
-    """The words of a `pdftotext -layout` extraction, without page furniture and contents."""
 
     def __init__(self, text):
         self.footnotes = []
@@ -124,7 +112,6 @@ class Pdf:
         self.width = prose_width([line for _, line in self.lines])
 
     def adjacent_lines(self):
-        """Each pair of lines that touch: one under the other, or the last and first of two pages."""
         last = None
         for index, (_, line) in enumerate(self.lines):
             if not line.strip():
@@ -136,7 +123,6 @@ class Pdf:
 
 
 def split_page(lines):
-    """The body lines of a page, edges stripped, and the footnotes under its separator."""
     lines = [line.rstrip() for line in lines]
     top, bottom = edges(lines, HEADERS, FOOTERS)
     body = lines[top:bottom]
@@ -154,7 +140,6 @@ def split_page(lines):
     return body, [note for note in footnotes if note]
 
 def edges(lines, header, footer):
-    """Where a page's body starts and ends: past its blank lines and one header line at the top, one footer line at the bottom."""
     top, bottom = 0, len(lines)
     top = past_blanks(lines, top, bottom, 1)
     if top < bottom and any(p.match(lines[top].strip()) for p in header):
@@ -173,7 +158,6 @@ def past_blanks(lines, index, stop, step):
 
 
 def contents(lines):
-    """Indexes of the lines that make up the table of contents: its dotted entries, the lines between them and its undotted tail."""
     leaders = [i for i, (_, line) in enumerate(lines) if LEADER.search(line)]
     if not leaders:
         return set()
@@ -193,7 +177,6 @@ def prose_width(lines):
 
 
 class Markdown:
-    """The words of a markdown conversion, each with the heading it falls under, cut in blocks."""
 
     def __init__(self, text):
         self.words, self.clauses, self.blocks = [], [], []
@@ -227,7 +210,6 @@ class Markdown:
             self.add(line, clause, joins=False)
 
     def add(self, line, clause, joins):
-        """Append a line's words. In a fence, a word hyphenated over the line break joins its end."""
         for number, word in enumerate(words(line)):
             if joins and number == 0 and self.joinable and word[0].isalnum():
                 self.words[-1] += word
@@ -242,7 +224,6 @@ class Markdown:
         return [(start, end) for kind, start, end in self.blocks if kind == "paragraph"]
 
     def closes_clause(self, span):
-        """Whether only footnotes follow this paragraph before the next heading."""
         for kind, start, end in self.blocks:
             if start < span[1] or end == start:
                 continue
@@ -270,7 +251,6 @@ def words(text):
 
 
 def reading_findings(layout, raw):
-    """Characters the raw reading order finds on a page and the layout extraction does not, or the reverse."""
     layout_pages, raw_pages = layout.split("\f"), raw.split("\f")
     findings = []
     if len(layout_pages) != len(raw_pages):
@@ -289,7 +269,6 @@ def characters(text):
 
 
 def footnote_findings(pdf, md):
-    """Find each PDF footnote as a paragraph of the markdown, closing the clause its page ends in."""
     findings = []
     placed = []
     for page, note in pdf.footnotes:
@@ -335,7 +314,6 @@ def word_findings(pdf, md):
 
 
 def cut_findings(pdf, md):
-    """A line that wraps, or a table that runs on over a page break, must stay one markdown block."""
     aligned = alignment(pdf, md)
     block_of = md.block_of()
     findings = []
@@ -359,14 +337,13 @@ def cut_findings(pdf, md):
 
 
 def wraps(pdf, upper, lower):
-    """Whether a line of prose runs on into the next: it fills the width, ends mid-sentence, and the next goes on in lower case."""
+    # INFO: fc 20nov26 a line wraps when it fills the width, ends mid-sentence, and the next goes on in lower case
     upper, lower = BULLET.sub("", upper.strip()), lower.strip()
     return (len(upper) >= WRAPPED * pdf.width and not COLUMNS.search(upper) and not SENTENCE_END.search(upper)
             and bool(CONTINUES.match(lower)) and not FORMULA.search(lower))
 
 
 def alignment(pdf, md):
-    """Map each PDF word index to the markdown word it matched, in the word diff."""
     _, positions, opcodes = diff(pdf, md)
     aligned = {}
     for tag, i1, i2, j1, j2 in opcodes:
@@ -377,7 +354,6 @@ def alignment(pdf, md):
 
 
 def diff(pdf, md):
-    """The word diff of the PDF and the markdown's body, footnotes taken out of both."""
     if md.diff is None:
         skipped = set()
         for start, end in md.footnotes:

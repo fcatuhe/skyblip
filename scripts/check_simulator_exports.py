@@ -3,11 +3,9 @@
 
     python3 scripts/check_simulator_exports.py
 
-firmware/simulator/web/embed.js reaches the firmware through cwrap() by C name,
-and the names are only resolved when a page loads the module: a C export renamed
-in firmware/simulator/frontends/browser.cpp and not in embed.js builds, ships,
-and breaks the simulator in the browser of every visitor. This gate is the build
-noticing instead.
+firmware/simulator/web/embed.js binds firmware exports through cwrap() by C name, and
+the names resolve only when a page loads the module, so a rename in
+firmware/simulator/frontends/browser.cpp would otherwise break only in the browser.
 """
 import os
 import re

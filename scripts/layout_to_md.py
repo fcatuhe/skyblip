@@ -1,12 +1,8 @@
 """Turn a `pdftotext -layout` extraction into markdown, for spec_to_md.py and etsi_to_md.py.
 
-Each page loses its running header and footer, matched only at its top and bottom edges, so a
-line of text that reads like them stays. The pages then run on into each other: a line the width
-of the page cut goes on over the page break, and a table goes on as one block. Footnotes leave the
-foot of their page and close the clause in which that page ends, as paragraphs. The table of
-contents is dropped, from its first dotted entry to its last. Wrapped lines are joined into
-paragraphs, a word hyphenated over the line break back into one word, and every column-aligned
-block is fenced verbatim.
+Running headers and footers go, matched only at a page's top and bottom edges. Pages run on
+into each other, footnotes close the clause their page ends in, the table of contents is
+dropped, wrapped lines join into paragraphs, and every column-aligned block is fenced verbatim.
 """
 import re
 
@@ -29,12 +25,7 @@ class Footnote:
 
 
 def convert(text, header, footer, heading):
-    """The markdown of a layout extraction.
-
-    `header` and `footer` are patterns a stripped line at a page's top or bottom edge is dropped
-    for. `heading(lines, i)` returns the markdown heading line `i` opens, or None, and how many
-    lines it used.
-    """
+    # INFO: fc 20nov26 heading(lines, i) returns the markdown heading line i opens, or None, and the lines it used
     bodies = [page_body(page.split("\n"), header, footer) for page in text.split("\f")]
     width = prose_width(line for body, _ in bodies for line in body if not LEADER.search(line))
     lines = without_repeated_blanks(without_contents(run_on(bodies, width)))
@@ -47,7 +38,6 @@ def prose_width(lines):
 
 
 def run_on(bodies, width):
-    """The pages' body lines as one list, each page's footnotes after its lines."""
     lines = []
     for body, footnotes in bodies:
         if not body and not footnotes:
@@ -78,7 +68,6 @@ def page_body(lines, header, footer):
     return body, [" ".join(note) for note in footnotes if note]
 
 def edges(lines, header, footer):
-    """Where a page's body starts and ends: past its blank lines and one header line at the top, one footer line at the bottom."""
     top, bottom = 0, len(lines)
     top = past_blanks(lines, top, bottom, 1)
     if top < bottom and any(p.match(lines[top].strip()) for p in header):
@@ -101,7 +90,6 @@ def last_line(lines):
 
 
 def runs_on(last, first, width):
-    """Whether a page's last line wraps onto the next page's first: a table goes on over a blank line anyway."""
     if not last.strip() or not first.strip() or any(tabular(line) for line in (last, first)):
         return False
     return wraps(last.strip(), first.strip(), width)
@@ -113,7 +101,6 @@ def tabular(line):
 
 
 def without_contents(lines):
-    """The lines minus the table of contents: its dotted entries, the lines between them and its undotted tail."""
     text = [line if isinstance(line, str) else "" for line in lines]
     leaders = [i for i, line in enumerate(text) if LEADER.search(line)]
     if not leaders:
@@ -220,14 +207,12 @@ class Writer:
 
 
 def wraps(previous, line, width):
-    """Whether a line goes on with a word the line above hyphenated, or a sentence the width of the page cut."""
     if HYPHENATED.search(previous) and line[0].isalnum():
         return True
     return len(previous) >= WRAPPED * width and continues(previous, line)
 
 
 def continues(previous, line):
-    """Whether a line goes on with the sentence the line above left open."""
     return not SENTENCE_END.search(previous) and bool(CONTINUATION.match(line)) and not FORMULA.search(line)
 
 
