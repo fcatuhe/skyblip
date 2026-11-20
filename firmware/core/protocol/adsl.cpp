@@ -89,10 +89,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
     traffic.latitude_1e7 = own.latitude_1e7;
     traffic.longitude_1e7 = own.longitude_1e7;
 
-    // Altitude and ground speed come from the 3D fix, so without one they are
-    // UNAVAILABLE and must say so (G.1.7, G.1.8). Transmitting a stale or zeroed
-    // altitude as if it were valid is worse than transmitting nothing: a receiver
-    // would compute relative vertical separation against it.
+    // INFO: fc 20nov26 G.1.7, G.1.8: with no fix, altitude and speed go unavailable, never stale
     if (own.fix_valid) {
         traffic.altitude_valid = own.vdop_e2 != 0;
         if (traffic.altitude_valid)
@@ -104,9 +101,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
             integrity_from_dop_e2(own.hdop_e2, own.geoid_measured ? own.vdop_e2 : 0);
     }
 
-    // Vertical rate needs two samples over a window, so it arrives later than the
-    // fix and has its own validity. Encoding 0 before then would claim level
-    // flight (G.1.9).
+    // INFO: fc 20nov26 G.1.9: climb has its own validity, since a 0 claims level flight
     traffic.climb_valid = own.climb_valid;
     if (own.climb_valid) traffic.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).value;
 

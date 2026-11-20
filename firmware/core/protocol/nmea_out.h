@@ -23,55 +23,27 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
                  const model::AircraftObservation& target, uint8_t alarm_level,
                  const char* callsign);
 
-// relative_bearing_deg is SIGNED, half a turn either way: the field is, and a value
-// pushed through an unsigned parameter puts a threat off the left wing at 340
-// degrees on an app that reads it as written.
 // INFO: fc 19sep26 the GPS field: 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving
 uint8_t pflau_gps(const model::Ownship& own);
 
 // INFO: fc 19sep26 the TX field is whether a burst can leave now: core/timing/transmit.h
+// INFO: fc 20nov26 relative_bearing_deg is signed, so a threat off the left wing is not at 340
 int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool transmitting,
                  int target_count, const model::AircraftObservation* threat, uint8_t alarm_level,
                  int16_t relative_bearing_deg, int32_t relative_altitude_m,
                  bool relative_altitude_valid, int32_t relative_distance_m);
 
-// fix_valid follows the same binary own.fix_valid this device already keeps
-// (no 2D/3D distinction survives to Ownship), which is what format_pflau's own
-// GPS field already reduces the same fix to: '3' (3D) when true, '1' (no fix)
-// when false. Both SoftRF forks send the same two values off the same test
-// (src/protocol/data/NMEA.cpp: isValidGNSSFix() ? '3' : '1').
+// INFO: fc 20nov26 Ownship has no 2D or 3D flag, so fix_valid sends 3 or 1, as SoftRF does
 int format_pgrmz(char* out, size_t capacity, int32_t altitude_ft, bool fix_valid);
 
-// $LK8EX1: pressure, pressure altitude, vertical speed, temperature and the
-// battery, in the one sentence LK8000, XCSoar and their descendants already
-// parse. Every field has a value that means "not available", which is why each
-// one is clamped short of its own sentinel below: a real reading that happened
-// to land on the sentinel would be read as no reading at all.
 constexpr uint32_t kLk8NoPressurePa = 999999;
 constexpr int32_t kLk8NoAltitudeM = 99999;
 constexpr int32_t kLk8NoVarioCmS = 9999;
 constexpr int32_t kLk8NoTemperatureC = 99;
 constexpr uint32_t kLk8NoBattery = 999;
 
-// Field 5 is one field carrying two different quantities, and which one it is
-// is decided by magnitude alone: below 1000 it is a VOLTAGE in volts, at 1000
-// and above it is a PERCENTAGE with 1000 added, so 1000 is 0% and 1100 is 100%.
-// We send the percentage form. SoftRF's lyusupov tree sends the voltage form
-// (src/protocol/data/NMEA.cpp:246-256, "$LK8EX1,999999,%d,%d,%d,%s" with a
-// "4.1"-style string), and the moshe-braner fork corrected itself to the
-// percentage with the reason in the code - "LK8000 specs say send percent
-// instead of volts as an integer, percent+1000" (MB src/driver/Baro.cpp:406-407,
-// and again at src/protocol/data/NMEA.cpp:1399-1400); GXAirCom sends
-// Clamp(percent,0,100)+1000 (src/main.cpp:4382). The percentage is also the
-// figure our own glass draws, and a device that says 38% while the tablet says
-// something else is a support call. Sending 38 in the voltage half of this field
-// would put 38 volts in front of a pilot.
 constexpr uint32_t kLk8BatteryPercentBase = 1000;
 
-// SoftRF's own bounds on the two fields it clamps, kept because they are what
-// the consumers have been fed for years: altitude -1000..99998 m and temperature
-// -99..98 C (lyusupov NMEA.cpp:250-253). The other two are one short of their
-// sentinel for the same reason.
 constexpr uint32_t kLk8PressureCeilingPa = kLk8NoPressurePa - 1;
 constexpr int32_t kLk8AltitudeFloorM = -1000;
 constexpr int32_t kLk8AltitudeCeilingM = kLk8NoAltitudeM - 1;
@@ -80,10 +52,6 @@ constexpr int32_t kLk8VarioFloorCmS = -kLk8VarioCeilingCmS;
 constexpr int32_t kLk8TemperatureFloorC = -99;
 constexpr int32_t kLk8TemperatureCeilingC = kLk8NoTemperatureC - 1;
 
-// What the device has to say, each part of it separately present or absent: a
-// unit with no barometer still has a battery, and that alone is a sentence worth
-// sending (MB sends exactly that, "$LK8EX1,999999,99999,9999,99,%d", when no
-// baro chip answered).
 struct Lk8Ex1 {
     uint32_t pressure_pa{0};
     int32_t altitude_m{0};
@@ -99,12 +67,6 @@ struct Lk8Ex1 {
 
 int format_lk8ex1(char* out, size_t capacity, const Lk8Ex1& reading);
 
-// $GPRMC/$GPGGA: ownship's own absolute position, for the EFB that has no GNSS
-// of its own (a panel-mounted tablet with no sky view). Neither is formatted
-// without both own.fix_valid and own.utc_valid: there is no position to report
-// without the first, and no way to stamp it without the second, and a sentence
-// missing both a real fix and a real time is worse than silence to a consumer
-// that stamps a log with it.
 int format_gprmc(char* out, size_t capacity, const model::Ownship& own);
 int format_gpgga(char* out, size_t capacity, const model::Ownship& own);
 
