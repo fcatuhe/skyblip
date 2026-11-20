@@ -14,6 +14,8 @@ require "action_view/railtie"
 require "action_cable/engine"
 require "rails/test_unit/railtie"
 
+require_relative "../lib/middleware/canonical_host"
+
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
@@ -26,7 +28,7 @@ module Skyblip
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets middleware tasks])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -74,6 +76,9 @@ module Skyblip
     config.i18n.default_locale = :en
 
     config.action_dispatch.rescue_responses["Decant::FileNotFound"] = :not_found
+
+    # INFO: fc 20nov26 it must run before ActionDispatch::Static, or www requests for files in public/ are served instead of redirected
+    config.middleware.unshift CanonicalHost, config.x.public_url
 
     config.mission_control.jobs.base_controller_class = "Admin::ApplicationController"
     config.mission_control.jobs.http_basic_auth_enabled = false
