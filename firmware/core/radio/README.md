@@ -1,8 +1,8 @@
 # core/radio
 
-The station log: every burst this radio sent or heard, in the order it happened, newest first.
+The station log: every burst this radio sent or heard, newest first.
 
-`rx_ok` and `tx_ok` are totals, and a total cannot tell an empty sky from a receiver that frames nothing. The traffic table only ever holds what already decoded, so a burst that arrived and did not become a frame leaves no trace in it. That burst is the one worth seeing: it is the difference between "nobody is transmitting" and "everybody is transmitting and I am deaf to them", and the two have the same reading on every other page. Two skyBlips that both transmit and neither hears is the fault this exists for, and it happened: `git log core/protocol/air.cpp`.
+Totals such as `rx_ok` cannot tell an empty sky from a receiver that frames nothing, and the traffic table holds only what decoded. The log also keeps the bursts that arrived and did not become a frame, which tell "nobody is transmitting" from "I am deaf to everybody".
 
 `Verdict` names the sixteen things that can happen to a burst.
 
@@ -11,119 +11,103 @@ The station log: every burst this radio sent or heard, in the order it happened,
 | `Transmitted` | own-ship's burst left the antenna |
 | `Lost` | own-ship's burst was armed and never completed: the dwell ran out, or the radio's transmit timeout did |
 | `Held` | the hour's air-time budget refused it (`timing::Transmitter::Attempt::over_budget`) |
-| `Unarmed` | `ports::Rf` refused the plan that carried it, so nothing was ever armed |
+| `Unarmed` | `ports::Rf` refused the plan that carried it, so nothing was armed |
 | `Received` | a burst arrived, framed, and named an aircraft |
-| `Named` | a burst arrived, framed, and carried an aircraft's registration instead of its position: §F.2.1's payload 66 with OGN's info header, which `TrafficService::decode_adsl` reads for the callsign and files under the sender's address (`core/traffic/callsigns.h`) |
+| `Named` | a burst framed and carried an aircraft's registration instead of its position: §F.2.1's payload 66 with OGN's info header, filed under the sender's address (`core/traffic/callsigns.h`) |
 | `BadCrc` | an integrity check refused it: the chip's own CRC, an ADS-L or ALP-TAS CRC no forward correction could rescue, or a Reed-Solomon codeword the uplink could not correct |
-| `Unframed` | clean chips behind the sync window and a sync tail naming neither system, so nothing was ever attempted |
+| `Unframed` | clean chips behind the sync window and a sync tail naming neither system, so nothing was attempted |
 | `Miskeyed` | an ALP-TAS frame whose CRC held and whose sender keyed it on a second inside `kKeyWindowS` of ours, but not ours |
-| `Undecoded` | the frame was attempted and refused: the ALP-TAS plausibility gate with no second that would have read it, or an ADS-L frame carrying no position |
-| `Unsupported` | the frame framed and carried a message type this firmware does not implement: ALP-TAS reads its 2024 position frame and nothing else, so Air V6 (type 0) and text messages (type 3) land here, and ADS-L reads §F.2.1's Traffic and the registration inside payload 66, so Status (3), Remote Identification (6) and any other telemetry carried in 66 land here too |
-| `Unattempted` | nothing was tried, because own-ship had no fix or no UTC to decode an ALP-TAS frame against |
+| `Undecoded` | the frame was attempted and refused: the ALP-TAS plausibility gate with no second that would have read it, an ADS-L frame carrying no position, or a registration whose text is not a callsign (`protocol::is_callsign_character`) |
+| `Unsupported` | a message type this firmware does not read. ALP-TAS reads only its 2024 position frame, so Air V6 (type 0) and text (type 3) land here. ADS-L reads §F.2.1's Traffic and the registration inside payload 66, so Status (3), Remote Identification (6) and other telemetry in 66 land here |
+| `Unattempted` | own-ship had no fix or no UTC to decode an ALP-TAS frame against |
 | `Declared` | an ADS-L Status from an aircraft in the table, whose Max. Protocol Version B.5 now holds for it, printed `STAT` |
-| `Deferred` | the clear channel assessment before own-ship's burst found the channel busy, and the burst is armed again a random 15 to 250 ms later, as far as its window reaches (ADS-L C.2 and D.3), printed `DEFER`. The row is dated at the instant the burst was planned for and carries the level the assessment read |
-| `Forced` | on the ground, the channel was still busy 3000 ms after the burst's first attempt, so it goes irrespective of carrier detect and nothing of ours follows for 2000 ms after it ends, printed `FORCE` |
-| `Busy` | the burst was found busy and could not be armed again inside its window, so it missed its second and the 2 s retry takes it, printed `BUSY` |
+| `Deferred` | the clear channel assessment found the channel busy, and the burst is armed again a random 15 to 250 ms later, as far as its window reaches (ADS-L C.2 and D.3), printed `DEFER`. The row is dated at the planned instant and carries the level the assessment read |
+| `Forced` | on the ground, the channel was still busy 3000 ms after the first attempt, so the burst goes irrespective of carrier detect and nothing of ours follows for 2000 ms after it ends, printed `FORCE` |
+| `Busy` | the burst was found busy and could not be armed again inside its window, so the 2 s retry takes it, printed `BUSY` |
 
-`BadCrc` and `Undecoded` were one verdict until the bench had two devices on it, and the pair of them is the reading that separates a marginal link from a protocol disagreement. Bits the air corrupted are a radio problem, and bits nothing here knew what to do with are ours: one is answered by moving the antenna and the other by reading `core/protocol/`.
+`BadCrc` is a radio problem, answered by moving the antenna. `Undecoded` is ours, answered by reading `core/protocol/`. It is the only refusal that means this firmware may be wrong: `Unattempted`, `Unframed`, `Miskeyed` and `Unsupported` are not.
 
-The last three were one verdict until 2026-09-19, and two of them were never a fault. A skyBlip still acquiring printed `DEC` for every ALP-TAS burst a SoftRF two metres away put on the air, for the whole minute it took to find the sky: an ALP-TAS position is coded relative to the receiver and its key stage is derived from the UTC second, so `TrafficService::decode_alptas` cannot start without a fix and a date, and a burst it never attempted is not a burst that failed. The ADS-L path has no such gate and needs none, because §G.1 carries an absolute position: an ADS-L frame decodes on a device that has never seen a satellite.
+`Unattempted` exists because an ALP-TAS position is coded relative to the receiver and its key stage comes from the UTC second, so `TrafficService::decode_alptas` cannot start without a fix and a date. ADS-L needs no such gate, because §G.1 carries an absolute position.
 
-`Unframed` and `Miskeyed` came off `Undecoded` on 2026-09-19, for the same reason `WAIT` and `TYPE` did before them: neither is this firmware getting a frame wrong. A burst whose sync tail names no system was never attempted, and the tape used to spell that `DEC` beside a frame we read and refused. `Miskeyed` is the other half, and it is the verdict this file was rewritten for. The ALP-TAS key stage moves once every 16 seconds (`utc_s >> 4`) and the frame carries the low 4 bits of the second its sender keyed in, so the decode tolerates a one-second disagreement and nothing more. Two seconds out, or across the block boundary, and every frame from that target fails for as long as the two clocks disagree: total, then gone, with no other symptom on the glass. `alptas::keyed_second` walks the blocks the window reaches, reads the time bits out of whichever one decrypts into a structured frame, and the row prints the offset as `KEY+18` or `KEY-2`. That number is the whole diagnosis, and the frame is still refused: traffic keyed on a second we disagree with is not traffic this device will draw.
+A SoftRF built with `USE_INTERLEAVING` sends Air V6 between its Air V7 frames, so it shows as a stream of `Unsupported` rows.
 
-A refused frame past the CRC names its sender. The ALP-TAS address word is in the plaintext first two words and the frame CRC covers it, so `TYPE`, `KEY` and `DEC` rows carry the address beside the verdict (`Entry::address_valid`). Before that, a bench had a tape of refusals and no way to tell whose frames they were: one target two metres away and a sky full of others read identically.
+`Miskeyed` diagnoses a clock disagreement. The ALP-TAS key stage moves once every 16 seconds (`utc_s >> 4`) and the frame carries the low 4 bits of its sender's second, so the decode tolerates one second of disagreement. Beyond that every frame from the target fails, with no other symptom. `alptas::keyed_second` finds the second that decrypts into a structured frame, and the row prints the offset as `KEY+18` or `KEY-2`. The frame is still refused.
 
-`Unsupported` is the sending aircraft's dialect rather than our failure, on both systems. `alptas::decode` refuses anything that is not message type 2 before it decrypts, and the type sits in the plaintext first word, so a SoftRF built with `USE_INTERLEAVING` - which interleaves Air V6 with Air V7 - reads as a stream of frames this firmware deliberately does not read. ADS-L asks the same question one field later: the payload type is the first byte past the descramble, and §F.2.1 puts four other broadcast payloads on this band beside Traffic. Since 2026-09-20 one of those four is read: payload 66 is OGN's, and a registration inside it is `Named` rather than a dialect we skip. The others - Status, Remote Identification, and payload 66 carrying anything but a registration - are valid frames from conforming senders and none of them an aircraft. What is left on `Undecoded` is a frame of a type we do read that framed, passed its own check and was still refused - an ADS-L Traffic payload carrying no position, a registration whose text is not a callsign (`protocol::is_callsign_character`), or an ALP-TAS frame the plausibility gate threw out - which is the only one of the three that means something may be wrong.
+The ALP-TAS address word is in the plaintext first two words under the frame CRC, so `TYPE`, `KEY` and `DEC` rows carry the sender's address (`Entry::address_valid`).
 
-A `CRC` row is a frame that framed and failed its own protocol's check, which is a real target the air damaged. It carries the byte count and the level it arrived at: `GetPacketStatus` survives the failure, and -110 dBm against -15 dBm is the difference between a burst at the floor and a target this receiver is failing to decode.
-
-Until 2026-09-16 the modem was programmed with `CRCType = 0x00`, which the SX126x spells one-byte CRC: off is `0x01` (DS table 13-70). The two units on the bench interoperated because they made the same mistake symmetrically, and every foreign ADS-L or FLARM burst was thrown away by a CRC byte its sender never sent. With the chip's check off it can no longer refuse anything, so the modem's own `CrcError` is a branch nothing on this hardware reaches and every `CRC` row is now a protocol's own verdict.
+A `CRC` row carries the byte count and the level, because `GetPacketStatus` survives the failure: -110 dBm is a burst at the floor, -15 dBm a target this receiver fails to decode. The modem's own CRC is off, `CRCType = 0x01` (SX126x DS table 13-70), because foreign ADS-L and FLARM bursts carry no such byte. Every `CRC` row is therefore a protocol's own check.
 
 ## What the window lets through
 
-The M-band sync window is 16 chips, because that is all ADS-L and ALP-TAS share (`core/protocol/air.h`), and 16 chips is thin: noise matches it about once in 65 536 tries and the correlator takes 100 000 tries a second. A quiet bench frames a few of those a minute. They are not receptions. Nothing arrived.
+The M-band sync window is the 16 chips ADS-L and ALP-TAS share (`core/protocol/air.h`). Noise matches it about once in 65 536 tries at 100 000 tries a second, so a quiet bench frames a few a minute.
 
-What tells them from a burst is the line code, not the level. §C.2.1 is Manchester, so every chip pair on air is `01` or `10`: noise decodes half of its pairs to a pair no transmitter can send, and a burst decodes none of them that way. `protocol::framed_noise` counts those over the first `kNoiseWindowBytes` and cuts at a quarter of them, five standard deviations below what noise produces and far past any damage the forward correction could repair.
+The line code tells noise from a burst. §C.2.1 is Manchester, so every chip pair on air is `01` or `10`, and noise decodes half its pairs to a pair no transmitter sends. `protocol::framed_noise` counts those over the first `kNoiseWindowBytes` and cuts at a quarter, five standard deviations below noise and far past any damage the forward correction could repair. The window must end inside the shortest burst on the band, because a dwell reads a fixed 58 chip-bytes and past the last chip the buffer holds chips nobody sent. `air.h` asserts it.
 
-The count stops there and not at the end of the report because a dwell reads a fixed 58 chip-bytes and the shortest system behind this window fills fewer: past its last chip the buffer holds chips nobody sent, which decode as damage and are evidence of nothing. The window has to end inside the shortest burst the band carries, and `air.h` asserts that it does.
+Noise is counted in `air.rx_noise` and never written to the tape. Over an empty sky the count climbs, and where it stops the receiver stopped listening. A `SYNC` row is `Unframed`: a third system heard and not understood.
 
-A window noise walked through is counted in `air.rx_noise` and written nowhere else. Sixteen rows is the whole tape, and a row describing nothing that arrived is a row the sky could have used. The count is on the page because it is the receiver's heartbeat: over an empty sky it climbs, and a site where it stops has a receiver that stopped listening rather than a band that went quiet. What earns a `SYNC` row is the other kind - clean chips behind the window and a sync tail naming no system - which is a third system on these frequencies, heard and not understood.
+`Lost` and `Unarmed` both print `LOST`, because to the reader both mean the burst did not go out. The entry and `timing_statistics` keep the distinction.
 
-There is no verdict for a burst the radio declined to send, because nothing declines: the instant is drawn inside the slot and the PA keys there whatever the receiver is hearing (`core/timing/README.md`). A dwell that carried a burst and reported nothing is `Lost`.
-
-The page spends no row on the difference between `Lost` and `Unarmed`: both read `LOST`, because both mean the burst did not go out and what separates them is ours, not the reader's. The distinction survives where it is acted on, in the entry and in `timing_statistics`.
-
-`Entry::airborne` is own-ship's flight state when the row was written, and the page prints it as `AIR` or `GND` on every burst of ours. It is per entry for the same reason the date is: §G.1.16 transmits at 1 Hz in the air and 0.1 Hz on the ground, and the tape outlives a takeoff. The page used to draw the live flag on all sixteen rows, so one takeoff rewrote the schedule the whole tape claimed to have gone out on.
-
-`Entry::at_s` is UTC once the receiver has given us a second, and time since boot before that. Which of the two is a flag per entry rather than a flag on the log, because the log outlives a first fix and the entries either side of one are dated differently. The second itself comes from the PPS edge the clock last latched (`timing::ClockState::utc_s`), not from the sentence that names it: see `core/timing/README.md`.
+`Entry::airborne` is per entry because §G.1.16 transmits at 1 Hz in the air and 0.1 Hz on the ground, and the tape outlives a takeoff. `Entry::at_s` is UTC once the receiver has given a second, and time since boot before. `Entry::utc_dated` says which, per entry, because the tape outlives a first fix. The UTC second comes from the latched PPS edge (`timing::ClockState::utc_s`, `core/timing/README.md`).
 
 ## The phase, and what two devices read across it
 
-`stamp_of` dates a burst from the instant the executor stamped it with (`messages::RfEvent::at_us`), against the PPS edge `timing::ClockState` latched, rather than from the pass that drained the queue. Three things follow, and the first is the only one the page exists for.
+`stamp_of` dates a burst from the executor's own instant (`messages::RfEvent::at_us`) against the latched PPS edge, not from the pass that drained the queue.
 
-The phase is UTC-referenced on every device that holds a lock, so a burst sent on one skyBlip and heard on another is one instant read twice: `TX .462` here and `RX .462` there is the link, measured, with nothing between the two units. Both stamps are taken where the radio raised the burst - the end of it, either way - so what is left between them is one poll period, and a missing row at that phase is a dwell or a channel that did not line up rather than a weak signal.
+The phase is UTC-referenced on every locked device, so one burst sent here and heard there is one instant read twice: `TX .462` and `RX .462` is the link, measured. Both stamps are taken at the end of the burst, where the radio raised it, so they differ by one poll period. A missing row at that phase is a dwell or a channel that did not line up, not a weak signal.
 
-Slot 1 opens at 800 ms and closes 200 ms into the next second, so a burst in that tail is drained under a second the air had not reached when it was sent. Dating from the event's own instant puts it back in the second its dwell opened in; dating from the drain would have moved a burst a second forward and read as a clock fault on the device that heard it.
+Slot 1 runs from 800 ms to 200 ms into the next second. Dating from the event keeps a burst in that tail in its dwell's second. Dating from the drain would move it a second forward and read as a clock fault.
 
-A phase is refused rather than guessed. Without a PPS lock there is no edge to measure from, and past `kStampReachUs` the event and the edge are not two views of one second. The row then prints the second alone, which is what the receiver actually knows.
+Without a PPS lock, or past `kStampReachUs`, the row prints the second alone rather than a guessed phase.
 
-`Entry::channel` is the dwell's own, carried on the event from the executor that armed it (`RfEvent::frequency_hz`): §C.2.5 makes traffic alternate between 868.2 and 868.4 MHz, and a receiver that never visits the second channel hears half its targets. Deriving it from the phase instead would have agreed with the slot map exactly when the radio did not, which is the one case worth printing.
+`Entry::channel` comes from the executor that armed the dwell (`RfEvent::frequency_hz`), not from the slot map, so it is right exactly when the radio disagrees with the map. §C.2.5 alternates traffic between 868.2 and 868.4 MHz.
 
-For that label to be true, a dwell drains its own tail before it closes. A burst framed as the window ends leaves its flag in the chip, and the next dwell's first poll used to read it and stamp it with the new band, the new channel and the new phase. Clearing the register on the way in would have been worse: between two dwells the receiver is still tuned where it was, so a frame arriving there is a real reception on the dwell that just closed, and that is the one it is reported as.
+A dwell drains its own tail before it closes. Between dwells the receiver is still tuned where it was, so a frame flagged as the window ends belongs to the dwell that closed.
 
-`Entry::tx_span_us` is the burst's own completion: from the deadline the dwell was armed for to the instant the executor reported it done. That deadline is the drawn instant rounded up to the millisecond `phase_ms()` was read at (`services/radio.cpp`), so the burst reaches the air up to a millisecond later than the draw and this figure cannot see it. §C.2's M-band burst is 4800 us of that at 100 kchip/s, and the rest is the pass that collected the report, so the figure reads a little over 4800 on silicon and a good deal more wherever the radio thread is being starved. It is not a jitter against the deadline: the report lands at the end of a burst that the deadline keys the start of, and subtracting a nominal length to make it read zero would be this file forming an opinion about air time it did not measure. `state.tx_deadline_us` carries the deadline out of `go::RadioService`, which owns it, for the same reason `last_tx_done_at_us` travels the other way: neither service forms a second opinion about the other's half.
+A reception is dated at the instant the executor saw DIO1 go up, or began the status read, never when the read-out ended: reading 58 chip-bytes costs milliseconds. DIO1 stays a level, not an edge, because a deadline drives a dwell (`boards/lilygo/t_echo_plus/t_echo_plus.dts`).
 
-`Entry::tx_keyed_us` is the first half of that, from the same deadline to the instant the executor issued SetTx (`RfEvent::keyed_at_us`). One number could not say whether a slow burst was slow before the air or after it, and both halves have different causes: what happens before is this CPU, what happens after is the chip and the read-out. The pair saturates at the field's own ceiling rather than at a column width - a burst 65 ms past its deadline is a dwell that has already ended, and the `Lost` verdict is what reports that.
+`Entry::tx_keyed_us` runs from the dwell's deadline to the instant the executor issued SetTx (`RfEvent::keyed_at_us`), and `Entry::tx_span_us` to the instant it reported the burst done. The first is this CPU, the rest is the chip and the read-out. The deadline is the drawn instant rounded up to the millisecond (`products/skyblip_go/services/radio.cpp`). §C.2's M-band burst is 4800 us at 100 kchip/s, so a span reads a little over 4800 on silicon, and the log subtracts no nominal length it did not measure. Both saturate at the field's ceiling: a burst 65 ms late is a dwell that already ended, which `Lost` reports. `state.tx_deadline_us` carries the deadline out of `go::RadioService`, which owns it.
 
-Neither figure is on the page. Both are microseconds of this CPU and of the chip, and a reader who wants them is at a bench with the link open, so the last burst's pair leaves through the diagnostics dump (`radio tx_keyed_us= tx_span_us=`) and the page keeps the row for the sky. What the pair measured once is worth keeping: of a 6014 us mean span on silicon, 619 us is the SPI write and SetTx before the air, 5160 us is the ramp and the burst itself, and 234 us is the dwell loop noticing DIO1.
+Neither figure is on the page. The last burst's pair leaves in the diagnostics dump (`radio tx_keyed_us= tx_span_us=`). On silicon a 6014 us mean span split into 619 us of SPI write and SetTx, 5160 us of ramp and burst, and 234 us for the dwell loop to notice DIO1.
 
-A reception is dated where the radio raised it: the executor stamps the instant it saw DIO1 go up, or the instant it began the status read, never the instant the read-out ended. Reading 58 chip-bytes out of the buffer costs milliseconds on a bench, and it used to sit between the burst and its own timestamp, which is what made one link's two stamps read 2 to 3 ms apart. DIO1 stays a level, not an edge: a dwell is driven by a deadline (`boards/lilygo/t_echo_plus/t_echo_plus.dts`).
-
-The capacity is what one screen holds. Nothing is kept that could not be shown: this is a tape of what is happening now, not a history to scroll back through. `products/skyblip_go/pages/radio_log.cpp` draws exactly `Log::kMaxEntries` rows for that reason.
+The capacity is one screen: `products/skyblip_go/pages/radio_log.cpp` draws exactly `Log::kMaxEntries` rows.
 
 ## What the counters hold
 
-The verdicts split on 2026-09-19 and the counters followed on the same day, because until then every outcome that was not `Received` was `air.rx_bad`. A device on the apron with no fix beside a chatty target reported a climbing bad-frame count while behaving perfectly, on the glass and in every reply a companion app reads, which is the mislabelling `WAIT` and `TYPE` had just been taken out of the tape for.
+Each verdict that is not a fault has its own counter, so a device with no fix beside a chatty target does not report a climbing bad-frame count.
 
 | | |
 |---|---|
-| `rx_ok` | a burst that named an aircraft |
-| `rx_bad` | a reception that is a fault: framed, attempted, refused, plus the integrity failures |
-| `rx_wait` | `Unattempted`, the bursts no fix or no UTC let us try |
-| `rx_type` | `Unsupported`, the dialect we do not read |
-| `rx_unframed` | `Unframed`, a burst that named neither system |
-| `rx_miskeyed` | `Miskeyed`, a frame whose sender keyed another second |
+| `rx_ok` | `Received` |
+| `rx_bad` | `BadCrc` and `Undecoded` |
+| `rx_wait` | `Unattempted` |
+| `rx_type` | `Unsupported` |
+| `rx_unframed` | `Unframed` |
+| `rx_miskeyed` | `Miskeyed` |
 | `rx_noise` | a sync window the band's own noise walked through |
-| `rx_named` | `Named`, a registration heard from somebody else |
-| `rx_status` | `Declared`, a Status that told us the highest ADS-L version a target reads |
-| `tx_ok` | own-ship's burst left the antenna |
-| `tx_lost` | own-ship's burst was armed and never completed |
+| `rx_named` | `Named` |
+| `rx_status` | `Declared` |
+| `tx_ok` | `Transmitted` |
+| `tx_lost` | `messages::RfEventType::Missed`: a dwell or transmission of ours that did not complete, never a reception |
 | `tx_named` | how many of the bursts in `tx_ok` carried own-ship's registration rather than a position |
 | `uplink_stale` | records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or ahead of the second they were heard in (G.3) |
 | `tx_given_up` | turns of own-ship's schedule that never went out, neither in their second nor on a retry 2 s on, before their type's next turn (`core/timing/README.md`) |
 | `tx_held_for_b5` | seconds own-ship held a position because a close neighbour reads only Issue 1 and the position carried an unknown field Issue 1 has no code for (B.5) |
-| `tx_deferred` | bursts of ours the clear channel assessment found busy, armed again a random 15 to 250 ms later, as far as their own window reaches (C.2 and D.3, `core/timing/README.md`) |
-| `tx_forced` | bursts keyed on a busy channel on the ground 3000 ms after their first attempt, each followed by 2000 ms from its end with nothing of ours on air (D.3) |
-| `tx_busy_missed` | bursts found busy that could not be armed again inside their window, which the 2 s retry then takes (D.3) |
-| `tx_held_for_fix` | positions own-ship lost for want of a fix: its second ended with nothing armed because its solution would have been over 500 ms old on air, less the frame and the key's slack (G.1.16), even on a redrawn instant, or named no quarter second to within 10 ms (G.1.1), or no fix delivered inside its quarter had anchored the clock (`core/timing/README.md`, The age of a position) |
+| `tx_deferred` | `Deferred` bursts (C.2 and D.3, `core/timing/README.md`) |
+| `tx_forced` | `Forced` bursts (D.3) |
+| `tx_busy_missed` | `Busy` bursts (D.3) |
+| `tx_held_for_fix` | positions lost for want of a fix: the solution would have been over 500 ms old on air, less the frame and the key's slack (G.1.16), even on a redrawn instant, or it named no quarter second within 10 ms (G.1.1), or no fix inside its quarter had anchored the clock (`core/timing/README.md`, The age of a position) |
 | `tx_redrawn_for_fix` | positions whose fix came after their drawn instant, armed on an instant drawn again over the rest of their window (`core/timing/README.md`, The age of a position) |
 
-`rx_status`, `uplink_stale`, `tx_held_for_b5`, `tx_given_up`, `tx_deferred`, `tx_forced`, `tx_busy_missed`, `tx_held_for_fix` and `tx_redrawn_for_fix` reach the diagnostics dump's radio group like the rest, and the RAW page prints the first three as `ST` on the verdict row, the fourth figure of `UPLINK`, and `B5` on the `DUTY` row. The other six are the dump's only.
+`BadCrc` and `Undecoded` share `rx_bad` because a counter answers whether anything is wrong, and both say yes. The tape says which.
 
-`BadCrc` is counted in `rx_bad` beside `Undecoded` rather than apart from it, even though the two are answered differently. What a counter is read for is whether anything is wrong, and both say yes: a burst the air damaged and a burst nothing here could read are each a reason to go and look. Which of the two it was is the tape's column, one row per burst, and a number that only ever climbs cannot carry that distinction anyway.
-
-`tx_lost` is `messages::RfEventType::Missed`, which is only ever emitted for a dwell or a transmission of ours that did not complete and was never a reception at all. It was counted as a bad reception until the same day, which is [#61](https://github.com/fcatuhe/skyblip/issues/61), now closed.
-
-All of them reach `core/comms/diagnostics.h`'s radio group, so they leave in the `diagnostics` dump and in the `radio` reply, under the names above. The radio group is 162 bytes at its widest, one frame on a 182-byte link (`test/core/test_diagnostics_frames.cpp`). The dump is framed per group, a narrower link splits a group over frames that never mix two, and `fits()` still refuses a link that cannot carry a whole field. The tape's own header keeps `RX`, `TX` and `NOISE`, because the panel's reader of `WAIT` and `TYPE` is the sixteen rows underneath it.
+All of them reach `core/comms/diagnostics.h`'s radio group, so they leave in the `diagnostics` dump and the `radio` reply under these names. The group is 162 bytes at its widest, one frame on a 182-byte link (`test/core/test_diagnostics_frames.cpp`). A narrower link splits a group over frames that never mix two groups, and `fits()` refuses a link that cannot carry a whole field. The RAW page also prints `rx_status` as `ST`, `uplink_stale` as the fourth figure of `UPLINK` and `tx_held_for_b5` as `B5`. The tape's header shows `RX`, `TX` and `NOISE`.
 
 ## Who writes what
 
-`go::TrafficService` writes everything the air reported. It already drains `bus.rf`, and it is the one place that knows whether a burst that arrived also decoded, which is the distinction the whole page turns on.
+`go::TrafficService` writes everything the air reported, because it drains `bus.rf` and alone knows whether a burst also decoded. `go::RadioService` writes `Held` and `Unarmed`, which raise no event: without a row the page would read like a dead transmitter.
 
-`go::RadioService` writes the two the air never sees. A burst its own policy refused reaches no executor and raises no event, so before `Held` and `Unarmed` existed the counters moved and the page stayed silent - which reads exactly like a dead transmitter to the one person looking at it. `Held` is the hour's allowance holding every burst until it frees up, and `Unarmed` is the executor refusing a plan that cannot complete inside its own dwell.
-
-`Held` is recorded once per spell, not once per refusal. The allowance holds for minutes at a time and a row a second would push the sky itself off a sixteen-row tape, so the row says when the spell began and `timing_statistics.refused()` counts every one. The next completed burst ends the spell, and a refusal after that is a new one. `Unarmed` is written only for a plan that carried a burst: a receive dwell the executor refused is a deafness, not a transmission, and it keeps its counter in `timing_statistics.missed()` until the page has somewhere honest to put it.
+`Held` is recorded once per spell, because the allowance holds for minutes and a row a second would push the sky off the tape. `timing_statistics.refused()` counts every refusal, and the next completed burst ends the spell. `Unarmed` is written only for a plan that carried a burst. A refused receive dwell counts in `timing_statistics.missed()`.
 
 ## On a bench
 
-Two units on a desk read -6 to -17 dBm, which is a hundred dB over this modem's floor and into compression. Nothing measured there says anything about link margin: put distance or attenuation between them before believing a level. What a bench does answer is the column of verdicts, and the honest reading of a quiet band is an empty tape under a noise count climbing a few a minute.
+Two units on a desk read -6 to -17 dBm, a hundred dB over this modem's floor and into compression, so a bench level says nothing about link margin. Put distance or attenuation between them before believing a level.
