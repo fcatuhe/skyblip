@@ -4,6 +4,7 @@
 
 #include <cstdint>
 
+#include "core/bus/bus.h"
 #include "core/events/central.h"
 #include "core/events/link.h"
 #include "ports/central.h"
@@ -18,8 +19,8 @@ class Central : public ports::Central {
     void disconnect() override;
     Status write(ConstByteSpan bytes) override;
 
-    bool pop_event(events::CentralEvent& out);
-    bool pop_rx(events::RxFrame& out);
+    // INFO: fc 19nov26 before scanning: its events and the peer's notifications land on this bus
+    void deliver_to(bus::GoBus& bus);
 };
 
 Central& central();

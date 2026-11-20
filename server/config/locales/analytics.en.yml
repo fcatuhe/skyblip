@@ -40,6 +40,10 @@ en:
       bounce_rate: "Bounce rate"
       visit_duration: "Visit duration"
       chart_title: "Overview"
+      outbound:
+        title: "Outbound links"
+        clicks: "Clicks"
+        conversion: "Conversion"
       breakdowns:
         pages: "Pages"
         sources: "Sources"
@@ -65,6 +69,9 @@ en:
         ranking:
           term: "Rows"
           definition: "The first 10 of each tab, by pageviews."
+        outbound:
+          term: "Outbound links"
+          definition: "The links to another site that visitors clicked or opened in a new tab, the affiliate links among them, the first 30 by clicks. The note under a link gives the section it sits in, the product on the buy page, and its words. Conversion: the share of the visitors in scope who clicked it. A link opened from a long press or the context menu goes unseen."
     visitors:
       session: "Last visit"
       visitor: "Visitor"
@@ -95,6 +102,9 @@ en:
       view: "View"
       click: "Click"
     filters:
+      outbound:
+        one: "Outbound link"
+        other: "Outbound links"
       path:
         one: "Path"
         other: "Paths"

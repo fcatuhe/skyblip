@@ -45,15 +45,18 @@ class BravoService : public runtime::Service {
     static constexpr uint32_t kFarewellCeilingMs = 2000;
 
     BravoService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                 ports::Central& central, common::AlarmService& alarm)
+                 ports::Central& central, bus::CentralQueue& central_events,
+                 common::AlarmService& alarm)
         : runtime::Service(context),
           settings_(settings),
           config_(config),
           central_(central),
+          central_events_(central_events),
           alarm_(alarm) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     void begin_pairing(uint32_t now_ms);
     void end_pairing();
@@ -133,6 +136,7 @@ class BravoService : public runtime::Service {
     Settings& settings_;
     comms::ConfigService& config_;
     ports::Central& central_;
+    bus::CentralQueue& central_events_;
     common::AlarmService& alarm_;
     AircraftAddressWarning aircraft_address_warning_{};
     common::AdsbCapture adsb_capture_{context_};

@@ -1,5 +1,7 @@
 #include "products/common/services/power.h"
 
+#include <algorithm>
+
 #include "core/diagnostics/payload.h"
 #include "core/events/sensor.h"
 
@@ -58,6 +60,13 @@ void PowerService::tick(uint32_t now_ms) {
     context_.state.power.die_valid = die_reading_fresh(now_ms);
     watch_charge();
     record_pass(now_ms);
+}
+
+uint32_t PowerService::due_in_ms(uint32_t now_ms) const {
+    const uint32_t record_ms = runtime::remaining_ms(now_ms - recorded_ms_, power_period_ms());
+    if (!ports::has(context_.roles.capabilities, ports::Capability::DieTemperature))
+        return record_ms;
+    return std::min(record_ms, runtime::remaining_ms(now_ms - die_read_ms_, kDiePeriodMs));
 }
 
 void PowerService::record_pass(uint32_t now_ms) {

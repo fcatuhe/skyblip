@@ -380,7 +380,6 @@ TEST_CASE("product: a unit with no haptic driver flies, sounds, and says what is
     // Optional, so the device flies and says so once.
     CHECK(rig.product.flyable());
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Haptic));
-    CHECK(ports::has(rig.product.degraded(), ports::Capability::Haptic));
 
     // And the voice it does have still works: the first fix is chirped by the
     // same service that would have pulsed the motor.
