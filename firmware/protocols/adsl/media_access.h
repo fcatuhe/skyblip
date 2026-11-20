@@ -26,8 +26,7 @@ struct ChannelAttempt {
     Backoff backoff{kMBandBackoff};
 };
 
-// INFO: fc 18nov26 EN 300 220-1 5.21.1's random interval: up to `units` units, inside the band's
-// backoff
+// INFO: fc 18nov26 EN 300 220-1 5.21.1's random interval: up to `units` units, inside the backoff
 struct Deferral {
     uint32_t unit_us{0};
     uint32_t units{1};

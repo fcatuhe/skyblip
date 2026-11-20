@@ -13,16 +13,13 @@ namespace skyblip::adsl {
 constexpr uint8_t kUplinkSync[2] = {0x2D, 0xD4};
 constexpr uint8_t kUplinkSyncBits = 16;
 
-// §C.4's modulation table, which is not §C.2's: the O band runs at twice the
-// chip rate, is Gaussian-shaped, and needs a wider receiver. A dwell that
-// retunes the synthesiser and nothing else listens to this band at half its
-// rate, which is deaf.
+// INFO: fc 20nov26 §C.4's rate, shaping and bandwidth differ from §C.2's, so a dwell sets all three
 constexpr uint32_t kUplinkChipRateBps = 200000;
 constexpr uint32_t kUplinkDeviationHz = 50000;
 constexpr uint32_t kUplinkChannelBandwidthHz = 250000;
 constexpr uint16_t kUplinkGaussianBtE2 = 50;
 
-// §C.4.2: the preamble is "10" twelve times, ahead of the sync word.
+// INFO: fc 20nov26 §C.4.2: the preamble is "10" twelve times, ahead of the sync word
 constexpr uint16_t kUplinkPreambleChips = 24;
 
 // INFO: fc 13nov26 G.3: a 30-bit address, 2 reserved bits and the 120-bit Traffic payload, verbatim
@@ -46,9 +43,7 @@ static_assert(1 + kUplinkHeaderBytes + uplink_payload_bytes(kUplinkMaxTargets) <
               "E.3.2 covers at most 223 bytes");
 constexpr int kUplinkMaxBurstBytes = static_cast<int>(sizeof(kUplinkSync)) + 1 + kUplinkMaxLength;
 
-// How long the longest uplink burst occupies the channel: preamble, sync word, length
-// byte and packet, at §C.4's chip rate. The dwell map (core/timing/slot.h) is
-// cut against this, so it is derived rather than remembered.
+// INFO: fc 20nov26 the dwell map in core/timing/slot.h is cut against the longest uplink burst
 constexpr uint32_t kUplinkBurstBits =
     kUplinkPreambleChips + kUplinkSyncBits + 8u * (1u + kUplinkMaxLength);
 constexpr uint32_t kUplinkBurstUs = kUplinkBurstBits * 1000000u / kUplinkChipRateBps;

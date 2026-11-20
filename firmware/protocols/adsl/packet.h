@@ -10,7 +10,7 @@
 
 namespace skyblip::adsl {
 
-// INFO: fc 13nov26 F.2.2's address mapping tables; 9 to 63 are manufacturer pages 0 to 54
+// INFO: fc 13nov26 F.2.2's address mapping tables, where 9 to 63 are manufacturer pages 0 to 54
 constexpr uint8_t kAddressTableRandom = 0;
 constexpr uint8_t kAddressTableIcao = 5;
 constexpr uint8_t kAddressTableFlarm = 6;
@@ -37,8 +37,7 @@ struct __attribute__((packed)) Packet {
     static constexpr uint8_t kPayloadBytes = 20;
     static constexpr uint8_t kCrcCoverBytes = 1 + kPayloadBytes;
     static constexpr uint8_t kDataBytes = kCrcCoverBytes + 3;
-    // INFO: fc 18nov26 G.2's 56 bits behind F.2's 40 are 12 bytes, so a Status packet is 16 with
-    // CRC
+    // INFO: fc 18nov26 F.2's 40 bits and G.2's 56 are 12 bytes, so a Status packet is 16
     static constexpr uint8_t kStatusDataBytes = 1 + 12 + 3;
     // INFO: fc 09nov26 on air the two sync bytes and the length byte go ahead of the data
     static constexpr uint8_t kTxBytes = 3 + kDataBytes;
@@ -49,8 +48,7 @@ struct __attribute__((packed)) Packet {
     static constexpr uint8_t kProtocolVersionIssue2 = 1;
     static constexpr uint8_t kMaxProtocolVersion = kProtocolVersionIssue2;
     static constexpr uint8_t kProtocolVersionMask = 0x0F;
-    // INFO: fc 13nov26 E.1: version in bits 0-3, signature flag bit 4, key index bits 5-6, FEC bit
-    // 7
+    // INFO: fc 13nov26 E.1: version bits 0-3, signature bit 4, key index bits 5-6, FEC bit 7
     static constexpr uint8_t kSignatureFlag = 0x10;
     static constexpr int kKeyIndexShift = 5;
     static constexpr uint8_t kKeyIndexMask = 0x03;
@@ -169,27 +167,24 @@ struct __attribute__((packed)) Packet {
     void set_latitude_1e7(int32_t latitude);
     void set_longitude_1e7(int32_t longitude);
 
-    // Three fields carry an explicit "invalid" code, and the spec is emphatic
-    // that it means UNAVAILABLE, not out-of-range: an over-range value "shall be
-    // encoded" as the limit (ADS-L 4 SRD860 issue 2, G.1.7 / G.1.8 / G.1.9). The
-    // setters below honour that. The set_*_invalid() calls are how a shell says
-    // it genuinely does not know.
-    static constexpr uint16_t kSpeedInvalidCode = 0xFF;       // G.1.8, 8 bits
-    static constexpr uint16_t kClimbInvalidCode = 0x1FF;      // G.1.9, 9 bits
-    static constexpr uint16_t kAltitudeInvalidCode = 0x3FFF;  // G.1.7, 14 bits
-    static constexpr int32_t kAltitudeOffsetM = 320;          // G.1.7 encoding offset
+    // INFO: fc 20nov26 G.1.7 to G.1.9: invalid is unknown, and a value past the limit sends it
+    static constexpr uint16_t kSpeedInvalidCode = 0xFF;
+    static constexpr uint16_t kClimbInvalidCode = 0x1FF;
+    static constexpr uint16_t kAltitudeInvalidCode = 0x3FFF;
+    static constexpr int32_t kAltitudeOffsetM = 320;
 
-    uint16_t speed_q() const;          // [0.25 m/s]
-    void set_speed_q(uint16_t speed);  // [0.25 m/s]
+    uint16_t speed_q() const;
+    void set_speed_q(uint16_t speed);
     bool has_speed() const { return field(kSpeedField) != kSpeedInvalidCode; }
     void set_speed_invalid() { set_field(kSpeedField, kSpeedInvalidCode); }
 
-    int32_t altitude_m() const;  // [m] HAE (WGS-84 ellipsoid, G.1.7: NOT pressure)
+    // INFO: fc 20nov26 G.1.7 altitude is height above the WGS-84 ellipsoid, never pressure altitude
+    int32_t altitude_m() const;
     void set_altitude_m(int32_t altitude);
     bool has_altitude() const { return field(kAltitudeField) != kAltitudeInvalidCode; }
     void set_altitude_invalid() { set_field(kAltitudeField, kAltitudeInvalidCode); }
 
-    int16_t climb_e8() const;  // [0.125 m/s]
+    int16_t climb_e8() const;
     void set_climb_e8(int16_t climb);
     bool has_climb() const { return field(kClimbField) != kClimbInvalidCode; }
     void set_climb_invalid() { set_field(kClimbField, kClimbInvalidCode); }
@@ -197,10 +192,7 @@ struct __attribute__((packed)) Packet {
     uint16_t track_c9() const { return static_cast<uint16_t>(field(kTrackField)); }
     void set_track_c9(uint16_t track) { set_field(kTrackField, track); }
 
-    // The Integrity[2] block, G.1.10 to G.1.15. Every one of these fields has a
-    // zero code that means "unknown / no fix", so leaving the block at its
-    // initialised value is not a neutral act: it tells a receiver we claim
-    // nothing. What we can honestly claim comes out of the receiver's DOP.
+    // INFO: fc 20nov26 G.1.10 to G.1.15 code 0 as unknown, so a block left zero claims nothing
     static constexpr uint8_t kDesignAssuranceNone = 0;
 
     static uint8_t horizontal_accuracy_code(uint32_t hfom_cm);
@@ -231,9 +223,7 @@ wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
 wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
                               Packet& out);
 
-// The timestamp field is quarter seconds inside a 15 s cycle, so the instant a
-// burst claims is expressible to 250 ms - and the position it carries has to
-// belong to that instant rather than to whenever the receiver last spoke.
+// INFO: fc 20nov26 G.1.1 counts quarters of a 15 s cycle, and the position must be that quarter's
 static constexpr uint32_t kTimestampCycleS = 15;
 static constexpr uint32_t kTimestampQuarterMs = 250;
 uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms);

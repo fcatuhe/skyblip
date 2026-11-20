@@ -34,8 +34,7 @@ static_assert(shared_sync(adsl::kSyncWord) == shared_sync(alptas::kSyncWord),
 constexpr uint8_t kSharedSync[2] = {static_cast<uint8_t>(shared_sync(adsl::kSyncWord) >> 8),
                                     static_cast<uint8_t>(shared_sync(adsl::kSyncWord))};
 
-// What the detector consumed is gone from the report, so the frame arrives
-// behind the rest of whichever sync word it was.
+// INFO: fc 20nov26 the report drops the window the detector matched, so it opens on the sync tail
 constexpr uint8_t kSyncTailBits = static_cast<uint8_t>(32u - kSharedSyncEndChip / 2u);
 constexpr uint8_t kSyncTailBytes = 3;
 
@@ -46,7 +45,7 @@ constexpr uint32_t sync_tail(uint32_t sync_word) {
     return (sync_word & ((1u << kSyncTailBits) - 1u)) << (8u * kSyncTailBytes - kSyncTailBits);
 }
 
-// Read the sync tail plus the longer of the two frames, and read it as chips.
+// INFO: fc 20nov26 a dwell reads the sync tail and the longer frame, ALP-TAS's, as chips
 constexpr uint8_t kRxFrameBytes = kSyncTailBytes + alptas::kFrameBytes;
 constexpr uint8_t kRxChipBytes = 2 * kRxFrameBytes;
 constexpr uint8_t kSyncWindowBytes = wire::kSyncWordBytes - kSyncTailBytes;
@@ -71,8 +70,6 @@ uint8_t frame_bytes(System system);
 // INFO: fc 15sep26 SX1262 DS 6.2.2: the part inserts the window, the buffer carries the rest
 size_t m_band_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
 
-// The chips a receiver reports once the shared window matched. Manchester-decode
-// them, name the system by the sync tail, and shift the frame to byte zero.
 bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out);
 
 // INFO: fc 17sep26 noise decodes half its chip pairs to a pair no transmitter can send
@@ -84,18 +81,7 @@ static_assert(kNoiseWindowBytes <= kSyncTailBytes + adsl::Packet::kStatusDataByt
 
 bool framed_noise(const Frame& frame);
 
-// One burst off the bus, named by the dwell that heard it.
-//
-// The M band carries two systems past one shared sync window, so there the name
-// has to be Manchester-decoded out of the sync tail. The O band carries the
-// ground station's uplink and nothing else: the dwell was armed for §C.4.3's
-// sync word, and the §D.1.1 length byte behind it names one of G.3's eleven
-// packet lengths or the burst is not an uplink packet. out is filled for the M
-// band only - an uplink packet is nine times longer than a Frame and stays where
-// the executor already put it.
-//
-// Naming a burst is protocol policy, so it lives here rather than in the
-// service that pulls the event: the service moves messages.
+// INFO: fc 20nov26 out is filled on the M band only, and an uplink stays where the executor put it
 System receive_burst(model::Band band, const uint8_t* data, size_t bytes, Frame& out);
 
 }  // namespace skyblip::protocol
