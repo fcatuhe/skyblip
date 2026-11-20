@@ -59,7 +59,8 @@ TEST_CASE("alarm call: each new aircraft in the window is a new announcement, nu
 }
 
 // A press on Bravo names the call it heard, so it never dismisses one Bravo had not played yet.
-TEST_CASE("alarm call: a dismissal of the current announcement dismisses, an older one does not") {
+TEST_CASE("alarm call: a dismissal of the current announcement dismisses, an older one does not" *
+          doctest::test_suite("main")) {
     Leader leader;
     leader.hear(0x515151, 800, 1000);
     leader.hear(0x626262, 700, 2000);

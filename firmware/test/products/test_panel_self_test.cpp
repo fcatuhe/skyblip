@@ -79,7 +79,8 @@ TEST_CASE("product: the self-test page names the part, not just the failure") {
 // ships two barometer addresses, five e-paper lots and two kinds of haptic
 // against the same footprints, so "BARO PASS" on its own does not identify the
 // device a bench is holding.
-TEST_CASE("product: the self-test page carries what the probes found, not what was expected") {
+TEST_CASE("product: the self-test page carries what the probes found, not what was expected" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;

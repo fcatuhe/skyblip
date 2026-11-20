@@ -103,7 +103,8 @@ TEST_CASE("simulator: losing the fix clears own-ship validity (fail closed)") {
     CHECK_FALSE(simulator.product().state().own.fix_valid);
 }
 
-TEST_CASE("simulator: a virtual aircraft arrives as a real ADS-L frame and enters traffic") {
+TEST_CASE("simulator: a virtual aircraft arrives as a real ADS-L frame and enters traffic" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     run(simulator, 0, 2000);
@@ -121,7 +122,8 @@ TEST_CASE("simulator: a virtual aircraft arrives as a real ADS-L frame and enter
 }
 
 // The one path a name can reach the glass by, end to end: a neighbour's own burst.
-TEST_CASE("simulator: an aircraft that names itself is named on the device") {
+TEST_CASE("simulator: an aircraft that names itself is named on the device" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     run(simulator, 0, 2000);
@@ -186,7 +188,8 @@ TEST_CASE("simulator: traffic reporting no climb holds its level while own-ship 
     CHECK(target->observation.altitude_m > level_at - 10);
 }
 
-TEST_CASE("simulator: a converging aircraft raises the collision alarm and buzzer") {
+TEST_CASE("simulator: a converging aircraft raises the collision alarm and buzzer" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     run(simulator, 0, 2000);

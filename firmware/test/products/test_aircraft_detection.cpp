@@ -69,7 +69,8 @@ void paired_on_the_radar(Tango& tango, bool fixed = true) {
 
 }  // namespace
 
-TEST_CASE("aircraft detection: a transponder Bravo hears is proposed once, and a press stores it") {
+TEST_CASE("aircraft detection: a transponder Bravo hears is proposed once, and a press stores it" *
+          doctest::test_suite("main")) {
     Tango tango;
     paired_on_the_radar(tango);
     tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
@@ -184,7 +185,8 @@ TEST_CASE("aircraft detection: a transponder first heard while taxiing is propos
 }
 
 // A wingman 10 m off in the air is as loud as our own transponder, so the air proposes nothing.
-TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says it waits") {
+TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says it waits" *
+          doctest::test_suite("main")) {
     Flight flight;
     flight.fly(30);
     REQUIRE(flight.state().flight.confirmed_state == flight::FlightState::Airborne);

@@ -43,7 +43,8 @@ uint32_t step_until_lit(Rig& rig, uint32_t& now_ms, uint32_t within_ms) {
 
 }  // namespace
 
-TEST_CASE("product: a running device with no fix winks blue, and green once it has one") {
+TEST_CASE("product: a running device with no fix winks blue, and green once it has one" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -110,7 +111,7 @@ TEST_CASE("product: with a PPS lock the wink falls on the UTC grid, not on when 
     for (size_t i = 1; i < green_from_ms.size(); i++) CHECK(green_from_ms[i] % 3000 == 2000);
 }
 
-TEST_CASE("product: a critical cell blinks the lamp red") {
+TEST_CASE("product: a critical cell blinks the lamp red" * doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
@@ -323,7 +324,7 @@ TEST_CASE("product: switching the alarm off silences the buzzer and does not dar
     CHECK_FALSE(rig.product.alarm().sounding());
 }
 
-TEST_CASE("product: an urgent target takes the lamp off the wink") {
+TEST_CASE("product: an urgent target takes the lamp off the wink" * doctest::test_suite("main")) {
     // The top row, driven by real frames on the air rather than by a level set by hand.
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);

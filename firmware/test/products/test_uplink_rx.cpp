@@ -164,7 +164,8 @@ void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, sec
 
 // THE GUARD. Delete the uplink branch from TrafficService, or the O-band arming
 // from RadioService, and this is the case that goes red.
-TEST_CASE("uplink: one ground-station frame carries several aircraft onto the radar") {
+TEST_CASE("uplink: one ground-station frame carries several aircraft onto the radar" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -226,7 +227,8 @@ TEST_CASE("uplink: a frame Reed-Solomon cannot repair is counted apart and dropp
 // A relay is a rebroadcast of something we may already be hearing for ourselves.
 // One aircraft, two paths, one target - and the better report is the one that
 // stays, even though the relay of it arrives afterwards and is therefore newer.
-TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two") {
+TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -288,7 +290,8 @@ TEST_CASE("uplink: the relay takes over once the direct report has gone stale") 
 // The phantom a relay can make that a direct reception never can: a ground
 // station hears us and puts us in the frame it sends back. Own-ship on the
 // radar, at own-ship's position, is a permanent level-3 collision with itself.
-TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") {
+TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

@@ -66,7 +66,8 @@ TEST_CASE("capture: a flights session claims a diagnostics sector, and the captu
     CHECK(rig.product.capture().stopped() == bus::CaptureStop::None);
 }
 
-TEST_CASE("capture: the capture takes flights sectors down to the floor and no further") {
+TEST_CASE("capture: the capture takes flights sectors down to the floor and no further" *
+          doctest::test_suite("main")) {
     Rig rig;
     const uint32_t count = platform::host::FlashRegion::kSectorCount;
     const uint32_t floor_sectors =

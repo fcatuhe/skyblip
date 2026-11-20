@@ -89,7 +89,8 @@ void set_callsign_over_the_link(Rig& rig, uint32_t& now_ms, const char* callsign
 
 }  // namespace
 
-TEST_CASE("product: an upload that lands parks the device and paints the glass before the swap") {
+TEST_CASE("product: an upload that lands parks the device and paints the glass before the swap" *
+          doctest::test_suite("main")) {
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
@@ -394,7 +395,8 @@ std::string land(Rig& rig) {
 }  // namespace
 
 TEST_CASE(
-    "product: an image signed by a key the bootloader does not trust lands and is not installed") {
+    "product: an image signed by a key the bootloader does not trust lands and is not installed" *
+    doctest::test_suite("main")) {
     Rig rig;
     stage_versions(rig);
     sign(rig, 0x21, 0x42);
@@ -457,7 +459,8 @@ TEST_CASE("product: an image with no key hash at all is refused as the wrong key
     CHECK(rig.platform.dfu().triggered == 0);
 }
 
-TEST_CASE("product: a release unit refuses to ask for an older image, and asks for the same one") {
+TEST_CASE("product: a release unit refuses to ask for an older image, and asks for the same one" *
+          doctest::test_suite("main")) {
     Rig older;
     stage_versions(older);
     REQUIRE(older.setup() == Status::Ok);
@@ -560,7 +563,8 @@ TEST_CASE("product: an image with nothing of its own beside a newer blob starts 
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 }
 
-TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone") {
+TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone" *
+          doctest::test_suite("main")) {
     Rig rig;
     const NewerBlob newer;
     REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
@@ -594,7 +598,8 @@ TEST_CASE("product: a sector that lost a bit is written over, not kept as a newe
     CHECK(std::string(stored.callsign) == "F-JABC");
 }
 
-TEST_CASE("product: a revert puts back the settings the pilot had when the swap began") {
+TEST_CASE("product: a revert puts back the settings the pilot had when the swap began" *
+          doctest::test_suite("main")) {
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);

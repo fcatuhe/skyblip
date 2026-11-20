@@ -23,7 +23,8 @@
 
 using namespace skyblip;
 
-TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum") {
+TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

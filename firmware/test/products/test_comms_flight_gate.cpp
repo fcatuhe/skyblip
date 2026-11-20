@@ -73,7 +73,8 @@ TEST_CASE("comms flight gate: a set with no fix since boot is staged, confirmed 
 
 // A prompt takes the glass and both controls, so an unauthenticated link must never raise one
 // aloft.
-TEST_CASE("comms flight gate: a set in flight is refused in_flight and raises no prompt") {
+TEST_CASE("comms flight gate: a set in flight is refused in_flight and raises no prompt" *
+          doctest::test_suite("main")) {
     Bench bench(flight::FlightState::Airborne);
     bench.config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":2}"));
     CHECK(bench.config.pending() == Pending::None);
@@ -125,7 +126,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "comms flight gate: install, recovery, power-off, cold start and erase are refused aloft") {
+    "comms flight gate: install, recovery, power-off, cold start and erase are refused aloft" *
+    doctest::test_suite("main")) {
     for (const char* request : kPromptRequests) {
         Bench bench(flight::FlightState::Airborne);
         bench.config.on_rx(config_frame(request));

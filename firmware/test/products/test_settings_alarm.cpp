@@ -28,7 +28,8 @@ std::string default_fields(const SettingsStore& store) {
 
 }  // namespace
 
-TEST_CASE("settings: a Go that cannot sound ships on visual, reads loud as visual, refuses soft") {
+TEST_CASE("settings: a Go that cannot sound ships on visual, reads loud as visual, refuses soft" *
+          doctest::test_suite("main")) {
     const ports::Capabilities silent = ports::Capability::Display;
     Settings settings = defaults();
     SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
@@ -52,7 +53,8 @@ TEST_CASE("settings: a Go that cannot sound ships on visual, reads loud as visua
 }
 
 // A paired Go that cannot sound sets BRAVO SOFT and BRAVO LOUD, which only its Bravo sounds.
-TEST_CASE("settings: a Go that cannot sound takes soft and loud only while paired with a Bravo") {
+TEST_CASE("settings: a Go that cannot sound takes soft and loud only while paired with a Bravo" *
+          doctest::test_suite("main")) {
     const ports::Capabilities silent = ports::Capability::Display;
     Settings settings = defaults();
     SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
@@ -133,7 +135,7 @@ TEST_CASE("settings: config says whether the Go can sound an alarm itself") {
     CHECK(config_fields(plus).find("\"annunciator_fitted\":true") != std::string::npos);
 }
 
-TEST_CASE("settings: a Go+ ships on loud and takes every step") {
+TEST_CASE("settings: a Go+ ships on loud and takes every step" * doctest::test_suite("main")) {
     const ports::Capabilities sounding = ports::Capability::Buzzer | ports::Capability::Haptic;
     Settings settings = defaults();
     SettingsStore store(settings, kTestActivation, kNoOwnTransponder, sounding);

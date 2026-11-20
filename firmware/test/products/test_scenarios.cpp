@@ -146,7 +146,8 @@ TEST_CASE("scenario: a failed expectation is reported, not swallowed") {
 // the same two M-band channels, and both have to arrive as targets. Losing the
 // ALP-TAS one is the failure this fixture exists to catch, because it is silent:
 // the radar simply shows less sky than there is.
-TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells") {
+TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/mixed_traffic.json"));
@@ -203,7 +204,8 @@ TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
 // 60 m/s of closure and held every one of them at "urgent" for as long as the
 // climb lasted. They are traffic - they belong on the screen, they must not be
 // an alarm - and the assertion is what the annunciator is allowed to say.
-TEST_CASE("scenario: a gaggle in one thermal is traffic, not three collisions") {
+TEST_CASE("scenario: a gaggle in one thermal is traffic, not three collisions" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/gaggle.json"));
@@ -363,7 +365,8 @@ TEST_CASE("scenario: two gliders sharing a thermal core are warned about the 15 
 
 // The other side of the fence: a glider arriving straight at 45 m/s is spoken
 // about while it is still a long way out, and once.
-TEST_CASE("scenario: a glider joining the thermal on a straight line is still caught") {
+TEST_CASE("scenario: a glider joining the thermal on a straight line is still caught" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/thermal_joiner.json"));
