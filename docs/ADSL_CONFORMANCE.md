@@ -705,11 +705,11 @@ What the component checks beyond the clauses, by file: the packet over a bit-err
 
 **uplink**
 
-- a destroyed frame is DETECTED (Status::Crc), never silently wrong
 - a header naming a later version or a reserved key is refused
   > E.1: a later version or a reserved key index is a packet this decoder cannot read.
 - a length G.3 cannot spell is refused before any decoding
   > A length that names no whole number of records is not an uplink packet, whatever it holds.
+- a packet with 40 bytes destroyed, past the 16 it repairs, is refused
 - a record with no address and no place on the globe is refused
   > Reed-Solomon can decode to a valid codeword that is not the one that was sent. A ground station reaches every aircraft in range at once, so one miscorrected frame is a screenful of phantoms in front of everybody, and what a frame carries is checked before any of it becomes a target.
 - a relayed record is current up to 10 s old, and never from the future
