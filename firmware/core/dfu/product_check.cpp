@@ -34,8 +34,7 @@ bool ProductCheck::admits(size_t offset, const uint8_t* chunk, size_t bytes) {
     return verified_;
 }
 
-// INFO: fc 16nov26 an upload ends where its image ends, so no swap carries forged bytes onto the
-// trust page
+// INFO: fc 16nov26 an upload ends at its image, so no swap carries forged bytes to the trust page
 bool ProductCheck::verify() const {
     ImageClass incoming;
     const std::optional<uint32_t> end =
