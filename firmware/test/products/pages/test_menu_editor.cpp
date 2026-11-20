@@ -13,7 +13,8 @@
 using namespace skyblip;
 using namespace skyblip::go;
 
-TEST_CASE("nearby menu: every row opens a page rather than changing a value") {
+TEST_CASE("nearby menu: every row opens a page rather than changing a value" *
+          doctest::test_suite("main")) {
     const Menu menu = menu_for(Page::Nearby);
     REQUIRE(menu.row_count == 5);
     for (int i = 0; i < menu.row_count; i++) CHECK(opens_a_page(menu.rows[i]));
@@ -31,7 +32,8 @@ TEST_CASE("nearby menu: every row opens a page rather than changing a value") {
     CHECK_FALSE(bench.editor.active());
 }
 
-TEST_CASE("menu editor: the pad moves down a row, the button changes the row it is on") {
+TEST_CASE("menu editor: the pad moves down a row, the button changes the row it is on" *
+          doctest::test_suite("main")) {
     Bench bench;
     CHECK(bench.editor.focus() == MenuRow::Light);
 
@@ -81,7 +83,8 @@ TEST_CASE("menu editor: the light is the first row, and a press on it switches i
     CHECK(std::string(value) == "OFF");
 }
 
-TEST_CASE("menu editor: the callsign is rolled a character at a time and stored at the end") {
+TEST_CASE("menu editor: the callsign is rolled a character at a time and stored at the end" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.focus_on(MenuRow::Callsign);
     REQUIRE(bench.change() == MenuAction::Moved);
@@ -126,7 +129,8 @@ TEST_CASE("menu editor: the callsign field opens on what is stored") {
 }
 
 // The ring only rolls forward, so blanking nine characters is sixty taps nobody will spend.
-TEST_CASE("menu editor: a press on a blank first character removes the stored name") {
+TEST_CASE("menu editor: a press on a blank first character removes the stored name" *
+          doctest::test_suite("main")) {
     Bench bench;
     std::memcpy(bench.values.settings.callsign, "F-JABC", 7);
     bench.focus_on(MenuRow::Callsign);
@@ -180,7 +184,8 @@ void type(Bench& bench, const char* wanted) {
 
 }  // namespace
 
-TEST_CASE("menu editor: the aircraft address is typed in hex, six digits, and stored on the last") {
+TEST_CASE("menu editor: the aircraft address is typed in hex, six digits, and stored on the last" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.focus_on(MenuRow::AircraftAddress);
     REQUIRE(bench.change() == MenuAction::Moved);
@@ -313,7 +318,8 @@ TEST_CASE("menu editor: moving the focus over a row is not editing it") {
     CHECK(range_before == bench.values.settings.range_step);
 }
 
-TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft") {
+TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.focus_on(MenuRow::AircraftType);
     REQUIRE(bench.values.settings.aircraft_type == go::kAircraftTypeLight);
@@ -337,7 +343,8 @@ TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft
 }
 
 // One press from the default is still heard: silent takes a second press.
-TEST_CASE("menu editor: the alarm steps down from loud through soft and visual to off, and round") {
+TEST_CASE("menu editor: the alarm steps down from loud through soft and visual to off, and round" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.focus_on(MenuRow::Alarm);
     REQUIRE(bench.values.settings.alarm == go::Alarm::Loud);
@@ -415,7 +422,8 @@ TEST_CASE("menu editor: the ring is a range a thumb can step, and the cycle clos
     CHECK(next_range_step(37) == (kDefaultRangeStep + 1) % kRangeStepCount);
 }
 
-TEST_CASE("menu editor: the plot starts on all, and one press each way flips it to scale") {
+TEST_CASE("menu editor: the plot starts on all, and one press each way flips it to scale" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.focus_on(MenuRow::Plot);
     REQUIRE(bench.values.settings.plot == RadarPlot::All);

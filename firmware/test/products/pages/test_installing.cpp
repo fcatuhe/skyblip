@@ -8,7 +8,8 @@
 using namespace skyblip;
 using namespace skyblip::go;
 
-TEST_CASE("installing page: it says what is happening and what not to do, unclipped") {
+TEST_CASE("installing page: it says what is happening and what not to do, unclipped" *
+          doctest::test_suite("main")) {
     Glass canvas;
     draw_installing(canvas);
     CHECK(reads_heading(canvas, kInstallingTitle, Heading::Interrupt));
@@ -23,7 +24,8 @@ TEST_CASE("installing page: it shows no key, because no gesture changes it") {
     CHECK_FALSE(has_pad_key(canvas));
 }
 
-TEST_CASE("receiving page: it says the install follows on its own, and the pad cancels it") {
+TEST_CASE("receiving page: it says the install follows on its own, and the pad cancels it" *
+          doctest::test_suite("main")) {
     Glass canvas;
     draw_receiving(canvas);
     CHECK(reads_heading(canvas, kReceivingTitle, Heading::Interrupt));

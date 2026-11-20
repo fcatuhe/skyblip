@@ -60,7 +60,8 @@ RadioLogSnapshot with(const radio::Log& log) {
 
 }  // namespace
 
-TEST_CASE("radio log page: a received frame shows when, from whom, and how loud") {
+TEST_CASE("radio log page: a received frame shows when, from whom, and how loud" *
+          doctest::test_suite("main")) {
     radio::Log log;
     log.record(received(0x3FA21C, -87));
 
