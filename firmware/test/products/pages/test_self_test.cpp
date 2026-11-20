@@ -3,6 +3,7 @@
 // rather than count ink: "there is something on the GNSS row" is not the claim
 // that matters, "the GNSS row says FAIL" is.
 #include <cstring>
+#include <string>
 
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
@@ -172,6 +173,52 @@ TEST_CASE("self-test page: a row with no detail is the row it always was") {
     // The detail is the only difference, and it is not on the page that has none.
     CHECK_FALSE(reads_at(without, detail_x("RADIO"), self_test_row_y(0), "1262"));
     CHECK(reads_at(with, detail_x("RADIO"), self_test_row_y(0), "1262"));
+}
+
+// Answered at boot, then how it works now: a row the transmit gate fails reads NO TX.
+TEST_CASE("self-test page: a row says how its part works now, and NO TX when it stops a burst") {
+    SelfTestPart parts[] = {
+        {"RADIO", PartState::Pass, "SX1262", "CCA OK"},
+        {"GNSS", PartState::Pass, "L76K", "NO PPS", true},
+    };
+    Glass canvas;
+    draw_self_test(canvas, page(parts, 2, /*flyable=*/true));
+
+    const int now_x = detail_x("RADIO") + 7 * kCellWidth;
+    CHECK(reads_at(canvas, now_x, self_test_row_y(0), "CCA OK"));
+    CHECK(row_reads(canvas, 0, "PASS"));
+    CHECK(reads_at(canvas, detail_x("GNSS") + 5 * kCellWidth, self_test_row_y(1), "NO PPS"));
+    CHECK(row_reads(canvas, 1, kSelfTestNoTxVerdict));
+}
+
+TEST_CASE("self-test page: the radio reads CCA OK while it listens, NO CCA once it does not") {
+    skyblip::timing::Requirements met{};
+    met.radio = true;
+    CHECK(std::string(radio_word(met)) == "CCA OK");
+    met.radio = false;
+    CHECK(std::string(radio_word(met)) == "NO CCA");
+}
+
+// The receiver's word is its first requirement unmet, in the gate's own order, else its rate.
+TEST_CASE("self-test page: the receiver reads its rate, or the first of its requirements unmet") {
+    skyblip::timing::Requirements met{};
+    met.receiver = met.fix = met.utc = met.pps = true;
+    skyblip::ports::GnssHealth health{};
+    health.rate_held = true;
+    health.config_stage = skyblip::ports::GnssConfigStage::Ready;
+    CHECK(std::string(receiver_word(met, health)) == "2 HZ");
+    met.pps = false;
+    CHECK(std::string(receiver_word(met, health)) == "NO PPS");
+    met.utc = false;
+    CHECK(std::string(receiver_word(met, health)) == "NO UTC");
+    met.fix = false;
+    CHECK(std::string(receiver_word(met, health)) == "NO FIX");
+    met.receiver = false;
+    CHECK(std::string(receiver_word(met, health)) == "STAMP");
+    health.rate_held = false;
+    CHECK(std::string(receiver_word(met, health)) == "1 HZ");
+    health.config_stage = skyblip::ports::GnssConfigStage::Degraded;
+    CHECK(std::string(receiver_word(met, health)) == "DEGRADED");
 }
 
 TEST_CASE("self-test page: the bus scan is a row of its own, addresses and no verdict") {

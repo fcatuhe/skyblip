@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/events/link.h"
+#include "core/timing/transmit_gate.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/services/diagnostics.h"
 #include "test/support/product_rig.h"
@@ -156,6 +157,28 @@ TEST_CASE("diagnostics: the link answers what the collector and the config servi
     CHECK(has(frames, ("\"percent\":" + percent).c_str()));
     const std::string fixes = std::to_string(rig.state().flight.gnss_solutions);
     CHECK(has(frames, ("\"fixes\":" + fixes).c_str()));
+}
+
+// A Go whose receiver never came up to 2 Hz: the dump says so at once, status as the glass does.
+TEST_CASE("diagnostics: the dump names the requirement unmet now, status the one the glass shows") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    Collector collector;
+    uint32_t now_ms = 0;
+    fly(rig, collector, now_ms, 4);
+    rig.raise_link();
+    rig.platform.link().clear();
+    rig.send("{\"command\":\"diagnostics\"}");
+    pass(rig, collector, now_ms, 200);
+    CHECK(has(config_frames(rig), "\"no_tx\":\"gnss\""));
+    rig.send("{\"command\":\"status\"}");
+    pass(rig, collector, now_ms, 200);
+    CHECK_FALSE(has(rig.last_on(events::Endpoint::Config), "no_tx"));
+
+    fly(rig, collector, now_ms, timing::TransmitGate::kVerdictSettleMs / 1000 + 1);
+    rig.send("{\"command\":\"status\"}");
+    pass(rig, collector, now_ms, 200);
+    CHECK(has(rig.last_on(events::Endpoint::Config), "\"no_tx\":\"gnss\""));
 }
 
 // A browser saw its link drop and could not tell a phone asleep from a unit that hung up.

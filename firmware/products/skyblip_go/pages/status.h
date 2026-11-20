@@ -6,6 +6,7 @@
 #include "core/gnss/acquisition.h"
 #include "core/power/charging.h"
 #include "core/settings/address.h"
+#include "core/timing/transmit_gate.h"
 #include "products/skyblip_go/glass.h"
 
 namespace skyblip::go {
@@ -17,6 +18,8 @@ struct StatusSnapshot {
     bool fix_valid{false};
     bool utc_valid{false};
     bool transmitting{false};
+    // INFO: fc 19nov26 the requirement unmet now, which TX OFF names on the bench's page
+    timing::NoTx no_tx{timing::NoTx::None};
     bool barometer_valid{false};
     uint8_t satellites{0};
     gnss::Stage stage{gnss::Stage::Silent};

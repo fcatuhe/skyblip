@@ -325,6 +325,27 @@ TEST_CASE("status page: the page reports whether own-ship is transmitting, not t
     CHECK_FALSE(reads_in(on_air, "TX OFF", 100, 65, 200, 85));
 }
 
+// The field names the first requirement the transmit gate finds unmet, so the bench reads why.
+TEST_CASE("status page: TX OFF names the requirement it waits on") {
+    StatusSnapshot snapshot;
+    snapshot.fix_valid = true;
+    snapshot.no_tx = skyblip::timing::NoTx::Radio;
+    Glass deaf;
+    draw_status(deaf, snapshot);
+    CHECK(reads_in(deaf, "TX OFF RADIO", 100, 65, 200, 85));
+
+    snapshot.no_tx = skyblip::timing::NoTx::Pps;
+    Glass unpulsed;
+    draw_status(unpulsed, snapshot);
+    CHECK(reads_in(unpulsed, "TX OFF PPS", 100, 65, 200, 85));
+
+    snapshot.transmitting = true;
+    Glass on_air;
+    draw_status(on_air, snapshot);
+    CHECK(reads_in(on_air, "TX ON", 100, 65, 200, 85));
+    CHECK_FALSE(reads_in(on_air, "PPS", 100, 65, 200, 85));
+}
+
 // B4. ADS-L carries no callsign, so the setting has exactly one job: telling
 // three devices on a bench apart. It shares the header with the identity that
 // does go on the air.

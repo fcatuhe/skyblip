@@ -66,6 +66,20 @@ void bravo_row(ui::Canvas& canvas, int y, const SelfTestSnapshot& snapshot) {
 
 }  // namespace
 
+const char* radio_word(const timing::Requirements& met) { return met.radio ? "CCA OK" : "NO CCA"; }
+
+const char* receiver_word(const timing::Requirements& met, const ports::GnssHealth& health) {
+    if (!met.receiver) {
+        if (health.rate_held) return "STAMP";
+        if (health.config_stage == ports::GnssConfigStage::Ready) return "1 HZ";
+        return ports::to_string(health.config_stage);
+    }
+    if (!met.fix) return "NO FIX";
+    if (!met.utc) return "NO UTC";
+    if (!met.pps) return "NO PPS";
+    return "2 HZ";
+}
+
 void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     canvas.clear(true);
 
@@ -87,14 +101,15 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     const int rows = snapshot.part_count < kSelfTestRows ? snapshot.part_count : kSelfTestRows;
     for (int i = 0; i < rows; i++) {
         const SelfTestPart& part = snapshot.parts[i];
-        const char* mark = verdict(part.state);
+        const char* mark = part.no_tx ? kSelfTestNoTxVerdict : verdict(part.state);
         int name_end = kLeft + (length(part.name) + 1) * kCellWidth;
         canvas.draw_text(kLeft, y, part.name, true, 1);
         // The identity sits with the name, not with the verdict: a row reads
         // "what it is" then "how it answered", left to right.
-        if (part.detail) {
-            canvas.draw_text(name_end, y, part.detail, true, 1);
-            name_end += (length(part.detail) + 1) * kCellWidth;
+        for (const char* said : {part.detail, part.now}) {
+            if (!said) continue;
+            canvas.draw_text(name_end, y, said, true, 1);
+            name_end += (length(said) + 1) * kCellWidth;
         }
         leaders(canvas, name_end, kRight - (length(mark) + 1) * kCellWidth, y);
         right_aligned(canvas, kRight, y, mark);

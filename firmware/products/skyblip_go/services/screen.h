@@ -130,6 +130,7 @@ class ScreenService : public runtime::Service {
     void draw_prompt(uint32_t now_ms);
     void draw_menu_page(uint32_t now_ms);
     NearbyGo nearby_go() const;
+    const SelfTestPart* self_test_now();
     NearbyBravo nearby_bravo() const;
     void enter_menu(uint32_t now_ms);
     void leave_menu();
@@ -218,6 +219,7 @@ class ScreenService : public runtime::Service {
     comms::ConfigService& config_;
     common::AlarmService& alarm_;
     const SelfTestSnapshot& self_test_;
+    SelfTestPart self_test_rows_[kSelfTestRows]{};
     BravoService& bravo_;
     BravoPage bravo_page_{};
     uint32_t notice_since_ms_{0};

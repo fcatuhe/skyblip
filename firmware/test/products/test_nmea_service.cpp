@@ -34,6 +34,7 @@
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
 #include "core/protocol/callsign.h"
+#include "core/timing/slot.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
@@ -227,6 +228,7 @@ TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent dev
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
+    REQUIRE(rig.bring_receiver_up(now_ms));
     fly(rig, now_ms, 3);
     rig.raise_link();
     // Nothing goes on air before the first fix has settled, so neither does a TX of 1.
@@ -234,8 +236,8 @@ TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent dev
     REQUIRE(rig.state().own.tx_settled);
     REQUIRE(fields(last_of(rig, "$PFLAU"))[2] == "1");
 
-    // No PPS lock is no burst (core/timing/transmit.h), while the fix and the pass stay.
     rig.platform.pps().set_locked(false);
+    fly(rig, now_ms, timing::kPpsEdgeMaxAgeMs / 1000 + 1);
     rig.platform.link().clear();
     fly(rig, now_ms, 2);
     const std::vector<std::string> values = fields(last_of(rig, "$PFLAU"));

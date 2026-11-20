@@ -82,8 +82,7 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
 // INFO: fc 14nov26 a position is encoded again from the newest fix | 18nov26 aged at its instant
 bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced) {
     const model::Ownship& own = context_.state.own;
-    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
-        return false;
+    if (!context_.state.transmit.transmits()) return false;
     if (silenced(tx_at_us)) return false;
     if (payload == Payload::Position && (!own.fix_dated || fix_too_old_at(tx_at_us))) return false;
 

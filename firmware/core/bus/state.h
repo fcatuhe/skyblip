@@ -23,6 +23,7 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
 #include "core/timing/slot_timing_statistics.h"
+#include "core/timing/transmit_gate.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -221,6 +222,8 @@ struct State {
     traffic::CallsignTable callsigns{};
     radio::Log radio_log{};
     RfState rf{};
+    // INFO: fc 19nov26 judged once a pass by the Go's RadioService, read by every transmit path
+    timing::TransmitGate transmit{};
     PowerState power{};
     FlightState flight{};
     GnssState gnss{};
@@ -295,7 +298,9 @@ struct State {
     // The traffic table's single time base. Mixing GNSS epoch seconds with
     // boot-relative seconds underflows uint32 and ages every target out at once.
     uint32_t traffic_now_s(uint32_t now_ms) const {
-        if (clock.pps_locked && clock.utc_s != 0) return clock.utc_s;
+        // INFO: fc 19nov26 a second with no edge yet, locked or held, counts on from the last edge
+        if (timing::pps_anchored(clock) && clock.utc_s != 0)
+            return clock.utc_s + clock.since_edge_ms / 1000;
         return own.utc_valid ? own.utc_s : now_ms / 1000;
     }
 };

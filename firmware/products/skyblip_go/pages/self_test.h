@@ -8,6 +8,8 @@
 
 #include "core/comms/peer.h"
 #include "core/settings/address.h"
+#include "core/timing/transmit_gate.h"
+#include "ports/gnss.h"
 #include "products/skyblip_go/glass.h"
 
 namespace skyblip::go {
@@ -25,6 +27,10 @@ struct SelfTestPart {
     // is a waveform driver or a pin. Optional, short (the row has to hold a name,
     // this, and a verdict inside 200 pixels), and never a second verdict.
     const char* detail{nullptr};
+    // INFO: fc 19nov26 how the part works now, after which part answered at boot: CCA OK, 2 HZ
+    const char* now{nullptr};
+    // INFO: fc 19nov26 the transmit gate names this part's requirement, so the verdict reads NO TX
+    bool no_tx{false};
 };
 
 struct SelfTestSnapshot {
@@ -80,8 +86,14 @@ static_assert(self_test_row_y(kSelfTestRows) + kSelfTestFooterHeight <= kGlassHe
 
 constexpr const char* kSelfTestAircraftAddressName = "ADS-B";
 constexpr const char* kSelfTestUnsetVerdict = "UNSET";
+constexpr const char* kSelfTestNoTxVerdict = "NO TX";
 
 void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot);
+
+// INFO: fc 19nov26 D.3: the radio entering its dwells and reading the channel it listens on
+const char* radio_word(const timing::Requirements& met);
+// INFO: fc 19nov26 the first of the receiver's requirements unmet, or the 2 Hz it holds
+const char* receiver_word(const timing::Requirements& met, const ports::GnssHealth& health);
 
 }  // namespace skyblip::go
 
