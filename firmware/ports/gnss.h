@@ -51,6 +51,8 @@ struct GnssHealth {
     gnss::FixReject last_reject{gnss::FixReject::None};
     GnssConfigStage config_stage{GnssConfigStage::Idle};
     bool identified{false};
+    // INFO: fc 19nov26 solving at the rate the product asked: 2 Hz on the Go, only at 115200
+    bool rate_held{false};
 };
 
 class Gnss {

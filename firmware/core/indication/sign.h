@@ -26,6 +26,8 @@ constexpr uint16_t kSignOffGapMs = 150;
 inline constexpr Sign kSignOn{Colour::Green, 1, kSignOnPulseMs, 0, 0};
 // INFO: fc 13nov26 the lead is a gap, so a traffic call cut by the shutdown never runs into pulse 1
 inline constexpr Sign kSignOff{Colour::Red, 3, kSignOffPulseMs, kSignOffGapMs, kSignOffGapMs};
+// INFO: fc 19nov26 felt once in flight as the glass first says NO TX, the lamp left dark
+inline constexpr Sign kSignNoTx{Colour::None, 1, kSignOnPulseMs, 0, 0};
 
 constexpr uint32_t length_ms(const Sign& sign) {
     return sign.lead_ms + static_cast<uint32_t>(sign.pulses) * sign.pulse_ms +

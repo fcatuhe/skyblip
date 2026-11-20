@@ -69,15 +69,15 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kTurnCeilingDps` | 30 | degrees per second | Ceiling | [README](../firmware/core/flight/README.md) argues it |
-| `kClimbWindowFloorMs` | 500 | milliseconds | Floor | Shortest window that still averages out sensor noise, and the longest one whose answer is still "now" rather than a history lesson. |
+| `kClimbWindowFloorMs` | 500 | milliseconds | Floor | shorter and the sensor noise is the rate, longer and the rate is history |
 | `kClimbWindowCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | [README](../firmware/core/flight/README.md) argues it |
-| `kExtrapolationCeilingMs` | 1500 (1.5 s) | milliseconds | Ceiling | The model is OGN's, in oss/nrf52-ogn-tracker src/ogn.h:1735-1790: constant ground speed on a constant turn rate, the turn applied as half before the velocity is resolved and half after, plus a constant climb. |
+| `kExtrapolationCeilingMs` | 1500 (1.5 s) | milliseconds | Ceiling | past this the last fix stands where it was, never at an invented position |
 | `kLevelFlightMg` | 1000 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kResultantFloorMg` | 200 | thousandths of g | Floor | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedStaleMs` | 2000 (2 s) | milliseconds | Stale | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedDampingSamples` | 4 | samples | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedRateDampingMs` | 2000 (2 s) | milliseconds | Damping | [README](../firmware/core/flight/README.md) argues it |
-| `kLogStatusPeriodMs` | 60000 (1 min) | milliseconds | Period | the cell and the aircraft heard, once a minute: one record in sixty of the track's |
+| `kLogStatusPeriodMs` | 60000 (1 min) | milliseconds | Period | the cell and the aircraft heard, once a minute: one record in sixty |
 | `kLogEventBacklogRecords` | 16 | records | - | alarms and encounters waiting on a writer that drains every pass |
 | `kTimeOffsetCeilingS` | `0xFFFF` = 65535 | seconds | Ceiling | - |
 | `kLogRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the ADS-L G.1.16 airborne rate, so the log holds what neighbours were told |
@@ -194,7 +194,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kGroundEmitStartMs` | `kUplinkWindowMs.start_ms` | milliseconds | - | - |
 | `kGroundEmitEndMs` | `kUplinkWindowMs.end_ms - kCompletionAllowanceMs` | milliseconds | - | a completion deadline, not a start deadline |
 | `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
-| `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | - |
+| `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kPpsLockTailMs` | 3000 (3 s) | milliseconds | - | a pulse reads locked this long past its last edge, so one missed edge keeps it |
+| `kPpsEdgeMaxAgeMs` | `static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms)` | milliseconds | MaxAge | C.5: the latest instant a burst planned from an edge keys at, window B's close |
 | `kRetuneUs` | 30 | microseconds | - | - |
 | `kSwitchMarginUs` | `kSwitchMarginMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kSwitchRetuneUs` | `kSwitchRetuneMs * 1000` = 5000 (5 ms) | microseconds | - | - |
@@ -207,6 +209,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFixInHandEarlyMs` | -1000000 | milliseconds | - | a fix in hand before every instant, for a caller that names no arrival |
 | `kRedrawLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | a redrawn instant leaves the channel check its listen before it |
 | `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
+| `kNoTxHoldMs` | 10000 (10 s) | milliseconds | Hold | a failure shown only once it lasts, so a short gap never flickers |
+| `kVerdictSettleMs` | 10000 (10 s) | milliseconds | Settle | the sky's requirements are judged this long after the first fix |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -337,6 +341,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAheadCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | unverified: two GNSS clocks part by a second at most, and more is no clock |
 | `kFarewellCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | two health periods for Bravo to answer an unpairing Go, then the link drops |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
+| `kRadioAnswerMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | three dwells and readings a second, so nine missed is a radio not answering |
+| `kRadioRefusalSamples` | 2 | samples | Samples | one refused dwell is a transient, a second inside the age a fault |
 | `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -425,4 +431,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | the gauge needs three readings to reject a transient, so this still shows charge on the first screen |
 
-280 constants over 26 folders.
+286 constants over 26 folders.

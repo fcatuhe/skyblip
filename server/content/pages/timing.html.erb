@@ -4,7 +4,7 @@ nav_title: Timing
 description: "When a skyBlip Go transmits: the windows of each second, a 20 s cycle set by its serial, an instant drawn every second, listen-before-talk and retries."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -139,7 +139,7 @@ updated_on: "2026-11-19"
   <p class="lede">The Go declares a limit of 1&nbsp;% of any hour on air for its use of the 868&nbsp;MHz band. It keeps sixty one-minute counters and checks the budget before every burst. A position every second plus a Status and a callsign every 10&nbsp;s uses 6&nbsp;ms per second: 0.6&nbsp;% of the time in flight, or 0.15&nbsp;% on the ground. The normal schedule cannot exhaust the budget. If a fault does exhaust it, the Go blocks transmission rather than keep occupying the band.</p>
 
   <h3 id="clock">GPS sets the clock, and the clock gates the radio.</h3>
-  <p class="lede">The GPS receiver&rsquo;s pulse per second, PPS, marks the edge from which the radio deadlines are calculated. The Go transmits only with a <%= link_to_page "gps", label: "settled fix", anchor: "settle" %>, valid UTC time, a PPS lock and an assigned serial number. If the pulses stop, it keeps the windows running for 60&nbsp;s to receive, but transmits nothing.</p>
+  <p class="lede">The GPS receiver&rsquo;s pulse per second, PPS, is the reference for the radio windows. Go transmits only with an activated address, a radio that answers and listens before transmission, a GPS receiver calculating a position on each second and half-second and sending its data at 115200 baud, a <%= link_to_page "gps", label: "settled fix", anchor: "settle" %>, valid UTC time and a pulse for the current second. Go uses this twice-a-second rate to keep every position it sends under ADS-L&rsquo;s 500&nbsp;ms age limit. If a requirement fails, transmission stops. A missing pulse stops it 1.2&nbsp;s after the last pulse. The radio windows continue from the last pulse for 60&nbsp;s, for reception only. After 10&nbsp;s without meeting a requirement, every page shows <span class="mono">NO TX</span> and the reason (<%= link_to_page "radar", label: "When Go does not transmit", anchor: "no-tx" %>).</p>
   <p class="lede">The GPS receiver reports the UTC second in a data sentence that arrives hundreds of milliseconds after the pulse. Until then, that report still names the previous second. Dating a received burst from it could put the burst in the wrong second. Two Go units exposed the problem on the bench: a burst read 42:52.954 on the sender and 42:53.956 on the receiver. Received bursts are now dated from the UTC second opened by the latest pulse.</p>
   <p class="lede">The firmware&rsquo;s service loop runs every 10&nbsp;ms, too slowly to open each radio window on time itself. Early bench captures showed window 2 opening 3 to 6&nbsp;ms late at the median, and up to 120&nbsp;ms late at worst. The firmware now gives the radio its next window as soon as the current one starts, with an absolute deadline calculated from the pulse. The radio can then switch without waiting for another pass through the loop.</p>
 

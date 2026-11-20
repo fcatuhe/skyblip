@@ -13,7 +13,8 @@ using adsl::state_from;
 
 struct FlightSample {
     int32_t speed_mm_s{0};
-    uint16_t hdop_e2{0};  // hundredths; zero means the receiver did not report
+    // INFO: fc 20nov26 0 means the receiver did not report a dilution of precision
+    uint16_t hdop_e2{0};
     bool fix_valid{false};
 };
 

@@ -395,12 +395,11 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     rig.run(now_ms, now_ms + 100);
     now_ms += 150;
     // Read on the first pass rather than ten seconds into the boot: the first
-    // status a phone is pushed should carry a temperature, and the self-test page
+    // dump a bench asks for should carry a temperature, and the self-test page
     // is the moment a bench eye is looking.
     CHECK(die.reads() == 1);
     CHECK(rig.product.state().power.die_valid);
     CHECK(rig.product.state().power.die_dc == 412);
-    CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
 
     // Five seconds of passes: still one measurement.
     rig.run(now_ms, now_ms + 5000);
@@ -425,7 +424,8 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     rig.run(now_ms, now_ms + 10000);
     now_ms += 10050;
     CHECK(die.reads() > before);
-    CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
+    CHECK(rig.product.state().power.die_valid);
+    CHECK(rig.product.state().power.die_dc == 412);
 
     rig.run(now_ms, now_ms + common::PowerService::kDieStaleMs);
     now_ms += common::PowerService::kDieStaleMs + 50;

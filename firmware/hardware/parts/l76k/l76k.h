@@ -214,6 +214,7 @@ class L76k : public ports::Gnss {
         reported.last_reject = last_reject();
         reported.config_stage = stage_;
         reported.identified = identified();
+        reported.rate_held = holds_rate();
         return reported;
     }
 

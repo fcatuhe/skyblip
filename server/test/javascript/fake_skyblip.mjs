@@ -467,7 +467,6 @@ export class FakeSkyblip {
       charging: false,
       power_level: this.swapPowered ? 'normal' : 'low',
       went_dark_flat: false,
-      die_temperature_c: 21,
     });
   }
 

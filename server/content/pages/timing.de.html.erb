@@ -5,7 +5,7 @@ slug: sendezeit
 description: "Wann skyBlip Go sendet: Zeitfenster je Sekunde, ein Zyklus von 20 s nach Seriennummer, neu berechnete Sendezeit, Kanalprüfung und erneute Sendeversuche."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-20"
 ---
 
 <section>
@@ -139,7 +139,7 @@ updated_on: "2026-11-19"
   <p class="lede">Go gibt für das 868-MHz-Band eine Sendezeitgrenze von 1&nbsp;% jeder Stunde an. Er führt sechzig Minutenzähler und prüft das Budget vor jeder Aussendung. Eine Position pro Sekunde plus Status und Rufzeichen alle 10&nbsp;s braucht 6&nbsp;ms pro Sekunde: 0,6&nbsp;% der Zeit im Flug beziehungsweise 0,15&nbsp;% am Boden. Der normale Zeitplan kann das Budget nicht aufbrauchen. Geschieht das durch einen Fehler, sperrt Go den Sender, statt das Band weiter zu belegen.</p>
 
   <h3 id="clock">GPS gibt den Takt vor, der Takt gibt den Funk frei.</h3>
-  <p class="lede">Der Impuls pro Sekunde des GPS-Empfängers, kurz PPS, liefert die Flanke für die Funkzeitpunkte. Go sendet nur mit <%= link_to_page "gps", label: "stabilem Positionsfix", anchor: "settle" %>, gültiger UTC-Zeit, PPS-Synchronisierung und zugeteilter Seriennummer. Fallen die Impulse aus, hält Go die Fenster für 60&nbsp;s zum Empfang offen, sendet aber nicht.</p>
+  <p class="lede">Der Impuls pro Sekunde des GPS-Empfängers, kurz PPS, dient als Bezugspunkt für die Funkzeitfenster. Go sendet nur mit einer aktivierten Adresse, einem Funkteil, das antwortet und vor dem Senden hört, einem GPS-Empfänger, der zur vollen und zur halben Sekunde eine Position berechnet und seine Daten mit 115200 Baud überträgt, <%= link_to_page "gps", label: "stabilem Positionsfix", anchor: "settle" %>, gültiger UTC-Zeit und einem Impuls für die laufende Sekunde. Mit diesen zwei Positionsberechnungen pro Sekunde hält Go jede gesendete Position unter der ADS-L-Altersgrenze von 500&nbsp;ms. Fehlt eine Voraussetzung, hört Go auf zu senden. Ein fehlender Impuls stoppt das Senden 1,2&nbsp;s nach dem letzten Impuls. Die Funkzeitfenster laufen ab dem letzten Impuls 60&nbsp;s lang weiter, nur für den Empfang. Fehlt eine Voraussetzung 10&nbsp;s lang, zeigt jede Seite <span class="mono">NO TX</span> und den Grund (<%= link_to_page "radar", label: "Sendet Go nicht", anchor: "no-tx" %>).</p>
   <p class="lede">Der GPS-Empfänger meldet die UTC-Sekunde in einem Datensatz, der Hunderte Millisekunden nach dem Impuls eintrifft. Bis dahin gilt in diesem Datensatz noch die vorige Sekunde. Ein Zeitstempel daraus könnte eine empfangene Aussendung in die falsche Sekunde legen. Zwei Go auf der Werkbank zeigten das Problem: Beim Sender stand 42:52.954, beim Empfänger 42:53.956. Empfänge erhalten jetzt die UTC-Sekunde, die der letzte Impuls begonnen hat.</p>
   <p class="lede">Die Firmware-Dienstschleife läuft alle 10&nbsp;ms, zu selten, um jedes Funkzeitfenster selbst pünktlich zu öffnen. Frühe Messungen auf der Werkbank zeigten, dass Fenster 2 im Median 3 bis 6&nbsp;ms zu spät begann, im ungünstigsten Fall bis zu 120&nbsp;ms. Die Firmware übergibt jetzt dem Funkmodul das nächste Fenster, sobald das aktuelle beginnt. Den absoluten Zeitpunkt berechnet sie aus dem Impuls. Das Funkmodul kann wechseln, ohne auf den nächsten Schleifendurchlauf zu warten.</p>
 

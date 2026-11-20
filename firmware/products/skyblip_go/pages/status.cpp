@@ -260,7 +260,14 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     char count[8];
     written = format_unsigned(count, static_cast<uint32_t>(snapshot.heard_count), 1);
     count[written] = 0;
-    text_row(canvas, y, "TFC", count, "", "TX", snapshot.transmitting ? " ON" : " OFF");
+    char transmit[16];
+    written = format_string(transmit, snapshot.transmitting ? " ON" : " OFF");
+    if (!snapshot.transmitting && snapshot.no_tx != timing::NoTx::None) {
+        written += format_string(transmit + written, " ");
+        written += format_string(transmit + written, timing::to_string(snapshot.no_tx));
+    }
+    transmit[written] = 0;
+    text_row(canvas, y, "TFC", count, "", "TX", transmit);
     y += kLineHeight;
 
     // The aligned block: the pressure the altitudes depend on, the geometric
