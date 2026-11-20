@@ -49,8 +49,8 @@ TEST_CASE("transmit gate: each requirement unmet names its own reason, the first
     CHECK(first_unmet(deaf_and_lost) == NoTx::Radio);
 }
 
-TEST_CASE("transmit gate: the reasons are one word each, short enough for the glass") {
-    CHECK(std::string(to_string(NoTx::Address)) == "ADDR");
+TEST_CASE("transmit gate: the reasons are one word each, spelled in full") {
+    CHECK(std::string(to_string(NoTx::Address)) == "ADDRESS");
     CHECK(std::string(to_string(NoTx::Radio)) == "RADIO");
     CHECK(std::string(to_string(NoTx::Gnss)) == "GNSS");
     CHECK(std::string(to_string(NoTx::Fix)) == "FIX");

@@ -22,7 +22,7 @@ test('status names why a Go does not transmit in the words its glass draws', () 
   assert.equal(statusOf({ command: 'status', flight: 'airborne', no_tx: 'pps' }).noTx, 'pps');
   assert.equal(noTxMark(statusOf({ command: 'status', no_tx: 'pps' })), 'NO TX PPS');
   assert.equal(noTxMark(statusOf({ command: 'status', no_tx: 'radio' })), 'NO TX RADIO');
-  assert.equal(noTxMark(statusOf({ command: 'status', no_tx: 'address' })), 'NO TX ADDR');
+  assert.equal(noTxMark(statusOf({ command: 'status', no_tx: 'address' })), 'NO TX ADDRESS');
   assert.equal(noTxMark(statusOf({ command: 'status', flight: 'airborne' })), null);
 });
 

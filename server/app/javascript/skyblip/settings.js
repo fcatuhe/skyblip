@@ -48,7 +48,7 @@ export function statusOf(reply) {
 // INFO: fc 19nov26 the words the Go's glass draws for status's no_tx, so the page and the glass agree
 export function noTxMark(status) {
   if (!status?.noTx) return null;
-  return `NO TX ${status.noTx === 'address' ? 'ADDR' : status.noTx.toUpperCase()}`;
+  return `NO TX ${status.noTx.toUpperCase()}`;
 }
 
 function ownTransponderOf({ own_transponder: address, own_transponder_callsign: callsign, own_transponder_category: type }) {

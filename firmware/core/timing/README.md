@@ -10,7 +10,7 @@ The Go transmits ADS-L only while every requirement below holds. `TransmitGate` 
 
 | Requirement | What holds it | Reason | ADS-L 4 SRD-860 Issue 2 |
 |---|---|---|---|
-| an ADS-L address | the serial skyblip.eu signed at activation (`../settings/README.md`) | `ADDR` | F.2.2 |
+| an ADS-L address | the serial skyblip.eu signed at activation (`../settings/README.md`) | `ADDRESS` | F.2.2 |
 | the radio answering and listening before it talks | in the last 3 s the radio entered a dwell, entered every dwell it was asked to, and read the channel (`kRadioAnswerMaxAgeMs`) | `RADIO` | D.3 |
 | the receiver at 2 Hz on 115200, each solution named `.000` or `.500` within 10 ms | `ports::GnssHealth::rate_held`, which the L76K reaches only at 115200, and `gnss::named_quarter_ms()` of the newest solution | `GNSS` | skyBlip's means of meeting G.1.16 inside C.5's direct slot (below) |
 | a valid fix, settled | `own.fix_valid`, then `own.tx_settled` (`../gnss/README.md`) | `FIX` | G.1.16 |

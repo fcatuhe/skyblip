@@ -13,7 +13,7 @@ enum class NoTx : uint8_t { None = 0, Address = 1, Radio = 2, Gnss = 3, Fix = 4,
 constexpr const char* to_string(NoTx reason) {
     switch (reason) {
         case NoTx::None: return "";
-        case NoTx::Address: return "ADDR";
+        case NoTx::Address: return "ADDRESS";
         case NoTx::Radio: return "RADIO";
         case NoTx::Gnss: return "GNSS";
         case NoTx::Fix: return "FIX";
