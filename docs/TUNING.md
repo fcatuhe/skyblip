@@ -194,7 +194,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kGroundEmitStartMs` | `kUplinkWindowMs.start_ms` | milliseconds | - | - |
 | `kGroundEmitEndMs` | `kUplinkWindowMs.end_ms - kCompletionAllowanceMs` | milliseconds | - | a completion deadline, not a start deadline |
 | `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
-| `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | - |
+| `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kRetuneUs` | 30 | microseconds | - | - |
 | `kSwitchMarginUs` | `kSwitchMarginMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kSwitchRetuneUs` | `kSwitchRetuneMs * 1000` = 5000 (5 ms) | microseconds | - | - |
@@ -207,6 +207,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFixInHandEarlyMs` | -1000000 | milliseconds | - | a fix in hand before every instant, for a caller that names no arrival |
 | `kRedrawLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | a redrawn instant leaves the channel check its listen before it |
 | `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
+| `kNoTxHoldMs` | 10000 (10 s) | milliseconds | Hold | a failure shown only once it lasts, so a short gap never flickers |
+| `kVerdictSettleMs` | 10000 (10 s) | milliseconds | Settle | the sky's requirements are judged this long after the first fix |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -337,6 +339,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAheadCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | unverified: two GNSS clocks part by a second at most, and more is no clock |
 | `kFarewellCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | two health periods for Bravo to answer an unpairing Go, then the link drops |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
+| `kRadioAnswerMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | three dwells and readings a second, so nine missed is a radio not answering |
 | `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -424,4 +427,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-279 constants over 26 folders.
+282 constants over 26 folders.
