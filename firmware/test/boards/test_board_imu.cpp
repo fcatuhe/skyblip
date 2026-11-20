@@ -73,7 +73,8 @@ TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
 }
 
 // The chip is a quarter turn from the case and face down with it: +X is up, +Y right, +Z forward.
-TEST_CASE("board: the chip's axes are turned into the case's before anything reads them") {
+TEST_CASE("board: the chip's axes are turned into the case's before anything reads them" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     platform.chips().imu.set_acceleration(990, -150, -20);
     bus::GoBus bus;
@@ -190,7 +191,8 @@ TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it 
     CHECK(state.imu.bootable);
 }
 
-TEST_CASE("board: a base image boots the hub from the copy on flash") {
+TEST_CASE("board: a base image boots the hub from the copy on flash" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     const ConstByteSpan carried = platform.imu_firmware();
     platform.set_imu_firmware_linked(false);

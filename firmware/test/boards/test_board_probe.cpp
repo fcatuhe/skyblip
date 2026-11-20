@@ -52,7 +52,8 @@ TEST_CASE("board: one scan, taken when the page asks, names everything on the se
         CHECK(inventory.i2c_addresses[i - 1] < inventory.i2c_addresses[i]);
 }
 
-TEST_CASE("board: a haptic that answers the bus is a capability, and it is the part") {
+TEST_CASE("board: a haptic that answers the bus is a capability, and it is the part" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     bus::GoBus bus;
     Board board{platform, bus};

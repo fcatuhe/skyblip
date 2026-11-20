@@ -114,7 +114,8 @@ TEST_CASE("ag3335: the configuration tracks L1 and L5 and takes SBAS corrections
     CHECK(chip.sleep_locked);
 }
 
-TEST_CASE("ag3335: the receiver sends GGA, GSA and RMC once a second, NMEA 4.10, and a PPS") {
+TEST_CASE("ag3335: the receiver sends GGA, GSA and RMC once a second, NMEA 4.10, and a PPS" *
+          doctest::test_suite("main")) {
     models::Ag3335 chip;
     parts::Ag3335 gnss(chip);
 
@@ -202,7 +203,8 @@ TEST_CASE("ag3335: a receiver that answers nothing ends degraded and unidentifie
 }
 
 TEST_CASE(
-    "ag3335: a fix reaches the solution, with the height above the ellipsoid from GGA field 11") {
+    "ag3335: a fix reaches the solution, with the height above the ellipsoid from GGA field 11" *
+    doctest::test_suite("main")) {
     models::Ag3335 chip;
     chip.altitude_m = 1500;
     chip.geoid_separation_m = 49;
@@ -248,7 +250,8 @@ TEST_CASE("ag3335: a receiver with no fix publishes none, and still counts its s
     CHECK(gnss.last_reject() != gnss::FixReject::None);
 }
 
-TEST_CASE("ag3335: with PPS locked the edge dates the fix, and an event after it carries its UTC") {
+TEST_CASE("ag3335: with PPS locked the edge dates the fix, and an event after it carries its UTC" *
+          doctest::test_suite("main")) {
     Timed timed;
     const gnss::GnssSolution fix = timed.next_fix();
     // 82 ms off the latency estimate, so only the latched edge can date the fix here.
