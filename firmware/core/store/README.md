@@ -53,7 +53,7 @@ Both run on the service loop that arms the radio, so neither may scan the pool o
 | Diagnostics, Flights at the floor | its own oldest |
 | Diagnostics, Flights at the floor and owning nothing to recycle | nothing, and the caller counts the refusal |
 
-Flights evicts Diagnostics first, because a flight is what the device exists to record. Diagnostics takes from Flights down to the floor before it recycles itself, so one capture fills the partition above the protected hours. On a 298-sector pool that leaves 170 sectors of diagnostics: 28,900 slots, about 44 minutes of a full capture at eleven records a second, or 120 hours of a power run.
+Flights evicts Diagnostics first, because a flight is what the device exists to record. Diagnostics takes from Flights down to the floor before it recycles itself, so one capture fills the partition above the protected hours. On a 298-sector pool that leaves 170 sectors of diagnostics: 28,900 slots, about 32 minutes of a full capture at fifteen records a second (`Recorder::kPeriodicRecordsPerSecond`), or 120 hours of a power run.
 
 A ring's frontier is never handed out, because it is being written. Taking free sectors forward of the newest keeps a lone ring contiguous.
 

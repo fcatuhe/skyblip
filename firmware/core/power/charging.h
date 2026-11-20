@@ -7,7 +7,7 @@ namespace skyblip::power {
 
 enum class ChargeCondition : uint8_t { Unknown = 0, Ok = 1, TooCold = 2, TooHot = 3 };
 
-// INFO: fc 07sep26 LilyGO's 0-60 C window, project/research/enclosure-and-mount-go.md:61
+// INFO: fc 07sep26 LilyGO's 0-60 C window
 constexpr int16_t kChargeColdFloorDeciCelsius = 50;
 constexpr int16_t kChargeHotCeilingDeciCelsius = 600;
 

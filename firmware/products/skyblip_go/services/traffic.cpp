@@ -191,7 +191,7 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
     relay.source = model::Source::AdslUplink;
     log(event, stamp, radio::Verdict::Received, &relay);
 
-    // INFO: fc 20nov26 a relay has no age, so it takes its arrival second (core/traffic/table.h)
+    // INFO: fc 20nov26 a relay has no age, so it takes its arrival second (table.cpp prefer_new)
     const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
     for (int i = 0; i < statistics.targets; i++) {
         model::AircraftObservation& observation = relayed[i];
