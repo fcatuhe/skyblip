@@ -1,73 +1,56 @@
 # scripts
 
-Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, `dev_release.rb`, `radio_protocols.rb`, `upstream_pins.rb` and `emsdk.rb`, which are Ruby.
+This directory holds the host tooling. The Python scripts run on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `make_wordmark.py`, which needs numpy and Pillow. The `.rb` scripts are Ruby, each a thin entry point over its logic in `lib/`, tested under `.github/test/`.
 
 | Script | What it does |
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
-| [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the presses' verdict |
-| [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec and the names `schemas/link.v1.json` gives its numbers, which `blip.py` speaks through |
+| [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the press's verdict |
+| [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec, with the names `schemas/link.v1.json` gives its numbers |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
-| `mkuf2.py` | build the drag-and-drop install image for a board, and refuse to write outside that board's factory bootloader window |
-| `build_local.sh` | build the device images of the products it is given, `skyblip_go` when none is named, off a committed ref, from a bare machine |
-| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator, its logic in `lib/simulator_scenarios.rb` |
-| `build_image.sh` | build, sign and check one product's images in a ready workspace, in its own build directory: the base and full images of a product with a sensor hub, the one image of a product without, and `check_imu_image.py` only for the first. What `build_local.sh`, CI and a release share |
-| `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones, its logic in `lib/dev_release.rb`, tested by `.github/test/dev_release_test.rb` |
-| `upstream_pins.rb` | read a version `.github/pins/action.yml` pins for Dependabot (`version emscripten-core/emsdk`), or fail while the vendored doctest or the Zephyr in `firmware/west.yml` differs from its pin (`check`), its logic in `lib/upstream_pins.rb`, tested by `.github/test/upstream_pins_test.rb` |
-| `emsdk.rb` | print the pinned Emscripten version and the `emcc` that runs it, for `make browser`: the one given if it runs the pin, else the one in `$EMSDK` or `~/.local/opt/emsdk`, which it clones, pulls and installs as needed. Its logic is in `lib/emsdk.rb`, tested by `.github/test/emsdk_test.rb` |
-| `radio_protocols.rb` | write the `PROTOCOLS.md` a production release carries: the radio protocol versions each product's `PROTOCOLS` names, each beside the specification it implements, its logic in `lib/radio_protocols.rb`, which `dev_release.rb` reads them through too |
-| `behavior_index.py` | generate the main claims index and one page per area under `docs/behavior/`. `test_behavior_index.py` checks the index and pages on fixtures |
-| [`conformance.py`](conformance.py) | generate the ADS-L and ADS-B reports from the host test suite. After `make -C firmware test`, run `python3 scripts/conformance.py adsl` for ADS-L and EN 300 220, or `python3 scripts/conformance.py adsb` for the DO-260B receive-side clauses. `test_conformance.py` checks both reports on fixtures |
-| `tuning_index.py`, `spec_to_md.py`, `etsi_to_md.py` | generate the tuning index and specification references under `docs/`. The two specification converters share `layout_to_md.py` |
+| `mkuf2.py` | build a board's drag-and-drop install image, refusing to write outside its factory bootloader window |
+| `build_local.sh` | build the device images of the products it is given, `skyblip_go` by default, off a committed ref, from a bare machine |
+| `build_image.sh` | build, sign and check one product's images in a ready workspace. `build_local.sh`, CI and a release share it |
+| `make_wordmark.py` | rasterise the wordmark into `firmware/ui/widgets/wordmark.cpp` |
+| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator |
+| `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones |
+| `radio_protocols.rb` | write the `PROTOCOLS.md` a production release carries: each product's protocol versions beside the specification each implements |
+| `upstream_pins.rb` | print a version `.github/pins/action.yml` pins for Dependabot (`version emscripten-core/emsdk`), or fail while the vendored doctest or the Zephyr in `firmware/west.yml` differs from its pin (`check`) |
+| `emsdk.rb` | print the pinned Emscripten version and its `emcc`, for `make browser`, installing them under `$EMSDK` or `~/.local/opt/emsdk` as needed |
+| `deploy_order.rb` | tell the server deploy whether production already runs a newer commit |
+| `behavior_index.py`, `tuning_index.py` | generate `docs/BEHAVIOR.md` with `docs/behavior/`, and `docs/TUNING.md` |
+| [`conformance.py`](conformance.py) | after `make -C firmware test`, generate the ADS-L and EN 300 220 report (`adsl`) or the DO-260B report (`adsb`) |
+| `spec_to_md.py`, `etsi_to_md.py`, `layout_to_md.py` | convert the specification PDFs to the markdown under `docs/reference/` |
 | `fetch_etsi.py`, `fetch_rtca.py` | download the ETSI standards and the DO-260B draft into `docs/reference/`, check their SHA-256 and convert them. The PDFs are git-ignored |
-| `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py` and `check_image_product.py`, which `build_image.sh` runs on the images it signs; `check_link_registry.py` fails when a file generated from the link registry is not, byte for byte, what `link_registry.py` would write, the C++ ones after clang-format, when a frame or a key of the registry has no description, and when the firmware writes the status frame other than the registry says. `size_check.py` prints each image's flash and RAM headroom against its slot and its board's SRAM, and fails a build with no slot; `check_protocol_boundary.py` fails when a file under `firmware/protocols/` includes anything but its own stack, `protocols/common/` and the C++ standard library; `check_clauses.py` fails when a conformance suite and the clauses of its standard disagree: ADS-L's specification headings, and the clause lists beside the EN 300 220 and DO-260B suites, whose headings it checks against the fetched standards when they are present; `check_spec_markdown.py` fails when a markdown conversion in `docs/reference/` lost, added, cut or misplaced a word of its PDF, and checks the ETSI conversions when they are fetched |
-| `test_*.py` | the Python self-checks, which the `firmware` workflow runs with `python3 -m unittest discover -s scripts`. `test_shared_layers.py` configures `firmware/test/cmake/shared_layers` with cmake, with and without `CONFIG_SKYBLIP_ACTIVATION` and `CONFIG_SKYBLIP_IMU_IMAGE` |
+| `check_*.py`, `size_check.py` | the gates CI runs. `build_image.sh` runs `check_imu_image.py`, `check_image_product.py`, `check_bootloader_keys.py` and `size_check.py` on the images it signs. Each script's docstring says what it fails on |
+| `test_*.py` | the Python self-checks: `python3 -m unittest discover -s scripts` runs them all, with no radio, no network and no sleeps |
 
 ## blip.py
 
-What a phone or the simulator page does, from a terminal, with numbers instead of a UI. It is for the bench: seeing the traffic picture as it leaves the device, measuring what a link actually costs, and pulling a flight or a diagnostics capture off the device into a file an analysis script can read.
+`blip.py` does from a terminal what a phone or the simulator page does, with numbers instead of a UI: watch the traffic picture leave the device, measure a link, and pull a flight or a diagnostics capture into a file.
 
 ### Install
 
-There is none. The shebang runs the script through [uv](https://docs.astral.sh/uv/), which installs `bleak` into a throwaway environment on first use:
+The shebang runs the script through [uv](https://docs.astral.sh/uv/), which installs `bleak` on first use: `./scripts/blip.py scan`. Without it, run `uv run --with bleak scripts/blip.py scan`.
 
-```
-./scripts/blip.py scan
-```
+macOS goes through CoreBluetooth and asks for Bluetooth permission the first time. Linux goes through BlueZ over D-Bus, with `bluetoothd` running and no pairing. Use Linux for anything that needs two centrals at once, because macOS gives one process one connection to a peripheral.
 
-Without the shebang, or on a machine where `scripts/` is not executable: `uv run --with bleak scripts/blip.py scan`.
+### Watch and command a device
 
-macOS goes through CoreBluetooth and asks for Bluetooth permission the first time the terminal uses it. Linux goes through BlueZ over D-Bus (`bluetoothd` running, no pairing needed). Use Linux for anything that needs two centrals at once, such as watching what the claim does to a second app: macOS gives one process one connection to a peripheral and will not hand out a second.
+- `./scripts/blip.py stream --seconds 30` subscribes to Nordic UART (`6e400003`), reassembles lines as the browser client does, and prints each NMEA sentence with a host timestamp. A sentence with a bad checksum is flagged, never dropped.
+- `./scripts/blip.py command '{"command":"diagnostics"}'` writes one command, as JSON with the registry's full names, to the config endpoint (`69c21302`) and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A multi-frame reply ends when a frame stops saying `"more": true`. A command the unit asks about on its glass, such as `gnss_cold_start`, is answered `pending`, and `blip.py` holds the link up to 35 s for the press, because the unit cancels a prompt whose link drops.
+- `./scripts/blip.py protocols` prints each radio protocol stack the unit carries with its version, as `ADS-L 0.1.0`.
+- `./scripts/blip.py --name "skyBlip Bravo" capture power_run` arms a capture with the profile `full`, `power_run` or `flight_run`, and `capture stop` stops it. The unit asks for a press, on its glass or its lamp, and `blip.py` waits up to 35 s for the verdict.
 
-### Watch a device
-
-```
-./scripts/blip.py stream --seconds 30
-```
-
-Subscribes to Nordic UART (`6e400003`), reassembles lines the way the browser client does (a notification is a slice of a byte stream, not a sentence), verifies every NMEA checksum and prints each sentence with a host timestamp. A sentence whose checksum does not match is printed and flagged, never dropped.
-
-`./scripts/blip.py command '{"command":"diagnostics"}'` takes one command as JSON with the registry's full names, writes it to the config endpoint (`69c21302`) as the numbered CBOR the unit reads, and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A name the registry does not hold is refused before anything is sent. A multi-frame reply ends when a frame stops saying `"more": true`, so `diagnostics` needs no `--parts` and will not silently truncate when the device grows a sixth group. A command the unit asks about on its glass, such as `gnss_cold_start`, is answered `pending` first. `blip.py` then says to press the button and holds the link up to 35 s for the verdict, because the unit cancels a prompt whose link drops.
-
-`./scripts/blip.py protocols` asks the unit for the radio protocol stacks it carries and prints one line each with its version, as the device page says it: `ADS-L 0.1.0`. The release's `PROTOCOLS.md` says what each version implements.
-
-`./scripts/blip.py --name "skyBlip Bravo" capture power_run` arms a diagnostics capture on a skyBlip Go or a skyBlip Bravo, and `capture stop` stops it. The profile is `full`, `power_run` or `flight_run`, the names the registry's `capture_profile` gives. A Go asks on its glass, with the profile and the flights it erases, and a Bravo, which has no glass, blinks its prompt on the lamp. `blip.py` says to press the button, and it waits up to 35 s for the verdict: `capture` once the press allowed it, or the refusal, which it prints and stops on.
-
-`blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains is a key `blip.py` speaks with no edit here. Its decoder refuses what the unit's own does, a frame outside the grammar the registry describes, and its encoder refuses a value its key's type does not take, a boolean where a number goes, a negative where an unsigned one does, hex that is not hex or a byte string of the wrong width, as the pages' does: `schemas/link.v1.vectors.json` lists both. `blip.py` stops on either with a `FrameError` it prints, the bytes of a frame it could not read beside it, rather than guessing.
+`blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains needs no edit here. Its decoder and encoder refuse what the unit's own refuse, as `schemas/link.v1.vectors.json` lists, and `blip.py` stops on a `FrameError` instead of guessing.
 
 ### Benchmark a link
 
-```
-./scripts/blip.py bench --seconds 20 --samples 10
-```
-
-Connect time to GATT ready, the negotiated MTU and the payload it leaves, the distribution of `status` round trips, the multi-frame throughput of `diagnostics`, then the stream: sentence counts by talker, bad checksums, `$PFLAU` cadence and its jitter, notification sizes and the gap between notifications.
-
-The round trip is stamped before the write goes out, not when `write_gatt_char` returns. Writing with a response returns when the peer's controller acknowledged the write, which is roughly half the exchange, and a version of this that stamped afterwards reported round trips of half a millisecond.
+`./scripts/blip.py bench --seconds 20 --samples 10` prints the connect time to GATT ready, the negotiated MTU, the `status` round trips, the multi-frame throughput of `diagnostics`, and the stream's sentence counts, bad checksums, `$PFLAU` cadence and notification sizes. The round trip is stamped before the write goes out, because a write with response returns when the peer's controller acknowledged it, about half the exchange.
 
 ### Fetch a capture
 
@@ -77,78 +60,64 @@ The round trip is stamped before the write goes out, not when `write_gatt_char` 
 ./scripts/blip.py decode capture.ndjson --summary
 ```
 
-`fetch` speaks the log endpoint (`69c21303`): `list` for the session count and one frame per session, then `read` for chunks, each one byte string of 24-byte records whose length is their count. Each session opens with a header line naming its record count, whether the device closed it and whether it is truncated, and each record follows as one NDJSON line carrying its store, session and index. A flights record is a `fix` or one of the events written beside the track, `status`, `alarm` and `encounter`, laid out in [`schemas/flight_log.v1.schema.json`](../schemas/flight_log.v1.schema.json) and in write order rather than time order, so sort on `utc_s`. Flights records are verified against the CRC-16-CCITT they were written with; diagnostics records carry no CRC of their own (the sector header holds it, `core/store/sector.h`), so a diagnostics slot is checked for a known type and a whole 24 bytes and nothing more.
+`fetch` speaks the log endpoint (`69c21303`): `list` for the sessions, then `read` for chunks of 24-byte records. Each session opens with a header line naming its record count, whether the device closed it and whether it is truncated, and each record follows as one NDJSON line. Flights records follow [`schemas/flight_log.v1.schema.json`](../schemas/flight_log.v1.schema.json) in write order, so sort on `utc_s`, and are verified against their CRC-16-CCITT. A diagnostics record has no CRC of its own, so it is checked only for a known type and a whole 24 bytes.
 
-`count` on a `read` is chunks, the way `core/comms/log_link.cpp` parses it, so `--window N` is chunks too: clamped to 1 to 8 here exactly as the device clamps it, 8 by default, which is 152 records over a link that negotiated a 498-byte MTU. A read is answered by that many chunks or by fewer, the last of them saying `ends_session`, and `fetch` consumes every one of them before the next command goes out. There is nothing to resync from, and nothing that resyncs.
+`--window N` counts chunks, clamped to 1 to 8 as the device clamps it. `fetch` consumes every chunk of a read before the next command goes out, so there is nothing to resync.
 
-A dead fetch resumes. The next command is the acknowledgement in this protocol, so the recovery is to ask again from the last index kept: run the same line, and `fetch` reads the tail of `--out`, skips the sessions already whole and restarts the interrupted one at the record after the last one it kept. A `torn` line is not a record kept: the record it names is fetched again once the device has written past it or closed the session. A record keeps its index while the ring recycles the sectors before it, but only until the unit restarts, and builds before 2026-11-17 renumbered what was left from record 0 at every rotation (`firmware/core/comms/README.md`, A record keeps its index while the ring rotates). So before it resumes, `fetch` reads that last record back and stops if the device holds another record at its index, or none, rather than skip records or find nothing to fetch. Fetch such a session into a new file. Sessions the device opened since follow it, so a capture re-armed between two fetches loses nothing. `--restart` ignores what the file holds.
+A dead fetch resumes: run the same line again, and `fetch` reads the tail of `--out` and restarts at the record after the last one kept. A record keeps its index only until the unit restarts (`firmware/core/comms/README.md`), so `fetch` first reads that last record back and stops if the device holds another record at its index. Fetch such a session into a new file. `--restart` ignores what the file holds.
 
-### The two records a fetch will not hand you
+`fetch` never writes the last record of a session the device reports as unclosed and not `recording`: the power stopped there, and a diagnostics record can be a torn write that still decodes. A `torn` line takes its place, and `decode --summary` says so first. A session marked `"truncated": true` lost its opening `boot` and `config` records to the ring, so nothing says which build or settings produced it. Records the ring recycles between two reads are printed and listed as missing.
 
-A session the device reports as unclosed, and not as `recording`, stopped where the power did, and a diagnostics record has no checksum of its own, so its last slot can be a torn write that still decodes as a plausible record. `fetch` does not write it. In its place goes a `torn` line naming the index it dropped and why, and `decode --summary` says so before it says anything else. Flights are untouched by this: a flight record carries a CRC and the firmware has already dropped a torn one. A session the device is still writing is listed `recording` instead of `power cut`, and `fetch` keeps its last record, which is whole.
-
-A session the device reports as truncated lost its beginning to the sector allocator, and with it the `boot` and `config` records a capture opens on. The header line carries `"truncated": true`, the summary names it, and an analysis reading that corpus knows it cannot say which build or which settings produced it. Its entry names the index of the first record it still holds as `first`, and `fetch` starts there. The ring can also recycle records between two reads of one fetch: `fetch` prints the indices it lost that way and goes on, and `decode --summary` lists them as missing.
-
-Two things the device will say no to: a command while it is flying (an offload is thousands of round trips beside a receiver anchored to a PPS edge) and a command from a second app while another holds the claim. Both come back as `acknowledge: false` with a reason, and `blip.py` stops with that reason rather than retrying. A third comes from the link rather than the device: a reply wider than the payload the link settled on is answered `small_mtu` (`firmware/core/comms/README.md`), and `blip.py` says the computer kept Bluetooth's smallest packet size and what to try, under the frame for `command` and in place of the fetch for `fetch`.
-
-A diagnostics capture lives in RAM and is armed from the device's own diagnostics screen. It does not survive a power cycle, so fetch it before switching the device off.
+The device refuses a command while flying and a command from a second app while another holds the claim, with `acknowledge: false` and a reason, and `blip.py` stops on it. A reply wider than the link's payload is answered `small_mtu` (`firmware/core/comms/README.md`), and `blip.py` says what to try. A diagnostics capture lives in RAM and does not survive a power cycle, so fetch it before switching the device off.
 
 ### Reading what came back
 
-`decode` prints one line per record, `--type gnss` narrows it to one type, and `--summary` gives the caveats first, then the counts per type, the span, every index missing from the file and every `gap` record in full. A `gap` record is the ring saying it had to refuse records right there: a corpus with invisible holes teaches the wrong number with total confidence, which is why the holes are records and why the summary prints them. The session and `torn` lines survive `--type` for the same reason: a filter must not be able to hide what the corpus cannot vouch for.
+`decode` prints one line per record, and `--type gnss` narrows it to one type. `--summary` prints the caveats first, then the counts per type, the span, every missing index and every `gap` record, where the ring refused records. The session and `torn` lines survive `--type`, so a filter cannot hide a hole.
 
 ## power_budget.py
 
-A board that senses no current cannot report milliamps, and this one senses none: the only electrical quantity on it is the divider across the cell. So the budget is assembled from two halves that meet here. The `duty` records say how long each consumer was on, the table at the top of the script says what one costs, and the `power` records say how far the cell actually fell over the same span. The gap between the modelled draw and the measured one is the table's error, printed as the last line rather than hidden.
+The board senses no current, only the cell's voltage, so the budget meets two halves here. The `duty` records say how long each consumer was on, the `CONSUMERS` table says what one costs, and the `power` records say how far the cell fell over the same span. The last line prints the gap between the modelled and measured draw as the table's error.
 
-### One run, end to end
+### One run
 
-Charge the unit to full and unplug it. Arm a power run from the device page in the briefing app, or with `scripts/blip.py capture power_run`, and allow it with a press on the unit. It records `boot`, `config`, `power` and `duty` and nothing else, every 30 s: on an empty partition the dump's `keeps_power_run_s` reads about 120 hours against the full capture's 32 minutes, and 120 hours is what makes an unattended run to cutoff survive in the ring. Then leave it alone in the posture you are measuring until it takes itself down.
-
-`FLIGHT RUN`, the row under it, records the same and keeps the same 120 hours, and runs the glass as in flight for as long as it is armed: the radar's flight clock and `FLIGHT` word, the g-meter's extremes cleared at the press that allows it. Leave it on the page you are measuring: the panel refreshes only when the frame changes, so the page decides the refreshes the `duty` records count. On an empty sky the flying radar changes once a minute, with its clock. It cannot fly the rest, because what else flight changes is what goes on air or into the pilot's log: the unit keeps the ground cadence and the on-ground flag (ADS-L G.1.16), and writes no flight (`firmware/core/diagnostics/README.md`).
+1. Charge the unit to full and unplug it.
+2. Arm a power run from the briefing app's device page or with `scripts/blip.py capture power_run`, and allow it with a press. It records `boot`, `config`, `power` and `duty` every 30 s, which keeps about 120 hours, enough for an unattended run to cutoff.
+3. Leave the unit in the posture you are measuring until it takes itself down.
+4. Fetch and read it:
 
 ```
 ./scripts/blip.py fetch --log diagnostics --all --out run.ndjson
 python3 scripts/power_budget.py run.ndjson --pack-mah 2400
 ```
 
-The capacity comes from the command line because the device cannot know it: LilyGO fits 2400 mAh on the T-Echo Plus and 850 mAh on the plain T-Echo, on the same footprint, and no reading on the board can tell the two apart.
+`FLIGHT RUN` records the same and runs the glass as in flight, but keeps the ground cadence on air and writes no flight (`firmware/core/diagnostics/README.md`). Pass the capacity on the command line, because the board cannot tell the 2400 mAh T-Echo Plus pack from the 850 mAh T-Echo one.
 
-### What it prints, and in which order
+### What it prints
 
-Caveats first, the way `blip.py decode --summary` does and out of the same helpers, because a corpus with holes in it teaches the wrong number with total confidence. A session the device did not close and the tail record it dropped, a run whose opening sector the ring recycled, every missing index and unreadable slot, every `gap` record in full, why the run is not a whole one when it is not, every interval dropped and why, and how many of the table's currents cite a datasheet. None of them was metered on this board.
+Caveats come first, from the same helpers as `blip.py decode --summary`, then the posture split and one row per consumer with its milliamp-hours, average milliamps and share. A row marked `(est)` has no datasheet figure behind it. A part the unit may not have, such as the IMU hub, is charged only when the `boot` record's `capabilities` name it.
 
-Then the time the Duty intervals cover, the stretch the cell was measured over, the posture split, and one row per consumer that drew anything, with its milliamp-hours, its average milliamps and its share. A row marked `(est)` has no datasheet figure behind it, only an estimate. A row for a part the unit may not have is charged only when the `boot` record's `capabilities` name it: the IMU hub needs the inclinometer bit, so a plain T-Echo is not billed for a T-Echo Plus part. A run whose `boot` record is gone is charged every row, and the caveats say so.
+`measured` is what the cell spent over the last stretch on battery alone and on one clock, since the first records count seconds since boot and the rest UTC. A stretch from 99% or more to the `power_level=flat` record is a whole run and spent the pack. Otherwise the fraction comes from the discharge curve in `core/power/battery.cpp`, and the script says so. A gauge that did not fall prints no measured line. `residual` is modelled minus measured.
 
-Two lines close it. `measured` is what the cell spent over the last stretch it ran on battery alone and on one clock. A capture outlives the first fix, so its first records count seconds since boot and the rest count UTC, and two instants on different clocks cannot be subtracted: the stretch is timed on the clock the run ended on. When that stretch starts at the gauge's 99% or more and ends on the `power_level=flat` record the parking capture writes, the run is whole and the pack is what it spent, which needs no curve at all. Otherwise it is a fraction of the pack read off the textbook discharge curve in `core/power/battery.cpp`, which the script says out loud because that is the assumption the run was supposed to replace. A gauge that did not fall gives no measured line at all, never a zero or a negative draw. `residual` is modelled minus measured, and the percentage beside it is how much of the discharge the table explains.
+### The table
 
-### The table, and what retires an estimate
+Three rows carry a datasheet figure for the part as this firmware drives it: the L76K tracking current, the SX1262's boosted receive on its DC-DC, and the transmit current at +14 dBm through the PA configuration `sx1262.h` writes. Every other row is an estimate. Replace one with a meter in series with the cell, such as a Nordic PPK II or a Joulescope, one consumer at a time, and rewrite its row of `CONSUMERS` and its source string.
 
-Three rows carry a datasheet figure for the part as this firmware drives it: the L76K tracking current, the SX1262's boosted receive on its DC-DC, and the transmit current for +14 dBm through the PA configuration `sx1262.h` actually writes. Every other row is an estimate, and the honest ones to attack first are the ones with the largest share.
+### The counters
 
-What replaces an estimate is a meter in series with the cell, a Nordic PPK II or a Joulescope, with one consumer moving at a time. When a figure comes back, it changes in one place: its row of `CONSUMERS`, with its source string rewritten from a datasheet reference to the bench that measured it.
+The duty counters wrap at 65536, and a reader subtracts two records, which crosses one wrap correctly. The firmware emits them at least every 60 s (`kDutyPeriodCeilingMs`), so the script subtracts a pair only when nothing hides between them: it refuses a pair more than 60 s apart, on two clocks, or with a missing index, an unreadable slot, a `gap` or a `boot` between them. It also drops an interval on `external_power` or `charging`, because time on USB is not drain.
 
-### Two things the reader has to know about the counters
-
-They wrap at 65536 rather than saturating, because a reader subtracts two records and unsigned subtraction crosses a wrap correctly as long as one interval moves less than that. The firmware bounds the emitting cadence at 60 s (`kDutyPeriodCeilingMs`) and asserts every period that emits the record against it, which bounds two consecutive records and nothing more. So the script subtracts a pair only when it can see everything between them: it refuses a pair more than 60 s apart, on two clocks, or with a missing index, an unreadable slot, a `gap` or a `boot` between them, and a pair it keeps cannot reach the wrap. A `boot` inside a session is the ring recycling under it, so it drops the Duty interval and not the cell's measured stretch. When the parking capture writes its pair on the same instant as the last regular one, the later Duty stands for both. A test holds its 60 s to the firmware's constant. It also drops an interval whose `power` record has `external_power` or `charging` set, because time on USB is not drain.
-
-Posture is read off the air the transmitter spent, because a power run records no flight record to ask. Parked is three position bursts and three callsign bursts in every 30 s, about 58 ms of air a minute, because the callsign burst is not gated on flight state. Airborne is thirty and three, about 318. The threshold sits at 160, and a device with no callsign set, which drops the callsign bursts from both figures (about 29 and 289), still lands on the right side of it.
-
-A flight run keys as a parked unit, so air time alone would call it parked. The `boot` record says which capture a session is (`profile`, absent from builds before the field, which read as they always did), and an interval of a flight run that keys under the threshold reads `simulated flight` instead, on a line of its own under the posture split. One that keys over it was flown, and reads airborne. A run with simulated flight in it prints one more line under `modelled`, `transmit not sent`: the 27 positions every 30 s a flier adds, 54 bursts of 5 ms a minute at the transmit row's 90 mA, about 0.4 mA over the simulated stretch. It is not in the modelled total, because the residual compares the table against what the cell spent and the cell never spent it. Add it to read the draw of a flying unit. The flight log the run did not write is not modelled: a 24-byte program every second and a sector erase every three minutes, which the table has no row for.
+Posture is read off the transmitter's air time: parked keys about 58 ms a minute, airborne about 318, and the threshold is 160. A flight run keys as parked, so its intervals read `simulated flight`, and `transmit not sent` prints what a flier would add, outside the modelled total.
 
 ## link_budget.py
 
-The e.r.p. assertion in `firmware/hardware/parts/sx1262/sx1262.h` is a chain of four figures and none of them is measured: `kConductedDbm` is the band limit written to `SetTxParams` (SoftRF writes the same 14 dBm through the same PA row on this board), the antenna gain is a vendor peak, and `kFeedLossCentiDb` is an allowance nobody measured. There is no RF meter on this bench yet. What there is, is two units that each record what they sent and what they heard, and a tape measure. This script is the field run that turns those into a number.
-
-Each unit's `burst` records carry the instant it transmitted and every burst it heard, with the sender's address, the channel and the level (`RssiAvg` out of `GetPacketStatus`; GFSK reports no SNR). Its `config` record carries its own address and what the transmitter was asked for: the `SetTxParams` argument and the row of DS table 13-21 the PA configuration is. A burst sent by one unit and heard by the other is one instant read twice, so the two captures pair burst by burst.
+The e.r.p. assertion in `firmware/hardware/parts/sx1262/sx1262.h` chains unmeasured figures: `kConductedDbm`, the antenna's vendor peak gain and `kFeedLossCentiDb`. This script estimates them from two units' captures of one link and a tape measure, pairing each burst one unit sent with the other's reception of it.
 
 ### One run, in a garden
 
-Charge both units. Fit the same antenna on each and note its name. Stand them upright, antennas vertical, on two supports at the same height, with nothing between them and nothing within a couple of metres around them. Measure the height of the middle of each whip above the ground and the distance between the two whips with a tape.
-
-The ground reflects, and at these heights the reflection is the largest error in the run. `quiet_distance_m()` is where it arrives half a wave late, so it can only strengthen the path and the e.r.p. ceiling carries no ground term: 16.7 m apart at 1.2 m up, 11.6 m at 1.0 m. The script prints how far the ground can move the path at whatever geometry it is given, so a garden that cannot fit that distance still gives an answer, only a wider one.
-
-Switch both on, wait until each reads `TX ON` on the status page and `PPS LOCK` on the radio log page, then arm a full capture on each from its device page or with `scripts/blip.py capture full`. Leave them for 30 minutes. On the ground a unit sends a position every 10 s, and its callsign every 10 s when one is set, so that is 180 to 360 bursts each way, and a full capture keeps 68 minutes, so the run fits whole. Stop both captures the same way and fetch each, while still switched on:
+1. Charge both units and fit the same antenna on each.
+2. Stand them upright on two supports at the same height, with nothing between them or within a couple of metres. Measure each whip's middle above the ground and the distance between the whips.
+3. Switch both on, wait for `TX ON` on the status page and `PPS LOCK` on the radio log page, then arm a `full` capture on each.
+4. After 30 minutes, stop both captures and fetch each while still switched on:
 
 ```
 ./scripts/blip.py --address <unit a> fetch --log diagnostics --out a.ndjson
@@ -157,50 +126,29 @@ python3 scripts/link_budget.py a.ndjson b.ndjson --distance 16.7 --height 1.2 \
     --antenna-a ANT-868-CW-QW-SMA --antenna-b ANT-868-CW-QW-SMA
 ```
 
-The antenna, the distance and the height come from the command line because the device cannot know any of them, for the reason `--pack-mah` does: nothing on the board can tell which whip is screwed on. A setting the pilot types would be a claim stored in flash that stays true until someone swaps the antenna, and nothing could notice it going stale. On the command line it is typed by the person who fitted the antenna, on the day. An antenna the script has no gain for is refused: add it to `ANTENNAS` with its source.
-
-No capture profile of its own either. `FULL` already records every `burst` and the `config`, and 30 minutes is under half of what it keeps. Its `traffic` records come along too, and the script prints the distance each unit's GNSS put the other at beside the tape, which catches a mistyped `--distance`.
+The ground reflection is the largest error. At `quiet_distance_m()` it arrives half a wave late and can only strengthen the path: 16.7 m apart at 1.2 m up, 11.6 m at 1.0 m. At any other geometry the script prints how far the ground can move the path. The antenna, distance and height come from the command line because nothing on the board knows which whip is screwed on. Add an unknown antenna to `ANTENNAS` with its source. The script prints the distance each unit's GNSS put the other at, which catches a mistyped `--distance`.
 
 ### What it prints
 
-Caveats first, the way `power_budget.py` does: every hole in either capture, then how many of the uncertainty terms cite a datasheet. Then one block per direction: how many bursts were sent and heard, the level they arrived at, the path loss against free space at that distance, the band the ground can move it by, and the e.r.p. of the sender with its interval.
-
-The e.r.p. is what the receiver heard, plus the free-space loss, less the receiver's own antenna gain and feed loss, less 2.15 dB to reference a dipole. It never uses the sender's programmed power, so the transmitter's own tolerance (TXACC, DS table 3-9) is inside the measurement and not on top of it. The path loss does use it, which is why the path's interval is wider. The level is corrected for `packet_rssi_dbm()` truncating the chip's half-dB steps upwards.
-
-The interval is every term of `TERMS` that applies, added in quadrature with the 95% interval of the mean, and the ground band beside it. Only TXACC cites a datasheet. The SX1262 datasheet states no absolute RSSI accuracy, and the RSSI term is the largest: the reason this is an estimate and not a measurement is that nothing in the run calibrates the receiver.
+Caveats come first, then one block per direction: bursts sent and heard, their level, the path loss against free space, the ground band and the sender's e.r.p. with its interval. The e.r.p. is the level heard plus free-space loss, less the receiver's antenna gain and feed loss, less 2.15 dB for a dipole. It never uses the sender's programmed power, so TXACC (DS table 3-9) is inside the measurement. The level is corrected for `packet_rssi_dbm()` truncating half-dB steps upwards. The interval adds every applicable term of `TERMS` in quadrature with the 95% interval of the mean. The RSSI term is the largest, because nothing calibrates the receiver and the SX1262 datasheet states no absolute RSSI accuracy.
 
 ### What it sets
 
-The last block turns the two estimates into the two constants the field run owns, taking the unit that radiates more:
+The last block sets the two constants from the unit that radiates more:
 
 | Line | Rule |
 |---|---|
 | `kFeedLossCentiDb` | the loss the chain may claim once the uncertainty is spent: the chain with no feed loss, less the higher unit's e.r.p. ceiling, never below 0 |
 | `kConductedDbm` | holds while that ceiling is at or under 14 dBm, otherwise comes down by what it is over |
 
-Then one more line, because two units are not the production line: a third unit at the top of TXACC would sit 2 dB higher. Whether the assertion carries that margin is the owner's decision, not the script's.
-
-Done is a run whose ceiling is printed for both directions: the `kFeedLossCentiDb` it prints goes into `sx1262.h`, the test pinning the chain in `firmware/test/hardware/test_sx1262.cpp` moves with it, and `kConductedDbm` comes down if the script says so.
+A third unit at the top of TXACC would sit 2 dB higher, and whether the assertion carries that margin is the owner's decision. Put the printed `kFeedLossCentiDb` into `sx1262.h` and move `firmware/test/hardware/test_sx1262.cpp` with it.
 
 ## The decoders
 
-`blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAGNOSTICS_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
-
-Import it directly for analysis, the CLI is not in the way:
+`blip_records.py` holds one table per record type, a tuple of `(name, codec)` pairs where a codec is a closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Add a record type as one entry in `DIAGNOSTICS_TYPES`, and a field as one pair. The tables match `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp` byte for byte, and take their names from `schemas/diagnostics_log.v1.schema.json`. `test_blip.py` holds them to the schema.
 
 ```python
 import blip_records as records
 for record in records.read_ndjson("capture.ndjson"):
     ...
 ```
-
-## Tests
-
-```
-python3 scripts/test_blip.py
-python3 scripts/test_mkuf2.py
-python3 scripts/test_power_budget.py
-python3 scripts/test_link_budget.py
-```
-
-No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, and the chunk framing. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_link.py` with it, which covers the NMEA checksum and line reassembly, the reply framing and the resume logic, and `test_blip_offload.py`, which answers a `list` and a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued. It loads `test_blip_altitude.py` too, which decodes a capture the host suite took of an ADS-B target, and holds both logs to an unknown altitude reading as unknown, and to an older record keeping the altitude it was written with.
