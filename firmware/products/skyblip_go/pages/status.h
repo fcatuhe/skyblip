@@ -27,12 +27,14 @@ struct StatusSnapshot {
     uint8_t fix_mode{0};
     int32_t latitude_1e7{0};
     int32_t longitude_1e7{0};
-    int32_t altitude_mm{0};           // GNSS, WGS-84 ellipsoid
-    int32_t altitude_standard_mm{0};  // pressure altitude, 1013.25 hPa datum (QNE)
+    // INFO: fc 20nov26 GNSS height above the WGS-84 ellipsoid, beside pressure altitude on 1013.25
+    int32_t altitude_mm{0};
+    int32_t altitude_standard_mm{0};
     uint32_t pressure_mpa{0};
-    int32_t speed_mm_s{0};  // as measured, not as transmitted
-    int32_t track_cdeg{0};  // hundredths of a degree
-    int32_t climb_mm_s{0};  // as measured, not as transmitted
+    // INFO: fc 20nov26 speed and climb as measured, never as transmitted
+    int32_t speed_mm_s{0};
+    int32_t track_cdeg{0};
+    int32_t climb_mm_s{0};
     uint32_t utc_s{0};
     int heard_count{0};
     const char* imu_stage{"NONE"};

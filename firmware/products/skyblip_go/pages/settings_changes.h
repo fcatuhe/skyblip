@@ -1,4 +1,3 @@
-// What a "set" from the phone would change, in the words of the device's own menu.
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_SETTINGS_CHANGES_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_SETTINGS_CHANGES_H
 
@@ -9,9 +8,7 @@ namespace skyblip::go {
 
 constexpr int kSettingsChangesBytes = kConfirmDetailRows * (kConfirmDetailColumns + 1);
 
-// Rows joined by '\n', at most kConfirmDetailRows of them: past that, the last row counts the
-// rest. Writes nothing and returns 0 when nothing differs, or when `capacity` is under
-// kSettingsChangesBytes.
+// INFO: fc 20nov26 past kConfirmDetailRows the last row counts the rest, and no change returns 0
 // INFO: fc 17nov26 sounds is whether the Go has a buzzer or a haptic, as the menu row reads it
 int describe_settings_changes(const Settings& from, const Settings& to, char* out, int capacity,
                               bool sounds);

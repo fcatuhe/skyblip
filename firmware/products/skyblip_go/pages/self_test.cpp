@@ -31,8 +31,6 @@ const char* verdict(PartState state) {
     return "NOT FOUND";
 }
 
-// A leader of dots between the name and its verdict, so an eye running down the
-// right-hand column does not lose which row it is on.
 void leaders(ui::Canvas& canvas, int from_x, int to_x, int y) {
     for (int x = from_x; x < to_x; x += 2 * kCellWidth) canvas.draw_text(x, y, ".", true, 1);
 }
@@ -89,8 +87,6 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     canvas.draw_text(kLeft, 3, text, true, 2);
     canvas.horizontal_line(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
-    // Identity and why the device is running at all, on one line: the pair a
-    // bench log needs before anything below it means something.
     written = format_string(text, "ID ");
     written += format_air_address(text + written, snapshot.address);
     text[written] = 0;
@@ -104,8 +100,6 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         const char* mark = part.no_tx ? kSelfTestNoTxVerdict : verdict(part.state);
         int name_end = kLeft + (length(part.name) + 1) * kCellWidth;
         canvas.draw_text(kLeft, y, part.name, true, 1);
-        // The identity sits with the name, not with the verdict: a row reads
-        // "what it is" then "how it answered", left to right.
         for (const char* said : {part.detail, part.now}) {
             if (!said) continue;
             canvas.draw_text(name_end, y, said, true, 1);
@@ -150,8 +144,6 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
 
     written = 0;
     if (snapshot.battery_valid) {
-        // Centivolts: at boot the number that matters is whether the pack can
-        // carry a flight, and two decimals is what a cell is judged on.
         written = format_string(text, "BAT ");
         written += format_unsigned(text + written, (snapshot.battery_mv + 5u) / 10u, 1, 2);
         written += format_string(text + written, " V");
@@ -161,7 +153,6 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     text[written] = 0;
     canvas.draw_text(kLeft, y, text, true, 1);
 
-    // The verdict, inverted so it cannot be read as one more row.
     const char* status = snapshot.flyable ? "PASS" : "FAIL";
     const int width = (length(status) + 2) * kCellWidth;
     canvas.rectangle(kRight - width, y - kSelfTestVerdictRise, width, kSelfTestVerdictHeight, true,

@@ -22,9 +22,9 @@ constexpr int kValueGap = 7;
 constexpr int kTitleGap = 4;
 constexpr int kTickLength = 4;
 constexpr int kTicks = 12;
-constexpr int kAltitudeTicks = 10;  // one mark per 100 ft, so the hands line up with them
-// Card letters stay upright whatever the card does: at 5x7 a turned glyph is a
-// staircase of its own stroke width, and unreadable beats authentic.
+// INFO: fc 20nov26 one mark per 100 ft, so the hands line up with them
+constexpr int kAltitudeTicks = 10;
+// INFO: fc 20nov26 card letters stay upright, because a turned 5x7 glyph is unreadable
 constexpr int kCardRadius = kDialRadius - 7;
 constexpr int kIndexTableLength = 5;
 constexpr int kNeedleLength = kDialRadius - 6;
@@ -67,8 +67,7 @@ constexpr int kReferenceInnerRadius = 7;
 constexpr int kReferenceOuterRadius = 20;
 constexpr int kReferenceDotRadius = 2;
 
-// Rounded, sign-symmetric projection of a radius onto a cordic axis: plain
-// integer division truncates toward zero and pulls both ends of a mark inward.
+// INFO: fc 20nov26 rounded both ways, since integer division truncates and pulls a mark inward
 int radial_half(int32_t radius_in_halves, int32_t axis) {
     const int32_t product = radius_in_halves * axis;
     return (product + (product < 0 ? -wire::kTrigOne : wire::kTrigOne)) / (2 * wire::kTrigOne);
@@ -108,9 +107,7 @@ void centred_value(ui::Canvas& canvas, int centre_x, int row, bool valid, int32_
     value_text(canvas, centre_x, row, text);
 }
 
-// Marks are stepped along the true radius in half-pixels rather than drawn as a
-// line between two rounded end points: over 4 px, rounding both ends tilts the
-// mark by degrees, which is what made the scales look bent.
+// INFO: fc 20nov26 stepped in half-pixels along the radius, since rounding both ends tilts a mark
 void radial_mark(ui::Canvas& canvas, int centre_x, int centre_y, int16_t angle, int from_radius,
                  int to_radius) {
     const int32_t unit_x = wire::sine(angle), unit_y = wire::cosine(angle);
@@ -177,7 +174,7 @@ void needle(ui::Canvas& canvas, int centre_x, int centre_y, int32_t angle_deg, i
                 canvas.line(centre_x + offset_x, centre_y + offset_y, tip_x + offset_x,
                             tip_y + offset_y, false);
     canvas.line(centre_x, centre_y, tip_x, tip_y, true);
-    if (thick) {  // the altimeter's thousands hand: short and broad, hundreds long and fine
+    if (thick) {
         canvas.line(centre_x + 1, centre_y, tip_x + 1, tip_y, true);
         canvas.line(centre_x, centre_y + 1, tip_x, tip_y + 1, true);
     }
@@ -201,8 +198,8 @@ void horizon(ui::Canvas& canvas, int centre_x, int centre_y, int32_t pitch_deg, 
             if (((x + y) & 1) == 0) canvas.set_pixel(x, y, true);
         }
     }
-    for (int i = kReferenceInnerRadius; i <= kReferenceOuterRadius;
-         i++) {  // solid over sky or ground
+    // INFO: fc 20nov26 the wing bars stay solid over sky and ground alike
+    for (int i = kReferenceInnerRadius; i <= kReferenceOuterRadius; i++) {
         canvas.set_pixel(centre_x - i, centre_y, true);
         canvas.set_pixel(centre_x + i, centre_y, true);
     }
@@ -248,8 +245,6 @@ void turn_coordinator(ui::Canvas& canvas, int centre_x, int centre_y, int32_t tu
     }
 }
 
-// The card rotates so the flown track sits under the fixed index at the top,
-// which is what makes N/E/S/W read as directions rather than as labels.
 void heading_card(ui::Canvas& canvas, int centre_x, int centre_y, int32_t track_deg) {
     static const char kCardinal[4] = {'N', 'E', 'S', 'W'};
     for (int i = 0; i < kTicks; i++) {
@@ -264,8 +259,7 @@ void heading_card(ui::Canvas& canvas, int centre_x, int centre_y, int32_t track_
             centre_y - kCharacterHeight / 2 - radial(kCardRadius, wire::cosine(angle)),
             kCardinal[bearing / 90], true);
     }
-    canvas.rectangle(centre_x - 1, centre_y - kDialRadius, 3, kIndexTableLength, true,
-                     true);  // the lubber index, on the case
+    canvas.rectangle(centre_x - 1, centre_y - kDialRadius, 3, kIndexTableLength, true, true);
     ui::draw_skyship(canvas, centre_x, centre_y);
 }
 
@@ -275,8 +269,7 @@ int32_t flight_path_deg(int32_t climb_fpm, int32_t speed_kt) {
            wire::kAngle16PerTurn;
 }
 
-// Coordinated turn: tan(bank) = omega * V / g, which in deg/s and knots is
-// turn_dps * kt / 1093, and no sensor on this device measures a bank.
+// INFO: fc 20nov26 tan(bank) = omega * V / g, which in deg/s and knots is turn_dps * kt / 1093
 int32_t inferred_bank_deg(int32_t turn_dps, int32_t speed_kt) {
     if (speed_kt <= 0) return 0;
     return (static_cast<int32_t>(arctangent(turn_dps * speed_kt, 1093)) * 360) /

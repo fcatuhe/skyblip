@@ -58,12 +58,10 @@ struct MenuSnapshot {
     bool aircraft{false};
 };
 
-// Nine characters, which is what the settings blob has always held, and the ring
-// a pad rolls through them: blank, dash, A to Z, 0 to 9, blank again.
 constexpr int kCallsignCharacters = static_cast<int>(kCallsignBytes) - 1;
 constexpr char kCallsignBlank = ' ';
 char next_callsign_character(char character);
-// The stored form: a name is edited nine wide and stored as what a pilot typed.
+// INFO: fc 20nov26 a name is edited nine wide and stored without its trailing blanks
 int callsign_stored(char* out, const char* edited);
 
 constexpr int kAircraftAddressCharacters = 6;
@@ -124,8 +122,6 @@ int menu_first_row(const Menu& menu, MenuRow focus);
 Keys menu_keys(const MenuSnapshot& snapshot);
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot);
 
-// The field screen the callsign and the aircraft address share: the characters at a size a thumb
-// can check, and a bar under the one the pad is rolling.
 struct CallsignSnapshot {
     const char* title{"CALLSIGN"};
     const char* text{""};
@@ -185,9 +181,6 @@ class MenuEditor {
     MenuRow focus() const;
     Page opening() const { return opening_; }
 
-    // The two gestures, named after them: in the rows the pad moves the focus
-    // and the button acts, in the callsign field the pad rolls a character and
-    // the button steps to the next one.
     void button(uint32_t now_ms);
     void pad(uint32_t now_ms);
 
