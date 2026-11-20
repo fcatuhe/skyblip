@@ -1,6 +1,6 @@
 # scripts
 
-Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, `dev_release.rb`, `radio_protocols.rb`, `upstream_pins.rb` and `emsdk.rb`, which are Ruby.
+Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, `dev_release.rb`, `radio_protocols.rb`, `release_notice.rb`, `upstream_pins.rb` and `emsdk.rb`, which are Ruby.
 
 | Script | What it does |
 |---|---|
@@ -20,6 +20,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `upstream_pins.rb` | read a version `.github/pins/action.yml` pins for Dependabot (`version emscripten-core/emsdk`), or fail while the vendored doctest or the Zephyr in `firmware/west.yml` differs from its pin (`check`), its logic in `lib/upstream_pins.rb`, tested by `.github/test/upstream_pins_test.rb` |
 | `emsdk.rb` | print the pinned Emscripten version and the `emcc` that runs it, for `make browser`: the one given if it runs the pin, else the one in `$EMSDK` or `~/.local/opt/emsdk`, which it clones, pulls and installs as needed. Its logic is in `lib/emsdk.rb`, tested by `.github/test/emsdk_test.rb` |
 | `radio_protocols.rb` | write the `PROTOCOLS.md` a production release carries: the radio protocol versions each product's `PROTOCOLS` names, each beside the specification it implements, its logic in `lib/radio_protocols.rb`, which `dev_release.rb` reads them through too |
+| `release_notice.rb` | write the one `NOTICE.md` every release carries: the repository's `NOTICE.md` with `LICENSE` and the texts in `LICENSES/` appended, its logic in `lib/release_notice.rb`, which `dev_release.rb` writes it through too |
 | `behavior_index.py` | generate the main claims index and one page per area under `docs/behavior/`. `test_behavior_index.py` checks the index and pages on fixtures |
 | [`conformance.py`](conformance.py) | generate the ADS-L and ADS-B reports from the host test suite. After `make -C firmware test`, run `python3 scripts/conformance.py adsl` for ADS-L and EN 300 220, or `python3 scripts/conformance.py adsb` for the DO-260B receive-side clauses. `test_conformance.py` checks both reports on fixtures |
 | `tuning_index.py`, `spec_to_md.py`, `etsi_to_md.py` | generate the tuning index and specification references under `docs/`. The two specification converters share `layout_to_md.py` |

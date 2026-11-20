@@ -68,10 +68,10 @@ class DeploymentTest < Minitest::Test
 
   def test_every_production_image_ships_its_third_party_notices
     workflow = File.read(File.join(ROOT, ".github/workflows/release.yml"))
-    notices = workflow.index(%r{^ +cp LICENSE NOTICE\.md LICENSES/\*\.txt release/$})
+    notices = workflow.index(%r{^ +ruby scripts/release_notice\.rb \. > release/NOTICE\.md$})
     checksums = workflow.index("sha256sum -- * > SHA256SUMS")
 
-    assert notices, "release copies LICENSE, NOTICE.md and the license texts into the release"
+    assert notices, "release writes NOTICE.md with LICENSE and the license texts into the release"
     assert_operator notices, :<, checksums
   end
 
@@ -82,7 +82,7 @@ class DeploymentTest < Minitest::Test
     checkout = steps.find { |step| step["uses"].to_s.start_with?("actions/checkout") }
 
     assert steps.any? { |step| step.dig("with", "pattern") == "skyblip-*" && step.dig("with", "merge-multiple") }
-    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/protocols/*/version.h firmware/products/*/PROTOCOLS lib/dev_release.rb lib/radio_protocols.rb scripts/dev_release.rb],
+    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/protocols/*/version.h firmware/products/*/PROTOCOLS lib/dev_release.rb lib/radio_protocols.rb lib/release_notice.rb scripts/dev_release.rb],
                  checkout.dig("with", "sparse-checkout").split
     assert_equal "ruby source/scripts/dev_release.rb image simulator source", steps.last.fetch("run")
   end
@@ -225,7 +225,7 @@ class DeploymentTest < Minitest::Test
   def test_the_release_files_hold_every_products_images_beside_the_simulator_the_notices_and_the_radio_protocols
     Dir.mktmpdir do |tree|
       release_tree(tree, slug: "skyblip-go", hub_image: true)
-      %w[lib/radio_protocols.rb scripts/radio_protocols.rb firmware/products/skyblip_go/PROTOCOLS firmware/products/skyblip_bravo/PROTOCOLS
+      %w[lib/radio_protocols.rb scripts/radio_protocols.rb lib/release_notice.rb scripts/release_notice.rb firmware/products/skyblip_go/PROTOCOLS firmware/products/skyblip_bravo/PROTOCOLS
          firmware/protocols/adsl/version.h firmware/protocols/adsb/version.h firmware/protocols/alptas/version.h].each do |file|
         FileUtils.mkdir_p(File.join(tree, File.dirname(file)))
         FileUtils.cp(File.join(ROOT, file), File.join(tree, file))
@@ -239,6 +239,8 @@ class DeploymentTest < Minitest::Test
       assert_equal Dir.children(File.join(tree, "release")).sort - %w[SHA256SUMS], listed.sort
       assert_includes listed, "skyblip-bravo-0.2.0.signed.bin"
       assert_includes listed, "scenarios.json"
+      assert_equal %w[NOTICE.md], listed.grep(/LICENSE|NOTICE|\.txt\z/)
+      assert_includes File.read(File.join(tree, "release/NOTICE.md")), "### LICENSES/Apache-2.0.txt\n\n```\nLICENSES/Apache-2.0.txt\n```"
       versions = %w[adsl adsb alptas].to_h { |stem| [ stem, File.read(File.join(ROOT, "firmware/protocols/#{stem}/version.h"))[RadioProtocols::DECLARATION, 1] ] }
       notes = File.read(File.join(tree, "release/PROTOCOLS.md"))
       assert_includes notes, "- `skyblip-bravo`: ADS-B #{versions["adsb"]} (1090 MHz extended squitter DF17, read only, after RTCA DO-260B (draft 4.2, 1090-WP30-18))\n"
