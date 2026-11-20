@@ -1,12 +1,6 @@
 name: firmware
 
-# Everything in this tree that is not the server or prose: firmware/, plus the
-# scripts, schemas and simulator harnesses the firmware is tested through. The site has
-# its own workflow, and every dependency is Dependabot's: the upstreams it has no
-# manifest for are named in .github/pins/action.yml.
-#
-# A push to a branch with an open PR already fires `pull_request`; main is the
-# post-merge signal, and this repo never commits to it directly.
+# Everything in this tree but the server and prose: firmware/ and the scripts, schemas and harnesses it is tested through.
 on:
   pull_request:
   push:
@@ -16,7 +10,7 @@ on:
 permissions:
   contents: read
 
-# Never cancel a run on main: that one is the record of what the merged tree does.
+# A run on main is the record of what the merged tree does, so it is never cancelled.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -40,7 +34,6 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
-          # A negated pattern excludes a file whatever else matches it, and the other patterns of a filter stay OR-ed.
           predicate-quantifier: some-with-excludes
           filters: |
             # Prose no check reads. The firmware's READMEs stay in: docs/TUNING.md and the protocol locks read them.
@@ -83,7 +76,6 @@ jobs:
       CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
-      # A PR recompiles the few files it touched, not all 155 translation units.
       - name: install ccache, cmake and pdftotext
         run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake poppler-utils
       - name: cache the compiled objects
@@ -105,27 +97,20 @@ jobs:
         run: python3 scripts/check_protocol_freeze.py
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
-      # A conformance suite reads its standard clause by clause, and a clause nobody read is the one a product is found non-conformant on.
       - name: every clause of ADS-L, EN 300 220 and DO-260B has a case
         run: python3 scripts/check_clauses.py
-      # The suite reads the markdown, not the PDF, so a word the conversion lost is a requirement nobody reads.
+      # The suites read the markdown, so a word the conversion lost is a requirement nobody reads.
       - name: the ADS-L markdown carries every word of its PDF, in order
         run: python3 scripts/check_spec_markdown.py
-      # A hold, a settle and a floor behave nothing alike, and a tree that spells
-      # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
         run: python3 scripts/check_tuning_names.py
       # The generated C++ is compared as clang-format writes it, so the check and its test need the lint job's pinned formatter.
       - name: install the pinned clang-format
         run: pip install --disable-pip-version-check "$(grep '^clang-format==' .github/lint/requirements.txt)"
-      # The firmware, the simulator, the suite and the server read the link's numbers from files generated off one registry, and phones read the status frame it describes unasked.
       - name: the link registry is described, its generated files are current and the status writer matches it
         run: python3 scripts/check_link_registry.py
-      # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
-      # device then sits in DFU mode until someone drops a .uf2 on it by hand.
       - name: no Nordic DFU package
         run: python3 scripts/check_no_dfu_package.py
-      # embed.js binds the firmware by C name, resolved only when a page loads the module.
       - name: the browser simulator binds only what it exports
         run: python3 scripts/check_simulator_exports.py
       # Dependabot proposes doctest and Zephyr in .github/pins, and the copies in use have to follow.
@@ -133,22 +118,19 @@ jobs:
         run: ruby scripts/upstream_pins.rb check
       - name: the Python self-checks
         run: python3 -m unittest discover -s scripts
-      # docs/BEHAVIOR.md and docs/behavior/ are generated from the test names: a rename that does not
-      # land with the doc leaves the repo claiming behavior the suite dropped. A page not committed is a diff too.
+      # A page not committed is a diff too.
       - name: behavior index matches the suite
         run: |
           python3 scripts/behavior_index.py
           git add --intent-to-add docs/BEHAVIOR.md docs/behavior
           git diff --exit-code docs/BEHAVIOR.md docs/behavior
-      # docs/ADSL_CONFORMANCE.md is what the declaration of conformity attaches, so it must be the suite as it runs.
+      # The declaration of conformity attaches docs/ADSL_CONFORMANCE.md, so it must be the suite as it runs.
       - name: ADS-L and DO-260B reports match the suite
         run: |
           python3 scripts/conformance.py adsl
           python3 scripts/conformance.py adsb
           git add --intent-to-add docs/ADSL_CONFORMANCE.md docs/ADSB_CONFORMANCE.md
           git diff --exit-code docs/ADSL_CONFORMANCE.md docs/ADSB_CONFORMANCE.md
-      # docs/TUNING.md is generated from the constants themselves: a threshold
-      # that moves without its note moving is the whole point of the gate.
       - name: tuning index matches the sources
         run: |
           python3 scripts/tuning_index.py
@@ -186,7 +168,6 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
-      # Its own cache key: the sanitized objects share nothing with the plain ones.
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
@@ -227,14 +208,13 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
-      # Its own cache key: -fsanitize=fuzzer-no-link instruments every object.
+      # Its own cache key, because -fsanitize=fuzzer-no-link instruments every object.
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
           path: .ccache
           key: ccache-${{ matrix.tree }}-${{ github.sha }}
           restore-keys: ccache-${{ matrix.tree }}-
-      # A minute from the seeds alone finds little, a minute on top of every earlier run finds more.
       - name: cache the corpus
         uses: actions/cache@v6
         with:
@@ -259,9 +239,7 @@ jobs:
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
-      # Pinned in .github/lint/requirements.txt, where Dependabot can see them:
-      # the runner image ships clang-format 18, which reformats brace-init
-      # differently, so an unpinned formatter is a gate that changes its mind.
+      # Pinned in .github/lint/requirements.txt, because the runner's clang-format 18 formats brace-init differently.
       - name: install clang-format and clang-tidy
         run: pip install --disable-pip-version-check -r .github/lint/requirements.txt
       - name: check formatting
@@ -274,16 +252,11 @@ jobs:
       - name: check the C++ subset rules
         run: make -C firmware tidy
 
-  # A pull request is signed with a key made for the run: the build and the signing
-  # are proven end to end, and the image updates no unit. main, and a branch run by
-  # hand (Run workflow, or gh workflow run firmware.yml --ref <branch>), are signed
-  # with the development key. Releases are release.yml's, with the production key.
+  # A pull request signs with a key made for the run, so its image updates no unit.
   product-image:
     strategy:
       fail-fast: false
-      # `slug` is the product as a human writes it: the board name carries an
-      # underscore Zephyr requires, and expressions have no replace().
-      # Bravo's image is kept a week, as the X1 smoke image is, and the pre-release dev-release publishes outlives both.
+      # `slug` is spelled out because expressions have no replace().
       matrix:
         include:
           - product: skyblip_go
@@ -295,9 +268,7 @@ jobs:
     name: product image (${{ matrix.product }})
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
-    # x86_64, unlike the host jobs: the cross output is identical either way, and
-    # on arm runners the Zephyr SDK fails to register its CMake package
-    # (FindZephyr-sdk.cmake:57 dies on an empty variable).
+    # x86_64, because on arm runners the Zephyr SDK fails to register its CMake package.
     runs-on: ubuntu-24.04
     environment:
       name: ${{ needs.changes.outputs.signing && format('firmware_{0}', needs.changes.outputs.signing) || '' }}
@@ -394,11 +365,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Every product's development image goes into one pre-release, one click from the
-  # Releases page: dev-<build> for main, the newest three kept, dev-<build>-<branch> for
-  # a branch run by hand, the newest kept until its pull request closes. A new tag per
-  # build, because immutable releases lock a published one, and a deleted name is never
-  # reused. The rules are lib/dev_release.rb's, tested in .github/test/dev_release_test.rb.
+  # Every product's development image goes into one pre-release, by the rules of lib/dev_release.rb.
   dev-release:
     name: dev pre-release
     needs: [changes, product-image, simulator]
@@ -411,7 +378,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      # Every product's files start with its own slug, so the images share one directory.
       - uses: actions/download-artifact@v8
         with:
           pattern: skyblip-*
@@ -423,7 +389,7 @@ jobs:
           name: browser-simulator
           path: simulator
 
-      # The third-party notices and the protocol versions travel with every image, so they come from the commit it was built from, as does the publisher.
+      # The notices, protocol versions and publisher come from the commit the images were built from.
       - uses: actions/checkout@v7
         with:
           path: source
@@ -444,9 +410,7 @@ jobs:
         run: ruby source/scripts/dev_release.rb image simulator source
 
   platform-adapters:
-    # What the pure-host suite cannot build: the Zephyr adapters, run where
-    # native_sim can. product-image compiles the ones it cannot, and the X1's
-    # smoke image, MCUboot with a signed app, is built and size-checked here for the bench's first session (#169).
+    # The Zephyr adapters the host suite cannot build, run on native_sim, and the X1's smoke image (#169).
     name: platform adapters (native_sim, meshtracker_x1)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -454,11 +418,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Restored before the setup action runs its `west update`, which then finds
-      # every pinned revision already checked out and fetches nothing. The action
-      # caches pip, the SDK and ccache itself, but not the clones, and those are
-      # most of the minute it spends. Keyed on the manifest, the only thing that
-      # can move them.
+      # Restored before the setup action's `west update`, which then fetches nothing, keyed on the manifest.
       - name: cache the west workspace
         uses: actions/cache@v6
         with:
@@ -478,11 +438,10 @@ jobs:
       - name: twister
         working-directory: firmware
         run: |
-          # ZEPHYR_BASE is not in this step's env, so ask west for the workspace.
           python3 "$(west topdir)/zephyr/scripts/twister" \
             -T test/twister -p native_sim -p meshtracker_x1 --inline-logs
 
-      # Twister names its build directory after the test's path, so the one smoke build is found rather than spelled.
+      # Twister names its build directory after the test's path, so the smoke build is found, not spelled.
       - name: the X1 smoke image fits its slot and its RAM, and installs by drag-and-drop inside the X1's window
         working-directory: firmware
         run: |

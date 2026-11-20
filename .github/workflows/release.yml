@@ -1,14 +1,7 @@
 name: release
 
-# A version's tag on main, v<firmware/VERSION>, becomes one draft release: every
-# product's image signed with the production key, the simulator, the notices,
-# the radio protocol versions, their checksums and their provenance. The draft
-# is published by hand, and once published its files cannot change: immutable
-# releases are on for this repo.
-#
-# Every action is pinned by commit, and nothing is restored from a cache: the
-# image jobs hold the production key, and a cache or a moved tag is code that
-# would run beside it.
+# A version's tag on main becomes one draft release, which is published by hand.
+# INFO: fc 20nov26 the image jobs hold the production key, so every action is pinned by commit and nothing comes from a cache
 on:
   push:
     tags: ["v*"]
@@ -101,9 +94,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # scripts/build_local.sh on a clean runner, the way anyone can rebuild a release:
-  # it fetches the pinned workspace and checks the SDK against its own sha256.sum.
-  # One job per product, after the simulator, so the approval is asked once the rest has built.
+  # scripts/build_local.sh on a clean runner, the way anyone can rebuild a release.
   image:
     name: signed image (${{ matrix.product }})
     needs: [tag, simulator]
@@ -144,7 +135,7 @@ jobs:
           SKYBLIP_CHANNEL: production
         run: scripts/build_local.sh "$PRODUCT"
 
-      # .signed.confirmed.bin stays behind: the .uf2 carries it, and only a factory line reads it alone.
+      # .signed.confirmed.bin stays behind, because the .uf2 carries it.
       - name: name the files after the release
         run: |
           slug=${PRODUCT//_/-}
@@ -163,7 +154,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Every product's images meet here, on a runner without the key, so the jobs that hold it need no token beyond reading the repository.
+  # The images meet on a runner without the key, so the jobs that hold it only read the repository.
   files:
     name: release files
     needs: [tag, simulator, image]
@@ -199,7 +190,7 @@ jobs:
           name: browser-simulator
           path: simulator
 
-      # Only what this run's image jobs named goes into the release: one artifact per product, holding that product's files at this version.
+      # Only what this run's image jobs named goes into the release.
       - name: every product's images, and nothing else
         run: |
           expected=$(jq -r '.[] | "image-" + .' <<< "$PRODUCTS" | sort)
@@ -253,7 +244,7 @@ jobs:
           name: release
           path: release
 
-      # The notes start at the last published release. The briefing shows pilots the two news sections, under these exact headings, and its technical list is what GitHub generates.
+      # The briefing shows pilots the two news sections under these exact headings.
       - name: create the draft
         env:
           GH_TOKEN: ${{ github.token }}
