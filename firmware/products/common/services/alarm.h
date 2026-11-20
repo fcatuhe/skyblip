@@ -37,10 +37,8 @@ struct AlarmSettings {
     static constexpr bool kUnpaired = false;
 };
 
-// The lamp lives here rather than in PowerService, whose state most of it reads,
-// because the highest-priority row in the table is the alarm level and because a
-// device going down has to be silenced, signed off and then darkened by the one
-// owner of the lamp, the buzzer and the motor.
+// INFO: fc 20nov26 owns the lamp with the buzzer and the motor, so one owner silences, signs off
+// and darkens a device going down
 class AlarmService : public runtime::Service {
    public:
     AlarmService(runtime::Context& context, AlarmSettings settings, bool lamp_shows_link = false)
@@ -50,9 +48,6 @@ class AlarmService : public runtime::Service {
     // INFO: fc 19nov26 a tune, a sign or a motor is timed in passes, the lamp to its next edge
     uint32_t due_in_ms(uint32_t now_ms) const override;
 
-    // The device is going down: the loop stops running, so the buzzer is
-    // released and the lamp is darkened and let go here rather than left latched
-    // on a rail that is about to drop.
     void park(uint32_t now_ms);
 
     // INFO: fc 13nov26 asked before the first pass, and played from it, so the sign costs bring-up
@@ -78,9 +73,8 @@ class AlarmService : public runtime::Service {
     traffic::Level announcing_level() const { return annunciation_.announcing_level(); }
     bool sounding() const { return annunciation_.sounding(); }
 
-    // What the table decided, and what the lamp is showing this instant. Both,
-    // because they differ in the gaps of a wink and a test has to be able to say
-    // which of the two it means.
+    // INFO: fc 20nov26 the decided and the lit condition differ in the gaps of a wink, so a test
+    // names which one it means
     indication::Condition indicator_condition() const { return indication_.condition(); }
     indication::Colour lamp() const { return shown_; }
 
@@ -100,9 +94,8 @@ class AlarmService : public runtime::Service {
     static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kServiceSilenceCeilingMs,
                   "the annunciator's guard has to cut before the watchdog bites");
 
-    // Three passes through the shortest flash in the table. An LED needs far less
-    // time than a piezo to be seen, so the figure is smaller than the one above -
-    // but a flash the loop cannot resolve is a flash nobody sees.
+    // INFO: fc 20nov26 fewer passes than a piezo needs, because an LED is seen sooner, but a flash
+    // the loop cannot resolve is unseen
     static constexpr uint32_t kPassesPerShortestFlash = 3;
     static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestFlash <=
                       indication::kShortestPhaseMs,
