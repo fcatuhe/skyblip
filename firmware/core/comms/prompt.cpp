@@ -72,8 +72,7 @@ cbor::Reader ConfigService::pending_set() const {
     return cbor::Reader(ConstByteSpan(pending_set_frame_, static_cast<size_t>(pending_set_bytes_)));
 }
 
-// INFO: fc 10nov26 the link has no pairing: no command renews a prompt, and one press ends prompts
-// for that link
+// INFO: fc 10nov26 no command renews a prompt, and one press ends prompts for that link
 bool ConfigService::prompt_refused() {
     if (pending_ != Pending::None) {
         acknowledge(false, link::Reason::PromptPending);
@@ -152,8 +151,7 @@ void ConfigService::confirm() {
         return;
     }
     if (pending_ == Pending::Set) {
-        // Asked again: the confirmation window is kPromptCeilingMs wide and a cell
-        // can cross the warning inside it.
+        // INFO: fc 20nov26 asked again, since a cell can cross the warning while a prompt stands
         if (!settings_writable()) {
             pending_ = Pending::None;
             pending_set_bytes_ = 0;

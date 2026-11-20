@@ -1,4 +1,3 @@
-// core/comms/timing_report.h: the bench's timing answer, cut to fit the link.
 #ifndef SKYBLIP_CORE_COMMS_TIMING_REPORT_H
 #define SKYBLIP_CORE_COMMS_TIMING_REPORT_H
 
@@ -6,9 +5,7 @@
 
 namespace skyblip::comms {
 
-// Enough for every field in one frame at its widest, for the link that can carry
-// them all: a frame is never longer than the payload, this only bounds the buffer
-// the caller lends.
+// INFO: fc 20nov26 a buffer bound only: a frame never outgrows the payload
 constexpr int kTimingFrameBytes = 384;
 
 class TimingReport {
@@ -17,15 +14,10 @@ class TimingReport {
 
     bool exhausted() const { return at_ >= count_; }
 
-    // INFO: fc 04aug26 Whether every field can be placed in some frame of this
-    // payload. Asked before the first frame goes out so the answer is all or
-    // nothing: a bench left holding two frames of a three-frame report, with no
-    // third one coming, has evidence with a hole in it.
+    // INFO: fc 04aug26 asked before the first frame, so a bench never holds a report with a hole
     bool fits(int payload_bytes) const;
 
-    // The next frame, written into out. Returns its length, or 0 when the payload
-    // is too small to carry a single field - which is a refusal, not a short
-    // frame. Advances only when a frame was produced.
+    // INFO: fc 20nov26 0 when not one field fits, a refusal, and it advances only on a frame
     int next_frame(int payload_bytes, uint8_t* out, int capacity);
 
    private:

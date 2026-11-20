@@ -1,8 +1,4 @@
-// core/comms/diagnostics.h: the one status dump, and the only place its fields
-// are named.
-//
-// INFO: fc 15nov26 seven subsystems, adsb only on a 1090 MHz receiver, capture only on a capture
-// ring
+// INFO: fc 15nov26 seven subsystems, adsb only on a 1090 MHz receiver, capture only with a ring
 #ifndef SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 #define SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 
@@ -27,16 +23,9 @@ enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Sto
 // INFO: fc 15nov26 the words the capture prompt on the glass names them by
 const char* capture_profile_word(CaptureProfile profile);
 
-// What the dump is made of. A plain snapshot with two writers and no logic: the
-// product's collector fills the first half from the services and the board
-// (products/skyblip_go/services/diagnostics.h), and comms::ConfigService fills
-// the second half, because the product already tells it those and a second copy
-// of a number is a number that can be wrong in one place.
+// INFO: fc 20nov26 two writers, the product's collector and ConfigService, so no number has a copy
 struct Diagnostics {
-    // Collected from the product. Counted rather than flagged: it is the proof
-    // that the collector is wired at all, and a dump of zeros from a device whose
-    // wiring was forgotten would read as a dead radio and a dead receiver. The
-    // link refuses to answer until it has moved.
+    // INFO: fc 20nov26 the link refuses the dump until this moves, the proof a collector is wired
     uint32_t refreshes{0};
     uint32_t uptime_s{0};
 
@@ -82,7 +71,7 @@ struct Diagnostics {
     uint32_t gnss_raises{0};
     uint32_t gnss_raise_fallbacks{0};
     bool gnss_identified{false};
-    // Points at the driver's own buffer, which outlives every reader of this.
+    // INFO: fc 20nov26 points at the driver's own buffer, which outlives every reader
     const char* gnss_firmware{""};
     gnss::FixReject gnss_reject{gnss::FixReject::None};
     uint32_t gnss_rejected{0};
@@ -91,10 +80,6 @@ struct Diagnostics {
     bool gnss_solution_phase_valid{false};
     uint32_t gnss_recoveries{0};
     bool gnss_recoveries_valid{false};
-    // The constant-turn model own-ship is carried by, measured against the fix
-    // that closed the interval (products/common/services/ownship.cpp). It belongs
-    // to the fix stream that feeds it, which is why it reads out with the
-    // receiver rather than with the radio.
     uint16_t residual_m{0};
     bool residual_valid{false};
 
@@ -128,7 +113,6 @@ struct Diagnostics {
     uint32_t capture_keeps_full_s{0};
     uint32_t capture_keeps_power_run_s{0};
 
-    // Held by comms::ConfigService, which is told each of these by the product.
     power::ResetReason reset{power::ResetReason::Unknown};
     uint32_t link_drops{0};
     uint8_t link_drop_reason{0};
@@ -139,23 +123,15 @@ struct Diagnostics {
     bool die_valid{false};
 };
 
-// Tenths of a degree as the whole degrees a support case is read in. The port
-// carries tenths because the sensor resolves 0.25 C and rounding a sensor's
-// resolution away at the port is not the port's decision. Rounded away from zero
-// on both sides, so -20.6 C does not read as -20. One implementation, because the
-// status reply and the dump must not round a support case differently.
+// INFO: fc 20nov26 rounded away from zero, and only here, so every reply rounds alike
 int whole_celsius(int16_t temperature_dc);
 
-// The dump, rendered. Built cheaply on the stack from a snapshot, read as link
-// frames, and then thrown away.
 class DiagnosticsReport {
    public:
     enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power, Adsb, Capture };
     static constexpr int kGroupCount = 7;
 
-    // Enough for one frame at its widest on a link that can carry a whole group;
-    // a frame is never longer than the negotiated payload, this only bounds the
-    // buffer the caller lends.
+    // INFO: fc 20nov26 a buffer bound only: a frame never outgrows the negotiated payload
     static constexpr int kFrameBytes = 384;
     // INFO: fc 19nov26 add() drops a field past this, so a frames test keeps the widest under it
     static constexpr int kMaxFields = 96;
@@ -189,8 +165,7 @@ class DiagnosticsReport {
     int field_bytes(const Field& field) const;
 
     link::Command command_;
-    // INFO: fc 11nov26 the array fields read these copies, so a refresh never changes a dump in
-    // flight
+    // INFO: fc 11nov26 array fields read these copies, so a refresh never changes a dump being sent
     static constexpr int kAdsbRssiCount = ports::AdsbReceiverStatistics::kRssiBuckets;
     uint32_t adsb_rssi_[kAdsbRssiCount]{};
     uint32_t adsb_formats_[adsb::kDownlinkFormats]{};

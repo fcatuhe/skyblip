@@ -16,8 +16,7 @@ static_assert(
     kAcknowledgementFrameBytes <= ports::kMinimumLinkPayloadBytes,
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 
-// INFO: fc 14nov26 Conflict is the Go's aircraft address against its Bravo's transponder, ADS-L
-// F.2.3 | 17nov26 Unsupported is a paired Bravo's alarm, which its Go sets
+// INFO: fc 14nov26 Conflict is F.2.3's address check | 17nov26 Unsupported, a paired Bravo's alarm
 link::Reason settings_refusal(Status status) {
     switch (status) {
         case Status::OutOfRange: return link::Reason::OutOfRange;
@@ -44,10 +43,7 @@ bool stages_prompt(link::Command command) {
 
 void ConfigService::tick(uint32_t now_ms) {
     now_ms_ = now_ms;
-    // INFO: fc 04aug26 The one frame nobody asked for is the one nobody will ask
-    // for again, so a controller that was momentarily out of buffers gets another
-    // pass rather than costing a pilot a stale gauge. Only a transient refusal
-    // arms this: a frame too big for the payload would retry forever.
+    // INFO: fc 04aug26 nobody asks for a push again, so a transient refusal retries it
     if (status_push_due_ && link_up()) push_status();
     install_held_ = upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished();
     if (upload_window_open_ && !install_held_ &&
@@ -65,8 +61,7 @@ void ConfigService::tick(uint32_t now_ms) {
 void ConfigService::set_flight_state(flight::FlightState state) {
     const bool changed = state != flight_state_;
     flight_state_ = state;
-    // A prompt that survived the take-off roll would be an authorisation a
-    // pilot could confirm with an elbow in the air.
+    // INFO: fc 20nov26 a prompt that survived the take-off roll could be confirmed by an elbow
     if (pending_ != Pending::None && !prompt_allowed()) {
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
@@ -104,8 +99,7 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
         push_update(events::Peer{event.session_id, event.connection});
 }
 
-// INFO: fc 18sep26 Only the holder's disconnect cancels: another app leaving must not answer a
-// prompt.
+// INFO: fc 18sep26 only the holder's disconnect cancels, so another app leaving answers no prompt
 void ConfigService::on_link_down(const events::LinkDown& event) {
     note_disconnected(event.session_id);
     diagnostics_.link_drop_reason = event.reason;
@@ -164,11 +158,7 @@ int ConfigService::payload_bytes_to(uint16_t session_id) const {
     return static_cast<int>(link_.payload_bytes_to(session_id));
 }
 
-// INFO: fc 04aug26 The only door to the link, and it refuses out loud. A frame
-// longer than the negotiated payload is not shortened by the controller, it
-// fails, so it is counted here and never handed down. Everything that comes
-// through this door is a request/response answer except the status push, so the
-// recovery from a lost one is the phone's next command; the push has tick().
+// INFO: fc 04aug26 the controller fails a frame wider than the payload, so count it and keep it
 Status ConfigService::reply(const uint8_t* frame, int bytes) {
     return reply_to(claim_.peer(), frame, bytes);
 }

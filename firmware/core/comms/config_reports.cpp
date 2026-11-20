@@ -95,11 +95,7 @@ void ConfigService::push_status() {
     status_push_due_ = broadcast(frame, bytes) == Status::WouldBlock;
 }
 
-// INFO: fc 04aug26 The one sender allowed more than one frame, and the reason
-// lives in core/comms/timing_report.h: a laboratory reads this once, so a
-// two-frame answer is free, while trimming a histogram would destroy the
-// evidence it was asked for. A frame that cannot be produced at all is counted
-// and the rest of the report is abandoned rather than sent with a hole in it.
+// INFO: fc 04aug26 several frames, all or none, because trimming a histogram destroys its evidence
 void ConfigService::send_timing() {
     if (timing_statistics_ == nullptr) {
         acknowledge(false, link::Reason::NoStatistics);
@@ -108,16 +104,6 @@ void ConfigService::send_timing() {
     start_report(timing_report_, kTimingFrameBytes, *timing_statistics_);
 }
 
-// The durable-write half of the same bench: the settings writes the device made,
-// the changes they were coalesced from, and the ones the policy could not place
-// inside a free phase of the second. `forced` is the only number here that is a
-// fault, and it is the reason this is exported at all - a stall that landed where
-// the slot map did not budget for one must not be silent.
-//
-// Deliberately its own object rather than four more keys on "timing": that reply
-// is already the longest thing this service sends, and the link negotiates a
-// notification size it has to fit inside. Same endpoint, same dispatch, one more
-// question - not a longer answer a phone might truncate.
 void ConfigService::send_flash() {
     if (durable_writes_ == nullptr) {
         acknowledge(false, link::Reason::NoStatistics);
@@ -137,11 +123,6 @@ void ConfigService::send_flash() {
     (void)reply(frame, writer.finish());
 }
 
-// The radio's half of the same bench, still its own question rather than four
-// more keys on "status": that reply is the one this service PUSHES unsolicited
-// and it is already sized against the narrowest phone in the field at its worst
-// case. A status push that vanished whenever a unit was hot AND refusing packets
-// would be the exact failure the payload ceiling exists to prevent.
 void ConfigService::send_radio() {
     start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics_,
                  link::Command::Radio, DiagnosticsReport::Group::Radio);
@@ -267,13 +248,7 @@ int ConfigService::format_update(uint8_t* out, int capacity) {
     return writer.finish();
 }
 
-// A whole dump nobody has collected is a dump of zeros, and zeros here read as a
-// receiver that has never seen a satellite and a supply that has never faltered -
-// which is a device reporting health it has not measured. So it is refused with a
-// reason, exactly as an unwired timing accumulator is. The radio group above is not
-// gated: it predates the collector, its own key is written every pass by whoever
-// owns the table (set_range_refused), and a radio that has heard nothing truthfully
-// has zero receptions.
+// INFO: fc 20nov26 refused until collected, because a dump of zeros reports health nobody measured
 void ConfigService::send_diagnostics() {
     if (diagnostics_.refreshes == 0) {
         acknowledge(false, link::Reason::NoStatistics);
