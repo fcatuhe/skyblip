@@ -29,7 +29,7 @@ constexpr uint32_t function_of(uint32_t psel) { return (psel >> NRF_FUN_POS) & N
 constexpr uint32_t kUarteStopTimeoutUs = 21000;
 constexpr uint32_t kUarteStopPollUs = 10;
 
-// INFO: fc 19nov26 every board's way into SYSTEM OFF; its perform() walks core/power's order
+// INFO: fc 19nov26 every board's way into SYSTEM OFF, whose perform() walks core/power's order
 class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
    public:
     // INFO: fc 12nov26 read once and cleared: a second read of RESETREAS reads as a power-on
@@ -48,7 +48,8 @@ class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
 
    protected:
     void power_off(power::DfuButton factory_dfu_button) {
-        // INFO: fc 05oct26 first, as it outlives the rails; no retention area, no recovery either
+        // INFO: fc 05oct26 first, as it outlives the rails, and without a retention area there is
+        // no recovery either
         (void)write_boot_magic(Dfu::boot_magic_for_system_off(factory_dfu_button));
         power::power_down(*this);
         // INFO: fc 05aug26 after the walk, which arms a level wake: a stale DETECT wakes us at once

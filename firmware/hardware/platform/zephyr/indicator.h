@@ -8,11 +8,6 @@
 
 namespace skyblip::platform::zephyr {
 
-// The board's RGB status LEDs, one lamp at a time. Whether there are any at all
-// is a devicetree question: the specs come from GPIO_DT_SPEC_GET_OR, so a board
-// file with no LED node yields a null port, ready() answers false, the platform
-// grants no capability and the product never attaches this - the same table runs
-// and nothing lights.
 class Indicator : public ports::Indicator {
    public:
     Indicator(const struct gpio_dt_spec& green, const struct gpio_dt_spec& red,
@@ -33,17 +28,8 @@ class Indicator : public ports::Indicator {
         drive(blue_, colour == indication::Colour::Blue);
     }
 
-    // Dark AND released. These LEDs hang off the gated peripheral rail - SoftRF's
-    // own comment on that pin reads "Power: EINK, RGB, CN1" (platform/iomap/
-    // LilyGO_TEcho.h:79-80) - and they are active-low, so "off" is the pin driven
-    // HIGH. A pin held high once the rail has collapsed sources current back into
-    // it through the LED, which is why SoftRF switches its LEDs off and then to
-    // inputs in SoC_fini (platform/nRF52.cpp:2799-2807) and why this is a step of
-    // its own rather than show(Colour::None).
-    //
-    // GPIO_DISCONNECTED rather than GPIO_INPUT: an input leaves the pin's input
-    // buffer powered, which is the microamps this whole exercise is about. The
-    // next show() reconfigures as an output, so park() is not one-way.
+    // INFO: fc 20nov26 active-low LEDs held high would feed the collapsed rail, so park()
+    // disconnects them: hardware/README.md
     void park() override {
         show(indication::Colour::None);
         release(green_);
@@ -52,8 +38,8 @@ class Indicator : public ports::Indicator {
     }
 
    private:
-    // Reconfigured on every call rather than set: it is one register write either
-    // way on this SoC, and it is what makes park() reversible without a flag.
+    // INFO: fc 20nov26 reconfigured on every call, which costs the same as set and makes park()
+    // reversible
     static void drive(const struct gpio_dt_spec& pin, bool on) {
         if (pin.port == nullptr) return;
         gpio_pin_configure_dt(&pin, on ? GPIO_OUTPUT_ACTIVE : GPIO_OUTPUT_INACTIVE);

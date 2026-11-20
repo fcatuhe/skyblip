@@ -45,9 +45,6 @@ static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
                   timing::dwell_of(timing::kWindowAMs).start_ms,
               "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
 
-// The T-Echo Plus, assembled once. Platform is silicon or host. Swapping
-// it changes which io/ backend the parts talk to and nothing else, so there is
-// no second copy of this wiring to keep in step.
 template <class Platform>
 class TEchoPlus {
    public:
@@ -86,9 +83,8 @@ class TEchoPlus {
         prove_roles();
     }
 
-    // Probing is done but for the IMU: capabilities() is known once this returns. This is
-    // bring-up, and a part that is present but refuses to start is a degraded state, not a
-    // missing capability.
+    // INFO: fc 20nov26 a part present but refusing to start is a degraded state here, not a missing
+    // capability
     Status begin() {
         const Status status = platform_.begin();
         if (status != Status::Ok) return status;
@@ -101,21 +97,15 @@ class TEchoPlus {
         return rf_.begin();
     }
 
-    // The way down, for the parts the board owns rather than the platform: a
-    // haptic driver that answered goes to standby and its enable is held low
-    // before the rail it hangs off collapses, and otherwise the enable that
-    // its probe raised is released. SoftRF puts it in standby in the
-    // same place (platform/nRF52.cpp:3007-3020). Called on every road into
-    // SYSTEM OFF, after the services have stopped running.
+    // INFO: fc 20nov26 called on every road into SYSTEM OFF, so the haptic driver parks before its
+    // rail collapses
     void park() { haptic_.park(); }
 
     ports::Capabilities capabilities() const { return capabilities_; }
     uint32_t barometer_faults() const { return barometer_faults_; }
 
-    // What answered, by name and address, behind the capability bits. The
-    // self-test page reads it: two BME280 addresses, five shipped e-paper
-    // IDs and a haptic that may or may not be a waveform driver are
-    // exactly the facts a PASS does not say.
+    // INFO: fc 20nov26 the self-test page reads which part answered where, which a capability bit
+    // does not say
     const ports::Inventory& inventory() const { return inventory_; }
 
     // INFO: fc 14nov26 only the self-test page reads the bus scan, so it runs once, when first
@@ -219,8 +209,6 @@ class TEchoPlus {
 
     void poll_battery(uint32_t now_ms) { producer_.poll_battery(capabilities_, now_ms); }
 
-    // The producer side: everything hardware says arrives on the bus, and the
-    // clock's PPS phase is refreshed. Identical on both platforms.
     void poll(bus::State& state, uint32_t now_ms) {
         rf_.service(now_ms);
         // INFO: fc 17oct26 serves the host annunciator's guards: a test catches an output left on
@@ -314,23 +302,18 @@ class TEchoPlus {
 
     void prove_roles() {
         if (ports::has(capabilities_, ports::Capability::Rf)) probed_rf_.prove(rf_);
-        // Buzzer OR haptic: they are one role and two parts, and a board with
-        // a dead buzzer pin still owes a pilot the pulse it can make.
+        // INFO: fc 20nov26 buzzer or haptic, one role and two parts, so a dead buzzer pin still
+        // leaves the pulse
         if (ports::has(capabilities_, ports::Capability::Buzzer) ||
             ports::has(capabilities_, ports::Capability::Haptic))
             probed_annunciator_.prove(platform_.annunciator());
     }
 
-    // What this board needs when a probe contradicts what the platform declared.
     ports::Capabilities without(ports::Capability bit) const {
         return ports::without(capabilities_, bit);
     }
 
-    // The ID is taken where the pins are free, which on silicon is the
-    // board port at PRE_KERNEL_1 and on the host is the panel model. Either way
-    // the driver is told once, before begin(), and an unread ID leaves
-    // the panel Unknown - which is the safest refresh policy and, until somebody
-    // reads a Plus on a bench, the honest answer for this board.
+    // INFO: fc 20nov26 an unread ID leaves the panel Unknown, the safest refresh policy
     void identify_panel() {
         parts::PanelId panel_id{};
         platform_.read_panel_id(panel_id);
@@ -338,18 +321,8 @@ class TEchoPlus {
         inventory_.panel_name = display_.panel_name();
     }
 
-    // The haptic is a part on a bus, not a pin. Capability::Haptic is granted by
-    // the part answering and identifying itself, never by the board being a Plus:
-    // P0.08 high with no DRV2605 behind it is a device that claims a vibration
-    // motor and cannot vibrate, which is what the alarm's escalation to haptics
-    // was until this probe existed.
-    //
-    // INFO: fc 06aug26 NOBODY HAS SEEN 0x5A ANSWER ON OUR OWN HARDWARE. The
-    // address, the identification and the whole pulse sequence come from SoftRF,
-    // which identifies the T-Echo Plus by exactly this probe
-    // (src/platform/nRF52.cpp:1158-1163, driver at 2112-2133). If a bench unit
-    // does not answer, this reports the haptic absent and the alarm loses it
-    // honestly, which is still better than the claim that preceded it.
+    // INFO: fc 06aug26 the DRV2605 answering grants the haptic, never the board being a Plus:
+    // README.md
     void establish_haptic() {
         capabilities_ = without(ports::Capability::Haptic);
         inventory_.haptic = ports::HapticKind::None;

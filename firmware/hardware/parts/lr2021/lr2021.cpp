@@ -114,7 +114,7 @@ Status Lr2021::take_snapshot() {
     return Status::Ok;
 }
 
-// INFO: fc 11nov26 SoftRF re-arms after 15 s of silence; a fault resets the part instead
+// INFO: fc 11nov26 SoftRF re-arms after 15 s of silence, and a fault resets the part instead
 bool Lr2021::service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms) {
     if (mode_ == Lr2021Mode::Sleep) return false;
     if (reset_owed_) {

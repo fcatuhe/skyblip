@@ -12,11 +12,8 @@
 
 namespace skyblip::platform::zephyr {
 
-// Zephyr's task watchdog: one software channel fed by the service loop, with the
-// nRF52's WDT peripheral installed underneath it as the hardware fallback. The
-// subsystem sizes that fallback from CONFIG_TASK_WDT_MIN_TIMEOUT plus
-// CONFIG_TASK_WDT_HW_FALLBACK_DELAY, which prj.conf sets above this channel's
-// period so the channel is always the first thing to expire.
+// INFO: fc 20nov26 prj.conf sets the hardware fallback above this channel's period, so the channel
+// always expires first
 class Watchdog : public ports::Watchdog {
    public:
     static constexpr uint32_t kWindowMs =
@@ -50,13 +47,8 @@ class Watchdog : public ports::Watchdog {
     bool armed() const override { return armed_; }
 
    private:
-    // INFO: hk 02aug26 the channel callback deliberately does NOT call
-    // sys_reboot(): a software reset lands in RESETREAS as SREQ, which is
-    // indistinguishable from a requested restart. Spinning here starves the
-    // hardware fallback too, so the reset that follows is a real WDT bite and
-    // the next boot reports DOG. SoftRF uses the same deliberate bite as its
-    // reboot primitive because on the nRF52 the watchdog cannot be stopped once
-    // it is started (src/platform/nRF52.cpp:3240-3292).
+    // INFO: hk 02aug26 it spins rather than call sys_reboot(), so the reset is a real WDT bite the
+    // next boot reports as DOG
     static void bite(int channel_id, void* user_data) {
         ARG_UNUSED(channel_id);
         ARG_UNUSED(user_data);

@@ -1,13 +1,3 @@
-// Which e-paper is actually glued to this board.
-//
-// LilyGO fits more than one panel behind the same footprint and the same
-// controller pinout, and the panels do not behave the same. SoftRF fingerprints
-// them by clocking registers 0x2D (11 bytes) and 0x2E (10 bytes) out of the
-// panel over a bit-banged half-duplex SPI inside a critical section, and carries
-// the IDs it has observed on real T-Echos in a comment block
-// (platform/nRF52.cpp:3775-3900, table at 3855-3878). That table is transcribed
-// below, byte for byte, including the two entries whose meaning it does not
-// establish.
 #ifndef SKYBLIP_HARDWARE_PARTS_SSD1681_PANEL_H
 #define SKYBLIP_HARDWARE_PARTS_SSD1681_PANEL_H
 
@@ -15,7 +5,6 @@
 
 namespace skyblip::parts {
 
-// The two registers, and the byte counts SoftRF reads from each.
 constexpr uint8_t kPanelIdRegister2d = 0x2D;
 constexpr uint8_t kPanelIdRegister2e = 0x2E;
 constexpr int kPanelIdBytes2d = 11;
@@ -25,9 +14,8 @@ constexpr int kPanelIdBytes = kPanelIdBytes2d + kPanelIdBytes2e;
 struct PanelId {
     uint8_t register_2d[kPanelIdBytes2d]{};
     uint8_t register_2e[kPanelIdBytes2e]{};
-    // False when the ID could not be taken at all. On silicon the read
-    // needs the panel's data line reversed, which only the board port can do,
-    // and a board that cannot do it says so here rather than reporting a panel.
+    // INFO: fc 20nov26 false when the ID could not be taken, since only the board port can reverse
+    // the data line
     bool valid{false};
 };
 
@@ -44,12 +32,8 @@ enum class Panel : uint8_t {
 
 namespace panels {
 
-// 0x2D: FF x11. 0x2E: 00 x10.
-// GDEP015OC1, the first-generation panel, on a different controller: our init
-// sequence is wrong for it, so finding one is a procurement alarm. It is NOT
-// allowed to change what the driver does, because all-0xFF is also what an
-// unwired read line returns and this board's e-paper MISO is a placeholder - see
-// the note below the table.
+// INFO: fc 20nov26 an OC1 read never changes the driver, because an unwired read line also reads
+// all 0xFF: README.md
 constexpr PanelId kGdep015Oc1{{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
                               {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                               true};
@@ -59,8 +43,7 @@ constexpr PanelId kGdeh0154D67Syx1942{
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     true};
 
-// 2118 and 2129 are the same in 0x2D and differ only in 0x2E, which is why the
-// ident needs both registers and why a table keyed on 0x2D alone would be wrong.
+// INFO: fc 20nov26 2118 and 2129 differ only in 0x2E, so the ident needs both registers
 constexpr PanelId kGdeh0154D67Syx2118{
     {0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00},
     {0x00, 0x05, 0x00, 0x9A, 0x00, 0x55, 0x35, 0x37, 0x14, 0x0C},
@@ -71,15 +54,10 @@ constexpr PanelId kGdeh0154D67Syx2129{
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     true};
 
-// 0x2D: 00 x11. The one identification SoftRF's own code actually acts on
-// (nRF52.cpp:3888-3897: all-zero 0x2D means DEPG0150BN, everything else falls
-// back to D67).
 constexpr PanelId kDepg0150Bn{
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, true};
 
-// SoftRF's table calls this one "TBD (M1)": observed in an Elecrow ThinkNode M1,
-// not named. Carried so a bench read that lands on it is recognised as a panel
-// somebody has seen rather than as noise.
+// INFO: fc 20nov26 SoftRF's "TBD (M1)", seen in an Elecrow ThinkNode M1 and never named
 constexpr PanelId kElecrowM1{{0x00, 0x00, 0x40, 0x20, 0x10, 0x00, 0x40, 0x03, 0x00, 0x00, 0x00},
                              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                              true};
@@ -105,8 +83,8 @@ inline Panel identify_panel(const PanelId& id) {
     return Panel::Unlisted;
 }
 
-// Short enough for the self-test row it is printed on: 200 px of 5x7 glass is 33
-// characters wide and the row already carries a name and a verdict.
+// INFO: fc 20nov26 short enough for the 33-character self-test row, which also carries a name and a
+// verdict
 constexpr const char* panel_name(Panel panel) {
     switch (panel) {
         case Panel::Gdeh0154D67Syx1942: return "D67/1942";
@@ -120,14 +98,6 @@ constexpr const char* panel_name(Panel panel) {
     }
     return "NO ID";
 }
-
-// Deliberately absent: anything that would let an identification REFUSE to
-// drive the panel. GDEP015OC1 is a different controller and our init sequence is
-// wrong for it, but its ID is all-0xFF, which is also what an unwired
-// read line returns - and this board's e-paper MISO is a placeholder. A rule
-// that withdrew the display on an all-0xFF read would blank the one page that
-// can explain a dead device. An OC1 verdict is a procurement alarm to be read on
-// the self-test page, not a runtime decision.
 
 }  // namespace skyblip::parts
 

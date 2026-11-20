@@ -20,11 +20,8 @@ struct PowerSettings {
     const int16_t& battery_offset_mv;
 };
 
-// Owns state.power.battery and state.power.level: what the divider read becomes the
-// voltage and the state of charge every screen and the companion link report,
-// and what core/power's cutoff rule made of the same samples. The level is
-// published rather than re-derived downstream, so the one place that knows the
-// cell is nearly gone is the one place that says so.
+// INFO: fc 20nov26 the only writer of state.power.level, so the lamp, the glass and the link never
+// re-derive a low cell
 class PowerService : public runtime::Service {
    public:
     PowerService(runtime::Context& context, PowerSettings settings)
@@ -37,16 +34,9 @@ class PowerService : public runtime::Service {
     bool cutoff() const { return cutoff_.cutoff(); }
     uint32_t implausible_samples() const { return gauge_.refused(); }
 
-    // The power-failure comparator fired. Polled off ports::SystemPower by the
-    // product and handed here, because this service owns the cutoff monitor and
-    // the monitor is where the rule lives (core/power/cutoff.h).
     void on_supply_warning() { cutoff_.on_supply_warning(); }
     uint32_t supply_warnings() const { return cutoff_.supply_warnings(); }
 
-    // Whether a durable write of this kind may happen now, and whether the
-    // supply warned, asked of the rule itself. The settings writer asks it; the
-    // flight log's answer is in the same rule and is always yes, which is the
-    // point of asking through it rather than around it.
     const power::CutoffMonitor& cutoff_monitor() const { return cutoff_; }
 
     power::ChargeCondition charge_condition() const { return charge_; }
@@ -68,12 +58,8 @@ class PowerService : public runtime::Service {
     static constexpr uint32_t kDiePeriodMs = 10000;
     static_assert(kDieStaleMs >= 2 * kDiePeriodMs, "one missed sample is not a dead sensor");
 
-    // Whether a reading younger than kDieStaleMs stands. tick() publishes it as
-    // state.power.die_valid, beside the tenths of a degree in die_dc, where the
-    // glass, the charge window and the config link's reply read both.
-    // False on a board with no sensor for ever, which is what the reply reads to
-    // decide whether the key exists at all - never a zero standing in for absent,
-    // because 0.0 C is a plausible hangar morning.
+    // INFO: fc 20nov26 false for ever on a board with no sensor, never a zero, because 0.0 C is a
+    // plausible hangar morning
     bool die_reading_fresh(uint32_t now_ms) const {
         return die_valid_ && now_ms - die_valid_ms_ <= kDieStaleMs;
     }

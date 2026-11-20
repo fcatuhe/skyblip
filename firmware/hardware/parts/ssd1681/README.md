@@ -4,10 +4,16 @@ The GDEH0154D67 e-paper on its SSD1681 controller, driven over `io::Spi` and `io
 
 ## Names
 
-The command constants are spelled in full. Where the datasheet's command table words it differently, this is the pair, the right column spelled as this tree's earlier identifiers cited it.
+The command constants are spelled in full. Where the datasheet's command table spells one differently, this is the pair.
 
 | Our name | Datasheet name |
 |---|---|
 | `kSoftwareReset` (0x12) | SwReset |
 | `kDisplayUpdateControl2` (0x22) | DisplayUpdateCtrl2 |
 | `kSetRamXRange`, `kSetRamYRange` (0x44, 0x45) | SetRamXAddr, SetRamYAddr |
+
+## Panel identity
+
+LilyGO fits more than one panel behind the same footprint and controller pinout, and they do not behave the same. SoftRF fingerprints them by clocking registers 0x2D (11 bytes) and 0x2E (10 bytes) out over a bit-banged half-duplex SPI, and lists the IDs it has seen on real T-Echos (`platform/nRF52.cpp:3775-3900`, table at 3855-3878). `panel.h` transcribes that table byte for byte, the two unnamed entries included.
+
+No identification may refuse to drive the panel. GDEP015OC1 sits on a different controller and our init sequence is wrong for it, but its ID is all 0xFF, which an unwired read line also returns, and this board's e-paper MISO is a placeholder. Refusing on that read would blank the one page that can explain a dead device. An OC1 verdict is a procurement alarm on the self-test page.

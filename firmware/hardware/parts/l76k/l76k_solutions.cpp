@@ -64,7 +64,7 @@ bool L76k::poll(uint32_t now_ms) {
             paired_valid = validity_.evaluate(now_ms) == gnss::FixReject::None;
             paired_stamp_ms = parser_.stamp_ms();
         }
-        if (received < sizeof(buffer)) break;  // drained
+        if (received < sizeof(buffer)) break;
     }
     if (sentences() != heard_sentences_) {
         heard_sentences_ = sentences();

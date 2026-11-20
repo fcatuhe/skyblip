@@ -7,21 +7,15 @@
 
 namespace skyblip::common {
 
-// Gated on the capability and not on the port's own answer, the same way the
-// board gates the barometer and the divider it polls: a part the platform never
-// found is a part nobody asks. The port would answer false anyway - this is what
-// keeps a device that has no sensor from calling into a driver once every ten
-// seconds to be told so.
+// INFO: fc 20nov26 gated on the capability, so a board with no sensor never calls the driver
 void PowerService::sample_die_temperature(uint32_t now_ms) {
     if (!ports::has(context_.roles.capabilities, ports::Capability::DieTemperature)) return;
-    // Unsigned subtraction, so the 49.7-day wrap of the millisecond counter costs
-    // one late reading and not a service that never reads again.
+    // INFO: fc 20nov26 unsigned subtraction, so the counter's 49.7-day wrap costs one late reading
     if (die_sampled_ && now_ms - die_read_ms_ < kDiePeriodMs) return;
     die_sampled_ = true;
     die_read_ms_ = now_ms;
     int16_t die_dc = 0;
-    // A refused measurement leaves the last good one standing rather than
-    // publishing a zero: the reading is minutes old by design anyway.
+    // INFO: fc 20nov26 a refused read leaves the last good reading standing, never a zero
     if (!context_.roles.die_temperature.read(die_dc)) return;
     die_dc_ = die_dc;
     die_valid_ = true;
@@ -42,11 +36,8 @@ void PowerService::watch_charge() {
 void PowerService::tick(uint32_t now_ms) {
     events::BatterySample raw{};
     while (context_.bus.battery.pop(raw)) {
-        // Trimmed once, here, on the way out of the queue: the gauge and the
-        // cutoff monitor are separate objects fed from the same stream, and a
-        // cutoff that fired 40 mV early on a trimmed unit would be the
-        // calibration causing the failure it exists to prevent. See
-        // core/power/battery.h for what the offset is and where it comes from.
+        // INFO: fc 20nov26 trimmed once here, so the gauge and the cutoff monitor read the same
+        // calibrated sample
         const events::BatterySample sample = power::calibrated(raw, settings_.battery_offset_mv);
         gauge_.apply(sample);
         // INFO: fc 05oct26 a refused reading is no step on the ladder, the cable still overrides it

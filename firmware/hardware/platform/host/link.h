@@ -22,9 +22,7 @@ class Link : public ports::Link {
         uint16_t session{0};
     };
 
-    // INFO: fc 04aug26 A phone that negotiated ATT_MTU 247, which is what an
-    // Android central and a nRF Connect both ask for. Cases that care about the
-    // ends of the range say so with declare_payload_bytes().
+    // INFO: fc 04aug26 a phone that negotiated ATT_MTU 247, as Android centrals and nRF Connect ask
     static constexpr uint16_t kDefaultPayloadBytes = 244;
 
     static Status begin() { return Status::Ok; }
@@ -60,11 +58,8 @@ class Link : public ports::Link {
     uint32_t refused() const { return sessions_.refused(); }
     uint16_t session_id() const { return last_session_id_; }
 
-    // What this link came up with. Floored the way a real one is: nothing may
-    // model a central that offers less than BLE guarantees. Said while a link is
-    // up it is the MTU exchange landing late, which is what an iOS central does,
-    // and it reaches the bus the same way silicon's att_mtu_updated does.
-    // INFO: fc 18sep26 What every central here negotiates, said before or after one connects.
+    // INFO: fc 18sep26 what every central negotiates, floored at what BLE guarantees, and set while
+    // up it models a late MTU exchange
     void declare_payload_bytes(uint16_t bytes) {
         declared_payload_bytes_ =
             bytes < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : bytes;
@@ -179,8 +174,8 @@ class Link : public ports::Link {
     }
 
     Status record(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) {
-        // The controller's refusal, modelled: an oversized notification is not
-        // shortened, it fails, so no case can pass by sending one.
+        // INFO: fc 20nov26 an oversized notification fails rather than shortens, as the controller
+        // does
         if (bytes.size() > (session_id == 0 ? payload_bytes() : payload_bytes_to(session_id))) {
             refused_oversize++;
             return Status::OutOfRange;

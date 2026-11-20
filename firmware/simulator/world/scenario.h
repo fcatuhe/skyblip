@@ -47,13 +47,11 @@ struct ScenarioAircraft {
     double up_m{0};
     double speed_mps{30};
     double track_deg{270};
-    // Degrees per second, positive to the right: this aircraft holds a steady
-    // turn instead of a straight line, which is what thermalling is.
+    // INFO: fc 20nov26 positive to the right
     double turn_dps{0};
     double climb_mps{0};
-    // Where in the second this aircraft transmits and on which M-band channel.
-    // Left alone it behaves like a conforming transmitter. Pinned, it is how a
-    // slot-timing bug becomes a committed fixture.
+    // INFO: fc 20nov26 below zero the aircraft picks its own instant, as a conforming transmitter
+    // does
     int phase_ms{-1};
     int slot{-1};
 };
@@ -66,8 +64,6 @@ struct ScenarioEvent {
     bool on_bravo{false};
 };
 
-// One scenario file drives the browser and the regression tests, so a bug found
-// in flight becomes a committed fixture rather than a bug report.
 constexpr const char* kDefaultCallsign = "S-BLIP";
 
 struct Scenario {

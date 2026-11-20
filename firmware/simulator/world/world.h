@@ -24,33 +24,25 @@ namespace skyblip::simulator {
 
 struct VirtualAircraft {
     bool used{false};
-    // Which system this aircraft is equipped with. AdslDirect and Alptas are
-    // Manchester bursts on the same two M-band channels, which is exactly why
-    // one dwell can hear them. AdslUplink is not a fit at all: it is an aircraft
-    // this device never hears for itself, reaching it only because a skyPost on
-    // the ground heard it and relays it on the O band.
+    // INFO: fc 20nov26 AdslUplink is no fit: this device hears such an aircraft only through a
+    // skyPost's O-band relay
     protocol::System system{protocol::System::AdslDirect};
     // INFO: fc 13nov26 an aircraft with ADS-B Out only has system Unknown, silent on 868
     AdsbOut adsb{};
     uint32_t address{0};
-    // North and east of the world's origin, not of own-ship: two aircraft that
-    // both manoeuvre only describe one encounter if they fly over the same
-    // ground. up_m stays own-relative, as the air in one thermal is.
+    // INFO: fc 20nov26 north and east of the world's origin, so two manoeuvring aircraft describe
+    // one encounter, while up_m stays own-relative
     double north_m{0}, east_m{0}, up_m{0};
     double speed_mps{30};
     double track_deg{270};
-    // Degrees per second, positive to the right: a target holding a steady turn,
-    // which is what a glider in a thermal is doing.
+    // INFO: fc 20nov26 positive to the right
     double turn_dps{0};
     double climb_mps{0};
-    // Where in the second this aircraft transmits, and on which M-band channel.
-    // Below zero it picks its own instant per second the way a conforming
-    // transmitter does. Pinned, it is the knob that proves our dwell map.
+    // INFO: fc 20nov26 below zero the aircraft picks its own instant each second, as a conforming
+    // transmitter does
     int phase_ms{-1};
     int slot{-1};
     uint32_t transmissions{0};
-    // Empty for an aircraft nobody named, which is most of them: only a skyBlip
-    // or an OGN tracker puts its registration on air.
     char callsign[adsl_edge::kInformationTextBytes + 1]{0};
 };
 
@@ -142,10 +134,8 @@ class Sky {
 static_assert(Air::kMaxBursts >= 2 * Sky::kMaxAircraft + 1,
               "a second's direct bursts, their callsigns and the relay must all fit the air");
 
-// The sky, the air and the ground the firmware flies through. It drives the part
-// models only: virtual aircraft are broadcast as genuine scrambled ADS-L frames
-// and own-ship motion as genuine NMEA, so the production receive and parse paths
-// are what run.
+// INFO: fc 20nov26 drives the part models only, with genuine ADS-L frames and NMEA, so the
+// production receive and parse paths run
 template <class Platform>
 class World : public Sky {
    public:
@@ -175,13 +165,9 @@ class World : public Sky {
     void set_track_deg(int32_t track_deg) { gnss().track_deg = ((track_deg % 360) + 360) % 360; }
     void set_turn_dps(double turn_dps) { gnss().turn_dps = turn_dps; }
     void set_climb_mm_s(int32_t climb_mm_s) { gnss().climb_mm_s = climb_mm_s; }
-    // The weather, not a setting: the sea-level pressure of the air the aircraft
-    // is flying through. The barometer reads what that implies at its altitude.
     void set_airmass_qnh_pa(uint32_t qnh_pa) { airmass_qnh_pa_ = qnh_pa; }
     void set_slip_mg(int32_t slip_mg) { slip_mg_ = slip_mg; }
     void set_pps_locked(bool on) { platform_.pps().set_locked(on); }
-    // The cell as the world holds it: what the divider reads, and whether a
-    // cable is in. Everything else about the battery is the firmware's opinion.
     void set_battery_mv(int32_t battery_mv) {
         platform_.battery().divider_mv = static_cast<uint16_t>(battery_mv < 0 ? 0 : battery_mv);
     }
@@ -191,20 +177,14 @@ class World : public Sky {
     void tap_pad() { tap_pending_ = true; }
     void hold_pad(bool down) { pad_held_ = down; }
 
-    // The pilot's phone walking up and walking away. It drives the platform's own
-    // comms::LinkSession, which is the object Zephyr's connection callbacks drive
-    // on silicon, so the device learns about the central the same way either side.
+    // INFO: fc 20nov26 raised on the platform's LinkSession, as Zephyr's callbacks do on silicon,
+    // so the device learns of a phone the same way
     void connect_companion(uint16_t session_id = 1) { platform_.link().raise_link(session_id); }
-    // What a phone says on the config endpoint, arriving where the board polls
-    // it: the only path a callsign reaches this device by.
     bool send_config(const char* json);
     void disconnect_companion() { platform_.link().drop_link(); }
 
-    // One altitude, two sensors: the GNSS model integrates climb into its own
-    // altitude and the barometer reads THAT, exactly as both would see the same
-    // air. Setting them apart would show a climb rate no real pair can produce.
-    // The airmass shifts the pressure the sensor sees, as weather does, without
-    // moving the aircraft.
+    // INFO: fc 20nov26 the barometer reads the GNSS model's altitude, because two sensors set apart
+    // would show a climb no real pair produces
     template <class Barometer>
     void feel_air(Barometer& barometer) const {
         const int32_t altitude_msl_mm = gnss().altitude_mm() - gnss().geoid_separation_m * 1000;
@@ -273,8 +253,8 @@ class World : public Sky {
         if (failure_[0] == 0) std::snprintf(failure_, sizeof(failure_), "%s", what);
     }
 
-    // A modelled press has to last longer than the board's debounce window or
-    // the firmware is right to ignore it.
+    // INFO: fc 20nov26 longer than the board's debounce window, or the firmware is right to ignore
+    // the press
     static constexpr uint32_t kPressMs = 60;
 
     Platform& platform_;

@@ -10,9 +10,6 @@ namespace skyblip::simulator {
 
 namespace {
 
-// Split "[{...},{...}]" into its object substrings. The flat reader in
-// simulator/world/json then handles each object, so nothing here re-implements
-// number or string parsing.
 std::vector<std::string> objects_in_array(const std::string& text, const char* key) {
     std::vector<std::string> out;
     const std::string needle = std::string("\"") + key + "\"";
@@ -75,8 +72,6 @@ bool event_from(const json::Reader& reader, ScenarioEvent& out) {
 
 protocol::System system_from(const std::string& name) {
     if (name == "alptas") return protocol::System::Alptas;
-    // Not a fit: an aircraft this device never hears for itself, reaching it
-    // only through a skyPost's O-band relay.
     if (name == "adsl_uplink") return protocol::System::AdslUplink;
     // INFO: fc 13nov26 ADS-B Out alone puts nothing on 868
     if (name == "adsb") return protocol::System::Unknown;
