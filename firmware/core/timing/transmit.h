@@ -13,13 +13,6 @@
 
 namespace skyblip::timing {
 
-// INFO: fc 18oct26 no address, no burst: only a serial the server signed may go on the air
-inline bool ownship_transmits(const model::Ownship& own, const ClockState& clock,
-                              const settings::AirAddress& address) {
-    return address && own.fix_valid && own.utc_valid && own.tx_settled && clock.utc_valid &&
-           pps_anchored(clock);
-}
-
 class Transmitter {
    public:
     static constexpr uint32_t kAirTimeMs = adsl::kAirTimeMs;

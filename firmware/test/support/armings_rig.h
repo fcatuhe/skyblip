@@ -16,6 +16,7 @@
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
+#include "test/support/receiver_at_rate.h"
 
 namespace skyblip {
 
@@ -53,6 +54,15 @@ struct Armings {
             return refuse ? Status::OutOfRange : Status::Ok;
         }
         void abort() override { aborts++; }
+        // INFO: fc 19nov26 each plan armed is a dwell entered and a channel read, unless told
+        ports::RfCarrier carrier() const override {
+            return ports::RfCarrier{-110, deaf ? 0 : arms};
+        }
+        ports::RfSwitching switching() const override {
+            ports::RfSwitching started{};
+            started.switches = stalled ? 0 : arms;
+            return started;
+        }
         Status withdraw(uint64_t tx_at_us) override {
             withdrawn++;
             withdrawn_at_us = tx_at_us;
@@ -70,12 +80,15 @@ struct Armings {
         uint32_t withdrawn{0};
         uint64_t withdrawn_at_us{0};
         bool refuse{false};
+        bool deaf{false};
+        bool stalled{false};
     } rf{};
     bus::Bus bus{};
     bus::State state{};
     platform::host::Identity identity{platform::host::Identity::kSerial};
     platform::host::Random random{};
     ports::NullRoles null{};
+    ReceiverAtRate receiver{};
     ports::Roles roles{clock,
                        rf,
                        null.link,
@@ -86,7 +99,7 @@ struct Armings {
                        null.dfu,
                        null.die_temperature,
                        null.indicator,
-                       null.gnss,
+                       receiver,
                        identity,
                        random,
                        ports::Capability::Rf};

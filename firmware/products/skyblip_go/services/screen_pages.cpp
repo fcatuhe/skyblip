@@ -308,8 +308,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.callsign = settings.callsign;
             snapshot.fix_valid = own.fix_valid;
             snapshot.utc_valid = own.utc_valid;
-            snapshot.transmitting = timing::ownship_transmits(own, context_.state.clock,
-                                                              context_.state.activation.address());
+            snapshot.transmitting = context_.state.transmit.transmits();
             snapshot.satellites = own.satellites;
             snapshot.stage = context_.state.gnss.stage;
             snapshot.stage_s = context_.state.gnss.stage_s;
@@ -358,8 +357,7 @@ NearbyGo ScreenService::nearby_go() const {
     go.charging = context_.state.power.battery.charging;
     go.stage = context_.state.gnss.stage;
     go.satellites = own.satellites;
-    go.transmitting =
-        timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address());
+    go.transmitting = context_.state.transmit.transmits();
     go.traffic = table.count() - table.count_of(model::Source::Adsb);
     return go;
 }

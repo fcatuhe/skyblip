@@ -14,6 +14,7 @@
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
+#include "test/support/receiver_at_rate.h"
 
 namespace skyblip {
 
@@ -31,6 +32,7 @@ struct Pass {
     bus::State state{};
     platform::host::Rf rf{radio, platform.clock(), bus.rf};
     ports::NullRoles null{};
+    ReceiverAtRate receiver{};
     ports::Roles roles{platform.clock(),
                        rf,
                        null.link,
@@ -41,7 +43,7 @@ struct Pass {
                        null.dfu,
                        null.die_temperature,
                        null.indicator,
-                       null.gnss,
+                       receiver,
                        platform.identity(),
                        platform.random(),
                        ports::Capability::Rf};

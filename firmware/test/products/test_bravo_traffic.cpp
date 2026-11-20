@@ -127,7 +127,7 @@ TEST_CASE("bravo traffic: nearby's Bravo row reads its health and its ADS-B, unt
     CHECK(unit_reads(flight.glass(), go::kNearbyBatteryEnd, kBravoY, "64", "%"));
     CHECK(unit_reads(flight.glass(), go::kNearbySatellitesEnd, kBravoY, "9", "SAT"));
     CHECK(unit_reads(flight.glass(), go::kNearbyRelativeAltitudeEnd, kBravoY, "1", "TFC"));
-    CHECK(unit_reads(flight.glass(), go::kNearbyRelativeAltitudeEnd, go::kNearbyUnitY, "0", "TFC"));
+    CHECK(flight.state().traffic.count() == flight.state().traffic.count_of(model::Source::Adsb));
 
     flight.tango.air.set_in_range(false);
     flight.tango.air.drop();

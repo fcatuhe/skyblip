@@ -14,6 +14,7 @@
 #include "core/timing/channel.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
+#include "core/timing/transmit_gate.h"
 #include "products/skyblip_go/settings.h"
 #include "protocols/adsl/media_access.h"
 #include "runtime/service.h"
@@ -26,6 +27,8 @@ class RadioService : public runtime::Service {
    public:
     // INFO: fc 28sep26 under the 403 ms between the two M dwells closing, so one retired dwell does
     static constexpr uint32_t kTxOutcomeMaxAgeMs = 250;
+    // INFO: fc 19nov26 three dwells and readings a second, so nine missed is a radio not answering
+    static constexpr uint32_t kRadioAnswerMaxAgeMs = 3000;
 
     RadioService(runtime::Context& context, const Settings& settings)
         : runtime::Service(context), settings_(settings) {}
@@ -106,6 +109,9 @@ class RadioService : public runtime::Service {
     // the radio believes it is inside the second reads the 32-bit millisecond
     // counter (ports/clock.h).
     bool identified();
+    void judge_transmit(uint32_t now_ms);
+    bool radio_answers(uint32_t now_ms);
+    bool receiver_holds_rate() const;
     int phase_ms() const;
     int phase_at(uint64_t now_us) const;
     int64_t second_origin_us() const;
@@ -156,7 +162,7 @@ class RadioService : public runtime::Service {
     void publish_dwell(uint32_t now_ms);
     void accrue_armed();
     void collect_outcome(uint32_t now_ms);
-    void take_carrier_samples();
+    void take_carrier_samples(uint32_t now_ms);
     void take_switching(uint32_t now_ms);
     void collect_busy(uint32_t now_ms);
     Armed* carrying(uint64_t tx_at_us, Payload& payload);
@@ -207,6 +213,10 @@ class RadioService : public runtime::Service {
     uint64_t pass_us_{0};
     uint32_t seen_tx_ok_{0};
     uint32_t seen_carrier_samples_{0};
+    std::optional<uint32_t> channel_read_ms_{};
+    std::optional<uint32_t> dwell_started_ms_{};
+    std::optional<uint32_t> dwell_refused_ms_{};
+    uint32_t seen_refused_{0};
     uint32_t seen_switches_{0};
     uint32_t seen_busy_{0};
     Contention contention_[kPayloads]{};

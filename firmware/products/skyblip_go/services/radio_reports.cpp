@@ -6,8 +6,11 @@ void RadioService::take_switching(uint32_t now_ms) {
     const ports::RfSwitching switching = context_.roles.rf.switching();
     context_.state.rf.timing_statistics.record_switching(
         switching.hop_us, switching.to_o_band_us, switching.to_m_band_us, switching.late_starts);
+    if (switching.refused != seen_refused_) dwell_refused_ms_ = now_ms;
+    seen_refused_ = switching.refused;
     if (switching.switches == seen_switches_) return;
     seen_switches_ = switching.switches;
+    dwell_started_ms_ = now_ms;
     record_switch(switching.last, now_ms);
 }
 
@@ -39,10 +42,11 @@ diagnostics::SwitchKind RadioService::kind_of(const ports::RfSwitch& change) {
                                           : diagnostics::SwitchKind::Retune;
 }
 
-void RadioService::take_carrier_samples() {
+void RadioService::take_carrier_samples(uint32_t now_ms) {
     const ports::RfCarrier carrier = context_.roles.rf.carrier();
     if (carrier.samples == seen_carrier_samples_) return;
     seen_carrier_samples_ = carrier.samples;
+    channel_read_ms_ = now_ms;
     noise_floor_.sample(carrier.level_dbm);
 }
 
@@ -76,9 +80,7 @@ diagnostics::Refusal RadioService::refusal_of(const timing::SlotPlan& slot,
     if (!armed) return diagnostics::Refusal::Unarmed;
     if (carries_tx) return diagnostics::Refusal::None;
     if (attempt.over_budget) return diagnostics::Refusal::OverBudget;
-    if (!timing::ownship_transmits(context_.state.own, context_.state.clock,
-                                   context_.state.activation.address()))
-        return diagnostics::Refusal::Unsettled;
+    if (!context_.state.transmit.transmits()) return diagnostics::Refusal::Unsettled;
     if (attempt.stale) return diagnostics::Refusal::HeldForFix;
     return diagnostics::Refusal::OffSchedule;
 }

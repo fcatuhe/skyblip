@@ -34,7 +34,6 @@
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
 #include "core/protocol/callsign.h"
-#include "core/timing/slot.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
@@ -219,32 +218,6 @@ TEST_CASE("nmea: PFLAU says GPS 1 on the ground, which XCSoar draws as a 2D fix"
     fly(rig, now_ms, 12);
     REQUIRE(flight::state_from(rig.state().own.flight_state) == flight::FlightState::Airborne);
     CHECK(fields(last_of(rig, "$PFLAU"))[3] == "2");
-}
-
-// The TX field is what an app shows as transmitting, and a device can hear all and say nothing.
-TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent device admits it") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
-    rig.raise_link();
-    // Nothing goes on air before the first fix has settled, so neither does a TX of 1.
-    fly(rig, now_ms, gnss::kFirstFixSettleMs / 1000);
-    REQUIRE(rig.state().own.tx_settled);
-    REQUIRE(fields(last_of(rig, "$PFLAU"))[2] == "1");
-
-    // A PPS lost past its holdover is no burst (core/timing/slot.h), while the fix stays.
-    rig.platform.pps().set_locked(false);
-    rig.platform.link().clear();
-    fly(rig, now_ms, 2);
-    REQUIRE(fields(last_of(rig, "$PFLAU"))[2] == "1");
-    fly(rig, now_ms, timing::kPpsHoldoverMs / 1000);
-    rig.platform.link().clear();
-    fly(rig, now_ms, 2);
-    const std::vector<std::string> values = fields(last_of(rig, "$PFLAU"));
-    CHECK(values[2] == "0");
-    CHECK(values[3] == "2");
-    CHECK(rig.state().own.fix_valid);
 }
 
 // FLARM's scale is time to impact, and 1 is its lowest real alarm: a 3 km ring

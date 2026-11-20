@@ -23,6 +23,7 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
 #include "core/timing/slot_timing_statistics.h"
+#include "core/timing/transmit_gate.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -215,6 +216,8 @@ struct State {
     traffic::CallsignTable callsigns{};
     radio::Log radio_log{};
     RfState rf{};
+    // INFO: fc 19nov26 judged once a pass by the Go's RadioService, read by every transmit path
+    timing::TransmitGate transmit{};
     PowerState power{};
     FlightState flight{};
     GnssState gnss{};

@@ -126,8 +126,7 @@ void NmeaService::emit_status(uint32_t now_ms) {
         worst_level = target->alarm_level;
     }
 
-    const bool transmitting =
-        timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address());
+    const bool transmitting = context_.state.transmit.transmits();
     const int length = threat != nullptr
                            ? protocol::format_pflau(
                                  sentence_, sizeof(sentence_), own, transmitting, heard,

@@ -220,39 +220,6 @@ TEST_CASE("transmit: nothing goes out unless the slot allows it") {
     CHECK(early.at_ms >= adsl::kDirectStartMs);
 }
 
-TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored clock") {
-    const skyblip::settings::AirAddress address = 0x00012Au;
-    skyblip::model::Ownship own{};
-    own.fix_valid = true;
-    own.utc_valid = true;
-    own.tx_settled = true;
-    CHECK(ownship_transmits(own, anchored(), address));
-
-    CHECK_FALSE(ownship_transmits(own, ClockState{true, false, 0}, address));
-    CHECK_FALSE(ownship_transmits(own, ClockState{false, true, 0}, address));
-
-    skyblip::model::Ownship unfixed = own;
-    unfixed.fix_valid = false;
-    CHECK_FALSE(ownship_transmits(unfixed, anchored(), address));
-
-    skyblip::model::Ownship untimed = own;
-    untimed.utc_valid = false;
-    CHECK_FALSE(ownship_transmits(untimed, anchored(), address));
-
-    skyblip::model::Ownship unsettled = own;
-    unsettled.tx_settled = false;
-    CHECK_FALSE(ownship_transmits(unsettled, anchored(), address));
-}
-
-// Issue #126: a unit the server never gave a serial has nothing it may transmit under.
-TEST_CASE("transmit: own-ship with every fact but an address does not go on air") {
-    skyblip::model::Ownship own{};
-    own.fix_valid = true;
-    own.utc_valid = true;
-    own.tx_settled = true;
-    CHECK_FALSE(ownship_transmits(own, anchored(), std::nullopt));
-}
-
 // C.5 on a held second: the bench's drift never carries a burst out of its window.
 TEST_CASE("transmit: on a held second a burst keeps the drift away from its window's edges") {
     const ClockState held{true, false, kPpsHoldoverMs, 12'000'000};

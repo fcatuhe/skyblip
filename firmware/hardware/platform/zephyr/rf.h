@@ -174,10 +174,12 @@ class Rf : public ports::Rf {
                 mailbox_.land();
                 continue;
             }
-            if (start(plan, armed_at_us))
+            if (start(plan, armed_at_us)) {
                 dwell(plan);
-            else
+            } else {
+                switching_.refused++;
                 miss_unfinished(mailbox_.flying_bursts(), 0, 0);
+            }
             last_end_us_ = plan.end_us;
             mailbox_.land();
             health(mailbox_.reinitialisation_affordable());
