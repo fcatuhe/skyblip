@@ -113,11 +113,9 @@ KEEPALIVE void simulator_set_turn_dps_e1(int turn_dps_e1) {
     on_unit([&](auto& unit) { unit.world().set_turn_dps(turn_dps_e1 / 10.0); });
 }
 KEEPALIVE void simulator_set_slip_mg(int slip_mg) { go_unit().world().set_slip_mg(slip_mg); }
-// The air outside, in pascals.
 KEEPALIVE void simulator_set_airmass_qnh_pa(int qnh_pa) {
     on_unit([&](auto& unit) { unit.world().set_airmass_qnh_pa(static_cast<uint32_t>(qnh_pa)); });
 }
-// The cell and the cable: the same two facts the board can read on silicon.
 KEEPALIVE void simulator_set_battery_mv(int battery_mv) {
     on_unit([&](auto& unit) { unit.world().set_battery_mv(battery_mv); });
 }
@@ -131,9 +129,6 @@ KEEPALIVE void simulator_set_position(int latitude_1e7, int longitude_1e7) {
     });
 }
 
-// equipment picks what the aircraft carries. ADS-L and ALP-TAS land on the same
-// two M-band channels, so it is the shared sync window that decides whether we
-// hear them, not the button. A Go hears ADS-B only through a paired Bravo.
 static protocol::System system_of(int equipment) {
     if (g_flying == simulator::Product::Bravo || equipment == kAdsb)
         return protocol::System::Unknown;
@@ -158,9 +153,7 @@ KEEPALIVE int simulator_add_aircraft(int north_m, int east_m, int up_m, int spee
                                          adsb_of(equipment));
     });
 }
-// phase_ms/slot below zero let the aircraft pick its own instant, as a
-// conforming transmitter does. Pinned, they put a burst where the dwell map
-// says we should or should not hear it.
+// INFO: fc 20nov26 a phase_ms or slot below zero lets the aircraft pick its own instant
 KEEPALIVE void simulator_add_aircraft_at(int north_m, int east_m, int up_m, int speed_mps,
                                          int track_deg, int phase_ms, int slot, int equipment) {
     on_unit([&](auto& unit) {
@@ -208,7 +201,7 @@ KEEPALIVE int simulator_aircraft_count() {
     return on_unit([](auto& unit) { return unit.world().aircraft_count(); });
 }
 
-// Layout: byte = panel[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
+// INFO: fc 20nov26 a pixel is black if panel[y * stride + (x >> 3)] & (0x80 >> (x & 7))
 KEEPALIVE const unsigned char* simulator_panel() { return go_unit().panel().data(); }
 KEEPALIVE const unsigned char* simulator_draw_prompt(const char* prompt, const char* argument,
                                                      const char* settings, unsigned seconds_left,
@@ -295,7 +288,6 @@ KEEPALIVE int simulator_dwell_frequency_khz() {
     return static_cast<int>(go_unit().product().state().rf.plan.frequency_hz / 1000);
 }
 
-// The tape: every burst that was on the air, heard or not.
 KEEPALIVE int simulator_air_record_count() { return go_unit().world().air().record_count(); }
 KEEPALIVE int simulator_air_phase_ms(int index) {
     return go_unit().world().air().record_at(index).phase_ms;

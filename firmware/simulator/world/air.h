@@ -10,29 +10,22 @@
 namespace skyblip::simulator {
 
 enum class AirEvent : uint8_t {
-    // Own-ship put a burst on air.
     Tx,
-    // A burst arrived while the radio was tuned to its channel and listening.
     Rx,
-    // A burst arrived while the radio was elsewhere: wrong band, wrong channel,
-    // transmitting, between dwells, or listening for a sync word this burst does
-    // not carry. This is what a slot-timing bug looks like.
+    // INFO: fc 20nov26 a burst missed for its band, its channel, a transmission, a gap between
+    // dwells or its sync word, which is how a slot-timing bug shows
     Deaf,
-    // Two bursts overlapped on the same channel.
     Collision,
 };
 
-// The longest burst the channel carries: an O-band uplink frame, which is not
-// Manchester-coded and is eleven times what an M-band one is.
 constexpr int kMaxBurstBytes = adsl::kUplinkMaxBurstBytes;
 static_assert(protocol::kTxChipBytes <= kMaxBurstBytes, "an M-band burst would not fit the air");
 
 struct AirRecord {
     uint64_t at_us{0};
     uint32_t frequency_hz{0};
-    // The chip rate the burst was sent at. It is part of the burst, not of the
-    // receiver: the two bands are two modulations and a dwell framing the wrong
-    // one is deaf on air, which is a bug the tape has to be able to show.
+    // INFO: fc 20nov26 the rate belongs to the burst, so a dwell framing the wrong band shows deaf
+    // on the tape
     uint32_t chip_rate_bps{adsl::kMBandChipRateBps};
     uint16_t phase_ms{0};
     uint16_t bytes{0};
@@ -41,19 +34,16 @@ struct AirRecord {
     uint8_t chips[kMaxBurstBytes]{};
 };
 
-// The 868 MHz channel between the modelled radio and everything else flying.
-// A frame exists at an instant, on a frequency, for as long as it takes to send
-// it. Whether the radio hears it is decided by where the radio was tuned when
-// the burst started, never by who queued it. Every burst is logged, heard or
-// not, which is what makes slot timing falsifiable instead of assumed.
+// INFO: fc 20nov26 where the radio was tuned as a burst starts decides whether it is heard, and
+// every burst is logged
 class Air {
    public:
-    // §C.2 at 100 kchip/s: 16-chip preamble, 64-chip Manchester sync word and
-    // 25 Manchester-encoded bytes.
+    // INFO: fc 20nov26 ADS-L C.2 at 100 kchip/s: a 16-chip preamble, a 64-chip sync word and 25
+    // Manchester-coded bytes
     static constexpr uint64_t kAirTimeUs = 4800;
     static constexpr int8_t kNoiseFloorDbm = -110;
-    // §C.2: 200 kHz between M-band channels, so anything within half of that is
-    // in the receiver's passband and the exact PLL word does not matter.
+    // INFO: fc 20nov26 half the 200 kHz M-band spacing of C.2, so a burst inside it is in the
+    // receiver's passband
     static constexpr uint32_t kChannelToleranceHz = 100000;
     static constexpr int8_t kSensitivityDbm = -115;
     static constexpr int kMaxBursts = 65;
@@ -64,31 +54,19 @@ class Air {
                kChannelToleranceHz;
     }
 
-    // How long a burst of this many bytes occupies the channel at this chip
-    // rate. Derived rather than remembered, because the O band sends eleven
-    // times the bytes at twice the rate and a fixed figure would be wrong for
-    // one of the two.
+    // INFO: fc 20nov26 derived, because the O band sends eleven times the bytes at twice the rate
     static uint64_t air_time_us(uint16_t bytes, uint32_t chip_rate_bps) {
         return static_cast<uint64_t>(bytes) * 8u * 1000000u / chip_rate_bps;
     }
 
-    // A burst is chips on a frequency, at a chip rate: the sync word the
-    // transmitter used is part of them, which is what decides whether a
-    // listening receiver frames it, and so is the rate it clocked them out at.
     void emit(uint64_t at_us, uint32_t frequency_hz, const uint8_t* chips, uint16_t bytes,
               int8_t rssi_dbm, uint32_t chip_rate_bps = adsl::kMBandChipRateBps);
 
     void step(uint64_t now_us, models::Sx1262& radio);
     void take_own_transmission(uint64_t now_us, models::Sx1262& radio);
 
-    // What a receiver armed with the shared sync window would frame out of a
-    // logged M-band burst: the tape is chips, and reading it means detecting the
-    // sync exactly as the radio does.
     static bool framed(const AirRecord& record, protocol::Frame& out);
 
-    // The same for the O band, where there is no Manchester and no shared
-    // window: strip §C.4.3's sync word and the length byte behind it, and what
-    // is left is the length byte and the uplink packet.
     static bool framed_uplink(const AirRecord& record, uint8_t* frame);
 
     void clear();
