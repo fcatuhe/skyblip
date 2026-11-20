@@ -7,8 +7,7 @@
 
 namespace skyblip::flight {
 
-// INFO: fc 15oct26 the cell and the aircraft heard, once a minute: one record in sixty of the
-// track's
+// INFO: fc 15oct26 the cell and the aircraft heard, once a minute: one record in sixty
 constexpr uint32_t kLogStatusPeriodMs = 60000;
 
 // INFO: fc 15oct26 one per traffic table slot, which the service holds equal with a static_assert

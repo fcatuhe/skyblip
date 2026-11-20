@@ -9,8 +9,7 @@
 
 namespace skyblip::dfu {
 
-// INFO: fc 10nov26 every product shares one signing key, so an upload must name the running image's
-// class
+// INFO: fc 10nov26 every product shares one signing key, so an upload must name the running class
 class ProductCheck {
    public:
     static constexpr size_t kProtectedAreaBytes = 128;
