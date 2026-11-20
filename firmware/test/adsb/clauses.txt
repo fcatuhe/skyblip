@@ -1,20 +1,4 @@
-# The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_do260b_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
-DO-260B A.1.7 Latitude/Longitude Coding Using Compact Position Reporting (CPR)
-DO-260B A.1.7.1 Principle of the CPR algorithm
-DO-260B A.1.7.2 CPR Algorithm Parameters and Internal Functions
-DO-260B A.1.7.3 CPR Encoding Process
-DO-260B A.1.7.4 Locally Unambiguous CPR Decoding
-DO-260B A.1.7.5 Locally Unambiguous CPR Decoding for Airborne, TIS-B and Intent Lat/Lon
-DO-260B A.1.7.6 Locally Unambiguous Decoding for Surface Position
-DO-260B A.1.7.7 Globally Unambiguous Airborne Position Decoding
-DO-260B A.1.7.8 Globally Unambiguous CPR Decoding of Surface Position
-DO-260B A.1.7.9 CPR Decoding of Received Position Reports
-DO-260B A.1.7.9.1 Overview
-DO-260B A.1.7.9.2 Emitter Centered Local Decoding
-DO-260B A.1.7.10 Reasonableness Test for CPR Decoding of Received Position Messages
-DO-260B A.1.7.10.1 Overview
-DO-260B A.1.7.10.2 Reasonableness Test Applied to Position Determined from Globally Unambiguous Decoding
-DO-260B A.1.7.10.3 Reasonableness Test Applied to Position Determined from Locally Unambiguous Decoding
+# The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
 DO-260B 2.2.3.2 ADS-B and TIS-B Message Baseline Format and Structures
 DO-260B 2.2.3.2.1 ADS-B Message Baseline Field Descriptions
 DO-260B 2.2.3.2.1.1 "DF" Downlink Format Field
@@ -281,3 +265,19 @@ DO-260B 2.2.10.7.2 Duplicate Address Condition
 DO-260B 2.2.17.4 TIS-B Message Processing and Report Generation
 DO-260B 2.2.18.4 ADS-R Message Processing
 DO-260B 2.2.18.5 ADS-R Report Processing
+DO-260B A.1.7 Latitude/Longitude Coding Using Compact Position Reporting (CPR)
+DO-260B A.1.7.1 Principle of the CPR algorithm
+DO-260B A.1.7.2 CPR Algorithm Parameters and Internal Functions
+DO-260B A.1.7.3 CPR Encoding Process
+DO-260B A.1.7.4 Locally Unambiguous CPR Decoding
+DO-260B A.1.7.5 Locally Unambiguous CPR Decoding for Airborne, TIS-B and Intent Lat/Lon
+DO-260B A.1.7.6 Locally Unambiguous Decoding for Surface Position
+DO-260B A.1.7.7 Globally Unambiguous Airborne Position Decoding
+DO-260B A.1.7.8 Globally Unambiguous CPR Decoding of Surface Position
+DO-260B A.1.7.9 CPR Decoding of Received Position Reports
+DO-260B A.1.7.9.1 Overview
+DO-260B A.1.7.9.2 Emitter Centered Local Decoding
+DO-260B A.1.7.10 Reasonableness Test for CPR Decoding of Received Position Messages
+DO-260B A.1.7.10.1 Overview
+DO-260B A.1.7.10.2 Reasonableness Test Applied to Position Determined from Globally Unambiguous Decoding
+DO-260B A.1.7.10.3 Reasonableness Test Applied to Position Determined from Locally Unambiguous Decoding

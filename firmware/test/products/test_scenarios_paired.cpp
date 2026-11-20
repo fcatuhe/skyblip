@@ -239,7 +239,8 @@ TEST_CASE("paired scenario: the Go shows Bravo's ADS-B as B targets, the airline
 }
 
 // ADS-L F.2.3 puts the ICAO address on both systems, and the table ranks a direct reception first.
-TEST_CASE("paired scenario: an aircraft on ADS-L and ADS-B shows once on the Go, as ADS-L") {
+TEST_CASE("paired scenario: an aircraft on ADS-L and ADS-B shows once on the Go, as ADS-L" *
+          doctest::test_suite("main")) {
     Paired paired("scenarios/paired.json");
     paired.run_until(10000);
     const traffic::Target* by_bravo = target_of(paired.simulator.bravo().state(), kDual);
@@ -400,7 +401,8 @@ TEST_CASE("paired scenario: Bravo plays the Go's calls within a claim period of 
     CHECK_FALSE(given_back);
 }
 
-TEST_CASE("paired scenario: an ADS-B threat sounds on the Go+ and on Bravo, at one onset") {
+TEST_CASE("paired scenario: an ADS-B threat sounds on the Go+ and on Bravo, at one onset" *
+          doctest::test_suite("main")) {
     Paired paired("scenarios/paired.json");
     const Onset onset = paired.fly_to_onset(kLateThreat);
     REQUIRE(onset.at_ms != 0);

@@ -134,7 +134,8 @@ struct Flight {
 
 }  // namespace
 
-TEST_CASE("bravo alarm: a Go+ and its Bravo both sound the Go's call, within the link's latency") {
+TEST_CASE("bravo alarm: a Go+ and its Bravo both sound the Go's call, within the link's latency" *
+          doctest::test_suite("main")) {
     Flight flight;
     flight.seconds(20);
     REQUIRE(flight.pair.go.state().bravo == comms::BravoState::Live);
@@ -153,7 +154,8 @@ TEST_CASE("bravo alarm: a second aircraft under a standing alarm is called again
     flight.both_call(kSecondAircraft, 700);
 }
 
-TEST_CASE("bravo alarm: a press on Bravo dismisses the alarm on both units") {
+TEST_CASE("bravo alarm: a press on Bravo dismisses the alarm on both units" *
+          doctest::test_suite("main")) {
     Flight flight;
     flight.seconds(20);
     flight.both_call();
@@ -171,7 +173,8 @@ TEST_CASE("bravo alarm: a press on Bravo dismisses the alarm on both units") {
     CHECK(flight.bravo_standing() == traffic::Level::None);
 }
 
-TEST_CASE("bravo alarm: a long touch on the Go dismisses the alarm on both units") {
+TEST_CASE("bravo alarm: a long touch on the Go dismisses the alarm on both units" *
+          doctest::test_suite("main")) {
     Flight flight;
     flight.seconds(20);
     flight.both_call();
@@ -237,7 +240,8 @@ TEST_CASE("bravo alarm: unpairing gives Bravo back the alarm it had before the p
 
 // A plain Go has no buzzer and no motor, so BRAVO LOUD is a Go's ADS-L traffic heard on Bravo.
 TEST_CASE(
-    "tango alarm: a plain Go on BRAVO LOUD sounds its ADS-L traffic on Bravo, and none itself") {
+    "tango alarm: a plain Go on BRAVO LOUD sounds its ADS-L traffic on Bravo, and none itself" *
+    doctest::test_suite("main")) {
     Flight flight(kPlainGo);
     flight.pair.go.settings().alarm = go::Alarm::Loud;
     flight.seconds(20);

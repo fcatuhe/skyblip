@@ -12,6 +12,7 @@
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
+#include "test/support/confirmed.h"
 
 using namespace skyblip;
 using namespace skyblip::comms;
@@ -56,7 +57,8 @@ ConfigService& upload_opened(ConfigService& config, SpyDfu& dfu) {
     return config;
 }
 
-TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation") {
+TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -121,20 +123,19 @@ TEST_CASE("comms: an upload that lands whole latches the install with no second 
     config.on_rx(config_frame(kDfu));
     config.confirm();
     config.tick(100);
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
 
     dfu.finished = true;
     config.tick(200);
     CHECK(config.pending() == Pending::None);
-    CHECK(config.install_requested());
+    CHECK(taken(config) == comms::Action::Install);
     CHECK_FALSE(config.receiving_firmware());
     CHECK(dfu.triggered == 0);
     CHECK(link_text(link.last().bytes).find("\"acknowledge\":true,\"reason\":\"install\"") !=
           std::string::npos);
 
-    config.clear_install_request();
     config.tick(300);
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
 }
 
 TEST_CASE("comms: an image other than the one the press named is refused, not installed") {
@@ -146,7 +147,7 @@ TEST_CASE("comms: an image other than the one the press named is refused, not in
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     upload_opened(config, dfu).tick(100);
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
     CHECK_FALSE(config.receiving_firmware());
     CHECK(link_text(link.last().bytes).find("not_approved") != std::string::npos);
 }
@@ -160,7 +161,7 @@ TEST_CASE("comms: a landed upload whose slot cannot be read is refused, not rebo
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     upload_opened(config, dfu).tick(100);
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
     CHECK(link_text(link.last().bytes).find("nothing_staged") != std::string::npos);
 }
 
@@ -180,7 +181,7 @@ TEST_CASE("comms: opening an upload window forgets the upload an earlier one fin
 
     config.tick(100);
     CHECK(config.receiving_firmware());
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
 }
 
 TEST_CASE("comms: a command code the registry does not hold is refused as unknown_command") {
@@ -193,7 +194,7 @@ TEST_CASE("comms: a command code the registry does not hold is refused as unknow
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":99}"));
     CHECK(config.pending() == Pending::None);
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
     CHECK(link_text(link.last().bytes).find("unknown_command") != std::string::npos);
 }
 
@@ -249,7 +250,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
 
     config.set_supply_warned(true);
     config.tick(100);
-    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(taken(config));
     CHECK_FALSE(config.receiving_firmware());
     CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
 
@@ -257,7 +258,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     REQUIRE(config.pending() == Pending::PowerOff);
     config.confirm();
-    CHECK(config.power_off_requested());
+    CHECK(taken(config) == comms::Action::PowerOff);
 }
 
 TEST_CASE("comms: the update question names the image state and the versions of the attempt") {
@@ -328,15 +329,12 @@ TEST_CASE("comms: recovery routed through confirmation, latched and never entere
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"recovery\"}"));
     CHECK(config.pending() == Pending::Recovery);
-    CHECK_FALSE(config.recovery_requested());
+    CHECK_FALSE(taken(config));
     config.confirm();
-    CHECK(config.recovery_requested());
+    CHECK(taken(config) == comms::Action::Recovery);
     CHECK(dfu.recovery == 0);
-    CHECK_FALSE(config.power_off_requested());
     CHECK(link_text(link.last().bytes).find("\"reason\":\"recovery\"") != std::string::npos);
-
-    config.clear_recovery_request();
-    CHECK_FALSE(config.recovery_requested());
+    CHECK_FALSE(taken(config));
 }
 
 TEST_CASE("comms: recovery refused in flight") {
@@ -355,7 +353,8 @@ TEST_CASE("comms: recovery refused in flight") {
 // The third way a device is asked to go dark (core/power/shutdown.h:
 // ShutdownReason::LinkRequest). The button and the cutoff already had callers;
 // this is the companion link's, behind the same gate as dfu and recovery.
-TEST_CASE("comms: power_off is confirmed on the device, then latched for the sequencer") {
+TEST_CASE("comms: power_off is confirmed on the device, then latched for the sequencer" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -365,16 +364,14 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
 
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(config.pending() == Pending::PowerOff);
-    CHECK_FALSE(config.power_off_requested());  // a remote request alone turns nothing off
+    CHECK_FALSE(taken(config));  // a remote request alone turns nothing off
     CHECK(link_text(link.last().bytes).find("confirm_power_off") != std::string::npos);
 
     config.confirm();
     CHECK(config.pending() == Pending::None);
-    CHECK(config.power_off_requested());
+    CHECK(taken(config) == comms::Action::PowerOff);
     CHECK(link_text(link.last().bytes).find("\"acknowledge\":true") != std::string::npos);
-
-    config.clear_power_off_request();
-    CHECK_FALSE(config.power_off_requested());
+    CHECK_FALSE(taken(config));
 }
 
 TEST_CASE("comms: power_off refused in flight") {
@@ -386,7 +383,7 @@ TEST_CASE("comms: power_off refused in flight") {
     config.set_flight_state(flight::FlightState::Airborne);
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(config.pending() == Pending::None);
-    CHECK_FALSE(config.power_off_requested());
+    CHECK_FALSE(taken(config));
     CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
 
     // And a confirmation that arrives after takeoff does not turn it off either.
@@ -395,7 +392,7 @@ TEST_CASE("comms: power_off refused in flight") {
     REQUIRE(config.pending() == Pending::PowerOff);
     config.set_flight_state(flight::FlightState::Airborne);
     config.confirm();
-    CHECK_FALSE(config.power_off_requested());
+    CHECK_FALSE(taken(config));
 }
 
 // A taxi read as a take-off once aborted a confirmed upload, which now runs on behind the radar.

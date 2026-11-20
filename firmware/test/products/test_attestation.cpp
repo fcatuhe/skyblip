@@ -79,7 +79,8 @@ crypto::Ed25519::Signature signature_in(const std::string& frame) {
 }  // namespace
 
 // Ed25519 is deterministic, so the unit's signature is the one the server's suite checks.
-TEST_CASE("attestation: the unit signs the vectors' attestation byte for byte, with no prompt") {
+TEST_CASE("attestation: the unit signs the vectors' attestation byte for byte, with no prompt" *
+          doctest::test_suite("main")) {
     Desk desk(Identity::kSerial);
     REQUIRE(desk.vectors.flag("release"));
 

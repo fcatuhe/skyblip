@@ -8,7 +8,7 @@ A skyBlip Go never installs a skyBlip Bravo image over the air, and a Bravo neve
 
 ### The mark
 
-The mark is MCUboot's image class, `IMAGE_TLV_UUID_CID` (0x75), with the vendor beside it, `IMAGE_TLV_UUID_VID` (0x74). `products/<product>/prj.conf` sets them through Zephyr's `CONFIG_MCUBOOT_IMGTOOL_UUID_VID`, `_VID_NAME`, `CONFIG_MCUBOOT_IMGTOOL_UUID_CID` and `_CID_NAME` (Zephyr v4.4.2, `modules/Kconfig.mcuboot:125-158`), which `cmake/mcuboot.cmake:125-131` passes to imgtool as `--vid` and `--cid`. imgtool derives each UUID with `uuid5` (MCUboot `scripts/imgtool/image.py`, `parse_uuid`) and adds both to the protected TLVs (`image.py:661-673`), which the image's hash and signature cover (MCUboot `docs/design.md`, Protected TLVs).
+The mark is MCUboot's image class, `IMAGE_TLV_UUID_CID` (0x75), with the vendor beside it, `IMAGE_TLV_UUID_VID` (0x74). `products/common/prj.conf` and each `products/<product>/prj.conf` set them through Zephyr's `CONFIG_MCUBOOT_IMGTOOL_UUID_VID`, `_VID_NAME`, `CONFIG_MCUBOOT_IMGTOOL_UUID_CID` and `_CID_NAME` (Zephyr v4.4.2, `modules/Kconfig.mcuboot:125-158`), which `cmake/mcuboot.cmake:125-131` passes to imgtool as `--vid` and `--cid`. imgtool derives each UUID with `uuid5` (MCUboot `scripts/imgtool/image.py`, `parse_uuid`) and adds both to the protected TLVs (`image.py:661-673`), which the image's hash and signature cover (MCUboot `docs/design.md`, Protected TLVs).
 
 | TLV | Name it is derived from | UUID |
 |---|---|---|

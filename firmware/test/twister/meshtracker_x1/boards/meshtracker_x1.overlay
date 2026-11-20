@@ -1,0 +1,14 @@
+/* INFO: fc 19nov26 the console is USB CDC, which only this smoke image builds, so the board declares none */
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
+
+zephyr_udc0: &usbd {
+	status = "okay";
+
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};

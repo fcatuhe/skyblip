@@ -15,6 +15,7 @@
 #include "core/timing/slot.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "hardware/platform/clear_channel.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/rf_mailbox.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
@@ -45,7 +46,7 @@ class Rf : public ports::Rf {
     // INFO: fc 03oct26 two RTC ticks: at most 17 status reads a burst, none outside its tail
     static constexpr uint64_t kTxTailPollUs = 60;
 
-    Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
+    Rf(parts::Sx1262& radio, ports::Clock& clock, bus::RfQueue& out)
         : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
@@ -210,12 +211,11 @@ class Rf : public ports::Rf {
         if (radio_.service(elapsed_ms, silence_ceiling_ms)) dio1_wakes_ = dio1_wakes_ && arm_dio1();
     }
 
+    // INFO: fc 19nov26 the clock counts ticks, so the tick at the deadline needs no spin after it
     void sleep_until(uint64_t deadline_us) {
-        const uint64_t now_us = clock_.microseconds();
-        if (deadline_us <= now_us) return;
-        const uint64_t remaining_us = deadline_us - now_us;
-        if (remaining_us > 2000) k_usleep(static_cast<int32_t>(remaining_us - 1000));
-        while (clock_.microseconds() < deadline_us) k_busy_wait(10);
+        const k_timeout_t due =
+            K_TIMEOUT_ABS_TICKS(static_cast<k_ticks_t>(k_us_to_ticks_ceil64(deadline_us)));
+        while (!abort_ && clock_.microseconds() < deadline_us) mailbox_.wait_wake(due);
     }
 
     // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
@@ -297,7 +297,7 @@ class Rf : public ports::Rf {
 
     bool refuse(const ports::RfBurst& burst, uint8_t index, const Assessment& assessment) {
         mailbox_.release(index);
-        out_.push(busy_report(burst, assessment, band_, frequency_hz_, clock_.microseconds()));
+        report(busy_report(burst, assessment, band_, frequency_hz_, clock_.microseconds()));
         return false;
     }
 
@@ -410,7 +410,7 @@ class Rf : public ports::Rf {
         rx_.rssi_dbm = event.rssi_dbm;
         rx_.rssi_valid = event.rssi_valid;
         rx_.at_us = at_us;
-        out_.push(rx_);
+        report(rx_);
     }
 
     void emit(events::RfEventType type, uint64_t at_us, const parts::RadioEvent& event = {}) {
@@ -424,12 +424,17 @@ class Rf : public ports::Rf {
         reported.keyed_at_us = keyed_at_us_;
         reported.staged_at_us = staged_at_us_;
         reported.tx_at_us = tx_at_us_;
-        out_.push(reported);
+        report(reported);
+    }
+
+    void report(const events::RfEvent& event) {
+        out_.push(event);
+        g_loop_wake.wake();
     }
 
     parts::Sx1262& radio_;
     ports::Clock& clock_;
-    bus::Queue<events::RfEvent, 8>& out_;
+    bus::RfQueue& out_;
     RfMailbox mailbox_{};
     ports::RfCarrier carrier_{};
     ports::RfSwitching switching_{};

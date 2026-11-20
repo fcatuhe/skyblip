@@ -111,7 +111,8 @@ TEST_CASE("comms: timing without an accumulator wired up says so, not zeros") {
     CHECK(link_text(link.last().bytes).find("no_statistics") != std::string::npos);
 }
 
-TEST_CASE("comms: status carries state of charge, the charging flag and the level") {
+TEST_CASE("comms: status carries state of charge, the charging flag and the level" *
+          doctest::test_suite("main")) {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();

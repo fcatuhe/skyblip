@@ -43,8 +43,7 @@ int32_t signed_bearing(uint16_t clockwise_deg) {
 }  // namespace
 
 Status NmeaService::setup() {
-    enabled_ =
-        has_feature(supported(declared_, context_.roles.capabilities), Feature::CompanionLink);
+    enabled_ = ports::has(context_.roles.capabilities, ports::Capability::Link);
     return Status::Ok;
 }
 
@@ -78,6 +77,14 @@ void NmeaService::tick(uint32_t now_ms) {
     last_pass_ms_ = now_ms;
     passed_once_ = true;
     run_pass(now_ms);
+}
+
+uint32_t NmeaService::due_in_ms(uint32_t now_ms) const {
+    if (!listening()) return runtime::kServiceRestCeilingMs;
+    if (!passed_once_ || pass_sent_ < pass_bytes_) return runtime::kServicePassCeilingMs;
+    const uint32_t since_ms = now_ms - last_pass_ms_;
+    if (since_ms >= kMovingTargetRedrawPeriodMs) return runtime::kServicePassCeilingMs;
+    return kMovingTargetRedrawPeriodMs - since_ms;
 }
 
 // The order is the policy: the alarm sentence is written first and is never

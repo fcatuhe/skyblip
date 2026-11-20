@@ -46,8 +46,7 @@ class Central : public ports::Central {
         return Status::Ok;
     }
 
-    bool pop_event(events::CentralEvent& out) { return events_.pop(out); }
-    bool pop_rx(events::RxFrame& out) { return rx_.pop(out); }
+    void deliver_to(bus::GoBus& bus) { bus_ = &bus; }
 
     bool scanning() const { return scan_duty_.has_value(); }
     const std::optional<ports::ScanDuty>& scan_duty() const { return scan_duty_; }
@@ -64,7 +63,7 @@ class Central : public ports::Central {
         event.type = events::CentralEventType::Found;
         event.address = address;
         std::strncpy(event.name, name, events::kAdvertisedNameBytes);
-        events_.push(event);
+        raise(event);
     }
 
     void come_up(uint16_t payload_bytes) {
@@ -75,7 +74,7 @@ class Central : public ports::Central {
         event.type = events::CentralEventType::Up;
         event.address = wanted_.value();
         event.payload_bytes = payload_bytes;
-        events_.push(event);
+        raise(event);
     }
 
     // INFO: fc 11nov26 lost, refused or never made, as Zephyr's connected() with an error
@@ -85,7 +84,7 @@ class Central : public ports::Central {
         if (wanted_) event.address = *wanted_;
         wanted_.reset();
         up_ = false;
-        events_.push(event);
+        raise(event);
     }
 
     bool notify(const std::string& bytes) {
@@ -94,7 +93,7 @@ class Central : public ports::Central {
         frame.endpoint = events::Endpoint::Peer;
         frame.bytes = static_cast<uint16_t>(bytes.size());
         std::memcpy(frame.data.data(), bytes.data(), bytes.size());
-        return rx_.push(frame);
+        return bus_ != nullptr && bus_->peer_rx.push(frame);
     }
 
     std::deque<std::string> writes{};
@@ -103,8 +102,11 @@ class Central : public ports::Central {
     int writes_refused{0};
 
    private:
-    bus::Queue<events::CentralEvent, 8> events_;
-    bus::Queue<events::RxFrame, 8> rx_;
+    void raise(const events::CentralEvent& event) {
+        if (bus_ != nullptr) (void)bus_->central_events.push(event);
+    }
+
+    bus::GoBus* bus_{nullptr};
     std::optional<ports::ScanDuty> scan_duty_{};
     std::string name_prefix_{};
     std::optional<events::BluetoothAddress> wanted_{};

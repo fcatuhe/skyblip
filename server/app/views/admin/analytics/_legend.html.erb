@@ -1,7 +1,7 @@
 <footer class="admin-legend">
   <h2><%= t("analytics.overview.legend.title") %></h2>
   <dl>
-    <% %w[scope segments visitors duration paths ranking].each do |entry| %>
+    <% %w[scope segments visitors duration paths ranking outbound].each do |entry| %>
       <dt><%= t("analytics.overview.legend.#{entry}.term") %></dt>
       <dd><%= t("analytics.overview.legend.#{entry}.definition") %></dd>
     <% end %>

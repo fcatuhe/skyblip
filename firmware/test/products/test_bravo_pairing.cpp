@@ -44,7 +44,8 @@ TEST_CASE("bravo pairing: an unpaired Go never scans, and shows no Bravo state")
     CHECK(tango.go.platform.link().admits_phone());
 }
 
-TEST_CASE("bravo pairing: the BRAVO page scans, lists the tag, and pairs on two presses") {
+TEST_CASE("bravo pairing: the BRAVO page scans, lists the tag, and pairs on two presses" *
+          doctest::test_suite("main")) {
     Tango tango;
     tango.open_page();
     CHECK(tango.go.product.screen().page() == go::Page::Bravo);
@@ -68,7 +69,8 @@ TEST_CASE("bravo pairing: the BRAVO page scans, lists the tag, and pairs on two 
     CHECK(field(tango.bravo.claims[0], "announcing") == "none");
 }
 
-TEST_CASE("bravo pairing: the pin survives a reboot, and the Go reconnects to it alone") {
+TEST_CASE("bravo pairing: the pin survives a reboot, and the Go reconnects to it alone" *
+          doctest::test_suite("main")) {
     Tango tango;
     tango.pair_and_store();
     REQUIRE(go::paired(tango.go.settings()));
@@ -116,7 +118,8 @@ TEST_CASE("bravo pairing: a lost link reconnects to the pinned Bravo") {
     CHECK(tango.go.platform.central().connects >= 2);
 }
 
-TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees the phone slot") {
+TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees the phone slot" *
+          doctest::test_suite("main")) {
     Tango tango;
     tango.pair_and_store();
     tango.go.show(tango.now_ms, go::Page::Bravo);

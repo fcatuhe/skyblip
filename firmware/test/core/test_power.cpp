@@ -68,7 +68,7 @@ TEST_CASE("gauge: nothing is reported before the first reading") {
     CHECK_FALSE(gauge.state().charging);
 }
 
-TEST_CASE("gauge: one transmit burst does not move the gauge") {
+TEST_CASE("gauge: one transmit burst does not move the gauge" * doctest::test_suite("main")) {
     Gauge gauge;
     settle(gauge, 3900);
     const uint8_t before = gauge.state().percent;
@@ -93,7 +93,7 @@ TEST_CASE("gauge: the reading the median threw out is still the reading the benc
     CHECK(gauge.state().sample_mv == 3700);
 }
 
-TEST_CASE("gauge: off the cable the percentage only falls") {
+TEST_CASE("gauge: off the cable the percentage only falls" * doctest::test_suite("main")) {
     Gauge gauge;
     settle(gauge, 3800);
     const uint8_t discharging = gauge.state().percent;
@@ -325,7 +325,7 @@ TEST_CASE("cutoff: a cell on the cable is never low either") {
 }
 
 // Every step of the ladder is read against the one under it, so a pilot meets them in order.
-TEST_CASE("cutoff: the ladder is low, critical, boot lockout, flat") {
+TEST_CASE("cutoff: the ladder is low, critical, boot lockout, flat" * doctest::test_suite("main")) {
     CHECK(kLowMv > kCriticalMv);
     CHECK(kCriticalMv > kBootLockoutMv);
     CHECK(kBootLockoutMv > kFlatMv);
@@ -374,7 +374,8 @@ TEST_CASE("cutoff: the decision latches once it is made") {
 
 // E1. From Critical down only the record that must survive is written, off the level alone.
 
-TEST_CASE("write gate: a settings write is refused from critical down, the log record is not") {
+TEST_CASE("write gate: a settings write is refused from critical down, the log record is not" *
+          doctest::test_suite("main")) {
     CHECK(may_write(PowerLevel::Normal, false, DurableWrite::Settings));
     CHECK_FALSE(may_write(PowerLevel::Critical, false, DurableWrite::Settings));
     CHECK_FALSE(may_write(PowerLevel::Flat, false, DurableWrite::Settings));
@@ -414,7 +415,8 @@ TEST_CASE("write gate: the monitor answers it from the samples it already has") 
     CHECK(monitor.may_write(DurableWrite::Settings));
 }
 
-TEST_CASE("refresh gate: a critical cell still gets its traffic picture, a flat one does not") {
+TEST_CASE("refresh gate: a critical cell still gets its traffic picture, a flat one does not" *
+          doctest::test_suite("main")) {
     CHECK(may_refresh(PowerLevel::Normal, false, PanelRefresh::Routine));
     CHECK(may_refresh(PowerLevel::Critical, false, PanelRefresh::Routine));
     CHECK_FALSE(may_refresh(PowerLevel::Flat, false, PanelRefresh::Routine));

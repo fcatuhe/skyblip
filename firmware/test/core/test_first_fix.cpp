@@ -34,7 +34,8 @@ void hold(FirstFix& first_fix, const Convergence& convergence, uint32_t from_ms,
 
 }  // namespace
 
-TEST_CASE("first fix: the confirmation fires once, on the first solution ever") {
+TEST_CASE("first fix: the confirmation fires once, on the first solution ever" *
+          doctest::test_suite("main")) {
     FirstFix first_fix;
     CHECK_FALSE(first_fix.ever_fixed());
     CHECK_FALSE(first_fix.take_acquired());
@@ -72,7 +73,8 @@ TEST_CASE("first fix: a receiver whose solutions still walk waits out the clock"
     CHECK(first_fix.settled(1000 + kFirstFixSettleMs + 60000));
 }
 
-TEST_CASE("first fix: three solutions the model predicted settle it before the clock does") {
+TEST_CASE("first fix: three solutions the model predicted settle it before the clock does" *
+          doctest::test_suite("main")) {
     FirstFix first_fix;
     first_fix.observe(unmeasured(), 1000);
 

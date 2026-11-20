@@ -105,7 +105,7 @@ updated_on: "2026-11-19"
   </figure>
 
   <h3 id="listen">Ascolta prima di trasmettere.</h3>
-  <p class="lede">ADS-L richiede l&rsquo;ascolto prima della trasmissione secondo le regole di accesso non interferente allo spettro di ETSI EN 300 220-1. Prima dell&rsquo;istante programmato, il Go misura il canale della trasmissione per 200&nbsp;&micro;s. Fa la media di nove letture in potenza, con la misura che termina non più di 2&nbsp;ms prima della trasmissione. Sotto la soglia trasmette. Alla soglia o sopra, il Go attende un tempo casuale fra 5 e 40&nbsp;ms a passi di 5&nbsp;ms, la durata riservata di una trasmissione, poi ascolta di nuovo. L&rsquo;indirizzo e l&rsquo;istante in cui il canale era occupato determinano questa estrazione.</p>
+  <p class="lede">ADS-L richiede l&rsquo;ascolto prima della trasmissione secondo le regole di accesso non interferente allo spettro di ETSI EN 300 220-1. Prima dell&rsquo;istante programmato, il Go misura il canale della trasmissione per 200&nbsp;&micro;s. Fa la media di nove letture in potenza, con la misura che termina non più di 2&nbsp;ms prima della trasmissione. Sotto la soglia trasmette. Alla soglia o sopra, il Go attende un tempo casuale fra 15 e 250&nbsp;ms a passi di 5&nbsp;ms, la durata riservata di una trasmissione, poi ascolta di nuovo. È l&rsquo;intervallo di rinvio previsto da ADS-L 4 SRD-860, sezione C.2, limitato alle attese che finiscono entro l&rsquo;ultimo avvio consentito della trasmissione nella sua finestra. Se non ci sta nessuna attesa di almeno 15&nbsp;ms, la trasmissione viene persa. L&rsquo;attesa parte dall&rsquo;istante previsto della trasmissione, e l&rsquo;indirizzo e quell&rsquo;istante determinano l&rsquo;estrazione.</p>
   <p class="lede">La soglia deriva dalla regola dello standard per un canale di 200&nbsp;kHz, corretta per il guadagno dell&rsquo;antenna. Al chip radio il canale è considerato occupato da &minus;78&nbsp;dBm. Il guadagno dell&rsquo;antenna e la perdita della linea usati in questo calcolo provengono dalla scheda tecnica e da una stima, non da misure su un&rsquo;unità.</p>
   <p class="lede">Una trasmissione rinviata resta nella sua finestra e sul suo canale. Una posizione rinviata viene ricodificata per il nuovo istante usando il fix più recente. Se il canale resta occupato fino alla chiusura della finestra, la trasmissione viene persa. A terra, dopo 3&nbsp;s dalla prima rilevazione di canale occupato, il Go può forzare una trasmissione senza ascoltare, come consente ADS-L. Poi resta silenzioso per 2&nbsp;s dalla fine della trasmissione. Non forza mai una trasmissione in volo, dove quel silenzio costerebbe due posizioni.</p>
 
@@ -117,9 +117,9 @@ updated_on: "2026-11-19"
       <tbody>
         <tr><th>Misura minima del canale</th><td>200&nbsp;&micro;s</td><td>almeno 160&nbsp;&micro;s</td></tr>
         <tr><th>Intervallo massimo fra misura e trasmissione</th><td>2&nbsp;ms</td><td>al massimo 5&nbsp;ms</td></tr>
-        <tr><th>Metodo per rendere casuale un rinvio</th><td>un hash dell&rsquo;indirizzo e dell&rsquo;istante in cui il canale era occupato</td><td></td></tr>
+        <tr><th>Metodo per rendere casuale un rinvio</th><td>un hash dell&rsquo;indirizzo e dell&rsquo;istante previsto della trasmissione</td><td></td></tr>
         <tr><th>Passo di rinvio</th><td>5&nbsp;ms, la durata riservata di una trasmissione</td><td>almeno la durata della misura</td></tr>
-        <tr><th>Rinvio minimo e massimo</th><td>5 e 40&nbsp;ms</td><td></td></tr>
+        <tr><th>Rinvio minimo e massimo</th><td>15 e 250&nbsp;ms</td><td></td></tr>
         <tr><th>Durata massima della trasmissione</th><td>5&nbsp;ms</td><td>al massimo 1&nbsp;s</td></tr>
         <tr><th>Silenzio minimo sulla stessa frequenza</th><td>100&nbsp;ms</td><td>almeno 100&nbsp;ms</td></tr>
       </tbody>

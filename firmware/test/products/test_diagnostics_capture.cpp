@@ -132,7 +132,8 @@ TEST_CASE("capture: a tap of the pad refuses the capture a page asked for") {
     CHECK_FALSE(rig.product.capture().capturing());
 }
 
-TEST_CASE("capture: what an armed device recorded comes back through the offload") {
+TEST_CASE("capture: what an armed device recorded comes back through the offload" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;

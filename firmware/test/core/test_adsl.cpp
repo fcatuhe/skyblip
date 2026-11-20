@@ -74,7 +74,7 @@ TEST_CASE("adsl: without an address the encoder builds no frame, position or nam
 // (G.1.11 to G.1.16), so an untouched block is not neutral: it tells a receiver
 // we claim no integrity at all, and receivers are entitled to weight us
 // accordingly. Without a fix that is the truthful answer; with one it is not.
-TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
+TEST_CASE("adsl: from_own claims integrity from the receiver's DOP" * doctest::test_suite("main")) {
     skyblip::model::Ownship own{};
     own.latitude_1e7 = 485000000;
     own.longitude_1e7 = 85000000;
@@ -82,6 +82,7 @@ TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
     own.speed_mm_s = 50000;
     own.hdop_e2 = 90;
     own.vdop_e2 = 150;
+    own.geoid_measured = true;
 
     adsl::Packet packet{};
     from_own(packet, own, 0xABCDEF, 6, 4);
@@ -120,6 +121,7 @@ TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
 TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
     skyblip::model::Ownship own{};
     own.fix_valid = true;
+    own.geoid_measured = true;
     adsl::Packet packet{};
 
     own.hdop_e2 = 200;  // 24 m horizontal
@@ -145,7 +147,8 @@ TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
 }
 
 // A codec that agrees with itself can still put a frame on air no other receiver reads.
-TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read") {
+TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read" *
+          doctest::test_suite("main")) {
     skyblip::model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
@@ -159,6 +162,7 @@ TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read
     own.track_cdeg = 27350;
     own.hdop_e2 = 90;
     own.vdop_e2 = 140;
+    own.geoid_measured = true;
     adsl::Packet packet{};
     REQUIRE(from_own(packet, own, 0x2ABCDE, 58, 1));
     const uint8_t clear[] = {0x00, 0x02, 0xBA, 0x37, 0xAF, 0x0A, 0x30, 0x21,

@@ -60,7 +60,8 @@ std::vector<simulator::AirRecord> held_from_cycle_start(int speed_kt, uint32_t h
 }  // namespace
 
 // Forced on the ground only: airborne the Status and the name are still busy at +8, past 3000 ms.
-TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms") {
+TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms" *
+          doctest::test_suite("main")) {
     uint64_t held_from_us = 0;
     uint32_t forced = 0;
     const std::vector<simulator::AirRecord> ground =

@@ -29,6 +29,12 @@
 
 namespace skyblip::bus {
 
+// INFO: fc 19nov26 the Mode S transponder Bravo heard at the entered address, and its ADS-B out
+struct AircraftTransponder {
+    uint32_t address{0};
+    bool adsb_out{false};
+};
+
 // Where the radio believes it is inside the second it is arming, stamped with
 // the pass it said so on. The radio service is the only writer; whoever needs
 // to know whether the core may be stalled reads it here rather than deriving
@@ -239,6 +245,8 @@ struct State {
     comms::BravoState bravo{comms::BravoState::Unpaired};
     // INFO: fc 14nov26 the transponder a live Bravo names, on the ground | 15nov26 on Bravo too
     std::optional<comms::OwnTransponderHeard> own_transponder{};
+    // INFO: fc 19nov26 written by a Go's Bravo service alone, kept until the address changes
+    AircraftTransponder aircraft_transponder{};
     // INFO: fc 17nov26 what this unit announces, which a paired Go sends its Bravo to play
     annunciation::Call alarm_call{};
     // INFO: fc 17nov26 written by Bravo's peer service alone: its Go's call while it plays it

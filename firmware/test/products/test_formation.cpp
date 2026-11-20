@@ -127,7 +127,8 @@ TEST_CASE("formation: a tight pair that settles down stops the alarm its joining
     CHECK(flight.rig.state.alarm_level == traffic::Level::None);
 }
 
-TEST_CASE("formation: a member closing on us alarms on the second fix, and is no longer a member") {
+TEST_CASE("formation: a member closing on us alarms on the second fix, and is no longer a member" *
+          doctest::test_suite("main")) {
     Flight flight;
     uint32_t now_ms = flight.hold_station(1000);
     REQUIRE(flight.target()->in_formation);
@@ -203,7 +204,8 @@ TEST_CASE("formation: a target nobody has heard from is forgotten, membership an
 }
 
 // The car trip: every stop was a landing, and every pull-away re-formed the pair with a beep.
-TEST_CASE("formation: a pair lifting off together is never announced, and joins") {
+TEST_CASE("formation: a pair lifting off together is never announced, and joins" *
+          doctest::test_suite("main")) {
     Flight flight;
     flight.own_state(flight::FlightState::Ground, 0);
     uint32_t now_ms = 1000;

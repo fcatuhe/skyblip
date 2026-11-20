@@ -1,6 +1,6 @@
 # Reference specifications
 
-Normative sources the firmware is written against, kept locally so a clause citation in `docs/BEHAVIOR.md` or a comment in `firmware/protocols/` can be checked without a network round trip.
+Normative sources the firmware is written against, kept locally so a clause citation in `docs/behavior/` or a comment in `firmware/protocols/` can be checked without a network round trip.
 
 The two ADS-L issues are published by EASA as attachments to [ED Decision 2022/024/R](https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r). The firmware targets Issue 2; Issue 1 is here because deployed hardware and most third-party implementations predate Issue 2, and the two differ in the payload set and in Subpart C.
 

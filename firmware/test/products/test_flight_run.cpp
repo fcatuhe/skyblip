@@ -79,7 +79,8 @@ TEST_CASE("flight run: a parked unit keeps the ground cadence on air while the g
     CHECK(said.names <= 4);
 }
 
-TEST_CASE("flight run: every burst on air says on ground, at the real position, standing still") {
+TEST_CASE("flight run: every burst on air says on ground, at the real position, standing still" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     park_on_the_bench(simulator);

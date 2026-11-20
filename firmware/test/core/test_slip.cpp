@@ -21,7 +21,8 @@ int16_t slip_of(int16_t right_mg, int16_t up_mg = kLevelFlightUpMg, int16_t aft_
 
 }  // namespace
 
-TEST_CASE("slip: coordinated flight reads zero whatever the load factor") {
+TEST_CASE("slip: coordinated flight reads zero whatever the load factor" *
+          doctest::test_suite("main")) {
     CHECK(slip_of(0) == 0);
     CHECK(slip_of(0, 2000) == 0);
     CHECK(slip_of(0, 500) == 0);

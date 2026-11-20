@@ -15,7 +15,7 @@
 
 using namespace skyblip;
 
-TEST_CASE("product: barometric pressure drives vertical speed") {
+TEST_CASE("product: barometric pressure drives vertical speed" * doctest::test_suite("main")) {
     Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     CHECK_FALSE(rig.product.ownship().barometer_active());
@@ -108,7 +108,8 @@ TEST_CASE("product: with neither a fix nor a barometer the climb is not valid") 
 }
 
 // A 2D fix differentiated the height it held and sent a climb of zero as valid.
-TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-L G.1.9)") {
+TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-L G.1.9)" *
+          doctest::test_suite("main")) {
     Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(1000, 1);

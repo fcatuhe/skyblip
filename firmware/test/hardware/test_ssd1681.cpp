@@ -81,7 +81,8 @@ TEST_CASE("ssd1681: a RES# pulse one microsecond under 10 ms leaves a sleeping p
     CHECK(chip.reset_pulses == 1);
 }
 
-TEST_CASE("ssd1681: present() writes a full framebuffer with correct black/white polarity") {
+TEST_CASE("ssd1681: present() writes a full framebuffer with correct black/white polarity" *
+          doctest::test_suite("main")) {
     models::Ssd1681 chip;
     parts::Ssd1681 driver = driver_for(chip);
     driver.begin();
@@ -134,7 +135,8 @@ TEST_CASE("ssd1681: an unturned glass takes framebuffer rows as gate lines") {
 }
 
 // The Plus mounts the glass a quarter turn off the scan: unturned here, the device reads sideways.
-TEST_CASE("ssd1681: a glass turned 270 degrees takes framebuffer columns as gate lines") {
+TEST_CASE("ssd1681: a glass turned 270 degrees takes framebuffer columns as gate lines" *
+          doctest::test_suite("main")) {
     models::Ssd1681 chip;
     parts::Ssd1681 driver = turned_driver_for(chip);
     driver.begin();

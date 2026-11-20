@@ -87,7 +87,8 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
 }
 
 // Arming spends the pilot's partition, so the glass names the profile and the flights it erases.
-TEST_CASE("confirm page: a capture names its profile and the flights it erases, not clipped") {
+TEST_CASE("confirm page: a capture names its profile and the flights it erases, not clipped" *
+          doctest::test_suite("main")) {
     char detail[comms::kPromptDetailBytes];
     for (const comms::CaptureProfile profile :
          {comms::CaptureProfile::Full, comms::CaptureProfile::PowerRun,
@@ -118,7 +119,8 @@ TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a ro
     CHECK(reads_inside_body(canvas, "UNITS METRIC"));
 }
 
-TEST_CASE("confirm page: one press accepts on the button's key, the pad's key cancels") {
+TEST_CASE("confirm page: one press accepts on the button's key, the pad's key cancels" *
+          doctest::test_suite("main")) {
     Glass canvas;
     const ConfirmSnapshot snapshot = prompt(comms::Pending::Dfu);
     draw_confirm(canvas, snapshot);

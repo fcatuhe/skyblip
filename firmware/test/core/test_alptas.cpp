@@ -36,7 +36,8 @@ model::AircraftObservation make_observation(int32_t latitude_1e7, int32_t longit
 }
 }  // namespace
 
-TEST_CASE("alptas: a decoded frame is an observation in ADS-L units, dated and sourced") {
+TEST_CASE("alptas: a decoded frame is an observation in ADS-L units, dated and sourced" *
+          doctest::test_suite("main")) {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t frame[alptas::kFrameBytes];
     REQUIRE(alptas_encode(frame, observation, kUtcS) == Status::Ok);
@@ -138,7 +139,8 @@ TEST_CASE("alptas: encoding refuses to claim a position it does not have") {
 }
 
 // core/protocol/README.md argues each row against the frame's type table and ADS-L G.1.3.
-TEST_CASE("alptas: every ALP-TAS aircraft type is read as the ADS-L category it names") {
+TEST_CASE("alptas: every ALP-TAS aircraft type is read as the ADS-L category it names" *
+          doctest::test_suite("main")) {
     const uint8_t expected[20] = {0, 4, 1, 3, 8, 1, 16, 7, 1, 2, 10, 5, 5, 11, 0, 0, 9, 11, 12, 13};
     for (uint8_t type = 0; type < 20; type++) {
         CAPTURE(int(type));

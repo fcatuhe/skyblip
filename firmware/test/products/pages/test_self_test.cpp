@@ -58,7 +58,8 @@ TEST_CASE("self-test page: every part on the page carries its own verdict") {
     CHECK_FALSE(row_reads(canvas, 0, "FAIL"));
 }
 
-TEST_CASE("self-test page: the page says whether the device may fly, in one word") {
+TEST_CASE("self-test page: the page says whether the device may fly, in one word" *
+          doctest::test_suite("main")) {
     const SelfTestPart ok[] = {{"RADIO", PartState::Pass}};
     Glass ready;
     draw_self_test(ready, page(ok, 1, /*flyable=*/true));

@@ -137,7 +137,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: a receiver solving off the quarters never names
 }
 
 // Flown with the channel busy one burst in three seconds, and a receiver 200 ms late on the wire.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst goes on air over 500 ms after its solution") {
+TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst goes on air over 500 ms after its solution" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     fly_measured(simulator, 200);

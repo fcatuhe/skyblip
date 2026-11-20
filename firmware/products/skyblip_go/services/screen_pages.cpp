@@ -86,6 +86,11 @@ bool ScreenService::unit_activated() {
     return activated;
 }
 
+void ScreenService::present_self_test() {
+    draw_self_test(framebuffer_, self_test_);
+    context_.roles.display.present(framebuffer_, ports::Refresh::Full, 0);
+}
+
 void ScreenService::render(uint32_t now_ms) {
     if (answering()) {
         draw_prompt(now_ms);

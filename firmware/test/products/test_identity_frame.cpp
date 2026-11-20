@@ -83,7 +83,8 @@ std::string go_identity(ports::Capabilities fitted) {
 
 }  // namespace
 
-TEST_CASE("identity: the unit names its product, variant, firmware, chip and tag") {
+TEST_CASE("identity: the unit names its product, variant, firmware, chip and tag" *
+          doctest::test_suite("main")) {
     Desk desk;
     CHECK(
         desk.ask() ==

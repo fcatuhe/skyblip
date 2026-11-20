@@ -39,7 +39,8 @@ Spent spent_so_far(simulator::Simulator& simulator) {
 
 }  // namespace
 
-TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating channel") {
+TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating channel" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
@@ -100,7 +101,8 @@ TEST_CASE("rf: the simulator puts own-ship's burst on air in the step that keyed
 }
 
 // The name is skyBlip's, so it keeps to slot 1's tail, where ADS-L transmits nothing today.
-TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, on channel 1") {
+TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, on channel 1" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -227,7 +229,7 @@ TEST_CASE("rf: losing and regaining PPS through the simulator counts as holdover
         if (bucket != 3) CHECK(statistics.pps_bucket(bucket) == 0);
 }
 
-TEST_CASE("rf: without an anchored clock nothing is transmitted") {
+TEST_CASE("rf: without an anchored clock nothing is transmitted" * doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
@@ -238,7 +240,7 @@ TEST_CASE("rf: without an anchored clock nothing is transmitted") {
     CHECK(simulator.product().state().air.tx_ok == 0);
 }
 
-TEST_CASE("rf: on the ground the transmit rate drops to 0.1 Hz") {
+TEST_CASE("rf: on the ground the transmit rate drops to 0.1 Hz" * doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);

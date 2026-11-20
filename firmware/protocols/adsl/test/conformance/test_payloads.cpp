@@ -157,6 +157,7 @@ TEST_CASE(
     report.o_band_hdr = adsl::ReceiveClass::Full;
     report.conspicuity_received = adsl::conspicuity::kFlarm | adsl::conspicuity::kAdsb1090;
     report.conspicuity_transmitted = 0x5A;
+    report.transponder = adsl::Transponder::ModeC;
     report.traffic_uplink_client = true;
     adsl::Packet packet{};
     adsl::encode_status(packet, 0x2ABCDE, adsl::kAddressTableFlarm, report);
@@ -172,7 +173,7 @@ TEST_CASE(
     CHECK(wire::read_bits(packet.payload, wire::BitField{50, 2}) == 0);
     CHECK(wire::read_bits(packet.payload, wire::BitField{52, 8}) == 0x11);
     CHECK(wire::read_bits(packet.payload, wire::BitField{60, 8}) == 0x5A);
-    CHECK(wire::read_bits(packet.payload, wire::BitField{68, 2}) == 0);
+    CHECK(wire::read_bits(packet.payload, wire::BitField{68, 2}) == 1);
     CHECK(wire::read_bits(packet.payload, wire::BitField{70, 1}) == 1);
     CHECK(wire::read_bits(packet.payload, wire::BitField{71, 1}) == 0);
     CHECK(wire::read_bits(packet.payload, wire::BitField{72, 24}) == 0);

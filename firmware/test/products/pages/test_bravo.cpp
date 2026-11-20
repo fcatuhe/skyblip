@@ -143,7 +143,8 @@ TEST_CASE("bravo page: a search for a named Bravo reads PAIRING, its tag and WAI
     CHECK(page.pad(snapshot.view, 30) == BravoAction::Cancel);
 }
 
-TEST_CASE("bravo page: a paired Go reads its Bravo's tag and whether it is connected") {
+TEST_CASE("bravo page: a paired Go reads its Bravo's tag and whether it is connected" *
+          doctest::test_suite("main")) {
     BravoSnapshot snapshot;
     snapshot.view.paired = true;
     snapshot.view.paired_tag = 0x3F2A;
@@ -263,7 +264,8 @@ TEST_CASE("bravo page: a refusal retries on the button, but three phones wait fo
     CHECK(page.pad(view, 30) == BravoAction::Leave);
 }
 
-TEST_CASE("bravo page: unpairing takes a second press, and the pad keeps the pin") {
+TEST_CASE("bravo page: unpairing takes a second press, and the pad keeps the pin" *
+          doctest::test_suite("main")) {
     BravoPage page;
     page.open(0);
     BravoView view;

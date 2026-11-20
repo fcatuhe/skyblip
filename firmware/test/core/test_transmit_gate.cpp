@@ -34,7 +34,8 @@ void judge_between(TransmitGate& gate, const Requirements& met, uint32_t from_ms
 
 }  // namespace
 
-TEST_CASE("transmit gate: each requirement unmet names its own reason, the first unmet first") {
+TEST_CASE("transmit gate: each requirement unmet names its own reason, the first unmet first" *
+          doctest::test_suite("main")) {
     CHECK(first_unmet(all_met()) == NoTx::None);
     CHECK(first_unmet(without(&Requirements::address)) == NoTx::Address);
     CHECK(first_unmet(without(&Requirements::radio)) == NoTx::Radio);
@@ -105,7 +106,8 @@ TEST_CASE("transmit gate: nothing the sky decides is shown before the first fix 
     CHECK(gate.shown() == NoTx::Pps);
 }
 
-TEST_CASE("transmit gate: a fix lost in flight stops the burst at once and shows 10 s later") {
+TEST_CASE("transmit gate: a fix lost in flight stops the burst at once and shows 10 s later" *
+          doctest::test_suite("main")) {
     TransmitGate gate;
     judge_between(gate, all_met(), 0, 60000);
     REQUIRE(gate.transmits());

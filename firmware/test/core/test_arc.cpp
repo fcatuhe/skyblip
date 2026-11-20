@@ -41,7 +41,8 @@ TEST_CASE("arc: an aircraft not turning flies a straight ray") {
     CHECK(east.north_m == 0);
 }
 
-TEST_CASE("arc: a turn flies the radius its rate and speed describe") {
+TEST_CASE("arc: a turn flies the radius its rate and speed describe" *
+          doctest::test_suite("main")) {
     // 23.15 m/s at 12 deg/s is radius = speed / rate = 111 m, so 221 m across at the half turn.
     const Position half = after(flying(0, kThermalSpeedMmS, 12), 15);
     const int32_t diameter = static_cast<int32_t>(wire::hypotenuse(half.north_m, half.east_m));

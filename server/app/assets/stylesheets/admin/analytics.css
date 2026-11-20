@@ -124,6 +124,9 @@
     vertical-align: bottom;
   }
 
+  .analytics-outbound th .note { display: block; font-weight: 400; }
+  .analytics-outbound .admin-truncate { max-inline-size: min(16rem, 35vw); }
+
   .analytics-visitor--user { color: var(--sky-deep); font-weight: 700; }
 
   .admin-pager {

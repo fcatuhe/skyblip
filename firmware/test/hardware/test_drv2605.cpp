@@ -90,7 +90,8 @@ TEST_CASE("drv2605: something else at 0x5A is not a haptic driver") {
     CHECK_FALSE(chip.moving());
 }
 
-TEST_CASE("drv2605: a pulse is a drive value that holds, and stops when it is told") {
+TEST_CASE("drv2605: a pulse is a drive value that holds, and stops when it is told" *
+          doctest::test_suite("main")) {
     models::Drv2605 chip;
     parts::Drv2605 haptic = driver_for(chip);
     REQUIRE(haptic.begin() == Status::Ok);

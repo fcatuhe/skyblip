@@ -50,7 +50,8 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status goes out as 16 bytes, and its length b
 }
 
 // "Some payload types have variable lengths, in which case the receiver must consult this field."
-TEST_CASE("ADS-L.4.SRD860.D.1.1: a receiver reads a 16-byte Status built the way the clauses say") {
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a receiver reads a 16-byte Status built the way the clauses say" *
+          doctest::test_suite("main")) {
     adsl::Packet clear{};
     adsl::encode_status(clear, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
     uint8_t frame[16] = {0};

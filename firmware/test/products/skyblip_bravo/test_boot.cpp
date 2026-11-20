@@ -13,7 +13,7 @@ TEST_CASE("bravo: boots on the X1's host models and listens on 1090 MHz under it
     CHECK(ports::has(rig.product.capabilities(),
                      ports::Capability::AdsbReceiver | ports::Capability::Gnss |
                          ports::Capability::Barometer | ports::Capability::HapticDriver));
-    CHECK(rig.product.degraded() == ports::Capability::DieTemperature);
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::DieTemperature));
     CHECK(rig.platform.radio().listening_for_adsb());
     rig.run_for(1000);
     CHECK(rig.platform.link().advertised == "skyBlip Bravo 3F2A");
@@ -103,7 +103,8 @@ TEST_CASE("bravo: a new image confirms itself once the receiver is up and the GN
 
 // Opus's review: a refused Bravo stayed awake and dark, so it looked switched off.
 TEST_CASE(
-    "bravo: a unit that refuses to fly blinks the critical row, and a hold still switches it off") {
+    "bravo: a unit that refuses to fly blinks the critical row, and a hold still switches it off" *
+    doctest::test_suite("main")) {
     BravoRig rig(ports::without(platform::host::MeshtrackerX1::kFullyFitted,
                                 ports::Capability::AdsbReceiver));
     REQUIRE(rig.setup() == Status::Down);

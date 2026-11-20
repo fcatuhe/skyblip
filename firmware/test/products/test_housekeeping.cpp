@@ -11,6 +11,7 @@
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/product.h"
 #include "runtime/tasks.h"
+#include "test/support/confirmed.h"
 #include "test/support/housekeeping_rig.h"
 
 using namespace skyblip;
@@ -18,7 +19,8 @@ using namespace skyblip;
 // D4: the way out. The radio is asked to sleep, the panel is parked, and only
 // then are the rails allowed to drop - and not while the button is still down.
 
-TEST_CASE("product: a long press parks the radio and the panel, then asks for the rails") {
+TEST_CASE("product: a long press parks the radio and the panel, then asks for the rails" *
+          doctest::test_suite("main")) {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -168,6 +170,26 @@ TEST_CASE("product: the hold that switches the device off does not page first") 
 
 // D4 over the link: the same road, from a phone instead of a thumb.
 
+// The product spends a confirmed cold start on the receiver, once, and keeps flying.
+TEST_CASE("product: a confirmed gnss_cold_start restarts the receiver once") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    rig.on_ground(now_ms);
+    rig.run(now_ms, 1000);
+
+    rig.send("{\"command\":\"gnss_cold_start\"}");
+    rig.run(1000, 1500);
+    REQUIRE(rig.config().pending() == comms::Pending::GnssColdStart);
+    CHECK(rig.platform.chips().gnss.restarts == 0);
+
+    rig.config().confirm();
+    rig.run(1500, 3000);
+    CHECK(rig.platform.chips().gnss.restarts == 1);
+    CHECK(rig.platform.chips().gnss.factory_resets == 0);
+    CHECK_FALSE(rig.product.shutdown().going_down());
+}
+
 TEST_CASE("product: a confirmed power_off over the link parks the device like a long press") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -192,7 +214,7 @@ TEST_CASE("product: a confirmed power_off over the link parks the device like a 
 
     // The latch is consumed, not left standing: a device that came back up with
     // it set would power itself off again.
-    CHECK_FALSE(rig.config().power_off_requested());
+    CHECK_FALSE(taken(rig.config()));
 
     // No button was ever down, so there is no release to wait for.
     rig.run(2000, 2000 + power::kParkSettleMs + power::kReleaseSettleMs + 500);
@@ -243,7 +265,8 @@ TEST_CASE("product: a page tap is not a power-off") {
 
 // D3: the acting half of the gauge, wired up.
 
-TEST_CASE("product: a cell at its cutoff takes the device down on its own") {
+TEST_CASE("product: a cell at its cutoff takes the device down on its own" *
+          doctest::test_suite("main")) {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 2000);

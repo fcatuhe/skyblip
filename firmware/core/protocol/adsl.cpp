@@ -99,7 +99,9 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
             traffic.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value;
         traffic.speed_valid = true;
         traffic.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
-        traffic.integrity = integrity_from_dop_e2(own.hdop_e2, own.vdop_e2);
+        // INFO: fc 19nov26 VDOP cannot bound a geoid separation the parser had to assume
+        traffic.integrity =
+            integrity_from_dop_e2(own.hdop_e2, own.geoid_measured ? own.vdop_e2 : 0);
     }
 
     // Vertical rate needs two samples over a window, so it arrives later than the

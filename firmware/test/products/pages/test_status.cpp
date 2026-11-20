@@ -307,7 +307,8 @@ TEST_CASE("status page: a solution without height reads 2D") {
 }
 
 // The page used to report PPS lock, a pin a pilot cannot act on.
-TEST_CASE("status page: the page reports whether own-ship is transmitting, not the PPS pin") {
+TEST_CASE("status page: the page reports whether own-ship is transmitting, not the PPS pin" *
+          doctest::test_suite("main")) {
     StatusSnapshot snapshot;
     snapshot.fix_valid = true;
     snapshot.satellites = 9;

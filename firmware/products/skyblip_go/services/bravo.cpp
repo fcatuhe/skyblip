@@ -55,7 +55,7 @@ void BravoService::tick(uint32_t now_ms) {
     if (const std::optional<uint16_t> tag = config_.take_pair_request()) pair_with(*tag, now_ms);
     if (seek_due_ && !leaving_) seek(now_ms);
     events::CentralEvent event{};
-    while (context_.bus.central_events.pop(event)) take_event(event, now_ms);
+    while (central_events_.pop(event)) take_event(event, now_ms);
     events::RxFrame frame{};
     while (context_.bus.peer_rx.pop(frame)) take_frame(frame, now_ms);
 
@@ -85,9 +85,16 @@ void BravoService::tick(uint32_t now_ms) {
     if (context_.state.flight.rolling && now_ms - started_ms_ >= kBootSettleMs) rolled_ = true;
     context_.state.bravo = state_now();
     context_.state.own_transponder = own_transponder_on_ground();
+    context_.state.aircraft_transponder = aircraft_transponder();
     config_.set_paired_tag(paired(settings_)
                                ? std::optional<uint16_t>(events::bluetooth_tag(settings_.bravo))
                                : std::nullopt);
+}
+
+uint32_t BravoService::due_in_ms(uint32_t now_ms) const {
+    if (step_ != BravoStep::Idle || leaving_ || seek_due_) return runtime::kServicePassCeilingMs;
+    if (linked()) return runtime::remaining_ms(now_ms - claimed_ms_, kClaimPeriodMs);
+    return runtime::kServiceRestCeilingMs;
 }
 
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {
@@ -306,6 +313,19 @@ std::optional<comms::OwnTransponderHeard> BravoService::own_transponder_on_groun
     const bool on_ground = context_.state.bravo == comms::BravoState::Live &&
                            context_.state.flight.confirmed_state == flight::FlightState::Ground;
     return on_ground ? own_transponder() : std::nullopt;
+}
+
+// INFO: fc 19nov26 an identification is an extended squitter, so the transponder has ADS-B out
+bus::AircraftTransponder BravoService::aircraft_transponder() const {
+    const bus::AircraftTransponder& kept = context_.state.aircraft_transponder;
+    const uint32_t entered = settings_.aircraft_address;
+    const bool kept_for_entered = kept.address != 0 && kept.address == entered;
+    const std::optional<comms::OwnTransponderHeard>& heard = context_.state.own_transponder;
+    if (heard && heard->address == entered) {
+        const bool identified = heard->callsign[0] != '\0' || heard->aircraft_category != 0;
+        return {entered, identified || (kept_for_entered && kept.adsb_out)};
+    }
+    return kept_for_entered ? kept : bus::AircraftTransponder{};
 }
 
 // INFO: fc 12nov26 health alone says lost, never quiet traffic: an empty sky is a healthy one

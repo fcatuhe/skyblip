@@ -37,7 +37,8 @@ struct Booted {
 
 }  // namespace
 
-TEST_CASE("tango boot: Bravo's first health without UTC reads waiting, with no tone") {
+TEST_CASE("tango boot: Bravo's first health without UTC reads waiting, with no tone" *
+          doctest::test_suite("main")) {
     Booted booted;
     booted.tango.run_for(3000);
     REQUIRE(booted.tango.service().link() == go::BravoLink::Up);

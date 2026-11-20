@@ -3,7 +3,7 @@
 
     python3 scripts/test_blip_frames.py
 
-Stdlib alone and no radio. Run by test_blip.py as well, which is the file CI invokes.
+Stdlib alone and no radio.
 """
 import json
 import pathlib

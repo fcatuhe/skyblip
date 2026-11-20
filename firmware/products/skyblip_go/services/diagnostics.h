@@ -4,42 +4,14 @@
 #include "core/bus/state.h"
 #include "core/comms/diagnostics.h"
 #include "ports/rf.h"
+#include "products/common/diagnostics_collector.h"
 
 namespace skyblip::go {
 
-// The dump's collector: it reads counters the device already keeps and writes
-// them into the one snapshot the companion link answers from
-// (core/comms/diagnostics.h). No formatting and no policy live here - that is
-// core's, and host-tested there.
-//
-// Not a runtime::Service, deliberately. A service is handed roles, the bus and
-// bus::State; six of these numbers belong to sibling services and five to the GNSS
-// part, and neither is reachable through a Context. Reaching for them would mean
-// publishing counters through the bus for one reader, so instead this is driven
-// from the shell with the product in hand.
-template <class Product>
-class DiagnosticsCollector {
-   public:
-    void step(Product& product, uint32_t now_ms) {
-        comms::Diagnostics& snapshot = product.config_link().config().diagnostics();
-        // Unsigned subtraction throughout, so the 49.7-day wrap of a 32-bit
-        // millisecond counter costs one late refresh and nothing else.
-        if (!started_ || now_ms - refreshed_ms_ >= comms::kDiagnosticsRefreshPeriodMs) {
-            refresh(product, snapshot, now_ms);
-            refreshed_ms_ = now_ms;
-        }
-        started_ = true;
-    }
-
-   private:
-    // Every read here is a const accessor of a counter that lives somewhere else.
-    // Nothing is cleared by being read: a dump is a witness, and a witness that
-    // consumes its evidence makes the second reader wrong.
-    void refresh(Product& product, comms::Diagnostics& snapshot, uint32_t now_ms) {
+struct RadioDiagnostics {
+    template <class Product>
+    static void collect(Product& product, comms::Diagnostics& snapshot, uint32_t /*now_ms*/) {
         const bus::State& state = product.state();
-
-        snapshot.uptime_s = now_ms / 1000;
-
         snapshot.noise_dbm = product.radio().noise_floor().level_dbm();
         snapshot.duty_permille = state.rf.duty_permille;
         snapshot.rx_ok = state.air.rx_ok;
@@ -69,54 +41,21 @@ class DiagnosticsCollector {
         snapshot.dio1_armed = dio1.armed;
         snapshot.dio1_edges = dio1.edges;
         snapshot.dio1_missed = dio1.missed;
-
-        snapshot.tracked = static_cast<uint32_t>(state.traffic.count());
-        snapshot.alarm = traffic::to_number(state.alarm_level);
         snapshot.uplink_frames = state.air.uplink_frames;
         snapshot.uplink_bad = state.air.uplink_bad;
         snapshot.uplink_targets = state.air.uplink_targets;
 
-        snapshot.gnss_fixes = state.flight.gnss_solutions;
-        snapshot.fix_valid = state.own.fix_valid;
-        snapshot.residual_m = state.own.prediction_residual_m;
-        snapshot.residual_valid = state.own.prediction_residual_valid;
-
-        // The receiver's own answers, which nothing else on the device reads: a
-        // unit talking at a rate the devicetree did not ask for, or one whose fixes
-        // are being refused for a named reason, is the support case this part
-        // generates. The part is reached through the board because it is a part and
-        // not a role - there is no ports:: seam that could carry a firmware string.
         const auto& gnss = product.board().gnss();
         snapshot.gnss_baud = gnss.baud_rate();
-        snapshot.gnss_config = gnss.config_stage();
         snapshot.gnss_raises = gnss.baud_raises();
         snapshot.gnss_raise_fallbacks = gnss.raise_fallbacks();
-        snapshot.gnss_identified = gnss.identified();
-        snapshot.gnss_firmware = gnss.firmware_version();
-        snapshot.gnss_reject = gnss.last_reject();
-        snapshot.gnss_rejected = gnss.rejected();
-        snapshot.gnss_overruns = gnss.port_overruns();
         snapshot.gnss_recoveries = gnss.recoveries();
         snapshot.gnss_recoveries_valid = true;
-        snapshot.gnss_solution_phase_ms = state.gnss.solution_phase_ms;
-        snapshot.gnss_solution_phase_valid = state.gnss.solution_phase_valid;
-
-        // The two counters core/power keeps and acts on nothing for: comparator
-        // firings, and readings the sanity floor threw away. They tell a supply
-        // problem from a divider problem and they had no reader at all.
-        snapshot.supply_warnings = product.power().supply_warnings();
-        snapshot.battery_implausible = product.power().implausible_samples();
-        snapshot.charge = product.power().charge_condition();
-        snapshot.charge_warnings = product.power().charge_warnings();
-
-        product.capture().describe(snapshot);
-
-        snapshot.refreshes++;
     }
-
-    uint32_t refreshed_ms_{0};
-    bool started_{false};
 };
+
+template <class Product>
+using DiagnosticsCollector = common::DiagnosticsCollector<Product, RadioDiagnostics>;
 
 }  // namespace skyblip::go
 

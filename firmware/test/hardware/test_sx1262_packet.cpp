@@ -34,7 +34,8 @@ TEST_CASE("sx1262: what was written to the buffer is what goes on air") {
 }
 
 // What a peer's detector matches is the window the part inserts, not one the dwell wrote itself.
-TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then the buffer") {
+TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then the buffer" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
@@ -174,7 +175,8 @@ TEST_CASE("sx1262: the packet the modem is told to expect carries no CRC of the 
     CHECK(sx1262::kCrcOneByte == 0x00);
 }
 
-TEST_CASE("sx1262: a burst is framed from the chips after the sync window, either system") {
+TEST_CASE("sx1262: a burst is framed from the chips after the sync window, either system" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);

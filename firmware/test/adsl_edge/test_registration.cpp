@@ -87,7 +87,8 @@ TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on
 }
 
 // A receiver files the name under the same target as the Traffic, so it follows the ICAO address.
-TEST_CASE("adsl edge: the name goes under the ICAO address while one is set") {
+TEST_CASE("adsl edge: the name goes under the ICAO address while one is set" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     go::Settings& settings = simulator.product().settings();

@@ -34,7 +34,7 @@ Played play(const Sign& sign, uint32_t from_ms) {
 
 }  // namespace
 
-TEST_CASE("sign: on is one green pulse, felt as it is lit") {
+TEST_CASE("sign: on is one green pulse, felt as it is lit" * doctest::test_suite("main")) {
     const Played played = play(kSignOn, 0);
     CHECK(played.lamp_pulses == 1);
     CHECK(played.motor_pulses == 1);
@@ -42,7 +42,7 @@ TEST_CASE("sign: on is one green pulse, felt as it is lit") {
     CHECK(played.out_of_step_ms == 0);
 }
 
-TEST_CASE("sign: off is three red pulses, each felt as it is lit") {
+TEST_CASE("sign: off is three red pulses, each felt as it is lit" * doctest::test_suite("main")) {
     const Played played = play(kSignOff, 0);
     CHECK(played.lamp_pulses == 3);
     CHECK(played.motor_pulses == 3);

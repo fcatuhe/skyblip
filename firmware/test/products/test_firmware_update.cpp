@@ -9,6 +9,7 @@
 #include "products/skyblip_go/pages/recovery.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "runtime/tasks.h"
+#include "test/support/confirmed.h"
 #include "test/support/frame_glass.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
@@ -50,9 +51,9 @@ bool attempt_recorded(Rig& rig) {
 
 const go::SelfTestPart& storage_row(Rig& rig) {
     for (int i = 0; i < go::kSelfTestPartCount; i++)
-        if (std::string(rig.product.self_test_rows()[i].name) == "STORAGE")
-            return rig.product.self_test_rows()[i];
-    return rig.product.self_test_rows()[0];
+        if (std::string(rig.product.self_test().parts[i].name) == "STORAGE")
+            return rig.product.self_test().parts[i];
+    return rig.product.self_test().parts[0];
 }
 
 // What a later image stores: one layout ahead of this one, sealed the way every blob is.
@@ -88,7 +89,8 @@ void set_callsign_over_the_link(Rig& rig, uint32_t& now_ms, const char* callsign
 
 }  // namespace
 
-TEST_CASE("product: an upload that lands parks the device and paints the glass before the swap") {
+TEST_CASE("product: an upload that lands parks the device and paints the glass before the swap" *
+          doctest::test_suite("main")) {
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
@@ -105,10 +107,9 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     now_ms += 200;
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Install);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
-    CHECK(rig.product.installing());
     CHECK(rig.product.board().rf().sleeps() == 1);
     CHECK_FALSE(rig.product.screen().powered());
-    CHECK_FALSE(config(rig).install_requested());
+    CHECK_FALSE(taken(config(rig)));
 
     // the panel is still clocking its refresh, and nothing is on record yet
     CHECK(rig.platform.dfu().triggered == 0);
@@ -394,7 +395,8 @@ std::string land(Rig& rig) {
 }  // namespace
 
 TEST_CASE(
-    "product: an image signed by a key the bootloader does not trust lands and is not installed") {
+    "product: an image signed by a key the bootloader does not trust lands and is not installed" *
+    doctest::test_suite("main")) {
     Rig rig;
     stage_versions(rig);
     sign(rig, 0x21, 0x42);
@@ -457,7 +459,8 @@ TEST_CASE("product: an image with no key hash at all is refused as the wrong key
     CHECK(rig.platform.dfu().triggered == 0);
 }
 
-TEST_CASE("product: a release unit refuses to ask for an older image, and asks for the same one") {
+TEST_CASE("product: a release unit refuses to ask for an older image, and asks for the same one" *
+          doctest::test_suite("main")) {
     Rig older;
     stage_versions(older);
     REQUIRE(older.setup() == Status::Ok);
@@ -560,7 +563,8 @@ TEST_CASE("product: an image with nothing of its own beside a newer blob starts 
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 }
 
-TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone") {
+TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone" *
+          doctest::test_suite("main")) {
     Rig rig;
     const NewerBlob newer;
     REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
@@ -594,7 +598,8 @@ TEST_CASE("product: a sector that lost a bit is written over, not kept as a newe
     CHECK(std::string(stored.callsign) == "F-JABC");
 }
 
-TEST_CASE("product: a revert puts back the settings the pilot had when the swap began") {
+TEST_CASE("product: a revert puts back the settings the pilot had when the swap began" *
+          doctest::test_suite("main")) {
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);
