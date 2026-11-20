@@ -1,25 +1,4 @@
-// core/timing/durable_write.h: whether a durable write may start now, and how
-// long one may wait. The single owner of that question.
-//
-// 1-ARCHITECTURE.md §5.1's "no flash work inside a dwell" is a statement about
-// the nRF52840's INTERNAL flash: the NVMC owns the memory while it writes or
-// erases, so the stall reaches every thread and every interrupt whose code lives
-// there - the PPS latch (hardware/platform/zephyr/pps.h timestamps the edge
-// inside the GPIO callback) and the SX1262's DIO1 among them - on the core that
-// arms PPS-anchored deadlines. The dwell map (core/timing/slot.h) leaves no
-// unarmed phase in the second: 207..442 is the uplink dwell, 447..1202 the two
-// M-band dwells own-ship keys the PA inside, and the only gaps are the three 5 ms
-// retunes, which are the last place a stall belongs. So this does not look
-// for a phase with no dwell in it. It places the whole stall where the CPU owes
-// the radio nothing: inside an armed RECEIVE dwell, finishing a retune's width
-// before that dwell has to be re-armed, clear of the window own-ship may key the
-// PA in, and clear of the top of the second the anchor is latched on.
-//
-// What that costs is the receiver, and it is worth saying out loud: the dwell
-// stays armed but the core is deaf to its reports for the length of the write, so
-// one settings write is up to kWorstWriteMs of one channel not being heard. That
-// is why the write is a request that coalesces rather than a call, and why the
-// bound below is measured from the first change and not the last.
+// INFO: fc 20nov26 a flash write stalls the core, so it goes only inside an armed receive dwell
 #ifndef SKYBLIP_CORE_TIMING_DURABLE_WRITE_H
 #define SKYBLIP_CORE_TIMING_DURABLE_WRITE_H
 
@@ -29,12 +8,7 @@
 
 namespace skyblip::timing {
 
-// What only the service that arms dwells knows: where in the second it believes
-// it is, and whether the dwell it armed carries a burst whose outcome has not
-// come back yet. Published once per pass, so this policy reads the radio's own
-// view of the second rather than keeping a second copy of the slot arithmetic.
-// Stamped, because a view sampled when the radio ran is already stale by the
-// time the service that asks gets its turn.
+// INFO: fc 20nov26 the radio's own stamped view of the second, never a second copy of the slot map
 struct DwellPhase {
     uint32_t at_ms{0};
     int phase_ms{0};
@@ -42,69 +16,32 @@ struct DwellPhase {
     bool burst_armed{false};
 };
 
-// Idle: nothing to write. Hold: something to write, not now. Place: now, inside
-// the window. Forced: the bound is spent and it goes anyway - the one outcome
-// that is a fault and is counted as one.
+// INFO: fc 20nov26 Forced is the one fault: the bound is spent and the write goes anyway
 enum class DurableWriteVerdict : uint8_t { Idle = 0, Hold = 1, Place = 2, Forced = 3 };
 
 class DurableWriteWindow {
    public:
-    // INFO: fw 04aug26 nRF52840 PS v1.8, NVMC chapter, "Electrical
-    // specification": tWRITE = 41 us to write one 32-bit word, tERASEPAGE =
-    // 85 ms to erase one 4 kB page. Flash cannot be read while the NVMC is
-    // writing or erasing it, which is why these are CPU stalls and not background
-    // work - the core fetches its own instructions from the memory being erased.
+    // INFO: fw 04aug26 nRF52840 PS v1.8 NVMC: tWRITE a word, tERASEPAGE a page, both stall the core
     static constexpr uint32_t kWordWriteUs = 41;
     static constexpr uint32_t kPageEraseMs = 85;
 
-    // INFO: fw 04aug26 What one settings write costs in the worst case. NVS
-    // (hardware/platform/zephyr/kvstore.h, three sectors of the internal
-    // storage_partition) appends until a sector is full, then closes it and
-    // garbage-collects the next one: one tERASEPAGE, plus the live entries
-    // copied forward a word at a time. The settings blob is 64 bytes and the
-    // trusted browsers 462, so the copy is kBlobWords words. Budgeted from the
-    // datasheet, not measured - the bench figure is what settles it.
+    // INFO: fw 04aug26 an NVS garbage collection, a page erase and both blobs copied, unmeasured
     static constexpr uint32_t kBlobWords = (64 + 462 + 3) / 4;
     static constexpr uint32_t kWorstWriteMs =
         kPageEraseMs + (kBlobWords * kWordWriteUs + 999) / 1000;
 
-    // INFO: fw 04aug26 The longest SINGLE stall inside that worst case, which is
-    // a different number: CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE splits a page erase
-    // into ERASEPAGEPARTIAL slices of CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE_MS and
-    // the flash is readable between them (both set in
-    // products/common/prj.conf). kWorstWriteMs of wall clock still passes;
-    // what shrinks is how long the core is held at once, and the static_assert
-    // below is what that buys - a write that had to go outside its window cannot
-    // move a dwell edge further than kSwitchRetuneMs, the retune every switch
-    // keeps, already absorbs.
+    // INFO: fw 04aug26 the longest single stall, prj.conf's partial erase slice
     static constexpr uint32_t kPartialEraseMs = 4;
 
-    // How long the policy waits for a stream of changes to stop before it writes
-    // the one blob they add up to. The glass steps a value on every tap that
-    // lands inside common::PromptAnswer::kAnswerSettleMs (600 ms), so a settle
-    // shorter than that window would put a pilot's six taps on flash six times.
-    // This is that window plus a service pass and a little.
+    // INFO: fc 20nov26 PromptAnswer::kAnswerSettleMs and a pass, so six quick taps make one write
     static constexpr uint32_t kSettleMs = 750;
 
-    // The hard bound, measured from the FIRST unwritten change rather than the
-    // last: a setting a pilot changed that is still not on flash when the cell
-    // dies is a setting they will believe they changed. Three seconds, the same
-    // figure §D.3 already treats as waited-long-enough for a burst that cannot
-    // find a clear channel. Long enough that the settle above and the widest gap
-    // between two free windows cannot spend it between them; short enough that
-    // what a pilot loses to a dead cell is the change they were still making.
+    // INFO: fc 20nov26 from the first unwritten change: a dying cell loses only the one in progress
     static constexpr uint32_t kDeferCeilingMs = 3000;
 
-    // A published view older than this is not evidence about where the second is
-    // any more, so it refuses rather than guesses. Ten service passes, and wider
-    // than the coarsest step anything drives the loop at: the phase carried
-    // forward from a stamped view stays exact as long as the clock does, and a
-    // view that outran its own dwell is refused by the window test anyway. This is
-    // for the other case - a radio that stopped publishing at all.
+    // INFO: fc 20nov26 ten passes: refuse a radio that stopped publishing rather than guess
     static constexpr uint32_t kViewStaleMs = 100;
 
-    // The one stretch the second offers, proved against the map it is cut from
-    // rather than restated: the uplink dwell (core/timing/README.md).
     static_assert(kWorstWriteMs + static_cast<uint32_t>(kSwitchRetuneMs) <
                       static_cast<uint32_t>(dwell_of(kUplinkWindowMs).width_ms()),
                   "one settings write no longer fits inside the uplink dwell");
@@ -113,17 +50,12 @@ class DurableWriteWindow {
     static_assert(kDeferCeilingMs > kSettleMs + 1000,
                   "the settle and one whole second could spend the bound between them");
 
-    // A change was accepted. Coalescing lives here: the first call starts the
-    // bound, every call restarts the settle, and the blob that eventually goes
-    // to flash is whichever one the caller holds by then.
+    // INFO: fc 20nov26 the first request starts the bound, and each one restarts the settle
     void request(uint32_t now_ms);
 
-    // Pure: the same arguments give the same answer, and nothing here reads a
-    // clock of its own.
     DurableWriteVerdict decide(const SlotPlan& plan, const DwellPhase& dwell,
                                uint32_t now_ms) const;
 
-    // The write happened. `forced` is the verdict that placed it, not a guess.
     void placed(uint32_t now_ms, bool forced);
     // INFO: fc 25sep26 stays pending with its bound restarted, and counts in neither ratio term
     void refused(uint32_t now_ms, bool forced);
@@ -133,16 +65,11 @@ class DurableWriteWindow {
     // INFO: fc 20sep26 the wait kDeferCeilingMs bounds, measured from the oldest unwritten change
     uint32_t waited_ms(uint32_t now_ms) const { return pending_ ? now_ms - first_request_ms_ : 0; }
 
-    // What the bench reads: how many changes arrived, how many writes they cost
-    // (the coalescing ratio), how many could not be placed inside the bound, and
-    // the longest a change ever waited.
     uint32_t requests() const { return requests_; }
     uint32_t writes() const { return writes_; }
     uint32_t forced() const { return forced_; }
     uint32_t worst_wait_ms() const { return worst_wait_ms_; }
 
-    // Exposed so the window itself is testable at a phase, without a request and
-    // a clock in front of it.
     static bool free_at(const SlotPlan& plan, int phase_ms, uint32_t cost_ms);
 
     static bool free_now(const SlotPlan& plan, const DwellPhase& dwell, uint32_t now_ms,

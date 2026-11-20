@@ -4,9 +4,7 @@
 
 namespace skyblip::timing {
 
-// Integer arithmetic on hundredths of a dBm. Truncation toward zero would stall
-// the average one step short of every target, so a residual that is too small
-// to weigh still moves the average by one hundredth.
+// INFO: fc 20nov26 a residual too small to weigh moves one hundredth, so truncation never stalls it
 void NoiseFloor::sample(int8_t rssi_dbm) {
     samples_++;
     const int32_t residual = static_cast<int32_t>(rssi_dbm) * 100 - level_centi_dbm_;
@@ -24,9 +22,7 @@ int8_t NoiseFloor::level_dbm() const {
 }
 
 namespace {
-// 10^(-d/10) in units of 1/2^20, for d decibels below the loudest reading in
-// the window. A mean of at most kMaxSamples terms cannot be pulled a whole
-// decibel by anything further down than the last entry, so it contributes zero.
+// INFO: fc 20nov26 10^(-d/10) in Q20, d dB under the peak, to where kMaxSamples terms move no dB
 constexpr uint32_t kPowerRatioQ20[] = {1048576, 832914, 661607, 525533, 417446, 331589,
                                        263390,  209218, 166188, 132008, 104858, 83291,
                                        66161,   52553,  41745,  33159,  26339};
@@ -54,10 +50,7 @@ void AirTime::spend(uint32_t now_ms, uint32_t air_ms) {
         started_ = true;
         head_start_ms_ = now_ms;
     } else if (now_ms - head_start_ms_ >= kWindowMs && head_start_ms_ - now_ms >= kWindowMs) {
-        // A gap wider than the window in either direction: nothing the ring holds
-        // is inside the hour any more. Only one of the two differences can be
-        // under the window, so an instant a little BEHIND the head is a caller
-        // repeating a pass, not a gap, and it lands in the head bucket below.
+        // INFO: fc 20nov26 an instant a little behind the head is a repeated pass, not a gap
         for (uint8_t i = 0; i < kBuckets; i++) bucket_ms_[i] = 0;
         head_ = 0;
         head_start_ms_ = now_ms;

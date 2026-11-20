@@ -1,9 +1,4 @@
-// core/timing/slot_timing_statistics.h: the bench-facing accumulator behind G6, the
-// launch gate's "slot timing proven on silicon". It has exactly two inputs -
-// the PPS edge boards/ already latches every pass, and the outcome an
-// armed dwell reports back against the deadline core/timing::Transmitter chose
-// - so nothing here forms a second opinion about either. ADS-L 4 SRD-860
-// issue 2 §C.5 is the budget both halves are read against.
+// INFO: fc 20nov26 the bench's slot timing against §C.5, from latched edges and dwell outcomes
 #ifndef SKYBLIP_CORE_TIMING_SLOT_TIMING_STATISTICS_H
 #define SKYBLIP_CORE_TIMING_SLOT_TIMING_STATISTICS_H
 
@@ -13,21 +8,7 @@
 
 namespace skyblip::timing {
 
-// Seven buckets, signed and symmetric about zero. The edges are the three
-// figures that already bound this budget, not a round number:
-//  - kRetuneUs, the SX1262's own share of it. Semtech DS.SX1261-2.W.APP rev
-//    2.1 §3.5.2 table 3-7, TS_HOP: 30 us typical for a 10 MHz synthesizer
-//    step; the M-band hop here is 200 kHz (adsl::kMBand1Hz - adsl::kMBand0Hz), so the chip
-//    settles inside this bucket with room left over. An error this small is
-//    the radio doing exactly what its own datasheet promises, not a PPS or a
-//    scheduling fault.
-//  - kSwitchMarginMs (core/timing/slot.h), what every switch leaves a late
-//    burst on the old channel.
-//  - kSwitchRetuneMs (core/timing/slot.h), the retune every switch keeps.
-//    Past this the error is not something the slot map budgeted for.
-// A count outside the widest pair still lands somewhere: saturated into the
-// outermost bucket, never wrapped, because a fault we cannot bound is one this
-// class must not misreport as a smaller one.
+// INFO: fc 20nov26 bucket edges are TS_HOP, the switch margin and the retune, and outliers saturate
 class SlotTimingStatistics {
    public:
     static constexpr int32_t kRetuneUs = 30;
@@ -35,31 +16,20 @@ class SlotTimingStatistics {
     static constexpr int32_t kSwitchRetuneUs = kSwitchRetuneMs * 1000;
     static constexpr int kBuckets = 7;
 
-    // Less than two nominal seconds, more than any jitter this budget could
-    // ever call ordinary: a gap this wide means at least one PPS edge went
-    // missing, which is holdover, not a sample for the interval histogram.
+    // INFO: fc 20nov26 under two seconds and over any jitter, so a gap this wide lost an edge
     static constexpr int64_t kHoldoverGapUs = 1500000;
     static constexpr int64_t kNominalSecondUs = 1000000;
 
-    // The PPS edge exactly as boards/ latched it, and the lock flag
-    // read alongside it. Safe to call every service pass: only a genuinely
-    // new edge value, or a transition of the lock flag, moves anything.
+    // INFO: fc 20nov26 safe every pass: only a new edge or a change of lock moves anything
     void record_edge(uint64_t edge_us, bool locked);
 
     // INFO: fc 28sep26 armed instant to the burst keying, both absolute, so no phase and no wrap
     void record_dwell_phase(int64_t error_us);
 
-    // A dwell that carried a plan and closed without the outcome it was armed
-    // for. Counted apart from the phase buckets above: a plan that never
-    // landed has no landing instant to measure against.
     void record_missed();
-    // A plan the policy never armed at all: the hour's air-time budget was
-    // already spent (core/timing/transmit.h Transmitter::Attempt::over_budget).
+    // INFO: fc 20nov26 a burst Transmitter::Attempt::over_budget kept off the air
     void record_refused();
 
-    // The executor's own measurement of its dwell changes, as it last reported
-    // it: the worst of each kind since boot, and how many dwells armed ahead were
-    // still not listening at their start. The figures the guards are sized from.
     void record_switching(uint32_t hop_us, uint32_t to_o_band_us, uint32_t to_m_band_us,
                           uint32_t late) {
         switch_hop_us_ = hop_us;
@@ -82,8 +52,6 @@ class SlotTimingStatistics {
     uint32_t switch_to_m_band_us() const { return switch_to_m_band_us_; }
     uint32_t late_dwells() const { return late_dwells_; }
 
-    // Exposed for the bench arithmetic to be checked directly, not only
-    // through record_edge()/record_dwell_phase()'s side effects.
     static int bucket_of(int64_t error_us);
 
    private:

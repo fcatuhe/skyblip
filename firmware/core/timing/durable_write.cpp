@@ -8,12 +8,7 @@ namespace {
 constexpr int kSecondMs = 1000;
 }  // namespace
 
-// Four refusals, in the order they cost. The first is the loudest: an armed dwell
-// hands the radio a plan, and the CPU's remaining debt to it is (a) the instant it
-// must be re-armed, (b) the instant own-ship keys the PA inside it, and (c) the
-// PPS edge the next second's deadlines are all measured from. A stall that lands
-// on the third is the worst of the three, because it does not delay one dwell -
-// it moves the anchor under every dwell that follows.
+// INFO: fc 20nov26 a stall on the PPS edge is the worst: it moves every later dwell's anchor
 bool DurableWriteWindow::free_at(const SlotPlan& plan, int phase_ms, uint32_t cost_ms) {
     if (plan.tx_allowed) return false;
     if (phase_ms < 0) return false;
@@ -27,9 +22,7 @@ bool DurableWriteWindow::free_at(const SlotPlan& plan, int phase_ms, uint32_t co
     // INFO: fc 17nov26 a write goes inside a running dwell, never in the retune before one
     if (at_ms < plan.start_ms) return false;
     if (done_ms + kSwitchRetuneMs > plan.end_ms) return false;
-    // §C.5's direct slot is narrower than the M-band dwells at both ends, so a
-    // write placed in slot 0's head would still be holding the core at 450 ms,
-    // which is an instant core/timing::Transmitter is allowed to have chosen.
+    // INFO: fc 20nov26 slot 0's dwell opens before the direct slot, where a burst may key at 450
     if (at_ms < adsl::kDirectStartMs && done_ms + kSwitchRetuneMs > adsl::kDirectStartMs)
         return false;
     const int next_edge_ms = at_ms < kSecondMs ? kSecondMs : 2 * kSecondMs;
@@ -51,11 +44,7 @@ bool DurableWriteWindow::placeable(const SlotPlan& plan, const DwellPhase& dwell
 
 bool DurableWriteWindow::free_now(const SlotPlan& plan, const DwellPhase& dwell, uint32_t now_ms,
                                   uint32_t cost_ms) {
-    // Nothing is armed: a product with no radio fitted, or one before the first
-    // dwell. There is no second to respect.
     if (!dwell.armed) return true;
-    // A burst is on the plan and its outcome has not been reported. That dwell is
-    // the one the whole guard exists for, whatever phase it is at.
     if (dwell.burst_armed) return false;
     const uint32_t stale_ms = now_ms - dwell.at_ms;
     if (stale_ms > kViewStaleMs) return false;
@@ -65,9 +54,7 @@ bool DurableWriteWindow::free_now(const SlotPlan& plan, const DwellPhase& dwell,
 DurableWriteVerdict DurableWriteWindow::decide(const SlotPlan& plan, const DwellPhase& dwell,
                                                uint32_t now_ms) const {
     if (!pending_) return DurableWriteVerdict::Idle;
-    // The bound outranks the coalescing settle, and then the window: a thumb that
-    // keeps stepping a value for longer than the bound buys a second write, which
-    // is the trade this way round on purpose.
+    // INFO: fc 20nov26 the bound outranks the settle: a thumb stepping past it buys a second write
     const bool bound_spent = now_ms - first_request_ms_ >= kDeferCeilingMs;
     if (!bound_spent && now_ms - last_request_ms_ < kSettleMs) return DurableWriteVerdict::Hold;
     if (placeable(plan, dwell, now_ms)) return DurableWriteVerdict::Place;
