@@ -1,12 +1,12 @@
 # core/store
 
-One flash partition, two rings on it. `Flights` is the pilot's log, written at one record a second; `Diagnostics` is the engineering capture, written in bursts that fill a sector in under a minute. They share the sectors rather than each owning a fixed slice, because a device that never records a diagnostics capture should still hold every hour the partition can, and a capture taken once a year should not have cost the pilot a fixed tenth of their season.
+One flash partition holds two rings: `Flights`, the pilot's log at one record a second, and `Diagnostics`, the engineering capture, which fills a sector in under a minute. They share the sectors rather than each owning a fixed slice, so a device that never captures still holds every hour the partition can.
 
-Pure, framework-free, host-tested, and it never touches flash. `SectorAllocator` decides which sector is next; the service that owns the part does the erasing and the writing.
+The code is pure, host-tested and never touches flash. `SectorAllocator` decides which sector is next. The service that owns the part erases and writes.
 
 ## The header
 
-`sector.h` is the 16 bytes at the head of every claimed sector, and the boot scan reads nothing else: one 16-byte read per sector finds both rings in 4768 bytes of a 1.16 MB partition, where reading the partition to find the end of it would be a quarter of a second of SPI on every boot.
+`sector.h` is the 16 bytes at the head of every claimed sector. The boot scan reads only these: 4768 bytes of a 1.16 MB partition, where reading it all would cost a quarter of a second of SPI on every boot.
 
 | Byte | Field |
 |---|---|
@@ -19,15 +19,13 @@ Pure, framework-free, host-tested, and it never touches flash. `SectorAllocator`
 | 13 | flags: bit 0 is `kSectorFlagSessionStart`, the sector the session opened in |
 | 14-15 | CRC-16-CCITT over bytes 0-13 |
 
-The session-start bit is the answer to the one question a renumbered ring cannot otherwise be asked. After a restart a session's records are numbered from the first sector that still carries its id, so once the ring has recycled the sector a session opened in, what is left reads exactly like a whole session that began later. The bit is written on the first claim of a session and on no other, it is never set afterwards, and it is under the CRC, so a suffix cannot acquire one: a session whose lowest-sequence sector does not carry it is reported truncated in the `list` reply (`../../products/common/services/record_store.cpp`).
+The session-start bit tells a whole session from what is left once the ring recycles its first sector, which otherwise reads like a session that began later. The allocator sets it, as `Claim::session_start`, on a session's first claim only, under the CRC, so a session whose lowest-sequence sector lacks it is reported truncated in the `list` reply (`../../products/common/services/record_store.cpp`).
 
-Rotation itself is not the defect; a rotation nobody counted is. `lost_sectors(owner)` counts, at the moment the decision is made and not in a poll after it, every sector recycled out from under the session that owner is writing - the ring recycling its own oldest, and the other ring evicting it. The capture reads that counter as it drains and turns each loss into a `diagnostics::Gap` on the flash, followed by a fresh `Boot` and `Config`, so every surviving suffix still names the build and the settings that produced it (`../diagnostics/README.md`).
+`lost_sectors(owner)` counts every sector recycled from under the session that owner is writing, by either ring, at the moment the decision is made. The capture turns each loss into a `diagnostics::Gap` followed by a fresh `Boot` and `Config` (`../diagnostics/README.md`).
 
-A sector this build cannot make sense of is quarantined rather than reclaimed: `quarantine(sector)` takes it out of the free list, out of `owned()`, and out of what an erase-all touches. Three things reach it, all from the boot scan: a read the part refused (counted apart, because a flash that will not read is a fault and not a free sector), a header that decodes but carries a version or an owner this build does not know, and a header whose record size is not the one both rings write. The alternative - treating any of them as free space - erases evidence on the next claim.
+`quarantine(sector)` removes a sector from the free list, from `owned()` and from an erase-all, because reclaiming a sector this build cannot read would erase evidence. The boot scan quarantines a read the part refused (counted apart, as a flash fault), a header with an unknown version or owner, and a header whose record size is not the one both rings write. Version 1 had no owner byte, and a v1 partition reads as free space.
 
-The version is 2. Version 1 had no owner byte and its CRC covered only the first 12 bytes, so there was no room to grow one under the checksum: the header was re-cut rather than extended, and a v1 partition reads as free space and is reclaimed sector by sector.
-
-`sequence` is one counter for the whole partition, it starts at one and it never repeats. That single counter is what makes the scan sufficient:
+`sequence` is one counter for the whole partition. It starts at one and never repeats, so the headers alone answer:
 
 | Question | Answer from the headers alone |
 |---|---|
@@ -36,11 +34,11 @@ The version is 2. Version 1 had no owner byte and its CRC covered only the first
 | a session's sectors, in order | that owner's sectors carrying that session id, by sequence |
 | a free sector | a header that does not decode, or one numbered zero |
 
-Two counters, one per ring, would answer neither: the interleaving of the two rings would be lost, and with it the order the sectors were claimed in.
+One counter per ring would lose the order in which the two rings claimed.
 
-The allocator keeps the owner, the sequence and the session id of every sector in RAM, filled from that one scan at boot and from every claim after it. Two questions are answered out of it and neither goes back to flash: `session_run()` walks a ring in the order it was written, one run of a session's back-to-back sectors at a time, which is how an index of sessions is rebuilt, and `session_sector()` gives the nth sector of one session, which is how a record index becomes an address. A session's sectors are consecutive in sequence and in nothing else, because the other ring claims in between, so neither answer may be arithmetic on a first sector. `session_sector()` counts from the oldest sector the session still holds. `recycled_sectors()` says how many sectors each ring has recycled from the front of the session it last took one from, since boot, which is what keeps a record's index while the ring rotates (`../comms/README.md`, A record keeps its index while the ring rotates).
+The allocator keeps every sector's owner, sequence and session id in RAM. `session_run()` walks a ring in write order, one run of a session's back-to-back sectors at a time. `session_sector()` gives the nth sector of a session, counted from the oldest it still holds. The other ring claims in between, so neither may be arithmetic on a first sector. `recycled_sectors()` counts the sectors each ring has recycled since boot from the front of the session it last took one from (`../comms/README.md`, A record keeps its index while the ring rotates).
 
-Both run on the service loop that also arms the radio and parses the GNSS, so neither may cost a scan of the pool per sector. Each scan visits every sector of the pool, 330 on the T-Echo, and the bench stalls work out at about 1.4 us a sector visited. A run costs three scans. `session_sector()` bisects the header between the two bounds the session's own count gives: the nth header is at least n above the session's lowest, and at least as far below its highest as the session has sectors after it. A capture the other ring never interrupted is resolved in two scans. The walk it replaced took n+1 scans for the nth sector, so reading the end of a 219-sector capture held the loop 600 ms a read, and a `list` over a full partition held it 340 ms.
+Both run on the service loop that arms the radio, so neither may scan the pool once per sector. A scan visits all 330 sectors on the T-Echo, at about 1.4 us a sector. A run costs three scans. `session_sector()` bisects on sequence: the nth sector is at least n above the session's lowest, and at least as far below its highest as the session has sectors after it.
 
 ## The claim
 
@@ -55,30 +53,18 @@ Both run on the service loop that also arms the radio and parses the GNSS, so ne
 | Diagnostics, Flights at the floor | its own oldest |
 | Diagnostics, Flights at the floor and owning nothing to recycle | nothing, and the caller counts the refusal |
 
-Flights eats Diagnostics before it eats itself, because a flight is the thing the device exists to record and a capture is a debugging aid with a session in front of it. Diagnostics grows the other way round: it takes from Flights down to the floor and only then recycles itself, so a device that captures once fills the whole partition above the protected hours rather than stopping at the two sectors it happened to be holding. On a 298-sector pool the steady state is 128 sectors of flights and 170 of diagnostics: 28,900 slots, which is about 44 minutes of a full capture at eleven records a second and 120 hours of a power run.
+Flights evicts Diagnostics first, because a flight is what the device exists to record. Diagnostics takes from Flights down to the floor before it recycles itself, so one capture fills the partition above the protected hours. On a 298-sector pool that leaves 170 sectors of diagnostics: 28,900 slots, about 44 minutes of a full capture at eleven records a second, or 120 hours of a power run.
 
-`Claim::session_start` says whether the sector handed out is the first the session owns, which is what the service writes into the header. The allocator decides it rather than the caller: a session with no sector on the partition yet is opening, and one that already has a sector is continuing, even if what it is continuing is a suffix of itself.
-
-A ring's frontier is never handed out: it is the sector being written into, and a ring that owns exactly one sector therefore has nothing to evict. Free sectors are taken forward of the newest, which is what keeps a ring's sectors contiguous while it is the only ring using the partition, and what makes the first claim on a virgin partition sector zero.
+A ring's frontier is never handed out, because it is being written. Taking free sectors forward of the newest keeps a lone ring contiguous.
 
 ## The floor
 
-`kFlightsFloorHours` is 6, and it is the promise the pool makes: six hours of flights are never evicted by a diagnostics capture. It is spelled in flight hours rather than in sectors because hours are what the promise is made in, and `flights_floor_sectors()` turns them into the count the policy compares against, from the record period and the slots a sector holds. At 170 slots a sector and one record a second, a sector is 2 min 50 s, so six hours is 128 of the partition's 298 sectors: a device that has flown all season keeps its last six hours whatever the bench does to it, and a diagnostics capture that wants more than the remaining 170 sectors is told no.
-
-It was twelve hours when a record went every four seconds, 64 sectors. At one a second twelve hours is 255 of the 298, which would leave a capture 43 sectors, about 11 minutes. Six hours keeps the floor under half the partition and leaves a capture about 44 minutes. A flight's events ride in its sectors (`../flight/README.md`), so the six hours are a little shorter for a flight with a busy sky: a status is one record in sixty, and each alarm and each aircraft heard one more.
+`kFlightsFloorHours` is 6: a capture never evicts the last six hours of flights. At 170 slots a sector and one record a second, a sector is 2 min 50 s, so six hours is 128 of 298 sectors, and `flights_floor_sectors()` does that sum. Twelve hours would leave a capture about 11 minutes. A flight's events ride in its sectors (`../flight/README.md`), so a busy sky shortens the six hours a little.
 
 ## The prepared spare
 
-Each ring keeps one spare: a sector already erased with no header yet, so a claim is instant.
-
-It exists because of the rate difference. At the flights cadence a sector lasts almost three minutes and the erase that claims a new one is invisible; at diagnostics rates a sector fills in under a minute, so that erase lands next to the direct slot often enough to be a problem. Preparing the spare is the same decision as claiming, so it runs through the same policy: `prepare(owner)` names the sector to erase and takes it away from its previous owner at once, since the erase is about to destroy what was in it.
-
-Three steps, and the service owns the middle one: `prepare()` names the sector, the service erases it in a pass where the radio is not keying, `note_erased()` says it is ready. An erase that fails leaves the spare reserved and dirty, so the next pass tries the same sector again, and a claim that arrives first takes it and erases it itself. A spare is never handed to the other ring and never handed out twice.
-
-A spare carries no header, so a power cut turns it back into a free sector, which is exactly what it is.
+Each ring keeps one spare, erased and without a header, so a claim does not erase next to the direct slot. `prepare(owner)` names it through the claim policy and takes it from its owner at once. The service erases it in a pass where the radio is not keying, then calls `note_erased()`. A failed erase leaves the spare reserved and dirty for the next pass, and a claim that arrives first erases it itself. A spare is never handed to the other ring nor handed out twice. A power cut turns it back into a free sector.
 
 ## Giving a ring back
 
-`release(owner)` is the other half of the erase: every sector that owner holds goes back to free, its spare with it, and the other ring is untouched. The sequence counter is not wound back, because it is the one number that must never repeat - a released sector is claimed again with a number above everything on the partition, so the walk order of what survived is still the order it was written in.
-
-What the service erases before it calls this is the service's business, and the two rings answer it differently: the pilot's "erase log" clears every sector that is not the capture's, because that is what it did when there was one ring on the partition, while a capture is never erased on request at all - the allocator recycles it (`../../products/skyblip_go/README.md`).
+`release(owner)` frees every sector that owner holds, its spare included, and leaves the other ring untouched. The sequence counter is not wound back, so survivors keep their write order. The pilot's "erase log" clears every sector that is not the capture's. A capture is never erased on request: the allocator recycles it (`../../products/skyblip_go/README.md`).
