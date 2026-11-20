@@ -5,7 +5,7 @@ nav_title: "Radar"
 description: "Lee los símbolos y la lista NEARBY de skyBlip Go. Entiende las alertas dentro de 3 km y 300 m y cómo PLOT ALL muestra el tráfico lejano."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -163,6 +163,35 @@ updated_on: "2026-11-18"
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "Pantalla NEARBY: una fila para el Go con la batería al 92 %, 9 satélites y 5 aeronaves recibidas. Debajo hay cinco aeronaves, primero las que están a tu altura, con la letra de la fuente, el indicativo o la dirección en letra pequeña, la distancia horizontal y la altitud relativa" %>
       <figcaption>NEARBY</figcaption>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="no-tx">Cuando el Go no transmite, <span class="highlight">cada página dice por qué</span>.</h3>
+      <p>
+        El Go transmite su posición solo mientras se cumplen todos los requisitos de
+        ADS-L: una dirección activada, una radio que responde y escucha antes de
+        transmitir, un receptor GPS que calcula dos soluciones por segundo, una
+        posición, la hora UTC y el pulso por segundo del receptor. Si falla uno, el Go
+        deja de transmitir al momento, pero sigue recibiendo, avisándole y
+        alimentando su aplicación de navegación.
+      </p>
+      <p>
+        A los 10&nbsp;s, la esquina superior izquierda de cada página muestra
+        <span class="mono">NO TX</span> sobre el motivo:
+        <span class="mono">RADIO</span>, <span class="mono">GNSS</span>,
+        <span class="mono">FIX</span>, <span class="mono">UTC</span> o
+        <span class="mono">PPS</span>. En vuelo, el Go vibra una vez cuando aparece la
+        marca. La marca desaparece cuando vuelve a transmitir. Antes de la primera
+        posición, el radar muestra en su lugar el avance del receptor. La página de
+        comprobación de funcionamiento indica qué componente impide transmitir, y
+        <%= link_to "Briefing", briefing_root_path %> muestra el mismo motivo
+        mientras está conectado.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-tx.png", alt: "La página del radar con NO TX sobre PPS en la esquina superior izquierda, en blanco sobre negro: el pulso por segundo del receptor se detuvo hace más de un minuto" %>
+      <figcaption>Sin pulso desde hace más de un minuto</figcaption>
     </figure>
   </div>
 </section>

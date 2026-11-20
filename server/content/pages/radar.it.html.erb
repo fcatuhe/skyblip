@@ -5,7 +5,7 @@ slug: radar
 description: "Leggi il radar del traffico di skyBlip Go, i simboli e la lista Nearby. Scopri gli avvisi entro 3 km e 300 m e come PLOT ALL mostra il traffico lontano."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -208,6 +208,35 @@ updated_on: "2026-11-18"
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "La pagina Nearby: una riga per il Go con la batteria al 92%, 9 satelliti e 5 aeromobili ricevuti, poi cinque aeromobili, prima quelli alla tua quota, ciascuno con una lettera che indica la fonte dell'informazione, il nominativo o l'indirizzo radio in piccolo, la distanza orizzontale e la quota rispetto a te" %>
       <figcaption>Nearby</figcaption>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="no-tx">Quando il Go non trasmette, <span class="highlight">ogni pagina dice perché</span>.</h3>
+      <p>
+        Il Go trasmette la tua posizione solo finché valgono tutti i requisiti
+        dell&rsquo;ADS-L: un indirizzo attivato, una radio che risponde e ascolta prima
+        di trasmettere, un ricevitore GPS che calcola due soluzioni al secondo, una
+        posizione, l&rsquo;ora UTC e l&rsquo;impulso al secondo del ricevitore. Se
+        uno manca, il Go smette subito di trasmettere, ma continua a ricevere, ad
+        avvisarti e ad alimentare la tua app di navigazione.
+      </p>
+      <p>
+        Dopo 10&nbsp;s, l&rsquo;angolo in alto a sinistra di ogni pagina mostra
+        <span class="mono">NO TX</span> sopra il motivo:
+        <span class="mono">RADIO</span>, <span class="mono">GNSS</span>,
+        <span class="mono">FIX</span>, <span class="mono">UTC</span> o
+        <span class="mono">PPS</span>. In volo, il Go vibra una volta quando il segno
+        appare. Il segno sparisce quando la trasmissione riprende. Prima della prima
+        posizione, il radar mostra invece l&rsquo;avanzamento del ricevitore. La
+        pagina dell&rsquo;autotest indica quale componente blocca la trasmissione, e
+        <%= link_to "Briefing", briefing_root_path %> mostra lo stesso motivo finché
+        è collegato.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-tx.png", alt: "La pagina radar con NO TX sopra PPS nell'angolo in alto a sinistra, bianco su nero: l'impulso al secondo del ricevitore si è fermato più di un minuto fa" %>
+      <figcaption>Nessun impulso da oltre un minuto</figcaption>
     </figure>
   </div>
 </section>

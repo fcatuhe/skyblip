@@ -4,7 +4,7 @@ nav_title: Radar
 description: "Read the skyBlip Go traffic display, symbols and Nearby list. Understand alerts within 3 km and 300 m and how PLOT ALL shows distant traffic."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -207,6 +207,34 @@ updated_on: "2026-11-18"
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "The nearby page: a line for the Go with its battery at 92%, 9 satellites and 5 aircraft received, then five aircraft, those at your height first, each with a letter showing the source of the information, its callsign, or its radio address in small type, its horizontal distance and its altitude relative to you" %>
       <figcaption>Nearby</figcaption>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="no-tx">When Go does not transmit, <span class="highlight">every page says why</span>.</h3>
+      <p>
+        Go transmits your position only while every ADS-L requirement holds: an
+        activated address, a radio that answers and listens before it transmits, a
+        GPS receiver solving twice a second, a position, UTC time and the
+        receiver&rsquo;s pulse per second. When one fails, Go stops transmitting at
+        once and keeps receiving, warning you and feeding your navigation app.
+      </p>
+      <p>
+        After 10&nbsp;s, the top-left corner of every page shows
+        <span class="mono">NO TX</span> above the reason:
+        <span class="mono">RADIO</span>, <span class="mono">GNSS</span>,
+        <span class="mono">FIX</span>, <span class="mono">UTC</span> or
+        <span class="mono">PPS</span>. In flight, Go vibrates once when the mark
+        appears. The mark disappears when transmission resumes. Before the first
+        position, the radar shows the receiver&rsquo;s progress instead. The self
+        test page shows which part stops transmission, and
+        <%= link_to "Briefing", briefing_root_path %> shows the same reason while
+        it is connected.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-tx.png", alt: "The radar page with NO TX above PPS in its top-left corner, white on black: the receiver's pulse per second stopped more than a minute ago" %>
+      <figcaption>No pulse for over a minute</figcaption>
     </figure>
   </div>
 </section>

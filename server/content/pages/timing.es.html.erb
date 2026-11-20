@@ -5,7 +5,7 @@ nav_title: "Temporización"
 description: "Cuándo transmite skyBlip Go: ventanas, ciclo de 20 s según el número de serie, un instante sorteado cada segundo, escucha previa y reintentos."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -139,7 +139,7 @@ updated_on: "2026-11-18"
   <p class="lede">El Go declara un límite de emisión del 1&nbsp;% de cualquier hora para su uso de la banda de 868&nbsp;MHz. Mantiene sesenta contadores de un minuto y comprueba el tiempo disponible antes de cada ráfaga. Una posición por segundo más un Status y un indicativo cada 10&nbsp;s usan 6&nbsp;ms por segundo: el 0,6&nbsp;% del tiempo en vuelo o el 0,15&nbsp;% en tierra. El programa normal no puede agotar el tiempo asignado. Si un fallo lo agota, el Go bloquea la transmisión en vez de seguir ocupando la banda.</p>
 
   <h3 id="clock">El GPS fija la hora y la hora habilita la radio.</h3>
-  <p class="lede">El pulso por segundo del receptor GPS, PPS, marca el flanco desde el que se calculan los plazos de radio. El Go solo transmite con una <%= link_to_page "gps", label: "posición estabilizada", anchor: "settle" %>, una hora UTC válida, sincronización PPS y un número de serie asignado. Si cesan los pulsos, mantiene las ventanas abiertas para recibir durante 60&nbsp;s, pero no transmite.</p>
+  <p class="lede">El pulso por segundo del receptor GPS, PPS, marca el flanco desde el que se calculan los plazos de radio. El Go solo transmite con un número de serie asignado, una radio que responde y escucha antes de transmitir, un receptor que calcula dos soluciones por segundo, una <%= link_to_page "gps", label: "posición estabilizada", anchor: "settle" %>, una hora UTC válida y un flanco PPS. Si cesan los pulsos, mantiene las ventanas y las transmisiones sobre el último flanco durante 60&nbsp;s y luego deja de transmitir. Cuando falta una de estas condiciones durante 10&nbsp;s, cada página muestra <span class="mono">NO TX</span> y el motivo (<%= link_to_page "radar", label: "Cuando el Go no transmite", anchor: "no-tx" %>).</p>
   <p class="lede">El receptor GPS comunica el segundo UTC en una trama de datos que llega cientos de milisegundos después del pulso. Hasta entonces, el dato sigue indicando el segundo anterior. Fechar con él una ráfaga recibida podría colocarla en el segundo equivocado. Dos unidades Go mostraron el problema en el banco de pruebas: el emisor fechó una ráfaga a las 42:52.954 y el receptor a las 42:53.956. Ahora las ráfagas recibidas se fechan con el segundo UTC que abre el último pulso.</p>
   <p class="lede">El bucle de servicio del firmware se ejecuta cada 10&nbsp;ms, demasiado despacio para abrir a tiempo cada ventana de radio por sí solo. Las primeras capturas en banco mostraron que la ventana 2 se abría entre 3 y 6&nbsp;ms tarde en la mediana y hasta 120&nbsp;ms tarde en el peor caso. Ahora el firmware programa la siguiente ventana de radio tan pronto como empieza la actual, con un plazo absoluto calculado a partir del pulso. Así, la radio puede cambiar de ventana sin esperar otra vuelta del bucle.</p>
 

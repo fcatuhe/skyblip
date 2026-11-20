@@ -5,7 +5,7 @@ slug: radar
 description: "Lesen Sie Radar, Symbole und die Liste NEARBY auf skyBlip Go. Warnungen gelten innerhalb von 3 km und 300 m. PLOT ALL zeigt auch entfernten Verkehr."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -163,6 +163,35 @@ updated_on: "2026-11-18"
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "Ansicht NEARBY: eine Zeile für Go mit 92% Akkustand, 9 Satelliten und 5 empfangenen Luftfahrzeugen. Dann folgen fünf Luftfahrzeuge, die auf Ihrer Höhe zuerst. Jeweils ein Buchstabe für die Quelle, das Rufzeichen oder klein gedruckt die Funkadresse, die horizontale Entfernung und die relative Höhe." %>
       <figcaption>NEARBY</figcaption>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="no-tx">Sendet Go nicht, <span class="highlight">sagt jede Seite warum</span>.</h3>
+      <p>
+        Go sendet Ihre Position nur, solange alle Anforderungen von ADS-L erfüllt
+        sind: eine aktivierte Adresse, ein Funkteil, das antwortet und vor dem Senden
+        hört, ein GPS-Empfänger mit zwei Lösungen pro Sekunde, eine Position, die
+        UTC-Zeit und der Impuls pro Sekunde des Empfängers. Fehlt eine davon, hört Go
+        sofort auf zu senden. Es empfängt weiter, warnt Sie weiter und versorgt Ihre
+        Navigations-App weiter.
+      </p>
+      <p>
+        Nach 10&nbsp;s zeigt die linke obere Ecke jeder Seite
+        <span class="mono">NO TX</span> über dem Grund:
+        <span class="mono">RADIO</span>, <span class="mono">GNSS</span>,
+        <span class="mono">FIX</span>, <span class="mono">UTC</span> oder
+        <span class="mono">PPS</span>. Im Flug vibriert Go einmal, wenn die Markierung
+        erscheint. Sie verschwindet, sobald Go wieder sendet. Vor der ersten Position
+        zeigt das Radar stattdessen den Fortschritt des Empfängers. Die
+        Selbsttest-Seite zeigt, welches Bauteil das Senden verhindert, und
+        <%= link_to "Briefing", briefing_root_path %> zeigt denselben Grund, solange
+        es verbunden ist.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-tx.png", alt: "Die Radarseite mit NO TX über PPS in der linken oberen Ecke, weiß auf schwarz: der Impuls pro Sekunde des Empfängers fehlt seit über einer Minute" %>
+      <figcaption>Seit über einer Minute kein Impuls</figcaption>
     </figure>
   </div>
 </section>

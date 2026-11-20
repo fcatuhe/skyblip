@@ -5,7 +5,7 @@ slug: radar
 description: "Lisez le radar de skyBlip Go, ses symboles et la liste Nearby. Comprenez l'alerte à moins de 3 km et 300 m et le mode PLOT ALL."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -222,6 +222,35 @@ updated_on: "2026-11-18"
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "La page nearby : une ligne pour le Go avec sa batterie à 92 %, 9 satellites et 5 aéronefs reçus, puis cinq aéronefs listés à votre hauteur d'abord, chacun avec une lettre indiquant la source de l'information, son indicatif, ou son adresse radio en petits caractères, sa distance horizontale et son altitude par rapport à vous" %>
       <figcaption>Nearby</figcaption>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="no-tx">Quand le Go n&rsquo;émet pas, <span class="highlight">chaque page dit pourquoi</span>.</h3>
+      <p>
+        Le Go n&rsquo;émet votre position que si toutes les exigences de l&rsquo;ADS-L
+        sont remplies&nbsp;: une adresse activée, une radio qui répond et écoute avant
+        d&rsquo;émettre, un récepteur GPS qui calcule deux positions par seconde, une
+        position, l&rsquo;heure UTC et l&rsquo;impulsion par seconde du récepteur. Si
+        l&rsquo;une manque, le Go cesse aussitôt d&rsquo;émettre, mais continue de
+        recevoir, de vous alerter et d&rsquo;alimenter votre application de navigation.
+      </p>
+      <p>
+        Au bout de 10&nbsp;s, le coin supérieur gauche de chaque page affiche
+        <span class="mono">NO TX</span> au-dessus de la raison&nbsp;:
+        <span class="mono">RADIO</span>, <span class="mono">GNSS</span>,
+        <span class="mono">FIX</span>, <span class="mono">UTC</span> ou
+        <span class="mono">PPS</span>. En vol, le Go vibre une fois quand la marque
+        apparaît. La marque disparaît quand l&rsquo;émission reprend. Avant la
+        première position, le radar montre plutôt la progression du récepteur. La
+        page d&rsquo;autotest indique quelle pièce bloque l&rsquo;émission, et le
+        <%= link_to "Briefing", briefing_root_path %> affiche la même raison tant
+        qu&rsquo;il est connecté.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-tx.png", alt: "La page radar avec NO TX au-dessus de PPS dans le coin supérieur gauche, en blanc sur noir : l'impulsion par seconde du récepteur s'est arrêtée il y a plus d'une minute" %>
+      <figcaption>Plus d&rsquo;impulsion depuis plus d&rsquo;une minute</figcaption>
     </figure>
   </div>
 </section>

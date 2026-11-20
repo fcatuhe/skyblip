@@ -5,7 +5,7 @@ slug: gps
 description: "Comment skyBlip Go tire un point des phrases GPS, attend qu'il se stabilise, garde l'heure avec le PPS et décide du vol à partir de la seule vitesse sol."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -59,7 +59,7 @@ updated_on: "2026-11-18"
   </figure>
 
   <h3 id="pps">Le PPS marque le début de la seconde.</h3>
-  <p class="lede">Le récepteur fournit une impulsion par seconde, appelée PPS. Une interruption en capture le front sans attendre le prochain tick du système d&rsquo;exploitation. Ce front marque le début de la seconde UTC à partir de laquelle se mesure chaque <%= link_to_page "timing", label: "fenêtre radio" %>. Chaque solution est datée à ce front, et non à l&rsquo;arrivée de sa dernière phrase. Si les impulsions cessent, les fenêtres radio continuent pendant 60&nbsp;s à partir du dernier front, en réception seulement&nbsp;: le Go n&rsquo;émet rien sans PPS verrouillé.</p>
+  <p class="lede">Le récepteur fournit une impulsion par seconde, appelée PPS. Une interruption en capture le front sans attendre le prochain tick du système d&rsquo;exploitation. Ce front marque le début de la seconde UTC à partir de laquelle se mesure chaque <%= link_to_page "timing", label: "fenêtre radio" %>. Chaque solution est datée à ce front, et non à l&rsquo;arrivée de sa dernière phrase. Si les impulsions cessent, les fenêtres radio et les émissions continuent pendant 60&nbsp;s à partir du dernier front. L&rsquo;horloge du Go dérive d&rsquo;au plus 10&nbsp;ms sur cette minute, donc il garde chaque émission au moins à cette distance des bords de sa fenêtre. Passé la minute, il cesse d&rsquo;émettre et chaque page affiche <span class="mono">NO TX PPS</span> 10&nbsp;s plus tard (<%= link_to_page "radar", label: "Quand le Go n&rsquo;émet pas", anchor: "no-tx" %>).</p>
   <p class="lede">On ne sait pas encore si le L76K continue de produire ces impulsions sans point GPS. Sa documentation décrit l&rsquo;impulsion, mais ne précise pas si la perte du point l&rsquo;arrête. La puce permet les deux comportements, et le Go ne choisit pas ce réglage. Un essai au banc doit établir ce qui se passe lors d&rsquo;une perte du point.</p>
 </section>
 
