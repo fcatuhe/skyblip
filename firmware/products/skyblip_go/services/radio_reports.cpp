@@ -79,6 +79,7 @@ diagnostics::Refusal RadioService::refusal_of(const timing::SlotPlan& slot,
     if (!timing::ownship_transmits(context_.state.own, context_.state.clock,
                                    context_.state.activation.address()))
         return diagnostics::Refusal::Unsettled;
+    if (attempt.stale) return diagnostics::Refusal::HeldForFix;
     return diagnostics::Refusal::OffSchedule;
 }
 

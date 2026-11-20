@@ -56,7 +56,7 @@ constexpr uint32_t kModelDateUtcS = 1735689600;
 
 struct Timed {
     models::Ag3335 chip;
-    parts::Ag3335 gnss{chip};
+    parts::Ag3335 gnss{ports::SolutionRate::Second, chip};
     OwnshipRig rig;
     uint32_t arrival_ms{0};
     uint32_t utc_s{0};
@@ -85,7 +85,7 @@ constexpr const char* kSequence =
 
 TEST_CASE("ag3335: bring-up identifies the receiver, then sends every setting once it is acked") {
     models::Ag3335 chip;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 2000);
 
@@ -99,7 +99,7 @@ TEST_CASE("ag3335: bring-up identifies the receiver, then sends every setting on
 
 TEST_CASE("ag3335: the configuration tracks L1 and L5 and takes SBAS corrections") {
     models::Ag3335 chip;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 2000);
 
@@ -117,7 +117,7 @@ TEST_CASE("ag3335: the configuration tracks L1 and L5 and takes SBAS corrections
 TEST_CASE("ag3335: the receiver sends GGA, GSA and RMC once a second, NMEA 4.10, and a PPS" *
           doctest::test_suite("main")) {
     models::Ag3335 chip;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 2000);
 
@@ -148,7 +148,7 @@ TEST_CASE("ag3335: every sentence the driver sends checksums and names its PAIR 
 TEST_CASE("ag3335: a lost acknowledgement is asked again, and the sequence still completes") {
     models::Ag3335 chip;
     chip.acks_to_drop = 2;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 5000);
 
@@ -161,7 +161,7 @@ TEST_CASE("ag3335: a lost acknowledgement is asked again, and the sequence still
 TEST_CASE("ag3335: what is said while the receiver restarts after $PAIR066 lands on a retry") {
     models::Ag3335 chip;
     chip.restart_ms = 1500;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 8000);
 
@@ -175,7 +175,7 @@ TEST_CASE(
     "ag3335: a refused command is skipped, the rest still land, and the receiver reads degraded") {
     models::Ag3335 chip;
     chip.unsupported_command = 382;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 5000);
 
@@ -191,7 +191,7 @@ TEST_CASE(
 TEST_CASE("ag3335: a receiver that answers nothing ends degraded and unidentified") {
     models::Ag3335 chip;
     chip.answers = false;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     const uint32_t every_attempt_ms = (parts::Ag3335::kCommandCount + 1) *
                                       parts::Ag3335::kCommandAttempts * parts::Ag3335::kAckWindowMs;
@@ -208,7 +208,7 @@ TEST_CASE(
     models::Ag3335 chip;
     chip.altitude_m = 1500;
     chip.geoid_separation_m = 49;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 4000);
 
@@ -229,7 +229,7 @@ TEST_CASE(
 TEST_CASE("ag3335: a GGA without field 11 falls back on the default separation and says so") {
     models::Ag3335 chip;
     chip.emit_geoid_separation = false;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 4000);
 
@@ -241,7 +241,7 @@ TEST_CASE("ag3335: a GGA without field 11 falls back on the default separation a
 TEST_CASE("ag3335: a receiver with no fix publishes none, and still counts its sentences") {
     models::Ag3335 chip;
     chip.fix_valid = false;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 4000);
 
@@ -297,7 +297,7 @@ TEST_CASE("ag3335: a command still processing is waited for, not sent again") {
     models::Ag3335 chip;
     chip.processing_command = 66;
     chip.processing_ms = 1500;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     run(gnss, chip, 0, 5000);
 
@@ -310,7 +310,7 @@ TEST_CASE("ag3335: a command that never stops processing is given up, and bring-
     models::Ag3335 chip;
     chip.processing_command = 66;
     chip.processing_ms = UINT32_MAX;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
 
     const uint32_t ceiling_ms =
         parts::Ag3335::kCommandAttempts * parts::Ag3335::kProcessingWindowMs;
@@ -323,7 +323,7 @@ TEST_CASE("ag3335: a command that never stops processing is given up, and bring-
 
 TEST_CASE("ag3335: a factory reset restores the receiver's defaults, and the sequence runs again") {
     models::Ag3335 chip;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
     run(gnss, chip, 0, 2000);
     REQUIRE(gnss.configured());
 
@@ -341,7 +341,7 @@ TEST_CASE("ag3335: a factory reset restores the receiver's defaults, and the seq
 
 TEST_CASE("ag3335: a cold start keeps the configuration") {
     models::Ag3335 chip;
-    parts::Ag3335 gnss(chip);
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
     run(gnss, chip, 0, 2000);
     REQUIRE(gnss.configured());
 

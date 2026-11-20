@@ -90,6 +90,10 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Radio, link::diagnostics_key::kTxForced, Kind::Unsigned, diagnostics.tx_forced);
         add(Group::Radio, link::diagnostics_key::kTxBusyMissed, Kind::Unsigned,
             diagnostics.tx_busy_missed);
+        add(Group::Radio, link::diagnostics_key::kTxHeldForFix, Kind::Unsigned,
+            diagnostics.tx_held_for_fix);
+        add(Group::Radio, link::diagnostics_key::kTxRedrawnForFix, Kind::Unsigned,
+            diagnostics.tx_redrawn_for_fix);
     }
 
     if (traffic) {
@@ -134,6 +138,9 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         if (diagnostics.residual_valid)
             add(Group::Gnss, link::diagnostics_key::kResidualM, Kind::Unsigned,
                 diagnostics.residual_m);
+        if (diagnostics.gnss_recoveries_valid)
+            add(Group::Gnss, link::diagnostics_key::kReceiverRecoveries, Kind::Unsigned,
+                diagnostics.gnss_recoveries);
     }
 
     if (power) {

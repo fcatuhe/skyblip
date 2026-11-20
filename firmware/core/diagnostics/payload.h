@@ -110,7 +110,8 @@ enum class Refusal : uint8_t {
     OverBudget = 1,
     Unarmed = 2,
     Unsettled = 3,
-    OffSchedule = 4
+    OffSchedule = 4,
+    HeldForFix = 5
 };
 
 constexpr uint8_t kDwellFlagTxAllowed = 1u << 2;

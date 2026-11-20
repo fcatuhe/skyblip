@@ -310,13 +310,9 @@ TEST_CASE("rf: a receiver the model predicts goes on air in seconds, not in twen
     CHECK(simulator.product().state().own.prediction_residual_m < gnss::kSettleResidualM);
 }
 
-// F3. The burst leaves in the direct slot, 450 to 1000 ms into the second, and
-// the ADS-L TimeStamp resolves to a quarter of a second. Encoding the fix's own
-// second left every transmission claiming quarter zero - an instant 450 ms or
-// more before the burst existed - while carrying a position from a third
-// instant. This pins the pair together: the quarter the frame claims is the
-// quarter it went on air in.
-TEST_CASE("rf: the burst is dated when it leaves, and carries the position from then") {
+// G.1.1 with G.1.16: the quarter a burst claims is its solution's, at most 500 ms before it leaves.
+TEST_CASE(
+    "rf: the burst is dated by its solution's quarter, solved under 500 ms before it leaves") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
@@ -340,10 +336,9 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
         REQUIRE(packet.address() == settings::address_of(platform::host::Identity::kSerial));
         if (!packet.is_position()) continue;
 
-        // Inside the direct slot the quarter is 1, 2 or 3. Zero is the old bug.
         REQUIRE(timing::Scheduler::in_direct_slot(record.phase_ms));
-        CHECK(int(packet.timestamp % 4) == record.phase_ms / 250);
-        CHECK(int(packet.timestamp % 4) != 0);
+        const int solved_ms = static_cast<int>(packet.timestamp % 4) * 250;
+        CHECK((record.phase_ms - solved_ms + 1000) % 1000 <= timing::Transmitter::kFixMaxAgeMs);
         checked++;
     }
     CHECK(checked >= 4);

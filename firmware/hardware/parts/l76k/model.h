@@ -7,6 +7,7 @@
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_H
 
+#include <deque>
 #include <string>
 
 #include "core/gnss/nmea.h"
@@ -20,7 +21,7 @@ namespace skyblip::models {
 // platform's UART fills on silicon, and here it is the rate the MCU end is set
 // to. Bytes crossing a rate mismatch are framing errors in both directions,
 // which is what "the receiver came up at 38400" actually looks like.
-class L76k : public io::Uart, public io::UartRate, public GnssTruth {
+class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssTruth {
    public:
     // Modelled receiver state, driven by the caller.
     bool fix_valid{true};
@@ -58,6 +59,21 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     // io::UartRate, and the two only agree because someone made them.
     uint32_t baud{parts::L76k::kFactoryBaudRate};
     bool refuses_baud_command{false};
+    bool refuses_fast_rate{false};
+    // INFO: fc 18nov26 a part that runs a sub-second $PCAS02 at another interval, as stamps show
+    uint32_t fast_rate_runs_at_ms{0};
+    // INFO: fc 18nov26 the shortest $PCAS02 interval the part takes, so 1000 refuses 2 Hz
+    uint32_t fastest_interval_ms{100};
+    // INFO: fc 18nov26 a part that lost UTC sends a no-time GGA and RMC, LilyGO-Modem-Series #95
+    bool time_lost{false};
+    // INFO: fc 18nov26 Go 000001 stopped NMEA and PPS together at 22:07, and only a reboot cured it
+    bool hung{false};
+    bool hangs_on_fast_rate{false};
+    uint32_t sub_second_rate_asked{0};
+    // INFO: fc 18nov26 Quectel L76K Hardware Design V1.0 4.2.1: RESET_N low at least 100 ms
+    static constexpr uint32_t kResetLowMs = 100;
+    int reset_pin{-1};
+    uint32_t hardware_resets{0};
 
     // INFO: fc 03aug26 $PCAS06 is answered with the CASIC firmware banner. A
     // clone that takes $PCAS sentences but never introduces itself is exactly
@@ -72,18 +88,25 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     static constexpr uint32_t kRebootMs = 300;
 
     // INFO: fc 18sep26 a cold receiver's solutions walk: metres of error at the first fix, decaying
+    // | 18nov26 and the sign turns each whole second, where own-ship measures the residual
     uint32_t walk_amplitude_m{0};
     uint32_t walk_duration_ms{15000};
 
     uint32_t solution_period_ms{kFactoryPeriodMs};
+    // INFO: fc 18nov26 how long after its solution the part starts talking: SoftRF measured 70 ms
+    uint32_t latency_ms{0};
+    // INFO: fc 18nov26 a UART stall: what lands in [from, until) of each period lands at until
+    uint32_t stall_period_ms{0};
+    uint32_t stall_from_ms{0};
+    uint32_t stall_until_ms{0};
     uint8_t constellations{0};
     uint8_t dynamic_model{0};
     bool sentence_set_applied{false};
     // INFO: fc 13sep26 the factory set, which is why a receiver that obeys nothing is still heard
     bool gga_enabled{true};
     bool gll_enabled{true};
-    bool gsa_enabled{true};
     // INFO: fc 29sep26 a $PCAS03 field counts solutions per sentence and 0 is off
+    uint8_t gsa_every{1};
     uint8_t gsv_every{1};
     bool rmc_enabled{true};
     bool vtg_enabled{true};
@@ -99,7 +122,22 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     // the cold start that is the whole point of asking.
     int last_restart_kind{-1};
 
+    struct Solved {
+        uint32_t at_ms{0};
+        uint32_t utc_seconds_of_day{0};
+        uint16_t utc_ms{0};
+        int32_t latitude_1e7{0};
+        int32_t longitude_1e7{0};
+        int32_t altitude_hae_mm{0};
+    };
+    static constexpr int kSolvedKept = 256;
+    int solved_count() const { return solved_count_ < kSolvedKept ? solved_count_ : kSolvedKept; }
+    const Solved& solved(int back) const {
+        return solved_[(solved_count_ - 1 - back + kSolvedKept) % kSolvedKept];
+    }
+
     bool aviation_dynamic_model() const { return dynamic_model == kAviationDynamicModel; }
+    bool gsa_enabled() const { return gsa_every != 0; }
     bool gsv_enabled() const { return gsv_every != 0; }
 
     // Everything the receiver heard, in the order it heard it: "WAKE,PCAS06,...".
@@ -117,6 +155,11 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     }
     uint32_t port_baud() const { return port_baud_; }
 
+    void set(int pin, bool level) override;
+    bool get(int) override { return false; }
+    void mode_output(int) override {}
+    void mode_input(int, bool) override {}
+
     size_t write(const uint8_t* data, size_t bytes) override {
         for (size_t i = 0; i < bytes; i++) {
             // A rate mismatch is not silence: the bits arrive and frame as
@@ -126,7 +169,7 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
                 garbled_bytes++;
                 continue;
             }
-            if (rebooting()) continue;
+            if (rebooting() || hung || held_in_reset_) continue;
             if (asleep) {
                 asleep = false;
                 deaf_since_ms_ = last_tick_ms_;
@@ -168,30 +211,35 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     }
     size_t available() override { return pending_.size(); }
 
+    // INFO: fc 18nov26 solutions fall where the receiver's UTC is a whole multiple of its period
     void tick(uint32_t now_ms) {
         last_tick_ms_ = now_ms;
-        // First tick only anchors the cadence. Anchoring on `last_ms_ == 0`
+        // First tick only anchors the clock. Anchoring on `last_ms_ == 0`
         // instead would re-anchor on every call made at t=0, which is a legal
         // timestamp, not an "unset" marker.
         if (!armed_) {
             armed_ = true;
             last_ms_ = now_ms;
-            report_ms_ = now_ms;
+            align_utc_ms(now_ms);
             return;
         }
         const int32_t elapsed_ms = static_cast<int32_t>(now_ms - last_ms_);
         if (elapsed_ms <= 0) return;
         last_ms_ = now_ms;
-        // A receiver nobody has spoken to yet is not producing, and one that is
-        // rebooting after $PCAS10 has nothing to say either.
-        if (asleep || rebooting()) {
-            report_ms_ = now_ms;
-            return;
+        int32_t left_ms = elapsed_ms;
+        for (;;) {
+            const int32_t to_solution_ms =
+                static_cast<int32_t>(solution_period_ms - utc_ms() % solution_period_ms);
+            if (to_solution_ms > left_ms) break;
+            fly(to_solution_ms);
+            left_ms -= to_solution_ms;
+            solve(now_ms - static_cast<uint32_t>(left_ms));
         }
-        fly(elapsed_ms);
-        if (now_ms - report_ms_ < solution_period_ms) return;
-        report_ms_ = now_ms;
-        emit_burst();
+        fly(left_ms);
+        while (!said_.empty() && static_cast<int32_t>(now_ms - said_.front().at_ms) >= 0) {
+            pending_ += said_.front().text;
+            said_.pop_front();
+        }
     }
 
    private:
@@ -218,6 +266,51 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     uint32_t solutions_{0};
     bool solving_since_set_{false};
     std::string heard_;
+    Solved solved_[kSolvedKept]{};
+    int solved_count_{0};
+    struct Said {
+        uint32_t at_ms{0};
+        std::string text;
+    };
+    std::deque<Said> said_;
+    std::string saying_;
+    bool solving_now_{false};
+
+    // A receiver nobody has spoken to yet is not producing, and one that is
+    // rebooting after $PCAS10 has nothing to say either.
+    void solve(uint32_t at_ms) {
+        if (asleep || rebooting() || hung || held_in_reset_) return;
+        saying_.clear();
+        solving_now_ = true;
+        emit_burst();
+        solving_now_ = false;
+        solved_[solved_count_ % kSolvedKept] = Solved{at_ms,
+                                                      utc_seconds_of_day,
+                                                      static_cast<uint16_t>(utc_ms()),
+                                                      walked_latitude_1e7(),
+                                                      longitude_1e7,
+                                                      altitude_mm()};
+        solved_count_++;
+        said_.push_back(Said{heard_at(at_ms + latency_ms), saying_});
+    }
+
+    uint32_t heard_at(uint32_t ready_ms) const {
+        if (stall_period_ms == 0) return ready_ms;
+        const uint32_t phase_ms = ready_ms % stall_period_ms;
+        if (phase_ms < stall_from_ms || phase_ms >= stall_until_ms) return ready_ms;
+        return ready_ms - phase_ms + stall_until_ms;
+    }
+
+    void say(const char* line, int bytes) {
+        (solving_now_ ? saying_ : pending_).append(line, static_cast<size_t>(bytes));
+    }
+
+    // INFO: fc 18nov26 the part stamps hhmmss.sss (L76K V1.1 table 3), the solved quarter included
+    int put_stamp(char* out) const {
+        int written = put_time(out);
+        out[written++] = '.';
+        return written + format_unsigned(out + written, utc_ms(), 3);
+    }
 
     static bool starts_with(const char* text, int bytes, const char* prefix) {
         int i = 0;
@@ -233,86 +326,15 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
         return value;
     }
 
-    void apply_command() {
-        commands_seen++;
-        if (!gnss::nmea_checksum_ok(command_, command_length_)) {
-            commands_rejected++;
-            return;
-        }
-        for (int i = 1; i < command_length_ && i < 7; i++) heard_ += command_[i];
-        heard_ += ',';
-
-        // The version banner is the part naming itself, not a setting: a
-        // receiver that obeys nothing still answers it.
-        if (starts_with(command_, command_length_, "$PCAS06,")) {
-            if (answers_identification) emit_version();
-            return;
-        }
-        if (!accepts_commands) return;
-        if (starts_with(command_, command_length_, "$PCAS01,"))
-            apply_baud(static_cast<int>(argument(command_, command_length_, 8)));
-        else if (starts_with(command_, command_length_, "$PCAS04,"))
-            constellations = static_cast<uint8_t>(argument(command_, command_length_, 8));
-        else if (starts_with(command_, command_length_, "$PCAS03,"))
-            apply_sentence_set();
-        else if (starts_with(command_, command_length_, "$PCAS11,"))
-            dynamic_model = static_cast<uint8_t>(argument(command_, command_length_, 8));
-        else if (starts_with(command_, command_length_, "$PCAS02,"))
-            solution_period_ms = argument(command_, command_length_, 8);
-        else if (starts_with(command_, command_length_, "$PCAS10,"))
-            apply_restart(static_cast<int>(argument(command_, command_length_, 8)));
-    }
-
-    // INFO: fc 19sep26 $PCAS01 numbers the rates 0..5, L76K protocol spec V1.1 SS2.3.1
-    void apply_baud(int code) {
-        static constexpr uint32_t kRates[6] = {4800, 9600, 19200, 38400, 57600, 115200};
-        if (refuses_baud_command || code < 0 || code >= 6) return;
-        baud = kRates[code];
-    }
-
-    // INFO: fc 18sep26 $PCAS03 fields are GGA,GLL,GSA,GSV,RMC,VTG and an empty one keeps its
-    // setting
-    void apply_sentence_set() {
-        static constexpr int kGsvField = 3;
-        bool* flags[6] = {&gga_enabled, &gll_enabled, &gsa_enabled,
-                          nullptr,      &rmc_enabled, &vtg_enabled};
-        int field = 0;
-        int at = 8;
-        while (at < command_length_ && field < 6) {
-            const bool empty = command_[at] == ',' || command_[at] == '*';
-            const uint8_t every = static_cast<uint8_t>(argument(command_, command_length_, at));
-            if (!empty && field == kGsvField) gsv_every = every;
-            if (!empty && field != kGsvField) *flags[field] = every != 0;
-            while (at < command_length_ && command_[at] != ',') at++;
-            at++;
-            field++;
-        }
-        sentence_set_applied = true;
-    }
-
-    // $PCAS10,n: 0 hot, 1 warm, 2 cold, 3 factory. The module reboots either
-    // way; a cold start also throws the orbit data away, and a factory reset
-    // takes every setting we applied with it.
-    void apply_restart(int kind) {
-        restarts++;
-        last_restart_kind = kind;
-        reboot_since_ms_ = last_tick_ms_;
-        rebooting_ = true;
-        pending_.clear();
-        if (kind >= 2) {
-            cold_since_ms_ = last_tick_ms_;
-            cold_ = true;
-        }
-        if (kind < 3) return;
-        factory_resets++;
-        constellations = 0;
-        dynamic_model = 0;
-        sentence_set_applied = false;
-        gga_enabled = gll_enabled = gsa_enabled = true;
-        rmc_enabled = vtg_enabled = true;
-        gsv_every = 1;
-        solution_period_ms = kFactoryPeriodMs;
-    }
+    void apply_command();
+    void apply_baud(int code);
+    void apply_rate(uint32_t interval_ms);
+    void apply_sentence_set();
+    void apply_restart(int kind);
+    void reset_pulse();
+    void factory_settings();
+    bool held_in_reset_{false};
+    uint32_t reset_since_ms_{0};
 
     int32_t walk_now_m() const {
         if (walk_amplitude_m == 0 || !solving_since_set_) return 0;
@@ -338,7 +360,7 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
             walk_step_ = 0;
             return;
         }
-        walk_step_++;
+        if (utc_ms() == 0) walk_step_++;
     }
 
     bool deaf() const { return deaf_ && last_tick_ms_ - deaf_since_ms_ < kWakeMs; }
@@ -361,12 +383,12 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
 
     std::string pending_;
     uint32_t last_ms_{0};
-    uint32_t report_ms_{0};
     bool armed_{false};
 };
 
 }  // namespace skyblip::models
 
+#include "hardware/parts/l76k/model_commands.h"
 #include "hardware/parts/l76k/model_sentences.h"
 
 #endif

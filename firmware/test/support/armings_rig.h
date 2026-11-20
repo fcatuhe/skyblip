@@ -111,17 +111,22 @@ struct Armings {
         state.clock.pps_locked = true;
         state.clock.utc_valid = true;
         state.clock.pps_edge_us = edge_us;
+        if (solving) state.own.fix_at_ms = static_cast<uint32_t>(now_us / 1000);
         radio.tick(static_cast<uint32_t>(now_us / 1000));
     }
 
+    // INFO: fc 18nov26 these cases are about the arming, so the newest solution is the pass's own
     void ready_to_transmit(uint32_t utc_s) {
         state.own.fix_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
         state.own.flight_state = 2;
         state.own.utc_s = utc_s;
-        state.own.fix_at_ms = static_cast<uint32_t>(kEdgeUs / 1000);
+        state.own.fix_dated = true;
+        solving = true;
     }
+
+    bool solving{false};
 };
 
 }  // namespace skyblip

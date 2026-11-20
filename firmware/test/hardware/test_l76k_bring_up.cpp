@@ -18,7 +18,7 @@ using namespace skyblip;
 TEST_CASE("l76k: bring-up configures constellations, sentences, dynamic model and rate") {
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
 
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
@@ -27,7 +27,45 @@ TEST_CASE("l76k: bring-up configures constellations, sentences, dynamic model an
     CHECK(chip.constellations == 7);  // GPS + GLONASS + BeiDou
     CHECK(chip.sentence_set_applied);
     CHECK(chip.aviation_dynamic_model());
+    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+
+    run(gnss, chip, kBringUpLeadMs + 1010, kConfiguredMs);
+    CHECK(gnss.solving_half_seconds());
+    CHECK(chip.commands_seen ==
+          parts::L76k::kCommandCount + 2 + parts::L76k::kRateCommandCount);  // + $PCAS01
+    CHECK(chip.commands_rejected == 0);
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
+}
+
+// L76K protocol spec V1.1 2.3.2: an interval under 1000 ms needs 115200, so 2 Hz comes last.
+TEST_CASE("l76k: 2 Hz is asked for only once the receiver answers at 115200") {
+    models::L76k chip;
+    chip.asleep = true;
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+
+    run(gnss, chip, 0, kConfiguredMs);
+
+    CHECK(chip.heard() == "WAKE,PCAS06,PCAS04,PCAS03,PCAS11,PCAS02,PCAS01,PCAS02,PCAS03,");
+    CHECK(chip.baud == parts::L76k::kTargetBaudRate);
+    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
+    CHECK(gnss.solving_half_seconds());
+}
+
+// GSA alone carries VDOP, so at 2 Hz it stays once a second rather than going every solution.
+TEST_CASE("l76k: at 2 Hz GGA and RMC close every solution, and GSA comes once a second") {
+    models::L76k chip;
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    run(gnss, chip, 0, kConfiguredMs);
+    REQUIRE(gnss.solving_half_seconds());
+
+    CHECK(chip.gga_enabled);
+    CHECK(chip.rmc_enabled);
+    CHECK(chip.gsa_every == parts::L76k::kGsaPeriodSolutions);
+    CHECK_FALSE(chip.gll_enabled);
+    CHECK_FALSE(chip.vtg_enabled);
+    CHECK_FALSE(chip.gsv_enabled());
+    CHECK(gnss.solution().vdop_e2 == chip.vdop_e2);
+    CHECK(gnss.sky().in_use() > 0);
 }
 
 // I, rows "A wake byte before probing" and "Receiver identification", in one
@@ -40,7 +78,7 @@ TEST_CASE("l76k: bring-up configures constellations, sentences, dynamic model an
 TEST_CASE("l76k: the receiver is woken, then identified, then configured, in that order") {
     models::L76k chip;
     chip.asleep = true;  // cold: it has heard nothing since power came up
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
 
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
@@ -82,9 +120,9 @@ TEST_CASE("l76k: a cold receiver eats whatever is said in the first 500 ms") {
 TEST_CASE("l76k: an unidentified receiver is still configured, and still says so") {
     models::L76k chip;
     chip.answers_identification = false;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
 
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    run(gnss, chip, 0, kConfiguredMs);
 
     CHECK_FALSE(gnss.identified());
     CHECK(gnss.firmware_version()[0] == 0);
@@ -99,9 +137,9 @@ TEST_CASE("l76k: a receiver that never obeys is reported degraded, not assumed g
     models::L76k chip;
     chip.accepts_commands = false;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
 
-    run(gnss, chip, 0, 30000);
+    run(gnss, chip, 0, 20000);
 
     // Every attempt wakes the receiver and asks it who it is before it starts
     // configuring, so an attempt is five sentences, not four.
@@ -111,14 +149,36 @@ TEST_CASE("l76k: a receiver that never obeys is reported degraded, not assumed g
     // baud rates here would throw away the sentences we do get.
     CHECK(chip.baud_changes == 0);
     CHECK(gnss.degraded());
+    CHECK(gnss.recoveries() == 1);
     CHECK_FALSE(gnss.configured());
     CHECK(gnss.sentences() > 0);  // it is talking, just not listening
+}
+
+// The pinned case: degraded was terminal, so a part that disobeyed once was left so until reboot.
+TEST_CASE("l76k: a degraded part is configured again after 10 s, 30 s, then every 60 s") {
+    models::L76k chip;
+    chip.accepts_commands = false;
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    run(gnss, chip, 0, 20000);
+    REQUIRE(gnss.recoveries() == 1);
+
+    run(gnss, chip, 20010, 50000);
+    CHECK(gnss.recoveries() == 2);
+    run(gnss, chip, 50010, 120000);
+    CHECK(gnss.recoveries() == 3);
+    run(gnss, chip, 120010, 300000);
+    CHECK(gnss.recoveries() >= 5);
+    CHECK_FALSE(gnss.configured());
+
+    chip.accepts_commands = true;
+    run(gnss, chip, 300010, 420000);
+    CHECK(gnss.holds_rate());
 }
 
 TEST_CASE("l76k: a receiver that obeys is reported configured") {
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
     CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Idle);
 
     run(gnss, chip, 0, 10000);
@@ -130,10 +190,10 @@ TEST_CASE("l76k: a receiver that obeys is reported configured") {
 // A receiver moved to a rate the port cannot follow is a GNSS-less device that looks fitted.
 TEST_CASE("l76k: bring-up raises the receiver and the port together") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
     REQUIRE(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
 
-    run(gnss, chip, 0, kBringUpLeadMs + 2 * parts::L76k::kVerifyWindowMs);
+    run(gnss, chip, 0, kConfiguredMs);
 
     CHECK(gnss.configured());
     CHECK(gnss.baud_rate() == parts::L76k::kTargetBaudRate);
@@ -149,7 +209,7 @@ TEST_CASE("l76k: bring-up raises the receiver and the port together") {
 TEST_CASE("l76k: a receiver that ignores the rate command is followed back down to 9600") {
     models::L76k chip;
     chip.refuses_baud_command = true;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Second, chip, chip);
 
     run(gnss, chip, 0, kBringUpLeadMs + 3 * parts::L76k::kVerifyWindowMs);
 
@@ -160,12 +220,14 @@ TEST_CASE("l76k: a receiver that ignores the rate command is followed back down 
     CHECK(gnss.solution().fix_valid);
     CHECK(gnss.baud_raises() == 1);
     CHECK(gnss.raise_fallbacks() == 1);
+    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+    CHECK_FALSE(gnss.solving_half_seconds());
 }
 
 // Without a rate port the receiver must be left where it boots, not asked to move alone.
 TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
     models::L76k chip;
-    parts::L76k gnss(chip);  // no rate port: io::FixedUartRate
+    parts::L76k gnss(ports::SolutionRate::Second, chip);  // no rate port: io::FixedUartRate
 
     run(gnss, chip, 0, kBringUpLeadMs + 2 * parts::L76k::kVerifyWindowMs);
 
@@ -173,6 +235,20 @@ TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
     CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
     CHECK(gnss.configured());
     CHECK(gnss.baud_raises() == 0);
+    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+}
+
+// 2 Hz needs 115200 (V1.1 2.3.2), so a Go whose port stays at 9600 never settles there.
+TEST_CASE("l76k: asked for 2 Hz, a part held at 9600 is recovered, never settled at 1 Hz") {
+    models::L76k chip;
+    chip.refuses_baud_command = true;
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+
+    run(gnss, chip, 0, 120000);
+
+    CHECK_FALSE(gnss.holds_rate());
+    CHECK(gnss.recoveries() >= 2);
+    CHECK(chip.sub_second_rate_asked == 0);
 }
 
 // I, row "Baud detection and recovery". A receiver that comes up at another rate
@@ -183,7 +259,7 @@ TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
 TEST_CASE("l76k: a receiver at the wrong baud is found, not written off") {
     models::L76k chip;
     chip.baud = 38400;  // not what the devicetree pins
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
     REQUIRE(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
 
     run(gnss, chip, 0, 30000);
@@ -198,19 +274,19 @@ TEST_CASE("l76k: a receiver at the wrong baud is found, not written off") {
 }
 
 // Absent hardware is a capability. A platform whose UART cannot be retuned hands
-// the driver the null rate control, and the receiver at the wrong baud degrades
-// after the ordinary number of attempts instead of the driver pretending it
-// changed something.
+// the driver the null rate control, and the receiver at the wrong baud is probed
+// at the one rate the port has, instead of the driver pretending it changed
+// something.
 TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not have") {
     models::L76k chip;
     chip.baud = 38400;
-    parts::L76k gnss(chip);  // no rate port: io::FixedUartRate
+    parts::L76k gnss(ports::SolutionRate::Half, chip);  // no rate port: io::FixedUartRate
 
     run(gnss, chip, 0, 30000);
 
     CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
     CHECK(chip.baud_changes == 0);
-    CHECK(gnss.degraded());
+    CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Probing);
     CHECK(gnss.sentences() == 0);
 }
 
@@ -221,13 +297,13 @@ TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not ha
 // hatch leaves the receiver on pedestrian smoothing at 1 Hz.
 TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE(chip.aviation_dynamic_model());
 
     gnss.request_restart(ports::Restart::Factory);
-    uint32_t now_ms = kBringUpLeadMs + 5010;
+    uint32_t now_ms = kConfiguredMs + 10;
     chip.tick(now_ms);
     gnss.service(now_ms);
     CHECK(chip.factory_resets == 1);
@@ -237,7 +313,7 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     CHECK(chip.solution_period_ms == models::L76k::kFactoryPeriodMs);
     CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Restarting);
 
-    run(gnss, chip, now_ms + 10, now_ms + 15000);
+    run(gnss, chip, now_ms + 10, now_ms + 20000);
     CHECK(gnss.configured());
     CHECK(chip.aviation_dynamic_model());
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
@@ -245,7 +321,7 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     // And the fix comes back on its own once the receiver has an almanac again,
     // which is the whole point: the pilot is told to wait, not to send it back.
     CHECK_FALSE(gnss.solution().fix_valid);
-    run(gnss, chip, now_ms + 15010, now_ms + models::L76k::kColdStartTtffMs + 3000);
+    run(gnss, chip, now_ms + 20010, now_ms + models::L76k::kColdStartTtffMs + 3000);
     CHECK(gnss.solution().fix_valid);
 }
 
@@ -254,12 +330,12 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
 // support script should reach for first.
 TEST_CASE("l76k: a cold start keeps the configuration and loses only the almanac") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solution().fix_valid);
 
     gnss.request_restart(ports::Restart::Cold);
-    const uint32_t now_ms = kBringUpLeadMs + 5010;
+    const uint32_t now_ms = kConfiguredMs + 10;
     chip.tick(now_ms);
     gnss.service(now_ms);
 

@@ -32,6 +32,9 @@ constexpr int kEpdBacklight = pin_number(1, 11);
 // (2112-2133). The name is Meshtastic's PIN_DRV_EN.
 constexpr int kHapticEnable = pin_number(0, 8);
 
+// INFO: fc 18nov26 LilyGO T-Echo utilities.h and Meshtastic t-echo-plus variant.h name P1.05
+constexpr int kGnssReset = pin_number(1, 5);
+
 // INFO: fc 19sep26 the button bounces mechanically, the pad flutters under a fingertip
 constexpr uint32_t kButtonHoldMs = 30;
 constexpr uint32_t kPadSettleMs = 30;
@@ -46,6 +49,7 @@ constexpr io::PinRole kPinRoles[] = {
     {io::PinFunction::RadioDio1, kRadioDio1},       {io::PinFunction::EpdDc, kEpdDc},
     {io::PinFunction::EpdReset, kEpdReset},         {io::PinFunction::EpdBusy, kEpdBusy},
     {io::PinFunction::EpdBacklight, kEpdBacklight}, {io::PinFunction::HapticEnable, kHapticEnable},
+    {io::PinFunction::GnssReset, kGnssReset},
 };
 
 constexpr io::PinMap kPinMap{kPinRoles, static_cast<int>(sizeof(kPinRoles) / sizeof(kPinRoles[0]))};
@@ -58,6 +62,7 @@ constexpr io::PinMap kPinMap{kPinRoles, static_cast<int>(sizeof(kPinRoles) / siz
 static_assert(kRadioBusy == SKYBLIP_DEVICETREE_PIN(DT_NODELABEL(radio_busy_gpio)));
 static_assert(kRadioDio1 == SKYBLIP_DEVICETREE_PIN(DT_NODELABEL(radio_dio1_gpio)));
 static_assert(kRadioReset == SKYBLIP_DEVICETREE_PIN(DT_ALIAS(radio_reset)));
+static_assert(kGnssReset == SKYBLIP_DEVICETREE_PIN(DT_ALIAS(gnss_reset)));
 static_assert(kEpdDc == SKYBLIP_DEVICETREE_PIN(DT_NODELABEL(epd_dc_gpio)));
 static_assert(kEpdReset == SKYBLIP_DEVICETREE_PIN(DT_NODELABEL(epd_reset_gpio)));
 static_assert(kEpdBusy == SKYBLIP_DEVICETREE_PIN(DT_NODELABEL(epd_busy_gpio)));

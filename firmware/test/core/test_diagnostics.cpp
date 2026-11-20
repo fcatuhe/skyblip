@@ -21,6 +21,8 @@ TEST_CASE("diagnostics: one group per subsystem, each carrying the counters that
     CHECK(has(json, "\"group\":\"radio\""));
     CHECK(has(json, "\"noise_dbm\":-101"));
     CHECK(has(json, "\"tx_busy_missed\":2"));
+    CHECK(has(json, "\"tx_held_for_fix\":4"));
+    CHECK(has(json, "\"tx_redrawn_for_fix\":9"));
     CHECK(has(json, "\"group\":\"traffic\""));
     CHECK(has(json, "\"uplink_targets\":52"));
     CHECK(has(json, "\"group\":\"gnss\""));

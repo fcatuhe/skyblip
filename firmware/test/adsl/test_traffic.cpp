@@ -68,45 +68,42 @@ TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted 
     CHECK_FALSE(packet.has_climb());
 }
 
-// A burst at 613 ms named 500 while carrying the position to 613: 113 ms apart, 14 m at 120 kt.
-TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms") {
+// The receiver solves on the quarter second, and the payload carries that solution as it stands.
+TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp names the solution's own quarter second") {
     model::Ownship own = flying();
     own.utc_s = 1785628800;
-    const int32_t into_utc_ms = 613;
+    own.utc_ms = 750;
     adsl::Packet packet{};
-    protocol::from_own(packet, own, 0x123456, 6, 4,
-                       protocol::BurstInstant{own.utc_s, into_utc_ms, into_utc_ms});
-    const int32_t named_ms = static_cast<int32_t>(packet.timestamp % 4u) *
-                             static_cast<int32_t>(adsl::kTimestampQuarterMs);
-    CHECK(named_ms == 500);
+    protocol::from_own(packet, own, 0x123456, 6, 4);
+    CHECK(packet.timestamp == adsl::timestamp_code(own.utc_s, 750));
 
-    adsl::Packet at_named{};
-    at_named.reset();
-    const flight::Prediction there = flight::extrapolate(own, named_ms);
-    at_named.set_latitude_1e7(there.latitude_1e7);
-    at_named.set_longitude_1e7(there.longitude_1e7);
-    CHECK(packet.latitude_1e7() == at_named.latitude_1e7());
-    CHECK(packet.longitude_1e7() == at_named.longitude_1e7());
+    adsl::Packet measured{};
+    measured.reset();
+    measured.set_latitude_1e7(own.latitude_1e7);
+    measured.set_longitude_1e7(own.longitude_1e7);
+    CHECK(packet.latitude_1e7() == measured.latitude_1e7());
+    CHECK(packet.longitude_1e7() == measured.longitude_1e7());
 }
 
-// It dates the navigation solution, and the position is carried to it, so the pair is one moment.
-TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp and the position name the same instant") {
+// G.1.1's 10 ms: a stamp a few ms off a quarter names it, a stamp between quarters builds nothing.
+TEST_CASE("ADS-L.4.SRD860.G.1.1: a solution off the quarter seconds builds no Traffic") {
     model::Ownship own = flying();
     own.utc_s = 1785628800;
-    protocol::BurstInstant at{};
-    at.utc_s = own.utc_s;
-    at.into_utc_ms = 500;
-    at.since_fix_ms = 500;
-
     adsl::Packet packet{};
-    protocol::from_own(packet, own, 0x123456, 6, 4, at);
-    CHECK(packet.timestamp == adsl::timestamp_code(own.utc_s, 500));
+    own.utc_ms = 600;
+    CHECK_FALSE(protocol::from_own(packet, own, 0x123456, 6, 4));
+    own.utc_ms = 745;
+    REQUIRE(protocol::from_own(packet, own, 0x123456, 6, 4));
+    CHECK(packet.timestamp == adsl::timestamp_code(own.utc_s, 750));
+    own.utc_ms = 995;
+    REQUIRE(protocol::from_own(packet, own, 0x123456, 6, 4));
+    CHECK(packet.timestamp == adsl::timestamp_code(own.utc_s + 1, 0));
+}
 
-    adsl::Packet at_fix{};
-    protocol::from_own(at_fix, own, 0x123456, 6, 4, protocol::BurstInstant{own.utc_s, 0, 0});
-    CHECK(at_fix.timestamp == adsl::timestamp_code(own.utc_s, 0));
-    // Half a second due east at 120 m/s: the transmitted position moved with the timestamp.
-    CHECK(packet.longitude_1e7() > at_fix.longitude_1e7());
+// TODO: fc 18nov26 the L76K's quarters are unmeasured against its PPS, until a bench capture
+TEST_CASE("ADS-L.4.SRD860.G.1.1: the L76K solves on the quarter its stamp names, within 10 ms" *
+          doctest::skip()) {
+    FAIL("unmeasured: no bench has timed the L76K's 2 Hz solutions against its PPS edge");
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airborne, never 3") {
@@ -295,9 +292,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
     CHECK(stays.longitude_1e7 == still.longitude_1e7);
 }
 
-// Our reading: the age is taken at the top of the second, and the burst carries the fix forward.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second is never sent" *
-          doctest::test_suite("main")) {
+// The age runs to the instant the burst goes on air, not to the top of the second it goes in.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a solution over 500 ms old at the burst's instant is not armed") {
     CHECK(timing::Transmitter::kFixMaxAgeMs == 500);
 
     timing::ClockState clock{};
@@ -307,8 +303,10 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second
 
     timing::Transmitter tx;
     tx.configure(0x123456);
-    CHECK(tx.attempt(plan, 100, 1000, true, 499).go);
-    CHECK_FALSE(tx.attempt(plan, 100, 1000, true, 501).go);
+    const int at_ms = tx.attempt(plan, 100, 1000, true, -1000).at_ms;
+    const int32_t ceiling_ms = 500 - timing::Transmitter::kFixAgeAllowanceMs;
+    CHECK(tx.attempt(plan, 100, 1000, true, ceiling_ms - at_ms).go);
+    CHECK_FALSE(tx.attempt(plan, 100, 1000, true, ceiling_ms + 1 - at_ms).go);
 }
 
 // skyBlip reads "0.1 Hz (once every 10 seconds)" as an average: C.2.5 and the parity rule make it

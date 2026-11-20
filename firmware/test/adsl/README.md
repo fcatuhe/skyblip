@@ -16,7 +16,8 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the cla
 | `test_datalink.cpp` | D.1 to D.3 | listen-before-talk as flown: the deferral, the 3000 ms force on the ground and the 2000 ms after it, and no force airborne | the whole subpart, `media_access()` among it |
 | `test_network.cpp` | E.1 to E.4.2 | the version own-ship's Traffic goes out in | the whole subpart |
 | `test_presentation.cpp` | F.1 to F.2.5 | skyBlip's address table, the ICAO address F.2.3 puts in its place, and the configurations it refuses | the header and the payload types |
-| `test_traffic.cpp` | G.1 to G.1.10, G.1.16 | what own-ship becomes on air: invalid fields, the instant, the flight state, the category | every field's offset and code |
+| `test_traffic.cpp` | G.1 to G.1.10, G.1.16 | what own-ship becomes on air: invalid fields, the quarter it names, the flight state, the category | every field's offset and code |
+| `test_traffic_flown.cpp` | G.1.1, G.1.16 | every Traffic burst a simulated Go flies, against the solution it names: its time, position and height as measured, known before the burst left and under 500 ms old when it ended, through a deferral, a stalled wire, a late solution, a backlog at a cold start, a receiver off the quarters and one left at 1 Hz | |
 | `test_quality.cpp` | G.1.11 to G.1.17 | the integrity and accuracy own-ship claims | the code tables |
 | `test_payloads.cpp` | G.2 to G.5 | the Status a Go flies and the uplink it hears | the Status payload's layout and cadence, and the payloads not implemented |
 
@@ -36,7 +37,7 @@ Where the firmware does not satisfy a clause, the case is still written as the c
 | F.2.4 | privacy mode, AMT 0 with an address drawn at start-up | F.2.4: "a device may be operated in privacy mode" | no Status field |
 | G.4 | the FIS-B Uplink payload, DO-358B's ground uplink message | G.2.10 lets a sender declare "Sender does not process FIS-B Uplink payloads" | FIS-B client 0 |
 
-The checker knows a fifth kind, `unmeasured:`, a figure the radio has to meet that no bench has measured yet. No ADS-L case uses it. The ADS-B suite does (`test/adsb/README.md`).
+The checker knows a fifth kind, `unmeasured:`, a figure the device has to meet that no bench has measured yet. Two ADS-L cases use it, both waiting on a bench to time the L76K against its PPS edge (`hardware/parts/l76k/README.md`): G.1.1's 10 ms on the receiver itself, which the simulator meets by construction, and G.1.16 for a receiver that delivers every solution a second late from power-up, which the device cannot detect without an independent time source (`core/gnss/README.md`). The ADS-B suite uses it too (`test/adsb/README.md`).
 
 Skipped cases carry no claim, so they never reach `docs/behavior/`: the generated pages stay a list of what the suite checks. `docs/ADSL_CONFORMANCE.md` is the report for the declaration of conformity, and it lists them: every clause in the specification's order, with the cases of both halves that pass and the skipped ones with their messages, then the EN 300 220 cases and the stack's own tests. `python3 scripts/conformance.py adsl` generates it from the run, and CI fails when it differs from the suite.
 

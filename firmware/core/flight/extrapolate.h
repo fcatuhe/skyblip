@@ -1,9 +1,8 @@
-// core/flight/extrapolate.h: where own-ship is at an instant that is not the
-// instant the fix is from. A burst leaves the radio somewhere in the direct
-// slot, the solution behind it was solved when the receiver last spoke, and at
-// 50 m/s every 100 ms between those two is 5 m of lie in a position other
-// aircraft compute separation against. The transmitted timestamp names an
-// instant; this is what makes the transmitted position belong to it.
+// core/flight/extrapolate.h: where an aircraft is at an instant that is not the
+// instant its fix is from. The alarm and the radar compare own-ship with a
+// neighbour at one instant, and at 50 m/s every 100 ms between a fix and that
+// instant is 5 m of lie in a separation. Own Traffic is never carried: it goes
+// on air as the receiver solved it, named by its own quarter second (G.1.1).
 #ifndef SKYBLIP_CORE_FLIGHT_EXTRAPOLATE_H
 #define SKYBLIP_CORE_FLIGHT_EXTRAPOLATE_H
 
@@ -20,10 +19,9 @@ namespace skyblip::flight {
 // and half after, plus a constant climb. Half and half is what keeps a circling
 // glider on its arc instead of on the tangent, at the cost of one sine.
 //
-// Beyond this gap it stops being a prediction. Our own §G.1.16 rule already
-// refuses a navigation solution older than 500 ms, and the burst can leave up
-// to a slot later than the attempt was decided, so the honest ceiling is a
-// little over a second. Past it the last fix goes out dated as the last fix:
+// Beyond this gap it stops being a prediction. A neighbour reports once a
+// second and an ALP-TAS frame leaves up to 1.2 s after its fix, so the honest
+// ceiling is a little over a second. Past it the last fix stands where it was:
 // wrong by a known amount beats wrong by an invented one.
 constexpr int32_t kExtrapolationCeilingMs = 1500;
 

@@ -150,10 +150,11 @@ inline constexpr Value kResetValues[] = {
 inline constexpr Enumeration kReset{kResetValues, 10};
 
 inline constexpr Value kGnssConfigValues[] = {
-    {"idle", 0},      {"restarting", 1}, {"waking", 2}, {"identifying", 3}, {"sending", 4},
-    {"verifying", 5}, {"confirming", 6}, {"ready", 7},  {"degraded", 8},
+    {"idle", 0},     {"restarting", 1}, {"waking", 2},     {"identifying", 3},
+    {"sending", 4},  {"verifying", 5},  {"confirming", 6}, {"ready", 7},
+    {"degraded", 8}, {"probing", 9},    {"resetting", 10},
 };
-inline constexpr Enumeration kGnssConfig{kGnssConfigValues, 9};
+inline constexpr Enumeration kGnssConfig{kGnssConfigValues, 11};
 
 inline constexpr Value kRejectValues[] = {
     {"none", 0},  {"no_solution", 1}, {"missing_rmc", 2}, {"missing_gga", 3},
@@ -469,6 +470,9 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"mode_s", 87, Type::Unsigned, nullptr, 0, false},
     {"mode_s_altitude", 88, Type::Unsigned, nullptr, 0, false},
     {"unmatched", 89, Type::Unsigned, nullptr, 0, false},
+    {"tx_held_for_fix", 90, Type::Unsigned, nullptr, 0, false},
+    {"tx_redrawn_for_fix", 91, Type::Unsigned, nullptr, 0, false},
+    {"receiver_recoveries", 92, Type::Unsigned, nullptr, 0, false},
     {"link_drop_reason", 94, Type::Unsigned, nullptr, 0, false},
 };
 
@@ -752,8 +756,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 90},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 90},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 93},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 93},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

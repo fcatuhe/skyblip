@@ -4,13 +4,13 @@ nav_title: ADS-L questions
 description: "skyBlip's open questions to EASA on ADS-L Issue 2, grouped by theme, with the source clauses, current firmware behaviour and answer status."
 published_on: "2026-11-14"
 parent: ads-l
-updated_on: "2026-11-14"
+updated_on: "2026-11-19"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
   <h1>Our open questions on ADS-L Issue 2.</h1>
-  <p class="lede">These are the questions skyBlip has put to EASA on ADS-L 4 SRD-860 Issue 2. Each theme quotes the clause, records what our firmware does today and says whether EASA has answered.</p>
+  <p class="lede">These are the questions skyBlip puts to EASA on ADS-L 4 SRD-860 Issue 2, where the text leaves a reading open. Each theme quotes the clause, records what our firmware does today and says whether the question has been sent and answered. Until EASA answers, Go flies the reading described here.</p>
   <p>skyBlip is open-source electronic conspicuity equipment for general aviation. skyBlip Go transmits and receives ADS-L. skyBlip Bravo receives ADS-B on 1090&nbsp;MHz and transmits nothing. Paired with a Go, on the ground, Bravo can name the transponder it takes for the aircraft&rsquo;s own.</p>
 </section>
 
@@ -36,17 +36,101 @@ updated_on: "2026-11-14"
 </section>
 
 <section>
+  <h2 class="kicker">The flight state</h2>
+  <h3>Should a craft that can hover announce Undefined rather than On ground?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.G.1.2, &ldquo;Flight State&rdquo;</strong>, says:</p>
+  <blockquote>
+    <p>The &ldquo;Undefined&rdquo; value shall be used if no reasonable decision is possible by the ADS-L device.</p>
+  </blockquote>
+  <p>Go decides the flight state from ground speed. A paraglider soaring a ridge into wind, a balloon or a hovering helicopter can fly with no ground speed, so for those aircraft categories Go cannot tell a landing from flight. For categories 3, 5, 7 to 13 and 15 to 17 it sends Undefined instead of On ground. It therefore keeps the 1&nbsp;Hz rate of G.1.16 instead of dropping to the ground rate of 0.1&nbsp;Hz.</p>
+  <ol>
+    <li><p><strong>Is this the use of Undefined the clause intends?</strong> Or should these categories announce On ground whenever their ground speed is low, and transmit at the ground rate?</p></li>
+  </ol>
+  <p class="note">Not sent yet.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The callsign</h2>
+  <h3>May payload type 66 go out after the direct slot?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.C.5</strong> gives aircraft the direct slot, from 450 to 1000&nbsp;ms of each UTC second, and says of the rest of the second:</p>
+  <blockquote>
+    <p>Reserved: The unused time is reserved for future extensions and shall not be used for any ADS-L transmissions.</p>
+  </blockquote>
+  <p>Clause <strong>ADS-L.4.SRD860.F.2.1, &ldquo;Payload Type Identifier&rdquo;</strong>, lists payload type 66 as &ldquo;OGN Diagnostics&rdquo; and says its &ldquo;Payload definition is outside the scope of this document.&rdquo;</p>
+  <p>Go sends its callsign in OGN&rsquo;s payload type 66 registration record, on the ADS-L frame, between 0 and 200&nbsp;ms of the second after its slot. The <%= link_to_page "ads-l/callsign", label: "callsign page" %> explains that record.</p>
+  <ol>
+    <li><p><strong>Is a payload the specification does not define an ADS-L transmission in the sense of C.5?</strong> We read it as not being one. Or does payload type 66 belong in the direct slot?</p></li>
+  </ol>
+  <p class="note">Not sent yet. The callsign lives outside Go&rsquo;s ADS-L stack, so a different answer changes the callsign code and not the ADS-L version.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The age of the position</h2>
+  <h3>Must every position be a solution measured on a quarter second and sent within 500&nbsp;ms?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.G.1.1, &ldquo;Timestamp&rdquo;</strong>, says:</p>
+  <blockquote>
+    <p>The Timestamp field indicates the number of quarter seconds since the full hour, modulo 60. [&hellip;] The timestamp refers to the time of the navigation solution (PVT fix) obtained by the GNSS receiver (e.g. on the full second) and included in the Traffic payload. It shall be accurate to &plusmn;&nbsp;10&nbsp;ms.</p>
+  </blockquote>
+  <p>Clause <strong>ADS-L.4.SRD860.G.1.16, &ldquo;Transmit Rate and Timing&rdquo;</strong>, says:</p>
+  <blockquote>
+    <p>A message shall be replaced with a new message if the total delay of 500 ms from obtaining (measuring) the PVT fix is exceeded, e.g. due to the frequency being occupied, to prevent old data being sent. No Traffic message shall be sent containing navigation data older than 500 ms.</p>
+  </blockquote>
+  <p>Read together with the direct slot of C.5, from 450 to 1000&nbsp;ms, every position must be a solution the receiver measured within 10&nbsp;ms of a quarter second, and it must leave within 500&nbsp;ms of that measurement. Go does not move a position forward to a quarter second, because the result would no longer be a solution the receiver obtained.</p>
+  <p>This ties each transmission to the receiver&rsquo;s solution schedule, which we have not met in other systems. A receiver solving once a second, on the full second, serves only bursts between 450 and 500&nbsp;ms: 50&nbsp;ms of the 550&nbsp;ms slot. At 5 solutions a second, only the full second falls on a quarter. Only 4 solutions a second, or a multiple, puts every solution on a quarter. Go&rsquo;s receiver, a Quectel L76K, documents 1, 2 and 5 solutions a second, and on the bench it ignored a request for 4. Go therefore runs it at 2, with solutions on .000 and .500 of each second.</p>
+  <p>At 2 solutions a second, part of the slot has no usable solution. Go sends on 868.2&nbsp;MHz between 450 and 810&nbsp;ms and on 868.4&nbsp;MHz between 830 and 990&nbsp;ms (<%= link_to_page "timing", label: "timing page" %>). The .000 solution serves bursts up to 490&nbsp;ms, keeping 10&nbsp;ms for the burst&rsquo;s air time. The .500 solution reaches Go 40 to 160&nbsp;ms after it was measured. Between 490&nbsp;ms and its arrival, no solution meets both clauses. That gap falls inside the 868.2&nbsp;MHz window. In 26 minutes on the bench, before the change below, 21 of the 81 positions due on 868.2&nbsp;MHz were not sent.</p>
+  <p>Go now holds a position that falls in the gap until the .500 solution arrives. If the position&rsquo;s instant has passed by then, Go draws a new instant at random over the rest of the window, from its address and the second, so units do not all transmit on the solution&rsquo;s arrival. A position is lost only if the .500 solution arrives after 810&nbsp;ms, the window&rsquo;s last instant. This is not ideal. On 868.2&nbsp;MHz the bursts no longer spread evenly: about a quarter move from 490&ndash;590&nbsp;ms into 590&ndash;810&nbsp;ms, which then carries about 40&nbsp;% more bursts, and the chance of two units colliding rises from about 2.8&nbsp;% to about 3.9&nbsp;% per neighbour. Every Go has the same receiver and the same gap, so the uneven load adds up across a fleet. It also depends on the receiver&rsquo;s delay, which Go measures but does not control.</p>
+  <ol>
+    <li><p><strong>Do G.1.1 and G.1.16 intend to bind each position to a solution measured on a quarter second?</strong> Or may a device carry its latest solution forward to the quarter the Timestamp names, with the 500&nbsp;ms counted from that measurement?</p></li>
+    <li><p><strong>Could a later issue let the Timestamp name the solution&rsquo;s own time more finely than a quarter second?</strong> Receivers solving 1, 5 or 10 times a second could then meet both clauses, and devices could keep an even spread over the slot.</p></li>
+  </ol>
+  <p class="note">Not sent yet.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Channel alternation</h2>
+  <h3>Does alternation by the schedule meet the rule after a burst that did not go out?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.C.2.5, &ldquo;Frequency Diversity&rdquo;</strong>, says:</p>
+  <blockquote>
+    <p>For the &ldquo;Traffic&rdquo; and &ldquo;Status&rdquo; payloads (see Subpart G), the sender shall alternate between these frequencies for every transmission to facilitate reception of these payloads for restricted, single-channel receivers.</p>
+  </blockquote>
+  <p>Go picks the channel from the parity of the UTC second: a position on 868.2&nbsp;MHz in an even second and on 868.4&nbsp;MHz in an odd one, and the Status the other way round. When a burst does not go out, because the channel stayed busy, the next one keeps its own second&rsquo;s channel, so two positions in a row can leave on the same frequency. A takeoff or a landing changes the rate, and in about one case in two it puts two positions in a row on one channel, once. A single-channel receiver still hears Go every other second, which is the purpose the clause gives.</p>
+  <ol>
+    <li><p><strong>Does alternation by the schedule meet C.2.5?</strong> Or must each transmission take the channel opposite to the last one that actually went out?</p></li>
+  </ol>
+  <p class="note">Not sent yet.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Velocity accuracy</h2>
+  <h3>May a device with no measured velocity bound send it as unknown?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.G.1.17, &ldquo;Quality Indicators&rdquo;</strong>, says:</p>
+  <blockquote>
+    <p>Unlike the ADS-B certification approach (CS-STAN Configuration 3 in particular), uncertified ADS-L devices shall however not report all quality values as 0. Instead, they shall report their positioning performance dynamically as defined in the previous sections.</p>
+  </blockquote>
+  <p>Go&rsquo;s receiver reports its horizontal and vertical dilution of precision, but no velocity error. Go&rsquo;s horizontal and vertical accuracy change with each fix, while its velocity accuracy is sent as 0, &ldquo;Unknown&rdquo;, which the table of G.1.16, &ldquo;Velocity Accuracy&rdquo;, allows.</p>
+  <ol>
+    <li><p><strong>Does that meet G.1.17?</strong> Not every quality value is 0, but the velocity accuracy always is.</p></li>
+  </ol>
+  <p class="note">Not sent yet.</p>
+</section>
+
+<section>
   <h2 class="kicker">References</h2>
   <ul class="sources">
     <li>
       <strong>EASA</strong> &middot;
       <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2.
-      <span class="support">F.2.3, ICAO Address, quoted above.</span>
+      <span class="support">C.2.5, C.5, F.2.1, F.2.3, G.1.1, G.1.2, G.1.16 and G.1.17, quoted above.</span>
     </li>
     <li>
       <strong>skyBlip firmware</strong> &middot;
       <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/settings/README.md"><code>core/settings/README.md</code></a>.
       <span class="support">The ICAO address section records the setting, the configurations Go refuses and the rules considered but not imposed.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot;
+      <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/ADSL_EASA_QUESTIONS.md"><code>docs/ADSL_EASA_QUESTIONS.md</code></a>.
+      <span class="support">The same questions, with the firmware files behind each reading.</span>
     </li>
   </ul>
   <p><%= link_to_page "ads-l/nmea", class: "cta cta--previous" %></p>

@@ -257,13 +257,16 @@ void civil_from_epoch(uint32_t utc_s, int& year, int& month, int& day) {
     year = static_cast<int>(march_year + (month <= 2 ? 1 : 0));
 }
 
-int format_nmea_time(char* out, uint32_t utc_s) {
+// INFO: fc 18nov26 a .500 solution keeps its fraction, so the time stays the position's at 2 Hz
+int format_nmea_time(char* out, uint32_t utc_s, uint16_t utc_ms) {
     const uint32_t second_of_day = utc_s % 86400u;
     int written = 0;
     written += format_unsigned(out + written, second_of_day / 3600u, 2);
     written += format_unsigned(out + written, (second_of_day / 60u) % 60u, 2);
     written += format_unsigned(out + written, second_of_day % 60u, 2);
-    return written;
+    if (utc_ms == 0) return written;
+    out[written++] = '.';
+    return written + format_unsigned(out + written, utc_ms / 10u, 2);
 }
 
 }  // namespace
@@ -275,7 +278,7 @@ int format_gprmc(char* out, size_t capacity, const model::Ownship& own) {
     civil_from_epoch(own.utc_s, year, month, day);
     int written = 0;
     written += format_string(sentence + written, "$GPRMC,");
-    written += format_nmea_time(sentence + written, own.utc_s);
+    written += format_nmea_time(sentence + written, own.utc_s, own.utc_ms);
     written += format_string(sentence + written, ",A,");
     written += format_nmea_latitude(sentence + written, own.latitude_1e7);
     sentence[written++] = ',';
@@ -301,7 +304,7 @@ int format_gpgga(char* out, size_t capacity, const model::Ownship& own) {
     char sentence[kScratchBytes];
     int written = 0;
     written += format_string(sentence + written, "$GPGGA,");
-    written += format_nmea_time(sentence + written, own.utc_s);
+    written += format_nmea_time(sentence + written, own.utc_s, own.utc_ms);
     sentence[written++] = ',';
     written += format_nmea_latitude(sentence + written, own.latitude_1e7);
     sentence[written++] = ',';

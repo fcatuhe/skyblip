@@ -59,6 +59,8 @@ struct Diagnostics {
     uint32_t tx_deferred{0};
     uint32_t tx_forced{0};
     uint32_t tx_busy_missed{0};
+    uint32_t tx_held_for_fix{0};
+    uint32_t tx_redrawn_for_fix{0};
     uint16_t tx_keyed_us{0};
     uint16_t tx_span_us{0};
     bool dio1_armed{false};
@@ -85,8 +87,10 @@ struct Diagnostics {
     uint32_t gnss_overruns{0};
     uint16_t gnss_solution_phase_ms{0};
     bool gnss_solution_phase_valid{false};
-    // The extrapolation the transmitter applies, measured against the fix that
-    // closed the interval (products/common/services/ownship.cpp). It belongs
+    uint32_t gnss_recoveries{0};
+    bool gnss_recoveries_valid{false};
+    // The constant-turn model own-ship is carried by, measured against the fix
+    // that closed the interval (products/common/services/ownship.cpp). It belongs
     // to the fix stream that feeds it, which is why it reads out with the
     // receiver rather than with the radio.
     uint16_t residual_m{0};
@@ -151,6 +155,8 @@ class DiagnosticsReport {
     // a frame is never longer than the negotiated payload, this only bounds the
     // buffer the caller lends.
     static constexpr int kFrameBytes = 384;
+    // INFO: fc 19nov26 add() drops a field past this, so a frames test keeps the widest under it
+    static constexpr int kMaxFields = 96;
 
     // INFO: fc 20oct26 command is what the reply answers under: radio asks for one group
     DiagnosticsReport(const Diagnostics& diagnostics, link::Command command);
@@ -172,8 +178,6 @@ class DiagnosticsReport {
         Kind kind;
         Group group;
     };
-
-    static constexpr int kMaxFields = 85;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_capture(const Diagnostics& diagnostics);

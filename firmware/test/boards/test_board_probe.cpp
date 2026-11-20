@@ -24,7 +24,7 @@ using boards::t_echo_plus::kRtcAddress;
 TEST_CASE("board: one scan, taken when the page asks, names everything on the sensor bus") {
     platform::host::Platform platform;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     CHECK(board.inventory().i2c_count == 0);
     CHECK(board.take_bus_inventory());
@@ -56,7 +56,7 @@ TEST_CASE("board: a haptic that answers the bus is a capability, and it is the p
           doctest::test_suite("main")) {
     platform::host::Platform platform;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
 
     CHECK(ports::has(board.capabilities(), ports::Capability::Haptic));
@@ -79,7 +79,7 @@ TEST_CASE("board: a haptic that answers the bus is a capability, and it is the p
 TEST_CASE("board: the T-Echo Plus drives its motor as an ERM in open loop, uncalibrated") {
     platform::host::Platform platform;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     models::Drv2605& chip = platform.chips().haptic;
 
@@ -93,7 +93,7 @@ TEST_CASE("board: the T-Echo Plus drives its motor as an ERM in open loop, uncal
 TEST_CASE("board: an output left on past its ceiling is cut, the motor and the buzzer both") {
     platform::host::Platform platform;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     ports::Roles roles = board.roles();
     models::Drv2605& chip = platform.chips().haptic;
@@ -118,7 +118,7 @@ TEST_CASE("board: an output left on past its ceiling is cut, the motor and the b
 TEST_CASE("board: the guard counts from turn-on: an off re-arms it, a pitch change does not") {
     platform::host::Platform platform;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     ports::Roles roles = board.roles();
     models::Drv2605& chip = platform.chips().haptic;
@@ -157,7 +157,7 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
     // a dead chip, a board that turned out to be a plain T-Echo.
     platform.chips().haptic.answers = false;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Haptic));
@@ -174,7 +174,7 @@ TEST_CASE("board: the panel it identified is on the inventory by name") {
     platform::host::Platform platform;
     platform.chips().epd.panel_id = parts::panels::kGdeh0154D67Syx2118;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
 
     CHECK(board.display().panel() == parts::Panel::Gdeh0154D67Syx2118);
@@ -184,7 +184,7 @@ TEST_CASE("board: the panel it identified is on the inventory by name") {
 TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
     platform::host::Platform platform;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
 
     // The default: no fingerprint taken, which is what this board will report on
@@ -201,7 +201,7 @@ TEST_CASE("board: a buzzer pin held down by its drive stage is a fitted buzzer")
     platform::host::Platform platform;
     platform.set_buzzer_pin_held_low(true);
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
 
     CHECK(ports::has(board.capabilities(), ports::Capability::Buzzer));
@@ -211,7 +211,7 @@ TEST_CASE("board: a buzzer pin that follows the pull-up is an empty pad, and the
     platform::host::Platform platform;
     platform.set_buzzer_pin_held_low(false);
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Buzzer));
@@ -231,7 +231,7 @@ TEST_CASE("board: a barometer at LilyGO's address is the one reported") {
     // came the other way.
     platform.i2c_bus().answer(0x76, false);
     platform.i2c_bus().answer(0x77, true);
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     board.probe();
     REQUIRE(board.take_bus_inventory());
 
@@ -246,7 +246,7 @@ TEST_CASE("board: the status lamp is a devicetree fact, and a board without one 
     // device with a lamp it never lights and no way to tell.
     platform::host::Platform fitted;
     bus::GoBus bus;
-    Board with_a_lamp{fitted, bus};
+    Board with_a_lamp{fitted, bus, ports::SolutionRate::Half};
     with_a_lamp.probe();
     CHECK(ports::has(with_a_lamp.capabilities(), ports::Capability::Indicator));
 
@@ -255,7 +255,7 @@ TEST_CASE("board: the status lamp is a devicetree fact, and a board without one 
         ~static_cast<uint32_t>(ports::Capability::Indicator));
     platform::host::Platform bare{kNoLamp};
     bus::GoBus bare_bus;
-    Board without{bare, bare_bus};
+    Board without{bare, bare_bus, ports::SolutionRate::Half};
     without.probe();
     CHECK_FALSE(ports::has(without.capabilities(), ports::Capability::Indicator));
     // And it is still a flyable board: the lamp is not required for anything.

@@ -9,16 +9,20 @@ namespace skyblip::ports {
 
 enum class Restart : uint8_t { Hot, Warm, Cold, Factory };
 
+enum class SolutionRate : uint8_t { Second, Half };
+
 enum class GnssConfigStage : uint8_t {
-    Idle,
-    Restarting,
-    Waking,
-    Identifying,
-    Sending,
-    Verifying,
-    Confirming,
-    Ready,
-    Degraded
+    Idle = 0,
+    Restarting = 1,
+    Waking = 2,
+    Identifying = 3,
+    Sending = 4,
+    Verifying = 5,
+    Confirming = 6,
+    Ready = 7,
+    Degraded = 8,
+    Probing = 9,
+    Resetting = 10
 };
 
 constexpr const char* to_string(GnssConfigStage state) {
@@ -32,6 +36,8 @@ constexpr const char* to_string(GnssConfigStage state) {
         case GnssConfigStage::Confirming: return "CONFIRM";
         case GnssConfigStage::Ready: return "READY";
         case GnssConfigStage::Degraded: return "DEGRADED";
+        case GnssConfigStage::Probing: return "PROBING";
+        case GnssConfigStage::Resetting: return "RESET";
     }
     return "?";
 }

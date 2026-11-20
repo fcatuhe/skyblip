@@ -26,7 +26,7 @@ void FlightLogService::tick(uint32_t now_ms) {
     if (!flights_.available()) return;
 
     const flight::LogAction action =
-        session_.update(context_.state.own, context_.state.flight.rolling, now_ms);
+        session_.update(context_.state.own_second, context_.state.flight.rolling, now_ms);
     if (action == flight::LogAction::OpenSession) {
         flights_.begin_session(session_.session_id());
         events_.open();
@@ -51,7 +51,7 @@ uint32_t FlightLogService::due_in_ms(uint32_t /*now_ms*/) const {
 
 // INFO: fc 15oct26 sampled with the fix, so an event is dated by the second the track holds
 void FlightLogService::watch(uint32_t now_ms) {
-    const model::Ownship& own = context_.state.own;
+    const model::Ownship& own = context_.state.own_second;
     events_.status(status_now(), own.utc_s, now_ms);
     events_.bravo(static_cast<uint8_t>(context_.state.bravo), comms::lost(context_.state.bravo),
                   own.utc_s);

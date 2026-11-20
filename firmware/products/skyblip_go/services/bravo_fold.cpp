@@ -61,7 +61,7 @@ std::optional<uint32_t> BravoService::second_edge_ms(uint32_t at_s) const {
     const model::Ownship& own = context_.state.own;
     if (clock.pps_locked && clock.utc_s != 0)
         return seconds_later_ms(static_cast<uint32_t>(clock.utc_edge_us / 1000), at_s, clock.utc_s);
-    if (own.utc_valid) return seconds_later_ms(own.fix_at_ms, at_s, own.utc_s);
+    if (own.utc_valid) return seconds_later_ms(own.fix_at_ms - own.utc_ms, at_s, own.utc_s);
     return std::nullopt;
 }
 

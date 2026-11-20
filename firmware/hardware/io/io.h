@@ -17,6 +17,7 @@ enum class PinFunction : uint8_t {
     EpdBusy,
     EpdBacklight,
     HapticEnable,
+    GnssReset,
 };
 
 struct PinRole {

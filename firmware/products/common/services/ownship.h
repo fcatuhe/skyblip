@@ -50,15 +50,22 @@ class OwnshipService : public runtime::Service {
     const flight::FlightTimer& timer_on_glass(uint32_t now_ms);
     bool simulating_flight() const;
     void apply_solution(const gnss::GnssSolution& solution, uint32_t now_ms);
+    void apply_second(uint32_t now_ms);
     void record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms);
     void record_flight(uint32_t now_ms);
     void record_pps(uint32_t now_ms);
     void record_barometer(const events::BarometerSample& sample, int32_t altitude_mm,
                           int32_t climb_mm_s, bool adopted, uint32_t now_ms);
     void record_motion(uint32_t now_ms);
-    uint32_t solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms) const;
+    struct Dated {
+        uint32_t at_ms{0};
+        bool trusted{false};
+    };
+    Dated solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms);
+    bool opens_second(const gnss::GnssSolution& solution);
     void publish_solution_phase(uint32_t now_ms);
-    void anchor_utc_s(const gnss::GnssSolution& solution);
+    void anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms);
+    static uint32_t latency_ceiling_ms(const gnss::GnssSolution& solution);
     static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
     void apply_barometer(const events::BarometerSample& sample, uint32_t now_ms);
     void apply_accelerometer(const events::AccelerometerSample& sample);
@@ -86,6 +93,9 @@ class OwnshipService : public runtime::Service {
     flight::GroundLatch ground_{};
     gnss::FirstFix first_fix_{};
     gnss::Acquisition acquisition_{};
+    model::Ownship second_{};
+    uint32_t opened_s_{0};
+    bool second_opened_{false};
     int32_t gnss_reference_altitude_mm_{0};
     uint32_t gnss_reference_ms_{0};
     int32_t barometer_reference_altitude_mm_{0};

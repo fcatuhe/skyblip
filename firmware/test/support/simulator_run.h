@@ -78,6 +78,20 @@ inline std::vector<simulator::AirRecord> statuses_flown(int speed_kt, uint32_t f
     return records_of(simulator.world().air(), adsl::Packet::kPayloadTypeStatus);
 }
 
+// The newest solution solved before the burst went on air on the quarter its timestamp names.
+inline const models::L76k::Solved* solution_named(const models::L76k& chip,
+                                                  const adsl::Packet& packet, uint64_t on_air_us) {
+    const uint32_t on_air_ms = static_cast<uint32_t>(on_air_us / 1000);
+    for (int back = 0; back < chip.solved_count(); back++) {
+        const models::L76k::Solved& solved = chip.solved(back);
+        if (solved.at_ms > on_air_ms) continue;
+        const uint32_t quarter = solved.utc_seconds_of_day % adsl::kTimestampCycleS * 4 +
+                                 solved.utc_ms / adsl::kTimestampQuarterMs;
+        if (quarter == packet.timestamp) return &solved;
+    }
+    return nullptr;
+}
+
 inline int count_of(const simulator::Air& air, simulator::AirEvent want) {
     int count = 0;
     for (int i = 0; i < air.record_count(); i++)

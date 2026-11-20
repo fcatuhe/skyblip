@@ -99,10 +99,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRefixSettleMs` | 5000 (5 s) | milliseconds | Settle | [README](../firmware/core/gnss/README.md) argues it |
 | `kSettleResidualM` | `flight::kFlightSpeedMmS / 1000` = 12 | metres | Settle | the takeoff speed over the second a residual spans, so no smaller error invents a flight |
 | `kConvergedFixes` | 3 | fixes | Fixes | - |
+| `kTornStampMs` | -2 | milliseconds | - | - |
 | `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea |
 | `kAltitudeCeilingM` | 100000 | metres | Ceiling | - |
 | `kAltitudeFloorM` | -1000 | metres | Floor | - |
-| `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, three missed bursts, not a freshness rule |
+| `kSolutionLatencyCeilingMs` | 250 | milliseconds | Ceiling | the stated assumption: the L76K delivers a solution within a quarter |
+| `kStampToleranceMs` | 10 | milliseconds | - | G.1.1's 10 ms: a stamp that close to a quarter is that quarter |
+| `kQuarterMs` | 250 | milliseconds | - | - |
+| `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 7 bursts at 2 Hz |
 
 ## [`firmware/core/indication`](../firmware/core/indication/README.md)
 
@@ -199,7 +203,10 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kStatusPeriodS` | `adsl::kStatusPeriodS` = 20 | seconds | Period | - |
 | `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
 | `kRetryStepS` | 2 | seconds | - | a burst that missed its second tries the same channel two seconds on |
-| `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | - |
+| `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | [README](../firmware/core/timing/README.md) argues it |
+| `kFixInHandEarlyMs` | -1000000 | milliseconds | - | a fix in hand before every instant, for a caller that names no arrival |
+| `kRedrawLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | a redrawn instant leaves the channel check its listen before it |
+| `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -375,7 +382,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDirectStartMs` | 450 | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kDirectEndMs` | 1000 (1 s) | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
-| `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
+| `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, from the PVT fix to the instant the burst goes on air |
 | `kStatusPeriodS` | 20 | seconds | Period | G.2.11 asks for a Status at least once every 20 s |
 | `kCycleMs` | `int64_t{kTimestampCycleS} * 1000` | milliseconds | - | - |
 | `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
@@ -418,4 +425,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-273 constants over 26 folders.
+280 constants over 26 folders.

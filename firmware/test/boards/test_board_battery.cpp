@@ -35,7 +35,7 @@ struct Unit {
 
     platform::host::Platform platform;
     bus::GoBus bus;
-    Board board{platform, bus};
+    Board board{platform, bus, ports::SolutionRate::Half};
     bus::State state;
     uint32_t now_ms{0};
 };

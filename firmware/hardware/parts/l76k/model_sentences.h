@@ -2,6 +2,8 @@
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 
+#include <cstring>
+
 #include "core/protocol/nmea_out.h"
 #include "core/util/format.h"
 #include "hardware/parts/l76k/model.h"
@@ -10,12 +12,20 @@ namespace skyblip::models {
 
 // INFO: fc 13sep26 the part emits the cycle in $PCAS03's own field order, so RMC closes a burst
 inline void L76k::emit_burst() {
+    if (time_lost) {
+        const char* gga = "$GNGGA,,,,,,0,00,25.5,,,,,,*64\r\n";
+        const char* rmc = "$GNRMC,,V,,,,,,,,,,N,V*37\r\n";
+        say(gga, static_cast<int>(std::strlen(gga)));
+        say(rmc, static_cast<int>(std::strlen(rmc)));
+        return;
+    }
     step_walk();
+    const bool gsa_due = gsa_enabled() && solutions_ % gsa_every == 0;
     const bool gsv_due = gsv_enabled() && solutions_ % gsv_every == 0;
     solutions_++;
     if (gga_enabled) emit_gga();
     if (gll_enabled) emit_gll();
-    if (gsa_enabled) emit_gsa();
+    if (gsa_due) emit_gsa();
     if (gsv_due) emit_gsv();
     if (rmc_enabled) emit_rmc();
     if (vtg_enabled) emit_vtg();
@@ -31,11 +41,11 @@ inline void L76k::emit_version() {
     pending_.append(line, static_cast<size_t>(written));
 }
 
-// $GPRMC,hhmmss,A,ddmm.mmmm,N,dddmm.mmmm,E,speed_kn,track,ddmmyy,,,A*cs
+// $GPRMC,hhmmss.sss,A,ddmm.mmmm,N,dddmm.mmmm,E,speed_kn,track,ddmmyy,,,A*cs
 inline void L76k::emit_rmc() {
     char line[128];
     int written = format_string(line, "$GPRMC,");
-    written += put_time(line + written);
+    written += put_stamp(line + written);
     written += format_string(line + written, solving() ? ",A," : ",V,");
     written += format_nmea_latitude(line + written, walked_latitude_1e7());
     line[written++] = ',';
@@ -48,7 +58,7 @@ inline void L76k::emit_rmc() {
     written += format_string(line + written, date);
     written += format_string(line + written, ",,,A");
     written = protocol::nmea_finish(line, written);
-    pending_.append(line, static_cast<size_t>(written));
+    say(line, written);
 }
 
 // INFO: fc 18sep26 one GSA per constellation, each naming its own satellites and system id
@@ -91,7 +101,7 @@ inline void L76k::emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t in_v
     line[written++] = ',';
     written += format_unsigned(line + written, system_id, 1);
     written = protocol::nmea_finish(line, written);
-    pending_.append(line, static_cast<size_t>(written));
+    say(line, written);
 }
 
 inline void L76k::emit_gll() {
@@ -101,10 +111,10 @@ inline void L76k::emit_gll() {
     line[written++] = ',';
     written += format_nmea_longitude(line + written, longitude_1e7);
     line[written++] = ',';
-    written += put_time(line + written);
+    written += put_stamp(line + written);
     written += format_string(line + written, solving() ? ",A,A" : ",V,N");
     written = protocol::nmea_finish(line, written);
-    pending_.append(line, static_cast<size_t>(written));
+    say(line, written);
 }
 
 // INFO: fc 18sep26 one set per talker, four satellites a sentence, and no C/N0 on one not
@@ -145,7 +155,7 @@ inline void L76k::emit_gsv_set(const char* talker, uint8_t in_view, uint8_t firs
         }
         written += format_string(line + written, ",0");
         written = protocol::nmea_finish(line, written);
-        pending_.append(line, static_cast<size_t>(written));
+        say(line, written);
     }
 }
 
@@ -163,14 +173,14 @@ inline void L76k::emit_vtg() {
     written += format_unsigned(line + written, kmh_e2(), 1, 2);
     written += format_string(line + written, ",K,A");
     written = protocol::nmea_finish(line, written);
-    pending_.append(line, static_cast<size_t>(written));
+    say(line, written);
 }
 
-// $GPGGA,hhmmss,ddmm.mmmm,N,dddmm.mmmm,E,q,sats,hdop,msl,M,separation,M,,*cs
+// $GPGGA,hhmmss.sss,ddmm.mmmm,N,dddmm.mmmm,E,q,sats,hdop,msl,M,separation,M,,*cs
 inline void L76k::emit_gga() {
     char line[128];
     int written = format_string(line, "$GPGGA,");
-    written += put_time(line + written);
+    written += put_stamp(line + written);
     line[written++] = ',';
     written += format_nmea_latitude(line + written, walked_latitude_1e7());
     line[written++] = ',';
@@ -188,7 +198,7 @@ inline void L76k::emit_gga() {
         written += format_signed(line + written, geoid_separation_m * 10, 1, 1, false);
     written += format_string(line + written, ",M,,");
     written = protocol::nmea_finish(line, written);
-    pending_.append(line, static_cast<size_t>(written));
+    say(line, written);
 }
 
 }  // namespace skyblip::models

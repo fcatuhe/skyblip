@@ -283,6 +283,9 @@ enum : uint32_t {
     kModeS = 87,
     kModeSAltitude = 88,
     kUnmatched = 89,
+    kTxHeldForFix = 90,
+    kTxRedrawnForFix = 91,
+    kReceiverRecoveries = 92,
     kLinkDropReason = 94,
 };
 }

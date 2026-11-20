@@ -8,6 +8,7 @@
 #include "doctest/doctest.h"
 #include "ports/rf.h"
 #include "test/support/anchored_clock.h"
+#include "test/support/fresh_fix.h"
 
 using namespace skyblip;
 using namespace skyblip::timing;
@@ -45,8 +46,9 @@ std::vector<Burst> flown(Transmitter& transmitter, uint32_t from_s, uint32_t sec
         transmitter.give_up(utc_s, airborne(utc_s), true);
         for (const int slot : {0, 1}) {
             for (const Payload payload : {Payload::Position, Payload::Status, Payload::Callsign}) {
-                const Transmitter::Attempt attempt = transmitter.attempt(
-                    slot_plan(slot), utc_s, utc_s * 1000, airborne(utc_s), 0, payload);
+                const Transmitter::Attempt attempt =
+                    transmitter.attempt(slot_plan(slot), utc_s, utc_s * 1000, airborne(utc_s),
+                                        kFixSolvedAtSecondEnd, payload);
                 if (!attempt.go) continue;
                 if (refused && refused(utc_s, payload)) continue;
                 transmitter.sent(utc_s, utc_s * 1000 + static_cast<uint32_t>(attempt.at_ms),
@@ -376,8 +378,8 @@ TEST_CASE("transmit cycle: a turn that never went out is given up and counted at
         given_up += transmitter.give_up(utc_s, false, true);
         for (const int slot : {0, 1}) {
             for (const Payload payload : {Payload::Status, Payload::Callsign}) {
-                const Transmitter::Attempt attempt =
-                    transmitter.attempt(slot_plan(slot), utc_s, utc_s * 1000, false, 0, payload);
+                const Transmitter::Attempt attempt = transmitter.attempt(
+                    slot_plan(slot), utc_s, utc_s * 1000, false, kFixSolvedAtSecondEnd, payload);
                 if (attempt.go) transmitter.sent(utc_s, utc_s * 1000, payload);
             }
         }

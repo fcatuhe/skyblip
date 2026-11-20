@@ -121,16 +121,19 @@ class RadioService : public runtime::Service {
     static uint64_t instant_us(const timing::Transmitter::Attempt& attempt, int64_t origin_us);
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
     uint32_t slot_utc_s(uint32_t now_ms) const;
-    int32_t fix_lag_ms() const;
+    int32_t fix_lag_ms(int64_t origin_us) const;
+    int32_t fix_in_hand_ms(int64_t origin_us) const;
     bool full_rate() const;
     void count_given_up(uint32_t now_ms);
-    protocol::BurstInstant burst_instant(const timing::Transmitter::Attempt& attempt,
-                                         uint64_t tx_at_us, uint32_t utc_s) const;
+    void count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
+    void hold_for_fix(uint32_t utc_s);
+    void carry_position(const timing::Transmitter::Attempt& position, uint32_t utc_s);
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
     static void listen_for(timing::Band band, ports::RfPlan& plan);
-    timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, uint32_t now_ms) const;
-    timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, uint32_t now_ms,
-                                         Payload payload) const;
+    timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, int64_t origin_us,
+                                         uint32_t now_ms) const;
+    timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, int64_t origin_us,
+                                         uint32_t now_ms, Payload payload) const;
     bool owes(const Armed& dwell, const timing::SlotPlan& plan, int64_t origin_us,
               uint32_t now_ms) const;
     uint8_t encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us, uint32_t utc_s,
@@ -163,6 +166,8 @@ class RadioService : public runtime::Service {
     void log_access(radio::Verdict verdict, const Armed& dwell, Payload payload,
                     const bus::RfState::Busy& busy, uint32_t now_ms);
     bool rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced);
+    bool fix_too_old_at(uint64_t tx_at_us) const;
+    void await_fix(uint32_t utc_s);
     bool silenced(uint64_t tx_at_us) const;
     void silence_after(uint64_t forced_at_us);
     void record_switch(const ports::RfSwitch& change, uint32_t now_ms);
@@ -185,6 +190,13 @@ class RadioService : public runtime::Service {
     // INFO: fc 13nov26 B.5: the second a position was last held, so each held second counts once
     uint32_t held_for_b5_s_{0};
     bool held_for_b5_{false};
+    uint32_t held_for_fix_s_{0};
+    bool held_for_fix_{false};
+    // INFO: fc 19nov26 a position waiting for its fix, lost unless armed before its second ends
+    uint32_t fix_wanted_s_{0};
+    bool fix_wanted_{false};
+    uint32_t redrawn_s_{0};
+    bool redrawn_{false};
     // INFO: fc 27sep26 per dwell and payload: queued bursts are built while the current dwell keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed current_dwell_{};

@@ -114,7 +114,9 @@ constexpr bool on_the_wire(ports::GnssConfigStage value) {
         case ports::GnssConfigStage::Verifying:
         case ports::GnssConfigStage::Confirming:
         case ports::GnssConfigStage::Ready:
-        case ports::GnssConfigStage::Degraded: return true;
+        case ports::GnssConfigStage::Degraded:
+        case ports::GnssConfigStage::Probing:
+        case ports::GnssConfigStage::Resetting: return true;
     }
     return false;
 }
@@ -343,6 +345,8 @@ static_assert(code(ports::GnssConfigStage::Verifying) == 5, "gnss_config verifyi
 static_assert(code(ports::GnssConfigStage::Confirming) == 6, "gnss_config confirming");
 static_assert(code(ports::GnssConfigStage::Ready) == 7, "gnss_config ready");
 static_assert(code(ports::GnssConfigStage::Degraded) == 8, "gnss_config degraded");
+static_assert(code(ports::GnssConfigStage::Probing) == 9, "gnss_config probing");
+static_assert(code(ports::GnssConfigStage::Resetting) == 10, "gnss_config resetting");
 static_assert(on_the_wire(ports::GnssConfigStage::Idle), "gnss_config");
 
 static_assert(code(gnss::FixReject::None) == 0, "reject none");

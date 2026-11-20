@@ -18,6 +18,7 @@
 #include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/simulator.h"
+#include "test/support/fresh_fix.h"
 #include "test/support/rf_pass_rig.h"
 
 using namespace skyblip;
@@ -102,7 +103,7 @@ TEST_CASE("rf: the transmit instant is measured from the latched edge, not from 
 
         const timing::SlotPlan plan = timing::Scheduler{}.plan(500, pass.state.clock);
         const timing::Transmitter::Attempt wanted =
-            pass.radio_service.transmitter().attempt(plan, 2, now_ms, true, 0);
+            pass.radio_service.transmitter().attempt(plan, 2, now_ms, true, kFixSolvedAtSecondEnd);
         REQUIRE(wanted.go);
         const uint64_t wanted_us = edge_us + static_cast<uint64_t>(wanted.at_ms) * 1000;
 

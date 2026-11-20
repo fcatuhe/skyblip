@@ -989,6 +989,21 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
+          "name": "tx_held_for_fix",
+          "number": 90,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_redrawn_for_fix",
+          "number": 91,
+          "type": "unsigned"
+        },
+        {
+          "name": "receiver_recoveries",
+          "number": 92,
+          "type": "unsigned"
+        },
+        {
           "name": "link_drop_reason",
           "number": 94,
           "type": "unsigned"
@@ -1456,6 +1471,21 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "unmatched",
           "number": 89,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_held_for_fix",
+          "number": 90,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_redrawn_for_fix",
+          "number": 91,
+          "type": "unsigned"
+        },
+        {
+          "name": "receiver_recoveries",
+          "number": 92,
           "type": "unsigned"
         },
         {
@@ -3292,6 +3322,16 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "degraded",
           "code": 8,
           "mirrors": "Degraded"
+        },
+        {
+          "name": "probing",
+          "code": 9,
+          "mirrors": "Probing"
+        },
+        {
+          "name": "resetting",
+          "code": 10,
+          "mirrors": "Resetting"
         }
       ]
     },

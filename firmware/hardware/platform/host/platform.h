@@ -182,6 +182,16 @@ class Battery {
 // edge itself arrived. The modelled receiver pulses on the whole second of the
 // clock the caller advances, so the edge is that second - not the phase rounded
 // to the millisecond whoever asked happened to ask on.
+class GnssRate : public io::UartRate {
+   public:
+    explicit GnssRate(io::UartRate& chip) : chip_(chip) {}
+    bool set(uint32_t baud) override { return retunes && chip_.set(baud); }
+    bool retunes{false};
+
+   private:
+    io::UartRate& chip_;
+};
+
 class Pps {
    public:
     explicit Pps(const Clock& clock) : clock_(clock) {}
@@ -244,13 +254,9 @@ class Platform {
         return chips_.radio;
     }
     io::Uart& uart(io::BusId) { return chips_.gnss; }
-    // Deliberately the null port, even though chips_.gnss can retune: this
-    // platform is a bench, not a T-Echo, and the product rig feeds fixes onto the
-    // bus rather than through the receiver model. A rate port here would have the
-    // driver walk its candidates against a silence that is the rig's, not a
-    // receiver's. Autobaud is proven where the model IS the wire,
-    // test/hardware/test_l76k.cpp.
-    static io::UartRate& uart_rate(io::BusId) { return io::kFixedUartRate; }
+    // INFO: fc 18nov26 fixed unless a world ticks the part, so a rig feeding the bus walks no rates
+    io::UartRate& uart_rate(io::BusId) { return gnss_rate_; }
+    void retune_gnss_port(bool on) { gnss_rate_.retunes = on; }
     io::Gpio& gpio() { return gpio_; }
     io::Delay& delay() { return delay_; }
     io::I2c& i2c(io::BusId) { return i2c_; }
@@ -337,6 +343,7 @@ class Platform {
     static constexpr uint8_t kRtcAddress = 0x51;
 
     Chips chips_{};
+    GnssRate gnss_rate_{chips_.gnss};
     Gpio gpio_{chips_};
     Delay delay_{chips_};
     I2cBus i2c_{};

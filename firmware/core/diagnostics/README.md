@@ -60,7 +60,7 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 |---|---|---|
 | `Boot` 1 | capabilities, firmware version, reset reason, image state, the capture profile | which build and which parts produced the rest of the corpus, whether the device came up from a fault, and which capture the session is |
 | `Config` 2 | address, address table, aircraft type, alarm setting, battery and frequency trims, whose the battery trim is, units, the power the transmitter was asked for and the PA row it was asked through | what the firmware was assuming while it decided everything else |
-| `Gnss` 3 | solution phase, residual, HDOP, VDOP, stage and its age, sats used and in view, fix mode, reject reason | where in its own second a solution lands (`kFixMaxAgeMs`, 500 ms of §G.1.16 nav age), and what the rejects cost |
+| `Gnss` 3 | solution phase, residual, HDOP, VDOP, stage and its age, sats used and in view, fix mode, reject reason | how long after its own quarter second a solution lands (`kFixMaxAgeMs`, 500 ms of §G.1.16 nav age), and what the rejects cost |
 | `Pps` 4 | edge interval, signed error against a nominal second, samples, holdover events, ms since the edge, lock | whether `kPpsHoldoverMs` is the right patience, and what the slot map is really anchored to |
 | `Burst` 5 | the whole of `radio::Entry`: verdict, band, channel, address, length, RSSI, key offset, tx_keyed_us, tx_span_us, the stage margin, airborne, callsign | every verdict `radio::Verdict` declares against the second it happened in: two devices on one bench read one link twice |
 | `Dwell` 6 | slot state, band, frequency, start and end, the phase it was read at, duty, noise floor, refusal reason, tx_allowed | whether the dwell map spends the second where §C.5 says, and what refuses a burst when one is refused |
@@ -171,11 +171,11 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 |---|---|---|
 | `Boot` | `products/common/services/capture.cpp` `record_boot` | as a capture session opens, so a corpus names the build that produced it |
 | `Config` | `products/common/services/capture.cpp` `record_config`, with the settings `products/skyblip_go/capture_settings.h` describes | the same instant, and for the same reason |
-| `Gnss` | `products/common/services/ownship.cpp` `record_gnss` | every solution the receiver publishes, fix or not |
+| `Gnss` | `products/common/services/ownship.cpp` `record_gnss` | the solution on each whole second the receiver publishes, fix or not, so one in two at 2 Hz |
 | `Pps` | `products/common/services/ownship.cpp` `record_pps` | every latched edge, and every `kPpsRecordPeriodMs` that brings none |
 | `Burst` | `products/skyblip_go/services/traffic.cpp` `log`, `products/skyblip_go/services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |
-| `Flight` | `products/common/services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
+| `Flight` | `products/common/services/ownship.cpp` `record_flight` | every evaluation of the flight machine on a whole-second solution, never only its transitions |
 | `Power` | `products/common/services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |
 | `Barometer` | `products/common/services/ownship.cpp` `record_barometer` | every sample the board polls (`runtime::kBarometerPublishPeriodMs`) |
 | `Motion` | `products/common/services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |

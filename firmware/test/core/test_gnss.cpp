@@ -369,9 +369,9 @@ TEST_CASE("gnss: a locked PPS edge dates the fix, not the stamped latency" *
 
     CHECK(solution_instant_ms(solution, 10'333, 10'000, true) == 10'000);
 
-    // No lock, or an edge too old to be this burst's own second: the estimate stands.
+    // No lock: the estimate stands. An edge missed since: the phase does, whole seconds on.
     CHECK(solution_instant_ms(solution, 10'333, 10'000, false) == 10'000);
-    CHECK(solution_instant_ms(solution, 11'400, 10'000, true) == 11'067);
+    CHECK(solution_instant_ms(solution, 11'400, 10'000, true) == 11'000);
 }
 
 // I, row "Date and jump sanity", second half. A sentence that stopped early

@@ -18,8 +18,15 @@ namespace skyblip::parts {
 
 class L76k : public ports::Gnss {
    public:
-    explicit L76k(io::Uart& uart, io::UartRate& rate = io::kFixedUartRate)
-        : uart_(uart), rate_(rate) {}
+    L76k(ports::SolutionRate solution_rate, io::Uart& uart, io::UartRate& rate = io::kFixedUartRate,
+         io::Gpio* reset = nullptr, int reset_pin = -1)
+        : solution_rate_(solution_rate),
+          uart_(uart),
+          rate_(rate),
+          reset_(reset),
+          reset_pin_(reset_pin) {}
+
+    static constexpr bool solves(ports::SolutionRate) { return true; }
 
     using ConfigStage = ports::GnssConfigStage;
 
@@ -44,8 +51,9 @@ class L76k : public ports::Gnss {
         9600, 115200, 38400, 57600, 19200, 4800,
     };
 
-    // INFO: fc 13sep26 one solution per second, transmitted extrapolated to the burst's own instant
-    static constexpr uint32_t kSolutionPeriodMs = 1000;
+    // INFO: fc 19nov26 2 Hz solves on .000 and .500, two of G.1.1's quarters, L76K V1.1 SS2.3.2
+    static constexpr uint32_t kSolutionPeriodMs = 500;
+    static constexpr uint32_t kFactorySolutionPeriodMs = 1000;
 
     // INFO: fc 13sep26 GGA + three GSA (one per constellation) + RMC, the widest burst we ask for
     static constexpr uint32_t kBurstBytes = 320;
@@ -75,15 +83,30 @@ class L76k : public ports::Gnss {
         "$PCAS02,1000*2E\r\n",
     };
 
+    // INFO: fc 18nov26 L76K protocol spec V1.1 SS2.3.2 allows under 1000 ms only at 115200
+    static constexpr int kRateCommandCount = 2;
+    static constexpr const char* kRateCommands[kRateCommandCount] = {
+        "$PCAS02,500*1A\r\n",
+        "$PCAS03,,,2,,,,,,,,,,,*30\r\n",
+    };
+    // INFO: fc 19nov26 the second sentence above keeps GSA, and the VDOP it carries, once a second
+    static constexpr uint8_t kGsaPeriodSolutions = 2;
+    static_assert(kGsaPeriodSolutions * kSolutionPeriodMs == kFactorySolutionPeriodMs,
+                  "GSA keeps the once a second it had at the factory rate");
+
     // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.15 asks us to claim
     static constexpr bool kGsaEnabled = true;
+
+    // INFO: fc 29sep26 GSV precedes RMC: nav_ms +55-65 ms on bench 0B1B2C, so one set in five
+    static constexpr uint8_t kSatellitesInViewPeriodSolutions = 5;
+    // INFO: fc 19nov26 $PCAS03 counts to 9, so at 2 Hz a set every 4.5 s, as one in five at 1 Hz
+    static constexpr uint8_t kHalfSecondSatellitesInViewPeriodSolutions = 9;
 
     // INFO: fc 18sep26 $PCAS03 takes a null per field meaning keep, so these move nGSV alone
     static constexpr const char* kSatellitesInViewOff = "$PCAS03,,,,0,,,,,,,,,,*32\r\n";
     static constexpr const char* kSatellitesInViewEverySolution = "$PCAS03,,,,1,,,,,,,,,,*33\r\n";
     static constexpr const char* kSatellitesInViewPaced = "$PCAS03,,,,5,,,,,,,,,,*37\r\n";
-    // INFO: fc 29sep26 GSV precedes RMC: nav_ms +55-65 ms on bench 0B1B2C, so one set in five
-    static constexpr uint8_t kSatellitesInViewPeriodSolutions = 5;
+    static constexpr const char* kSatellitesInViewHalfSecondPaced = "$PCAS03,,,,9,,,,,,,,,,*3B\r\n";
 
     // INFO: fc 18sep26 four talkers, up to 32 satellites, four to a sentence and 72 bytes each
     static constexpr uint32_t kSatellitesInViewBytes = 648;
@@ -103,9 +126,28 @@ class L76k : public ports::Gnss {
         "$PCAS10,3*1F\r\n",
     };
 
-    // INFO: fc 13sep26 the rate we ask for is the factory rate, so obedience is the sentence set
+    // INFO: fc 18nov26 Go 000001 went silent, NMEA and PPS, and stayed so until rebooted
+    static constexpr uint32_t kSilenceMs = 3000;
+    static constexpr uint32_t kProbeListenMs = kWakeDelayMs + kFactorySolutionPeriodMs;
+    static constexpr uint32_t kProbePeriodMs = 10000;
+    static_assert(kBaudCandidateCount * kProbeListenMs < kProbePeriodMs,
+                  "a probe round hears every rate once inside its period");
+    static constexpr uint8_t kSilentRoundsBeforeReset = 3;
+    // INFO: fc 18nov26 Quectel L76K Hardware Design V1.0 4.2.1: RESET_N low at least 100 ms
+    static constexpr uint32_t kResetHoldMs = 150;
+    // INFO: fc 19nov26 a part refusing the rate or disobeying is retried for good, ever slower
+    static constexpr int kRecoveryBackoffSteps = 3;
+    static constexpr uint32_t kRecoveryBackoffMs[kRecoveryBackoffSteps] = {10000, 30000, 60000};
+
+    // INFO: fc 13sep26 obedience is the sentence set | 18nov26 and, after 2 Hz, its cadence
     static constexpr uint32_t kVerifyWindowMs = 3000;
     static constexpr uint32_t kMinVerifySentences = 2;
+    static constexpr uint32_t kRateVerifyWindowMs = 2000;
+    // INFO: fc 19nov26 2 Hz makes four half steps a window, any other rate none
+    static constexpr uint32_t kMinHalfSteps = 2;
+    static_assert(kMinHalfSteps < kRateVerifyWindowMs / kSolutionPeriodMs,
+                  "a part at the asked rate passes with steps to spare");
+    static constexpr int32_t kDayMs = 86400000;
     static constexpr uint8_t kMaxConfigAttempts = 3;
 
     // Drive the configuration sequence. Until it has run the receiver is on its
@@ -113,8 +155,21 @@ class L76k : public ports::Gnss {
     void service(uint32_t now_ms);
 
     ConfigStage config_stage() const { return stage_; }
+    enum class Cadence : uint8_t { Second, Half };
+    bool solving_half_seconds() const {
+        return stage_ == ConfigStage::Ready && cadence_ == Cadence::Half;
+    }
+    Cadence cadence() const { return cadence_; }
+    uint32_t solution_period_ms() const;
     bool configured() const { return stage_ == ConfigStage::Ready; }
+    // INFO: fc 19nov26 ready at the rate the product asked, which the transmit gate reads
+    bool holds_rate() const {
+        return configured() &&
+               (solution_rate_ == ports::SolutionRate::Second || cadence_ == Cadence::Half);
+    }
+    uint32_t recoveries() const { return recoveries_; }
     bool degraded() const { return stage_ == ConfigStage::Degraded; }
+    bool probing() const { return stage_ == ConfigStage::Probing; }
 
     // Drain whatever the receiver has said into the parser. Returns true when
     // that produced a NEW fix, or when the fix we already published stopped
@@ -192,9 +247,27 @@ class L76k : public ports::Gnss {
     static constexpr uint8_t kNoRestart = 0xFF;
 
     void start_sequence(uint32_t now_ms);
+    void start_rate(uint32_t now_ms);
+    void seek_rate(uint32_t now_ms);
+    void enter(ConfigStage stage, uint32_t now_ms);
+    uint32_t window_steps() const { return cadence_steps_ - verify_steps_; }
+    uint32_t window_sentences() const { return parser_.solution().sentences - verify_sentences_; }
+    bool silent(uint32_t now_ms) const;
+    void start_probing(uint32_t now_ms);
+    void listen(uint32_t now_ms);
+    void probe(uint32_t now_ms);
+    bool step_baud();
+    void begin_reset(uint32_t now_ms);
+    void hold_reset(uint32_t now_ms);
+    void recover(uint32_t now_ms);
+    uint32_t recovery_backoff_ms() const;
+    void retry_bring_up(uint32_t now_ms);
+    void flush();
+    void settle(uint32_t now_ms);
     void send_next(uint32_t now_ms);
     void begin_wake(uint32_t now_ms);
     void send(const char* sentence, uint32_t now_ms);
+    void wake(uint32_t now_ms);
     void verify_failed(uint32_t now_ms);
     bool obeying() const;
     void begin_verify(uint32_t now_ms);
@@ -205,12 +278,21 @@ class L76k : public ports::Gnss {
     void pace_satellites_in_view(uint32_t now_ms);
     uint8_t satellites_in_view_every() const;
     static const char* satellites_in_view_command(uint8_t every);
+    bool verified() const;
+    bool on_cadence() const;
+    void observe_cadence();
+    void watch_cadence(uint32_t now_ms);
+    void rate_failed(uint32_t now_ms);
+    bool newer_than_published(int32_t stamp_ms) const;
 
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
 
+    ports::SolutionRate solution_rate_;
     io::Uart& uart_;
     io::UartRate& rate_;
+    io::Gpio* reset_;
+    int reset_pin_;
     gnss::NmeaParser parser_{};
     gnss::FixValidity validity_{};
     gnss::GnssSolution solution_{};
@@ -221,7 +303,27 @@ class L76k : public ports::Gnss {
     uint32_t last_command_ms_{0};
     uint32_t verify_start_ms_{0};
     uint32_t verify_sentences_{0};
+    const char* const* sequence_{kCommands};
+    int sequence_count_{kCommandCount};
     int next_command_{0};
+    Cadence cadence_{Cadence::Second};
+    uint32_t recoveries_{0};
+    int failed_rounds_{0};
+    uint8_t rate_attempts_{0};
+    uint32_t entered_ms_{0};
+    uint32_t heard_ms_{0};
+    uint32_t heard_sentences_{0};
+    uint32_t probe_round_ms_{0};
+    int probe_bauds_{0};
+    uint8_t silent_rounds_{0};
+    bool reset_released_{false};
+    uint32_t released_ms_{0};
+    int32_t last_stamp_ms_{-1};
+    uint32_t unstamped_{0};
+    uint32_t cadence_steps_{0};
+    uint32_t verify_unstamped_{0};
+    uint32_t verify_steps_{0};
+    int32_t published_stamp_ms_{-1};
     int baud_index_{0};
     uint32_t baud_before_raise_{kFactoryBaudRate};
     uint8_t baud_tried_{1};

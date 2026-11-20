@@ -255,13 +255,13 @@ TEST_CASE("rf: after a forced burst ends nothing of ours goes on air for 2000 ms
     CHECK(sent[1].at_us >= sent[0].at_us + kAirTimeUs + adsl::kSilenceAfterForceUs);
 }
 
-// Without a name to force, the turn that waits longest on the ground is a position.
+// Without a name to force, the turn that waits longest on the ground is a position, on a retry.
 TEST_CASE("rf: on the ground with no name set, a position busy for 3000 ms is forced") {
     Listening run(0);
     run.to_cycle_second(timing::Transmitter::kPositionOffsetsS[0]);
     const uint64_t held_from_us = ms_to_us(run.now_ms);
     run.hold(true);
-    run.run_for(6000);
+    run.run_for(8000);
     run.hold(false);
     CHECK(run.state().air.tx_forced >= 1);
     std::vector<simulator::AirRecord> sent;
@@ -297,8 +297,8 @@ TEST_CASE("rf: deferred bursts keep 100 ms apart on a frequency, and one to a dw
     }
 }
 
-// G.1.16 with §D.3: the deferred burst is built again for its new instant, from the newest fix.
-TEST_CASE("rf: a deferred position is re-encoded at its new instant, byte for byte") {
+// G.1.16 with §D.3: the deferred burst is built again from the newest fix, aged at its new instant.
+TEST_CASE("rf: a deferred position is re-encoded from the newest fix, byte for byte") {
     Armings armings;
     armings.ready_to_transmit(1000);
     armings.state.own.latitude_1e7 = 455000000;
@@ -333,16 +333,10 @@ TEST_CASE("rf: a deferred position is re-encoded at its new instant, byte for by
     adsl::Packet sent{};
     REQUIRE(packet_of(record, sent));
 
-    const int32_t at_ms = static_cast<int32_t>((deferred.tx_at_us - Armings::kEdgeUs) / 1000);
-    protocol::BurstInstant instant{};
-    instant.utc_s = armings.state.traffic_now_s(static_cast<uint32_t>(Armings::kEdgeUs / 1000));
-    instant.into_utc_ms = at_ms;
-    instant.since_fix_ms =
-        static_cast<int32_t>(deferred.tx_at_us / 1000 - armings.state.own.fix_at_ms);
     adsl::Packet expected{};
     REQUIRE(protocol::from_own(expected, armings.state.own, armings.state.activation.address(),
                                settings::kSkyblipAddressMappingTable,
-                               armings.state.own.aircraft_category, instant));
+                               armings.state.own.aircraft_category));
     CHECK(std::memcmp(sent.data, expected.data, adsl::kFrameBytes - 3) == 0);
     CHECK(std::memcmp(drawn_chips.data(), deferred.tx, deferred.tx_bytes) != 0);
 }

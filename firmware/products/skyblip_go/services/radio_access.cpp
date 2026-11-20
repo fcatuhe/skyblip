@@ -56,8 +56,15 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
 
     bus::State::AirCounts& air = context_.state.air;
     const bool forced = verdict.access == adsl::Access::Force;
-    const bool rearmed = (forced || verdict.access == adsl::Access::Defer) &&
-                         rearm(dwell, payload, verdict.at_us, forced);
+    const bool deferred = forced || verdict.access == adsl::Access::Defer;
+    // INFO: fc 19nov26 a deferral its fix is too old for waits for the next fix, then is redrawn
+    if (deferred && payload == Payload::Position && fix_too_old_at(verdict.at_us)) {
+        await_fix(dwell.utc_s);
+        air.tx_deferred++;
+        log_access(radio::Verdict::Deferred, dwell, payload, busy, now_ms);
+        return;
+    }
+    const bool rearmed = deferred && rearm(dwell, payload, verdict.at_us, forced);
     if (!rearmed) {
         air.tx_busy_missed++;
         log_access(radio::Verdict::Busy, dwell, payload, busy, now_ms);
@@ -72,12 +79,13 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
     }
 }
 
-// INFO: fc 14nov26 G.1.1: a position is encoded again for its new instant, from the newest fix
+// INFO: fc 14nov26 a position is encoded again from the newest fix | 18nov26 aged at its instant
 bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced) {
-    if (!timing::ownship_transmits(context_.state.own, context_.state.clock,
-                                   context_.state.activation.address()))
+    const model::Ownship& own = context_.state.own;
+    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return false;
     if (silenced(tx_at_us)) return false;
+    if (payload == Payload::Position && (!own.fix_dated || fix_too_old_at(tx_at_us))) return false;
 
     timing::Transmitter::Attempt attempt{};
     attempt.go = true;
@@ -104,6 +112,12 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
     if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
     if (payload == Payload::Status) context_.state.rf.status_at_us = tx_at_us;
     return true;
+}
+
+bool RadioService::fix_too_old_at(uint64_t tx_at_us) const {
+    const int32_t fix_age_ms =
+        static_cast<int32_t>(static_cast<uint32_t>(tx_at_us / 1000) - context_.state.own.fix_at_ms);
+    return !timing::Transmitter::fresh(fix_age_ms);
 }
 
 // INFO: fc 14nov26 dated at the burst's planned instant, with the level its assessment read

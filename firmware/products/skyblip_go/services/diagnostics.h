@@ -32,6 +32,8 @@ struct RadioDiagnostics {
         snapshot.tx_deferred = state.air.tx_deferred;
         snapshot.tx_forced = state.air.tx_forced;
         snapshot.tx_busy_missed = state.air.tx_busy_missed;
+        snapshot.tx_held_for_fix = state.air.tx_held_for_fix;
+        snapshot.tx_redrawn_for_fix = state.air.tx_redrawn_for_fix;
         snapshot.tx_keyed_us = state.rf.last_tx_keyed_us;
         snapshot.tx_span_us = state.rf.last_tx_span_us;
         const ports::RfDio1 dio1 = product.board().roles().rf.dio1();
@@ -46,6 +48,8 @@ struct RadioDiagnostics {
         snapshot.gnss_baud = gnss.baud_rate();
         snapshot.gnss_raises = gnss.baud_raises();
         snapshot.gnss_raise_fallbacks = gnss.raise_fallbacks();
+        snapshot.gnss_recoveries = gnss.recoveries();
+        snapshot.gnss_recoveries_valid = true;
     }
 };
 

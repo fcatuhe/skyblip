@@ -116,6 +116,7 @@ class Gpio : public io::Gpio {
                 case io::PinFunction::EpdBusy: chips_.epd.busy_pin = role.pin; break;
                 case io::PinFunction::EpdBacklight: chips_.epd.backlight_pin = role.pin; break;
                 case io::PinFunction::HapticEnable: chips_.haptic.enable_pin = role.pin; break;
+                case io::PinFunction::GnssReset: chips_.gnss.reset_pin = role.pin; break;
             }
             owner_[i] = role;
             count_ = i + 1;
@@ -157,6 +158,7 @@ class Gpio : public io::Gpio {
                 case io::PinFunction::EpdBusy:
                 case io::PinFunction::EpdBacklight: return &chips_.epd;
                 case io::PinFunction::HapticEnable: return &chips_.haptic;
+                case io::PinFunction::GnssReset: return &chips_.gnss;
             }
         }
         return nullptr;

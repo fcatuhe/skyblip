@@ -154,7 +154,7 @@ void NmeaService::emit_status(uint32_t now_ms) {
 // core/protocol on the same fix and UTC validity $PGRMZ and $PFLAU already
 // read off own, so there is nothing to gate here a second time.
 void NmeaService::emit_ownship() {
-    const model::Ownship& own = context_.state.own;
+    const model::Ownship& own = context_.state.own_second;
     const int rmc = protocol::format_gprmc(sentence_, sizeof(sentence_), own);
     if (rmc > 0) write(sentence_, rmc);
     const int gga = protocol::format_gpgga(sentence_, sizeof(sentence_), own);

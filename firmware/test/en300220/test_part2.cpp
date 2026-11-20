@@ -8,6 +8,7 @@
 #include "hardware/platform/host/rf.h"
 #include "protocols/adsl/physical.h"
 #include "simulator/simulator.h"
+#include "test/support/fresh_fix.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -41,11 +42,12 @@ TEST_CASE("EN 300 220-2 4.4.3.3: the air time of any hour stays within band M's 
     const timing::SlotPlan plan = timing::Scheduler::plan(500, clock);
     timing::Transmitter transmitter;
     transmitter.configure(0x5B7E57);
-    CHECK(transmitter.attempt(plan, 7200, 0, true, 0).go);
+    CHECK(transmitter.attempt(plan, 7200, 0, true, kFixSolvedAtSecondEnd).go);
     for (uint32_t burst = 0; burst < timing::AirTime::kBudgetMs / timing::Transmitter::kAirTimeMs;
          burst++)
         transmitter.sent(burst, 0);
-    const timing::Transmitter::Attempt refused = transmitter.attempt(plan, 7200, 0, true, 0);
+    const timing::Transmitter::Attempt refused =
+        transmitter.attempt(plan, 7200, 0, true, kFixSolvedAtSecondEnd);
     CHECK_FALSE(refused.go);
     CHECK(refused.over_budget);
 }

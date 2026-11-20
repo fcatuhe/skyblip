@@ -127,6 +127,7 @@ uint8_t wire(diagnostics::Refusal value) {
         case diagnostics::Refusal::Unarmed: return 2;
         case diagnostics::Refusal::Unsettled: return 3;
         case diagnostics::Refusal::OffSchedule: return 4;
+        case diagnostics::Refusal::HeldForFix: return 5;
     }
     return kUnpinned;
 }
@@ -307,7 +308,7 @@ TEST_CASE(
     "diagnostics ordinals: diagnostics::Refusal's codes are the dwell refusal byte, and a code "
     "changed here "
     "changes REFUSAL in scripts/blip_records.py and the schema's refusal enum with it") {
-    codes_pinned<diagnostics::Refusal>(5);
+    codes_pinned<diagnostics::Refusal>(6);
 }
 
 TEST_CASE(

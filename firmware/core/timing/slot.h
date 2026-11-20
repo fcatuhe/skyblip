@@ -79,6 +79,8 @@ struct ClockState {
     // INFO: fc 16sep26 the second that opened at utc_edge_us, not the one the last sentence named
     uint32_t utc_s{0};
     uint64_t utc_edge_us{0};
+    // INFO: fc 18nov26 the anchor came from a fix inside its quarter, so positions trust it
+    bool utc_anchor_fixed{false};
 };
 
 void carry_utc_to_edge(ClockState& clock, uint64_t edge_us);
