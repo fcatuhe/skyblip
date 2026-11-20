@@ -1,146 +1,130 @@
 # core/power
 
-What a terminal voltage means, what the device does about it, and the order it goes dark in. `battery.*` is the gauge a pilot reads, `cutoff.*` the rule that acts, `charging.*` the temperature window, `wake.*` whether a boot becomes a device, `shutdown.*` the road out, `reset_reason.*` what the last one was, `duty.h` how long a consumer was on.
+What a cell's terminal voltage means, what the device does about it, and the order it goes dark in. `charging.*` holds the charge temperature window and `reset_reason.*` names the last reset.
 
-The cell is a 4.2 V LiPo pouch: 2400 mAh on this board, and LilyGO fits the same footprint with an 850 mAh pack on the plain T-Echo. Nothing below changes between them. A pouch cell's voltage says what fraction of the charge is left; only its capacity says how long each fraction lasts, and capacity is the thing no reading here can see.
+The cell is a 4.2 V LiPo pouch: 2400 mAh on this board and 850 mAh on the plain T-Echo, with the same values for both. The voltage gives the fraction of charge left, never the time it lasts.
 
 ## The ladder
 
-Every other number about the cell hangs off these four, so they are declared together in `cutoff.h` and a `static_assert` holds their order.
+`static_assert`s in `cutoff.h`, `wake.h` and `battery.h` hold the order of these steps.
 
-| Step | mV | What it is for |
-|---|---|---|
-| float | 4200 | what a charger holds a full pouch at, and `kFullMv`, the gauge's 100% |
-| low | 3600 | the knee: above it the cell spends 100 mV crossing ten points of charge, below it the same 100 mV costs twenty. `kLowMv`, about 12% |
-| critical | 3500 | land. No durable write but the flight record is allowed. `kCriticalMv`, about 5% |
-| boot lockout | 3400 | a device this flat does not start a flight it cannot finish (`wake.h`) |
-| flat | 3200 | the cutoff: the device takes itself down, and `kEmptyMv`, the gauge's 0%. `kFlatMv` |
+| Step | mV | Constant | What it is for |
+|---|---|---|---|
+| float | 4200 | `kFullMv` | what a charger holds a full pouch at, and the gauge's 100% |
+| low | 3600 | `kLowMv` | the knee, about 12%: above it 100 mV crosses ten points of charge, below it twenty |
+| critical | 3500 | `kCriticalMv` | land, about 5%. No durable write but the flight record |
+| boot lockout | 3400 | `kBootLockoutMv` | a device this flat does not start a flight it cannot finish |
+| flat | 3200 | `kFlatMv`, `kEmptyMv` | the cutoff: the device takes itself down. The gauge's 0% |
 
-Three properties of that order are worth more than the numbers themselves.
+The gauge reads zero where the device stops, so a pilot never sees a percentage run out while the aircraft still transmits. `battery.cpp` asserts the curve's first point against `kEmptyMv`.
 
-The gauge reads zero where the device stops, not where a datasheet calls the cell empty. A percentage that runs out while the aircraft is still transmitting teaches a pilot to distrust the number, and `battery.cpp` asserts the curve's first point against `kFlatMv` so the two cannot drift apart.
+The lockout sits above the cutoff because a cell relaxes once the load goes: a device that shut down at 3200 mV reads about 3400 mV by the next press. It guards a switch-on, not a restart: a watchdog, lockup or software reset may come in flight, so that boot answers only to the cutoff.
 
-The lockout sits above the cutoff. A cell relaxes once the load goes away, so a device that shut itself down at 3200 reads about 3400 by the time a thumb reaches the button, and a lockout underneath the cutoff would hand back a device with one minute in it.
-
-The lockout guards a switch-on, not a restart. A watchdog, lockup or software reset means the device was running a moment ago, possibly in flight, so that boot is held to the cutoff the running device answers to, and a fault never leaves a flying unit dark with a cell the cutoff would have kept on air (`wake.cpp`).
-
-The cutoff is a loaded reading, because a loaded reading is the only kind this device ever takes. A pouch datasheet puts the discharge floor at 3.0 V and its protection board trips near 2.5 V; stopping at 3.2 V under a receiver and a 14 dBm radio leaves the pack resting near 3.4 V, which is a voltage it can sit at in a flight bag for months without reaching either.
+The cutoff is a loaded reading. Stopping at 3.2 V under load leaves the pack resting near 3.4 V, where it can sit for months without reaching the datasheet's 3.0 V floor or the protection board's 2.5 V trip.
 
 ## The levels, and what each one does
 
-Three of the steps are a `PowerLevel`, and the level is the one fact every reader of the cell takes: the lamp, the radar ring, the status row, the frame the glass wears once off, and the write rule. None of them compares millivolts again, so they cannot disagree about where the cell is.
+Every reader of the cell takes the `PowerLevel` and none compares millivolts again, so no two readers disagree.
 
-| Level | Entered under | Lamp | Radar ring | Status row | Glass once off | Refuses |
-|---|---|---|---|---|---|---|
-| `Normal` | | green or blue, one wink every 3 s | the state word | `%` | the wordmark | nothing |
-| `Low` | `kLowMv` | red, one wink every 3 s | `BAT n%` | `% LOW` | `CHARGE THE BATTERY` | nothing |
-| `Critical` | `kCriticalMv` | red, a blink every 600 ms | `BAT n%` | `% LOW` | `CHARGE THE BATTERY` | every durable write but the flight record |
-| `Flat` | `kFlatMv` | red, a blink every 600 ms, then dark | `BAT n%` | `% LOW` | `BATTERY EMPTY` | everything: the device takes itself down, and a press after it is refused |
+| Level | Entered under | Lamp | Radar ring | Status row | Glass once off |
+|---|---|---|---|---|---|
+| `Normal` | | green or blue, one wink every 3 s | the state word | `%` | the wordmark |
+| `Low` | `kLowMv` | red, one wink every 3 s | `BAT n%` | `% LOW` | `CHARGE THE BATTERY` |
+| `Critical` | `kCriticalMv` | red, a blink every 600 ms | `BAT n%` | `% LOW` | `CHARGE THE BATTERY` |
+| `Flat` | `kFlatMv` | red, a blink every 600 ms, then dark | `BAT n%` | `% LOW` | `BATTERY EMPTY` |
 
-`needs_charge` is the one predicate the product asks, true from `Low` down, and it is what puts `BAT` in the ring, `LOW` on the status row and `CHARGE THE BATTERY` on the glass of a long press or a companion switch-off. A stow stays blank at any level. The lamp tells `Low` from `Critical` by cadence, because the first can stand for an hour and has to cost what the alive wink costs, and the second is the step a pilot is meant to act on.
+`needs_charge` is true from `Low` down. A stow leaves the glass blank at any level. The lamp tells `Low` from `Critical` by cadence: `Low` can last an hour and must cost no more than the alive wink, and `Critical` is the step a pilot must act on.
 
-`CutoffMonitor` moves the level on runs of `kLevelSamples` consecutive readings, in both directions. Three under a step go down to it, which is what keeps a transmit burst from acting, and a falling cell is not slowed by anything more. Coming back up takes three that clear the step by `kRecoveryMarginMv` (35 mV), which is what keeps a cell resting on a step from flickering across it. The run alone did not: on E68BD9's run to cutoff (`docs/bench/2026-10-05-power-run-E68BD9.md`) the level crossed between `Normal` and `Low` five times in five minutes at 3591 to 3601 mV, and between `Low` and `Critical` three times in a minute, because three readings a second apart on either side of a line are routine while a parked cell takes minutes to cross it. The margin is that run's spread: the gauge's median moves 35 mV inside a half hour at the median of its half-hour windows, and three readings that all clear a line have a median that clears it too, so a median that wanders less than the margin never brings the level back up. A `static_assert` keeps `kCriticalMv` plus the margin under `kLowMv`, so a cell climbing out of `Critical` lands in `Low` rather than having to clear it too. A recovery climbs every step its readings cleared at once. The cable is the exception both ways, because the charge current holds the terminal above the cell: a cable puts the level at `Normal` on its first reading and nothing counts until it leaves. `Flat` latches, so a cell relaxing once the radio is quiet cannot cancel the shutdown it started.
+`CutoffMonitor` moves the level only on a run of `kLevelSamples` (3) consecutive readings, so a transmit burst never acts. Going back up, every reading of the run must also clear the step by `kRecoveryMarginMv` (35 mV), or a parked cell straddling a line flickers across it. The margin is the half-hour spread of a parked cell's median on E68BD9's run (`docs/bench/2026-10-05-power-run-E68BD9.md`). A `static_assert` keeps `kCriticalMv` plus the margin under `kLowMv`, so a cell climbing out of `Critical` lands in `Low`. A recovery climbs every step its readings cleared at once.
 
-An `Unknown` monitor has seen no believable reading yet, which is also what an unpopulated divider reads for ever, and it acts like `Normal`. Its first reading at or above `kLowMv` makes it `Normal`; one under waits for the run like any other step.
+The cable sets `Normal` on its first reading and nothing counts until it leaves, because the charge current holds the terminal above the cell. `Flat` latches, so a cell relaxing once the radio is quiet cannot cancel its shutdown. An `Unknown` monitor has seen no believable reading yet, as with an unpopulated divider, and acts like `Normal`.
 
-The enum's values are the diagnostics record's level byte, so they are not in ladder order: `Low` joined last and took code 4, and `Critical` and `Flat` kept the codes and thresholds they had as `Low` and `Cutoff`, so every capture already on a flash decodes to the same step (`../diagnostics/README.md`). Readers therefore ask `needs_charge` or switch on the level, never compare it.
+The enum's values are the diagnostics record's level byte, not ladder order (`../diagnostics/README.md`). Ask `needs_charge` or switch on the level. Never compare it.
 
 ## The write rule, and the supply warning
 
-`may_write` is one function over the level and no second threshold: from `Critical` down nothing durable is written except the flight record. The settings blob is a rewrite of an NVS sector that garbage-collects the flash the image runs from, and a burst sagging the cell under it is the failure. The flight record is the exception because it is the one write whose value is highest exactly when the cell is lowest, and it is an append to the external NOR. A unit whose divider is unpopulated reads `Unknown` and keeps its settings page.
+From `Critical` down, `may_write` refuses every durable write except the flight record. The settings blob rewrites an NVS sector in the flash the image runs from, and a burst sagging the cell during that rewrite is the failure. The flight record is worth most when the cell is lowest, and it is an append to the external NOR.
 
-A latched supply warning outranks the level entirely. POFCON compares the SoC's own rail, so once it has fired what the divider says about the cell is no longer the question, and every write but the flight record stops. It never drives the level to `Flat`, so it never starts a shutdown: POFCON warns about VDD, well under any healthy cell, so by the time it fires there is no orderly shutdown left to run, the panel park alone is 3 s and the brownout reset is milliseconds away. The one useful thing at that moment is not to be inside a write. The voltage rule keeps the shutdown, where three consecutive samples are the evidence.
+A latched POFCON supply warning stops every write but the flight record, whatever the level. POFCON watches the SoC's own rail, well under any healthy cell, so when it fires the brownout reset is milliseconds away and a 3 s panel park cannot finish. It therefore never sets `Flat` or starts a shutdown. `supply_warnings` counts the firings: any on a healthy cell means a supply problem or a threshold set too high.
 
 ## The curve, and the cable
 
-`percent_from_mv` reads one table, and only off the cable. On these boards the divider cannot see the cell while USB is in: both bench units read the USB rail for the whole charge, 4670 to 4700 mV on E68BD9 from a cell switched off at 45 %, and above 4700 mV on 0B1B2C (`docs/bench/2026-10-05-power-run-E68BD9.md`, #114). A cell in constant current reads well under 4.2 V, so that reading is not the cell and no curve can make a state of charge of it. LilyGO's own wiki warns that battery readings are wrong while USB is connected.
+On the cable the divider reads the USB rail, not the cell: 4670 to 4700 mV on E68BD9 and above 4700 mV on 0B1B2C (`docs/bench/2026-10-05-power-run-E68BD9.md`, #114). So on the cable the gauge reports `valid` false, `percent` 0 and `cell_mv` as the divider read it, as evidence of the rail. `charging` is the cable itself, because this board has no charger status pin.
 
-So on the cable the gauge shows no cell. `valid` is false, `percent` is 0 and `cell_mv` is what the divider read, which a capture keeps as evidence of the rail. `charging` is the cable itself: this board has no charger status pin, so nothing says when the charge ends, and a full cell on the cable still reads `charging`. The status reply leaves `battery_percent` out, the status page reads `-- V --% CHG`, the six-pack retitles its battery dial `CHARGE V` over the rail to a hundredth of a volt, and the first reading off the cable starts the median over on the charged cell, which is the first number worth showing. There is no charge curve: the reading it needed never reaches the device.
+The gauge shows the median of the last three readings, so a transmit burst is discarded whole. Off the cable the percentage only falls.
 
-The discharge table is the textbook shape for a single pouch cell, not this pack measured on this board. It is right to a few percent in the middle and worst at the ends, which is where a pilot cares. What replaces it is a logged discharge of a fitted unit under the real dwell map, which the power budget needs anyway: the shape of the table does not change, only its points. `battery.h` carries the same warning where it explains why there is no time-remaining estimate, and that estimate stays refused until the same log exists.
+The discharge table is the textbook shape for a single pouch cell, not this pack measured on this board, and is worst at the ends. A logged discharge of a fitted unit under the real dwell map replaces its points. Until then the gauge gives no time remaining: minutes are the percentage over the curve's slope, and a small error in the level becomes a large one in the slope.
 
 ## The window, and what a refused reading leaves behind
 
-A reading is the cell only inside `plausible_mv`: above `kImplausibleFloorMv` (1800 mV), which an unpopulated or floating divider sits under, and at most `kImplausibleCeilingMv` (4700 mV), which no 4.2 V cell reaches and a rail does. The platform's read still answers whether a reading is believable, but it hands back what the divider read either way, 0 when the ADC gave nothing, and the board publishes it on every battery pass with VBUS beside it. A refused reading never hides the cable again, so the cutoff monitor's cable override and the charge window both see it.
+A reading is the cell only inside `plausible_mv`: above `kImplausibleFloorMv` (1800 mV), which an unpopulated or floating divider sits under, and at most `kImplausibleCeilingMv` (4700 mV), which a rail reaches and no 4.2 V cell does. The platform hands back what the divider read either way, 0 when the ADC gave nothing, with VBUS beside it, so a refused reading never hides the cable.
 
-The gauge counts each refusal, on the cable or off it (`Gauge::refused`, the `implausible` count in the `power` record and the diagnostics reply), and shows the refused value as its `cell_mv` with `valid` false, so a capture says which bound a reading crossed. Off the cable a refused reading is no step on the ladder: the cutoff monitor never sees it, so it neither counts towards a level nor breaks a run.
+The gauge counts each refusal (`implausible` in the `power` record) and shows the refused value as `cell_mv` with `valid` false. Off the cable the cutoff monitor never sees a refused reading, so it neither counts towards a level nor breaks a run.
 
 ## The trim, set on the line
 
-`kCalibrationCeilingMv` and `settings.battery_offset_mv` exist because two 1% resistors and the SAADC's own gain error can put a reading out by more than 80 mV, which is tens of percentage points in the flat middle. The answer is one number measured against a supply on the line, and it is the only trim there is.
+`settings.battery_offset_mv` is the only trim: one number per unit, measured against a bench supply on the line. Two 1% resistors put the divider out by up to 84 mV at a full cell, and the SAADC's gain error adds more, which is tens of percentage points on the flat middle of the curve. The service applies it once, so the gauge and the cutoff monitor act on the same millivolts.
 
-The device cannot trim itself. A charger in constant voltage holds the cell's terminal at its float, so a reading taken there would have a known true value, but the divider reads the USB rail while the cable is in, so no float plateau ever reaches it. The learner that waited for one never learned on either bench unit, and a rail that happened to sit within `kCalibrationCeilingMv` of 4.2 V would have taught it the rail's error and moved the cutoff by as much, so it is gone. `settings.battery_offset_manual` stays in the blob and in the `Config` record: every trim since is one a person set.
+`kCalibrationCeilingMv` (250 mV) is three times the divider's worst case: past it the reading is wired wrong. `core/settings` enforces it where the value enters.
+
+The device cannot trim itself, because the divider reads the USB rail while the cable is in and never sees the charger's float.
 
 ## What the glass says about a flat cell, and when it says it
 
-A device that reaches `kFlatMv` in the air says so before the rails go: `BATTERY EMPTY` under the mark, pushed by the shutdown the cutoff asked for. Nobody pressed anything, so the frame is the only thing that can tell a pilot what happened, and the alternatives they would otherwise pick between are a crash and a dead unit. The button stays armed, as it does after every switch-off. A press that follows is refused by the lockout (`wake.h`) and leaves the frame already on the glass, so the cell pays for one bring-up (`../../products/skyblip_go/README.md`) and not for a refresh or a flight it cannot finish.
+A device that reaches `kFlatMv` paints `BATTERY EMPTY` before the rails go, because nobody pressed anything and the frame is the only way a pilot learns what happened. A cell that emptied on a shelf painted nothing, so `refused_frame` pushes the same frame for the refused press. Later refused presses leave it there: anything but a new word is `Leave`, because a full refresh is seconds of panel rail off a cell with none to spare.
 
-The other way a cell arrives empty is a winter on a shelf. That unit ran no shutdown and painted nothing, so it is the refused boot that names it: `refused_frame` pushes the same `BATTERY EMPTY` for the press that gets no device, and the button stays armed after it. Both roads end at the same glass, and every later press on that cell is refused and leaves it there: anything but a new word is `Leave`, because a full refresh is seconds of panel rail off a cell with none to spare.
+A device switched off while the cell is `Low` or `Critical` wears `CHARGE THE BATTERY`. The next press gets a device, unless the cell has since drained past the lockout: that refusal pushes `BATTERY EMPTY` over it.
 
-The cable is the way out of both, with a press. The lockout spares external power, so a press on the cable gets a device whatever the cell reads, and its first frame takes the word off the glass. The cable alone wakes nothing: VBUS wakes the SoC, and the T-Echo's factory bootloader puts it straight back into SYSTEM OFF before MCUboot or this firmware runs. So `BATTERY EMPTY` stays on the glass for the whole charge, until the press, and the charger's own red LED is what says the cell is filling.
+`ports::SystemPower::cell_on_glass` keeps the word across SYSTEM OFF. A platform with nowhere to keep it answers `None`, which costs a repeated frame. A second retained bit, `went_dark_flat`, is set wherever the cutoff or a refused boot parks the flat frame. The next boot that runs reports it on the self-test page and in the status reply, then drops it, so a support case learns it after the glass has changed.
 
-That holds by the bootloader, not by this firmware. The T-Echo's factory bootloader reads the device's one button as its DFU button, so every SYSTEM OFF on a T-Echo writes `0x6d`, `DFU_MAGIC_SKIP`, to GPREGRET (`boot_magic_for_system_off` in `shutdown.h`), or the press that wakes the unit would land in the UF2 drive, and LilyGO's build of it sends a VBUS wake back to SYSTEM OFF whenever that byte is set (`../../boards/lilygo/t_echo_plus/factory/README.md`). So "a charger plugged into a device in a flight bag must not wake it" holds before `boot_path` is asked. The X1's bootloader lets a cable wake through, so on the X1 it rests on `boot_path` alone (`../../boards/seeed/meshtracker_x1/factory/README.md`). `boot_path` refuses a charger wake again, as the defence for a bootloader that would let one through, and on such a bootloader `refused_frame` would take a word off the glass and put back the wordmark, the frame of every armed device.
+The cable alone changes nothing on the glass, plugged in or pulled out. A press on the cable gets a device whatever the cell reads, because the lockout spares external power, and its first frame takes the word off. Until then the charger's own red LED says the cell is filling.
 
-`boot_path` knows a charger wake by RESETREAS.VBUS, which the nRF52840 sets only on a wake from SYSTEM OFF by VBUS rising (`nrf52840_bitfields.h:8848`, in hal_nordic's MDK). A wake by the button sets OFF instead (`:8872`), and a power-on or a brown-out leaves the register empty (nRF52840 PS v1.8 §5.3.3), so a first cell, or a cable into a unit with no cell, boots. Zephyr's hwinfo reports VBUS as `RESET_POR` (`drivers/hwinfo/hwinfo_nrf.c:138-141` at v4.4.2), so `read_reset_causes()` reads the bit itself and a charger wake arrives as `UsbVbus` with `PowerOn`, never with `LowPowerWake`. The rule once needed both, as nrf52-ogn-tracker's `T_Echo_StayOffOnChargerWake` does, a pair the nRF52840 never reports for a cable, so a charger wake that got past the bootloader booted. It refuses VBUS alone now, as SoftRF does on the X1 (`lyusupov/SoftRF` `d091924`, `src/platform/nRF52.cpp:925-931`). SoftRF refuses a reset-pin reset there too. This firmware lets one through, with a button held down, and with a restart of the unit itself, so a deliberate act always gets a device.
+### The charger wake
 
-Arming the button means waiting for it, because the wake pin senses a level and a button still down would wake the unit the instant the rails dropped. The cutoff waits in `AwaitRelease` like every other shutdown, and a refused press waits in `park_refusal` for the finger it refused to come up. Nothing bounds either wait, so a bag holding the button down keeps the unit awake with its rails up until it lets go. That is the price of a button that always wakes: the cutoff and a refused press used to withhold it against exactly that bag, and with the cable swallowed as well, a unit the cutoff switched off could then be woken by nothing but the reset pin (#113).
+A charger plugged into a switched-off device must not wake it. On the T-Echo the factory bootloader ensures that: every SYSTEM OFF writes `0x6d`, `DFU_MAGIC_SKIP`, to GPREGRET (`boot_magic_for_system_off` in `shutdown.h`) so a waking press skips DFU, and LilyGO's build sends a VBUS wake back to SYSTEM OFF whenever that byte is set (`../../boards/lilygo/t_echo_plus/factory/README.md`). The X1's bootloader lets a cable wake through, so there the rule rests on `boot_path` (`../../boards/seeed/meshtracker_x1/factory/README.md`).
 
-A device switched off while the cell needs charge, `Low` or `Critical`, wears a milder word, `CHARGE THE BATTERY`. The cable does not take it off either, and the next press gets a device. It asks for the cable and names nothing that happened, so a press on a cell that has drained past the lockout since does not leave it there: that refusal pushes `BATTERY EMPTY` over it.
+`boot_path` refuses a wake with RESETREAS.VBUS set, which the nRF52840 sets only on a wake from SYSTEM OFF by VBUS rising (`nrf52840_bitfields.h:8848`, in hal_nordic's MDK). A button wake sets OFF instead (`:8872`), and a power-on or a brown-out leaves the register empty (nRF52840 PS v1.8 §5.3.3), so a first cell, or a cable into a unit with no cell, boots. Zephyr's hwinfo reports VBUS as `RESET_POR` (`drivers/hwinfo/hwinfo_nrf.c:138-141` at v4.4.2), so `read_reset_causes()` reads the bit itself, and a charger wake arrives as `UsbVbus` with `PowerOn`. The rule refuses VBUS alone, as SoftRF does on the X1 (`lyusupov/SoftRF` `d091924`, `src/platform/nRF52.cpp:925-931`). A reset-pin reset, a held button and a restart all boot.
 
-What the panel wears has to outlive the rails for that comparison to exist, so it does: `ports::SystemPower::cell_on_glass`, one of `None`, `Low` and `Flat`. A platform with nowhere to keep it answers `None`, which costs a repeated frame and nothing else.
+### Arming the button
 
-The glass forgets once a press on the cable gets a device, and a support case must not. A second bit, `went_dark_flat`, is set wherever the cutoff or a refused boot parks the flat frame, whether or not the panel could draw it. The boot that runs reads it, prints `WAS EMPTY` beside the cell's voltage on the self-test page and answers `went_dark_flat` in the status reply, then drops it, so it names the one boot that followed the flat cell and no other.
-
-The cable leaving changes nothing on the glass either, because VBUS falling does not wake this SoC. A unit unplugged with `BATTERY EMPTY` on it keeps the word, and the next press off the cable is answered by the cell: refused against the same frame while it is under the lockout, a device once it has charged past it.
+The wake pin senses a level, so every road to SYSTEM OFF waits for the button to come up, the cutoff and a refused press included. Nothing bounds the wait, so a bag holding the button down keeps the unit awake. The button always wakes because, with the cable swallowed by the bootloader, a unit whose button was withheld could be woken only by the reset pin (#113).
 
 ## Charge mode, considered and refused
 
-A charger plugged into a switched-off unit wakes the SoC, and the factory bootloader sends it straight back to SYSTEM OFF, as `boot_path` would. SoftRF-moshe-braner does something else there (`src/platform/nRF52.cpp:2512-2560`): it beeps the battery level out of the buzzer, then sleeps. That answers the question a pilot asks, "is it charging?", and it is not done here, for three reasons.
-
-What the device says out loud is one table, `core/indication/lamp.h`, and charge is deliberately not a row of it: this board's charger IC drives its own LED, which already answers the question. A buzzer ladder in the wake path would be a second vocabulary beside that table.
-
-What it would beep is not yet trustworthy. The gauge medians three samples before it states a percentage (`battery.h`) and the trim is a setting, so an honest level exists most of a boot later, on every cable wiggle in a flight bag, which is the case the refusal exists for.
-
-The refusal is complete without it. A charge mode would be a third `BootPath` value beside the other two, with the rule and the sleep path untouched, and on the T-Echo's factory bootloader it would never run: the charger wake ends before this firmware runs.
+A charger wake does not beep the battery level, as SoftRF-moshe-braner does. The charger IC drives its own LED, `core/indication/lamp.h` has no charge row, and on the T-Echo the charger wake never reaches this firmware.
 
 ## Time in state, because there is no current
 
-`duty.h` is one accumulator, `OnTime`: a thing was on, and this is how many milliseconds of it have gone by. It is what the backlight, the annunciator and the companion link are counted with, each by the service that drives that consumer and each published on `bus::State::duty` (`../bus/README.md`).
+`OnTime` in `duty.h` counts the milliseconds a consumer was on: the backlight, the annunciator and the companion link, each counted by the service that drives it and published on `bus::State::duty` (`../bus/README.md`). Multiplied by per-consumer milliamps from a datasheet or a bench, it is the only power figure this device can produce.
 
-It takes the span between two observations rather than a pass at its nominal length, for the reason the air-time ring gives: a pass that ran long has to carry its own length, and an unsigned difference is the only arithmetic that survives the 49.7-day wrap of `ports::Clock::milliseconds()`. A state that flips between two observations is credited to the state that was latched, so the error is one pass and it does not accumulate.
-
-What these buy is the second half of a budget nothing else on this board can supply. Milliamps per consumer come from a datasheet or a bench; how long each was on comes from here, and multiplying the two is the only power figure this device can produce.
+It credits the span between two observations, so a pass that ran long carries its own length and the unsigned difference survives the 49.7-day clock wrap. A flip between two observations is credited to the latched state, so the error is one pass and does not accumulate.
 
 ## The off state, on every road
 
-Every road into SYSTEM OFF parks the parts the same way. A long press, a stow, the cutoff, a link request and a recovery that powers off run `drive_shutdown`, and a refused boot, on a charger wake or a held press, runs `park_refusal`. Both park the same parts: the radio executor is aborted and parked for good, so it arms, recovers and reinitialises nothing more, the lamp and the buzzer are parked, and a DRV2605 that answered at bring-up is put in standby with its enable, P0.08, held low. Bring-up raises P0.08 on every board before the DRV2605 probe, so where nothing answered at 0x5A the park releases it to an input: on a Plus that keeps it from back-feeding the driver once P0.12 drops, and on the plain T-Echo the pin is console RX. Both roads wait for the radio executor to report itself parked before SYSTEM OFF touches the radio, and an executor whose bring-up never started its thread reads parked at once. The wait is bounded: once everything else is ready, `kRadioParkCeilingMs` (2 s) is the longest it lasts. The request wakes the executor's thread wherever it waits, before a queued plan's start or inside a dwell (`zephyr/rf.h`, `sleep_until` and `dwell`), so only a radio that stops answering reaches the ceiling. Past the ceiling the thread is aborted and SYSTEM OFF takes the radio with its NRESET pulse. An abort inside an SPI transfer keeps the driver's bus lock, so after an abandon SYSTEM OFF sends no SPI at all: it stops the SPIM with register writes alone, pulses NRESET, checks BUSY and goes on. The radio is then left in STDBY_RC, about 0.6 mA by the datasheet and not measured, so the ceiling is a last resort and not a road. A refused boot, an install and a recovery that reboots park the lamp, the buzzer and the motor at once. A switch-off that leaves the unit off parks them once its sign off ends, under a second later and inside `kParkSettleMs` (`../indication/README.md`), so the last duty record, written as the shutdown starts, leaves out the motor time of the sign. The panel then wears its last frame and goes into deep sleep (0x10) after it. A refusal that leaves the glass alone sends the 0x10 with no refresh, and a refused frame that is still not ready at `kRefusalParkCeilingMs` gets it at the ceiling. An install reboots into the bootloader and takes none of these roads.
+`drive_shutdown`, run by every switch-off, and `park_refusal`, run by a refused boot, park the same parts. An install reboots into the bootloader and takes neither.
 
-Then `power_down` walks `kPowerDownOrder`, the same on every road:
+- The radio executor is parked for good. SYSTEM OFF waits for it, at most `kRadioParkCeilingMs` (2 s), which only a hung radio reaches. Past it the thread is aborted, possibly holding the SPI bus lock, so SYSTEM OFF sends no SPI and the radio stays in STDBY_RC, about 0.6 mA by the datasheet.
+- The lamp, the buzzer and the motor are parked, after the sign-off on a switch-off (`../indication/README.md`). The last duty record, written as the shutdown starts, leaves out the sign-off's motor time.
+- A DRV2605 that answered at bring-up goes to standby with its enable, P0.08, held low. Otherwise P0.08 is released to an input: on a Plus that stops it back-feeding the driver, and on the plain T-Echo it is console RX.
+- The panel wears its last frame and gets deep sleep (0x10), at `kRefusalParkCeilingMs` at the latest on a refusal.
 
-- `RadioSleep`: NRESET is pulsed for 100 us, BUSY is awaited for up to 10 ms, and SetSleep goes out with cold start, 160 nA against 600 nA warm (DS 13.1.1), with NSS left high. The pulse puts the part in STDBY_RC whatever state it was in, the only state SetSleep is valid from, and it comes before the SetSleep, never after it. A BUSY that never falls, or cannot be read, sends nothing, prints why, and the power-down carries on. MeshCore uses the same order.
+Then `power_down` walks `kPowerDownOrder`:
+
+- `RadioSleep`: NRESET pulsed for 100 us, BUSY awaited for up to 10 ms, then SetSleep with cold start, 160 nA against 600 nA warm (DS 13.1.1). The pulse puts the part in STDBY_RC, the only state SetSleep is valid from.
 - `ExternalFlashDeepPowerDown` and `ExternalFlashLinesReleased`: 0xB9, then CS, WP# and HOLD# disconnected.
-- `PanelLinesReleased`: the seven panel lines disconnected, as cfr34k does.
+- `PanelLinesReleased`: the seven panel lines disconnected.
 - `SensorBusReleased`: TWIM0 disabled and SDA and SCL disconnected, because Zephyr leaves it enabled without device power management.
-- `GnssStandby`: the L76K's WAKE_UP driven low and kept low.
-- `GnssLinesReleased`: the UART stopped and disabled, then TX, RX and RESET_N disconnected. RESET_N is never pulsed.
-- `PeripheralRailOff`: P0.12 driven low and kept low into SYSTEM OFF, as MeshCore does, because a floating one restarted a unit (Meshtastic #10510). The wake pin is armed 20 ms later.
+- `GnssStandby`: the L76K's WAKE_UP driven low and kept low. That is its standby, so no `$PCAS12` is sent.
+- `GnssLinesReleased`: the UART stopped and disabled, TX, RX and RESET_N disconnected with no pull. RESET_N is never pulsed.
+- `PeripheralRailOff`: P0.12 driven low into SYSTEM OFF, because a floating one restarted a unit (Meshtastic #10510). The BME280 and BHI260AP sit behind it and get no sleep command.
+- `WakePinArmed`: `kRailSettleMs` (20 ms) later. Only the button wakes this device.
 
-P0.13 is never lowered: per the vendor schematic it enables U11, the AP2112K-3.3 that feeds the SoC and the radio, and LilyGO's `pin_config.h` never defines it. The sequence differs from LilyGO's `Sleep_Display.ino` on three GNSS lines. WAKE_UP stays driven low, where LilyGO drives it low and then leaves a pull-down. RESET_N is released with no pull, as SoftRF and Meshtastic leave it, where LilyGO uses a pull-down. The UART is stopped and its lines disconnected, where LilyGO leaves pull-ups on them.
-
-LilyGO measured 56.77 uA in SYSTEM OFF on this board with its own sequence (T-Echo_V1.0 Power Consumption Test, 2024-09-09). That is a measurement of their sequence, a reference for the order of magnitude, and not a figure this firmware has been measured at. Its GNSS step, worth 27.6 mA there, changes several receiver pins at once. One part of the floor is fixed whatever the firmware does: the battery divider, R18 and R22 at 100k each on the schematic, draws about 19 to 21 uA across a 3.7 to 4.2 V cell. The one bench evidence for this firmware is E68BD9 switched off at 30 to 45 % and near flat by morning (`docs/bench/2026-10-05-power-run-E68BD9.md`), which puts the off current of the sequence before this one at 23 to 41 mA, inferred from the drain and not measured with a meter.
-
-Two cheap checks settle it. A meter in series with the pack after a switch-off reads the number directly. The blue GNSS PPS LED (LED6) blinking while a switched-off unit lies outdoors means the receiver is running and the off state still leaks.
-
-Five things were considered and are not done:
-
-- The `$PCAS12` standby command: WAKE_UP held low already puts the L76K in standby.
-- Sleep commands to the BME280 or the BHI260AP: both sit behind P0.12, which the sequence cuts.
-- moshe-braner's reboot into SYSTEM OFF: `board.c` raises every rail at boot, so the next boot does not start from a low-power state.
-- Lowering P0.13: it enables the regulator that feeds the SoC and the radio.
-- An LPCOMP wake: only the button wakes this device, and a charger already reaches it through VBUS.
+P0.13 is never lowered: per the vendor schematic it enables U11, the AP2112K-3.3 that feeds the SoC and the radio.
 
 ## What is still unmeasured
 
-No current is sensed anywhere on this board, so nothing here can count coulombs, and no figure in minutes may be published (`battery.h`). The sleep current the shutdown sequence leaves has never been measured either (`shutdown.h`). Both are the same bench day, and until it happens every number in this directory is a voltage or a decision about one.
+No current is sensed anywhere on this board, so nothing here can count coulombs and no figure in minutes may be published. The sleep current the shutdown sequence leaves has never been measured either.
 
-What the device can do without a current sense is say how long each consumer was on, which is what the `duty` records carry and what `POWER RUN` on the capture page arms. A run from full to cutoff, offloaded and read by `scripts/power_budget.py`, gives the average draw off the pack's own capacity and needs no curve to do it. The same file says which consumer that draw went to, against a table of per-part currents that is still mostly datasheet typicals. `scripts/README.md` says how to take one, and the residual the tool prints is the honest size of what remains unmeasured.
+LilyGO measured 56.77 uA in SYSTEM OFF on this board with its own sequence (T-Echo_V1.0 Power Consumption Test, 2024-09-09). The battery divider, R18 and R22 at 100k each, draws about 19 to 21 uA whatever the firmware does. A meter in series with the pack after a switch-off reads the real figure, and a blinking GNSS PPS LED (LED6) on a switched-off unit means the receiver still runs.
+
+A power run from full to cutoff, read by `scripts/power_budget.py`, gives the average draw off the pack's capacity and splits it across consumers by the `duty` records (`scripts/README.md`).

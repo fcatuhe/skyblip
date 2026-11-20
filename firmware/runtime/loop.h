@@ -34,8 +34,6 @@ class Loop {
     }
 
     void run_pass(uint32_t now_ms, LoopMeter* meter = nullptr) {
-        // Registration happens at construction, before there is a time base to
-        // stamp, so the deadlines start counting from the first pass.
         if (!feed_decision_.started()) feed_decision_.begin(now_ms);
         for (int i = 0; i < count_; i++) {
             Service& service = *entries_[i].service;

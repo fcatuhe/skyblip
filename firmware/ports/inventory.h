@@ -1,12 +1,3 @@
-// ports/inventory.h: what the board found when it asked its own hardware, as
-// opposed to what it was compiled expecting to find.
-//
-// ports/capabilities.h carries the verdicts - present, absent, required. This
-// carries the identities behind them, because LilyGO ships more than one part
-// against the same footprint and the self-test page is the only place a bench
-// can see which one it is holding: which of the two BME280 addresses answered,
-// which e-paper lot the panel is from, whether the haptic is a waveform driver
-// or a motor on a pin. Names and addresses only: nothing here decides anything.
 #ifndef SKYBLIP_PORTS_INVENTORY_H
 #define SKYBLIP_PORTS_INVENTORY_H
 
@@ -14,24 +5,16 @@
 
 namespace skyblip::ports {
 
-// The haptic actually established at bring-up. Absent is a capability
-// (Capability::Haptic); this says which kind of hardware the pulse goes to, so a
-// board that is wired for one and fitted with the other is visible rather than
-// silent.
 enum class HapticKind : uint8_t { None, PinMotor, WaveformDriver };
 
 struct Inventory {
-    // The addresses that answered a bus scan, in ascending order. Everything
-    // fitted on this board's I2C bus is in here, including the parts nothing
-    // drives, because "0x51 answered" is the whole evidence for an RTC.
+    // INFO: fc 20nov26 every address that answered, driven or not: 0x51 alone shows an RTC
     static constexpr int kMaxI2cAddresses = 8;
     uint8_t i2c_addresses[kMaxI2cAddresses]{};
     uint8_t i2c_count{0};
 
-    // 0 when no barometer answered.
     uint8_t barometer_address{0};
-    // parts::panel_name() of the identified panel, or its unknown label. Never
-    // null: the page prints it.
+    // INFO: fc 20nov26 never null, because the self-test page prints it
     const char* panel_name{"?"};
     HapticKind haptic{HapticKind::None};
     // INFO: fc 11nov26 an undriven RTC: T-Echo's PCF8563 at 0x51, or X1's YSN8900 on its own bus
@@ -43,8 +26,6 @@ struct Inventory {
         return false;
     }
 
-    // Ascending, no duplicates, and it drops what it cannot hold rather than
-    // running off the end of the array.
     bool add_i2c_address(uint8_t address) {
         if (i2c_count >= kMaxI2cAddresses || has_i2c_address(address)) return false;
         uint8_t at = i2c_count;

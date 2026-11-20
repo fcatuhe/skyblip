@@ -68,6 +68,8 @@ void make_worst_case(ConfigService& config) {
     config.set_flight_state(flight::FlightState::Airborne);
     config.set_battery_state(unplugged, power::PowerLevel::Critical);
     config.set_die_temperature(INT16_MIN, true);
+    config.set_bravo_state(BravoState::NoUtc);
+    config.set_no_tx(timing::NoTx::Pps);
 }
 
 // Two weeks of bench: one PPS edge a second puts a bucket into seven figures,
@@ -170,7 +172,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     CHECK(config.link_drops() == 0);
 
     // Every field whole: the last key is there.
-    CHECK(body.find("\"die_temperature_c\":-3277}") != std::string::npos);
+    CHECK(body.find("\"no_tx\":\"pps\"}") != std::string::npos);
 }
 
 TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte") {
@@ -463,9 +465,10 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     CHECK(link.sent.size() == 1);
 }
 
-// The widest status of an unpaired unit is 20 bytes, so a central that never exchanged its MTU
-// hears every push.
-TEST_CASE("comms: the widest status push of an unpaired unit fits the twenty bytes of any link") {
+// The widest status without the transponder is 20 bytes, so a central that never exchanged its MTU
+// hears every push, a paired Go saying NO TX included.
+TEST_CASE(
+    "comms: the widest status push without the transponder fits the twenty bytes of any link") {
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
@@ -479,12 +482,13 @@ TEST_CASE("comms: the widest status push of an unpaired unit fits the twenty byt
 
     REQUIRE_FALSE(link.sent.empty());
     CHECK(link.last().bytes.size() == ports::kMinimumLinkPayloadBytes);
-    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":-3277}") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"no_tx\":\"pps\"}") != std::string::npos);
     CHECK(config.link_drops() == 0);
 }
 
-// A paired Go's bravo key takes the widest status to 22 bytes, which a 20-byte link refuses.
-TEST_CASE("comms: a paired unit's widest status push is dropped and counted on a 20-byte link") {
+// The transponder Bravo hears on the ground takes status past 20 bytes, which a 20-byte link
+// refuses.
+TEST_CASE("comms: a status naming the own transponder is dropped and counted on a 20-byte link") {
     platform::host::Link link;
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
@@ -496,14 +500,14 @@ TEST_CASE("comms: a paired unit's widest status push is dropped and counted on a
     make_worst_case(config);
     const size_t before = link.sent.size();
 
-    config.set_bravo_state(BravoState::LinkDown);
+    config.set_own_transponder(OwnTransponderHeard{0x3A4B5C, "", 0});
     CHECK(link.sent.size() == before);
     CHECK(config.link_drops() == 1);
 
-    link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes + 2);
-    config.set_bravo_state(BravoState::Live);
+    link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes + 6);
+    config.set_own_transponder(OwnTransponderHeard{0x3A4B5D, "", 0});
     REQUIRE(link.sent.size() == before + 1);
-    CHECK(link.last().bytes.size() == ports::kMinimumLinkPayloadBytes + 2);
+    CHECK(link.last().bytes.size() == ports::kMinimumLinkPayloadBytes + 6);
 }
 
 // The notify share cut a report at its first refusal, and the phone waited on "more".

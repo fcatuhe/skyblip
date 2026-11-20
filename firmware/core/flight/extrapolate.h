@@ -1,8 +1,3 @@
-// core/flight/extrapolate.h: where an aircraft is at an instant that is not the
-// instant its fix is from. The alarm and the radar compare own-ship with a
-// neighbour at one instant, and at 50 m/s every 100 ms between a fix and that
-// instant is 5 m of lie in a separation. Own Traffic is never carried: it goes
-// on air as the receiver solved it, named by its own quarter second (G.1.1).
 #ifndef SKYBLIP_CORE_FLIGHT_EXTRAPOLATE_H
 #define SKYBLIP_CORE_FLIGHT_EXTRAPOLATE_H
 
@@ -13,21 +8,10 @@
 
 namespace skyblip::flight {
 
-// INFO: rs 03aug26 The model is OGN's, in
-// oss/nrf52-ogn-tracker src/ogn.h:1735-1790: constant ground speed on a
-// constant turn rate, the turn applied as half before the velocity is resolved
-// and half after, plus a constant climb. Half and half is what keeps a circling
-// glider on its arc instead of on the tangent, at the cost of one sine.
-//
-// Beyond this gap it stops being a prediction. A neighbour reports once a
-// second and an ALP-TAS frame leaves up to 1.2 s after its fix, so the honest
-// ceiling is a little over a second. Past it the last fix stands where it was:
-// wrong by a known amount beats wrong by an invented one.
+// INFO: rs 03aug26 past this the last fix stands where it was, never at an invented position
 constexpr int32_t kExtrapolationCeilingMs = 1500;
 
-// Where the model says own-ship is at the target instant. When `valid` is
-// false the fields are the unextrapolated fix, so a caller that only wants a
-// position always has one.
+// INFO: fc 20nov26 an invalid prediction holds the fix as it was, so a caller always has a position
 struct Prediction {
     int32_t latitude_1e7{0};
     int32_t longitude_1e7{0};
@@ -37,8 +21,7 @@ struct Prediction {
     bool valid{false};
 };
 
-// Pure: own-ship state and a signed offset from the instant that state is from.
-// A negative offset predicts backwards, which is how the residual is measured.
+// INFO: fc 20nov26 a negative offset predicts backwards, which is how the residual is measured
 Prediction extrapolate(const model::Ownship& own, int32_t elapsed_ms);
 
 // INFO: fc 13sep26 a neighbour's burst carries position, speed and track, and no turn rate
@@ -49,11 +32,7 @@ model::Ownship carried_to(const model::Ownship& own, uint32_t now_ms);
 model::AircraftObservation carried_to(const model::AircraftObservation& observation,
                                       uint32_t now_ms);
 
-// INFO: rs 03aug26 OGN's PredResid (src/ogn.h:1424-1430): predict the previous
-// position forward to the instant the next one arrived and sum the absolute
-// north, east and vertical misses in metres. It is the only live measure of
-// whether the model above is describing this aircraft or fighting it, and it
-// costs one extrapolation per fix.
+// INFO: rs 03aug26 OGN's PredResid (src/ogn.h:1424-1430), the live measure of the model's fit
 uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7,
                                int32_t longitude_1e7, int32_t altitude_hae_mm);
 

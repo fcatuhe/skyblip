@@ -3,6 +3,7 @@ require "fileutils"
 require "open3"
 require "tmpdir"
 require_relative "radio_protocols"
+require_relative "release_notice"
 
 class DevRelease
   KEEP_MAIN = 3
@@ -120,7 +121,7 @@ class DevRelease
         endings.each { |ending| FileUtils.cp(File.join(images, "#{slug}#{ending}"), File.join(into, "#{slug}-#{tag}#{ending}")) }
       end
       FileUtils.cp(SIMULATOR_FILES.map { |file| File.join(simulator, file) }, into)
-      FileUtils.cp(notices(source), into)
+      File.write(File.join(into, "NOTICE.md"), ReleaseNotice.new(source).to_s)
       File.write(File.join(into, "SHA256SUMS"), checksums(into))
     end
 
@@ -152,13 +153,6 @@ class DevRelease
             match[0]
           end
         end
-    end
-
-    def notices(source)
-      licenses = Dir.glob(File.join(source, "LICENSES", "*.txt")).sort
-      raise ArgumentError, "No license texts in #{source}/LICENSES" if licenses.empty?
-
-      [ File.join(source, "LICENSE"), File.join(source, "NOTICE.md"), *licenses ]
     end
 
     def checksums(directory)

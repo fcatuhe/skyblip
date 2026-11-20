@@ -65,9 +65,8 @@ class Producer {
     void publish_clock(bus::State& state) {
         const uint64_t now_us = platform_.clock().microseconds();
         state.clock.pps_locked = platform_.pps().locked();
-        state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
         // INFO: fc 19nov26 the latched edge, as rebuilding it from the phase lost up to 1 ms
-        timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
+        timing::take_edge(state.clock, platform_.pps().last_edge_us(), now_us);
         // INFO: fc 19nov26 the one reader of the PPS edge, so the bench histogram is fed here
         state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
     }

@@ -65,10 +65,7 @@ bool TrafficTable::prefer_new(const model::AircraftObservation& incoming,
     const uint32_t incoming_s = observation_at_s(incoming), existing_s = observation_at_s(existing);
     const int incoming_rank = source_rank(incoming.source),
               existing_rank = source_rank(existing.source);
-    // A ground relay never displaces a first-hand reception the alarm layer
-    // would still act on. Being newer is not enough: a relayed frame is always
-    // newer than the direct one it repeats, which is how a relay would
-    // otherwise walk a target backwards once a second, for ever.
+    // INFO: fc 20nov26 a relay is newer than the direct report it repeats, so newer is not enough
     if (incoming_rank < existing_rank && incoming_s >= existing_s &&
         incoming_s - existing_s <= direct_preferred_max_age_s(existing))
         return false;
@@ -143,11 +140,7 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
         adsb_without_position_++;
         return -1;
     }
-    // One observation at a time, deliberately: an uplink frame carries up to
-    // ten aircraft and one implausible entry among them says nothing about
-    // the other nine, so a ghost is refused without taking a good report with
-    // it. A refused observation also never displaces the slot an aircraft of that
-    // address already holds - the refusal happens before find().
+    // INFO: fc 20nov26 refuse before find(), so a ghost never displaces the slot its address holds
     int32_t slant_m = 0;
     if (range_check(own_, observation, slant_m) == Plausibility::TooFar) {
         implausible_++;

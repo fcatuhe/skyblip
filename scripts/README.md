@@ -19,6 +19,7 @@ This directory holds the host tooling. The Python scripts run on the standard li
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones |
 | `radio_protocols.rb` | write the `PROTOCOLS.md` a production release carries: each product's protocol versions beside the specification each implements |
+| `release_notice.rb` | write the one `NOTICE.md` every release carries: the repository's `NOTICE.md` with `LICENSE` and the texts in `LICENSES/` appended |
 | `upstream_pins.rb` | print a version `.github/pins/action.yml` pins for Dependabot (`version emscripten-core/emsdk`), or fail while the vendored doctest or the Zephyr in `firmware/west.yml` differs from its pin (`check`) |
 | `emsdk.rb` | print the pinned Emscripten version and its `emcc`, for `make browser`, installing them under `$EMSDK` or `~/.local/opt/emsdk` as needed |
 | `deploy_order.rb` | tell the server deploy whether production already runs a newer commit |

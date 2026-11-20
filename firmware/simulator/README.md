@@ -63,6 +63,7 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - `"on_ground": 1` sends surface positions, and `"pressure_only": 1` sends no GNSS-baro difference.
 - `"category"` is the emitter category, `A0` to `C7`, in the shorthand `core/protocol/README.md` uses under The category ADS-B sends: the letter is the identification message's type code, A for 4, B for 3 and C for 2, and the digit is the category. The type code and category pairs are The 1090MHz Riddle's wake vortex table, which prints no letters. Any other value refuses the file.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
+- The event `"pps": 0` stops the pulse and `1` brings it back. The Go stops transmitting 1.2 s after the last edge, on the first second without one, shows `NO TX PPS` 10 s later, and keeps hearing traffic on the held edge through the 60 s holdover, as `pps_loss.json` does (`../core/timing/README.md`, A burst is timed only from a fresh edge). The pulse is the one fault the simulator forces from a scenario. A stuck radio or a receiver that refuses 2 Hz are forced in the suite, from the part models.
 - In a paired file, an event with `"unit": "bravo"` acts on Bravo instead of the Go. Bravo aboard takes `fix` and `companion`. The event `"bravo_link": 0` loses the link between them, and `1` brings it back. A file that uses either outside a pair, or gives Bravo another event, is refused.
 
 ## The browser

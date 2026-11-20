@@ -1,6 +1,6 @@
 # core/events
 
-What happened, as a value small enough to cross a queue. One header per producer, because the producer is what decides the shape.
+What happened, as a value small enough to cross a queue. Each producer has its own header, because the producer decides the shape.
 
 | File | Raised by | Drained by |
 |---|---|---|
@@ -12,10 +12,10 @@ What happened, as a value small enough to cross a queue. One header per producer
 | `input.h` | the board, off the button and the pad | `screen` |
 | `stamp.h` | nobody: it is how the others say *when* | everybody |
 
-`Stamp` is a UTC second, the milliseconds into it, and whether the phase is trustworthy at all. It is derived from the PPS edge at the point of use, never sampled once a pass, because a pass takes milliseconds and the phase is what a slot is measured in.
+`Stamp` is a UTC second, the milliseconds into it, and whether the phase is trustworthy. Derive it from the PPS edge at the point of use, never once per pass, because a pass takes milliseconds and a slot is measured in them.
 
-An event that carries an instant carries a `Stamp`. An event that does not need one does not get one: `ContactEvent` is answered on the pass it arrives on, and a field nobody reads is a field that goes stale silently. What is forbidden is a second encoding of the same instant, which is what `rx_utc` and `rx_ms` were on `AircraftObservation` until they became the stamp the dwell already knew.
+An event that carries an instant carries a `Stamp`, and no second encoding of it. The raw `at_us` on `RfEvent` and `AdsbFrame` is the executor's clock reading, the input `stamp_of` turns into a `Stamp`. An event answered on the pass it arrives on, such as `ContactEvent`, carries no stamp.
 
-The raw `uint64_t at_us` on `RfEvent` and `AdsbFrame` is not a second encoding: it is the executor's own clock reading, the input `stamp_of` turns into a `Stamp` once the PPS edge is known.
+A `LinkEvent` of type Down carries in `payload_bytes` the payload the link settled on.
 
-`AdsbFrame` is 24 bytes where `RfEvent` is about 300: the 14 bytes the LR2021 decoded, the level of their pulses and when the executor woke for them. A busy sky hands up hundreds a second, so the queue is deeper than a dwell's. `kAdsbQueueFrames` is sized for the average load: the 100 aircraft of DO-260B Table 2-105 class A0 at the 6.2 squitters a second of DO-260B 2.2.3.3.1.3, over a 100 ms drain window, is 62 frames. 2.2.3.3.1.3 averages its 6.2 over any 60 s, so it bounds no burst, and the drain window is chosen, not yet measured. `bus::Queue` counts what it drops, and the receiver reports that count as `dropped`, so the bench reads whether 62 is enough. The queue now carries every downlink format the LR2021 hears, the replies to radars and the noise that passes the preamble detector, which the 62 were not sized for, so `dropped` decides that too.
+`kAdsbQueueFrames` is sized for the average load: the 100 aircraft of DO-260B Table 2-105 class A0, at the 6.2 squitters a second of DO-260B 2.2.3.3.1.3, over a 100 ms drain window, is 62 frames. That clause averages over 60 s, so it bounds no burst, and the drain window is not measured yet. The queue also carries every other downlink format the LR2021 hears and preamble noise. The receiver reports the queue's drop count as `dropped`, and the bench reads from it whether 62 is enough.

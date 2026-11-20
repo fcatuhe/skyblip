@@ -1,12 +1,3 @@
-// core/flight/log_session.h: when a flight is worth recording, and where the
-// next record goes. Both are policy, both are pure, and neither knows what
-// flash is - the service does the writing and this decides what to write.
-//
-// A device parked on a trailer for a week must not fill the partition with its
-// own stillness, so a session is bracketed by core/flight's flight state and by
-// nothing else. That state is already the one the transmitter and the update
-// lockout obey, so "the log started" and "the aircraft took off" cannot drift
-// apart.
 #ifndef SKYBLIP_CORE_FLIGHT_LOG_SESSION_H
 #define SKYBLIP_CORE_FLIGHT_LOG_SESSION_H
 
@@ -27,31 +18,22 @@ constexpr uint32_t kLogStillHoldMs = 120000;
 
 enum class LogAction : uint8_t { Idle, OpenSession, AppendRecord, CloseSession };
 
-// Fed own-ship every service pass. Holds the records it wants written in a
-// bounded ring; the writer drains them when the radio is not keying.
 class LogSession {
    public:
     LogAction update(const model::Ownship& own, bool rolling, uint32_t now_ms);
 
     bool recording() const { return open_; }
-    // A closed session whose last record has not reached flash yet.
     bool closing() const { return closing_; }
-    // The UTC second the session opened, which is also the time base every one
-    // of its records is written against and the name the offload protocol uses.
+    // INFO: fc 20nov26 the opening UTC second, its records' time base and its name on the link
     uint32_t session_id() const { return session_id_; }
 
     int queued() const { return count_; }
-    // Yields records only while a session is running, plus the one last record a
-    // landing leaves behind. On the ground the same ring is a holding pen, not a
-    // queue: what it holds is overwritten, never written out.
+    // INFO: fc 20nov26 on the ground the ring is a holding pen, overwritten and never written out
     bool peek(LogRecord& out);
     void commit();
 
-    // Records the ring had to overwrite because nothing drained it. Not silent:
-    // the same accounting the bus queues get.
     uint32_t dropped() const { return dropped_; }
 
-    // After an erase there is no history to be the tail of.
     void reset();
 
    private:
@@ -73,9 +55,7 @@ class LogSession {
     bool closing_{false};
 };
 
-// Where the next record goes: which sector the log is filling and how far into
-// it. Which sector that is, and the sequence it was labelled with, is
-// core/store's decision - this is the cursor inside it.
+// INFO: fc 20nov26 the cursor inside a sector, while core/store chooses the sector and its sequence
 class LogRing {
    public:
     void configure(uint32_t sector_count, uint32_t slots_per_sector);

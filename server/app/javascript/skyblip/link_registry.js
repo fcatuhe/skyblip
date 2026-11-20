@@ -346,11 +346,6 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         },
         {
-          "name": "die_temperature_c",
-          "number": 7,
-          "type": "integer"
-        },
-        {
           "name": "bravo",
           "number": 8,
           "type": "enum",
@@ -370,6 +365,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "own_transponder_category",
           "number": 11,
           "type": "unsigned"
+        },
+        {
+          "name": "no_tx",
+          "number": 12,
+          "type": "enum",
+          "enum": "no_tx"
         }
       ]
     },
@@ -1007,6 +1008,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "link_drop_reason",
           "number": 94,
           "type": "unsigned"
+        },
+        {
+          "name": "no_tx",
+          "number": 95,
+          "type": "enum",
+          "enum": "no_tx"
         }
       ],
       "keys_of": "diagnostics"
@@ -1492,6 +1499,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "link_drop_reason",
           "number": 94,
           "type": "unsigned"
+        },
+        {
+          "name": "no_tx",
+          "number": 95,
+          "type": "enum",
+          "enum": "no_tx"
         }
       ]
     },
@@ -3806,6 +3819,47 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "confirm_failed",
           "code": 6,
           "mirrors": "ConfirmFailed"
+        }
+      ]
+    },
+    "no_tx": {
+      "mirrors": {
+        "type": "timing::NoTx",
+        "header": "core/timing/transmit_gate.h",
+        "off_the_wire": [
+          "None"
+        ]
+      },
+      "values": [
+        {
+          "name": "address",
+          "code": 1,
+          "mirrors": "Address"
+        },
+        {
+          "name": "radio",
+          "code": 2,
+          "mirrors": "Radio"
+        },
+        {
+          "name": "gnss",
+          "code": 3,
+          "mirrors": "Gnss"
+        },
+        {
+          "name": "fix",
+          "code": 4,
+          "mirrors": "Fix"
+        },
+        {
+          "name": "utc",
+          "code": 5,
+          "mirrors": "Utc"
+        },
+        {
+          "name": "pps",
+          "code": 6,
+          "mirrors": "Pps"
         }
       ]
     },

@@ -47,11 +47,6 @@ class TrafficTable {
    public:
     static constexpr int kMaxTargets = 48;
 
-    // Our own 24-bit address. A ground station relays every aircraft it heard,
-    // and it heard us: without this the uplink puts own-ship on the radar, at
-    // own-ship's position, and the alarm layer grades a head-on with the
-    // aircraft it is bolted to. Zero means nothing is filtered, which is what a
-    // table nobody told has to assume.
     void set_own_address(uint8_t address_mapping_table, uint32_t address) {
         own_address_mapping_table_ = address_mapping_table;
         own_address_ = address & settings::kAddressMask;
@@ -60,18 +55,8 @@ class TrafficTable {
     // INFO: fc 11nov26 a new address releases its slot even under an alarm: that alarm was on us
     void set_aircraft_address(uint32_t address);
 
-    // Where own-ship is, for the range gate below. This is the table's door and
-    // three paths come through it - a direct ADS-L frame, an ALP-TAS frame and up
-    // to ten aircraft relayed inside one uplink frame - so the gate lives
-    // here rather than on any one of them: a path added later is gated by
-    // construction instead of by remembering. Whoever drains the radio bus
-    // refreshes this each pass; a table nobody told has no reference and gates
-    // nothing, which is also what a device without a fix has.
     void set_own_reference(const model::Ownship& own) { own_ = own; }
 
-    // Receptions refused because the position they claimed was further away than
-    // this radio can hear (core/traffic/sanity.h). Not silent: a rate that climbs
-    // is a receiver at the edge of its budget or a decoder that is wrong.
     uint32_t implausible() const { return implausible_; }
     uint32_t adsb_without_position() const { return adsb_without_position_; }
 

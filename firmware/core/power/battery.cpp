@@ -87,8 +87,6 @@ void Gauge::apply(const events::BatterySample& sample) {
     recent_[0] = sample.divider_mv;
     if (seen_ < kWindowSamples) seen_++;
 
-    // Rejecting a transient takes three readings. Before that the newest is
-    // everything the gauge knows.
     const uint16_t cell_mv =
         seen_ < kWindowSamples ? recent_[0] : median_of(recent_[0], recent_[1], recent_[2]);
     const uint8_t percent = percent_from_mv(cell_mv);

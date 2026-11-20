@@ -4,11 +4,11 @@ What the firmware decides about an update image: how it reads MCUboot's header a
 
 ## One product's images only
 
-A skyBlip Go never installs a skyBlip Bravo image over the air, and a Bravo never installs a Go one. Both products sign with the same key on each channel, so the signature cannot tell them apart. Every image names its product instead, in a protected TLV, and the upload hook refuses an image whose product is not the running image's.
+A skyBlip Go never installs a skyBlip Bravo image over the air, and a Bravo never installs a Go one. Both products sign with the same key on each channel, so the signature cannot tell them apart. Every image names its product in a protected TLV instead, and the upload hook refuses an image whose product is not the running image's.
 
 ### The mark
 
-The mark is MCUboot's image class, `IMAGE_TLV_UUID_CID` (0x75), with the vendor beside it, `IMAGE_TLV_UUID_VID` (0x74). `products/common/prj.conf` and each `products/<product>/prj.conf` set them through Zephyr's `CONFIG_MCUBOOT_IMGTOOL_UUID_VID`, `_VID_NAME`, `CONFIG_MCUBOOT_IMGTOOL_UUID_CID` and `_CID_NAME` (Zephyr v4.4.2, `modules/Kconfig.mcuboot:125-158`), which `cmake/mcuboot.cmake:125-131` passes to imgtool as `--vid` and `--cid`. imgtool derives each UUID with `uuid5` (MCUboot `scripts/imgtool/image.py`, `parse_uuid`) and adds both to the protected TLVs (`image.py:661-673`), which the image's hash and signature cover (MCUboot `docs/design.md`, Protected TLVs).
+The mark is MCUboot's image class, `IMAGE_TLV_UUID_CID` (0x75), with the vendor beside it, `IMAGE_TLV_UUID_VID` (0x74). `products/common/prj.conf` and each `products/<product>/prj.conf` set them through Zephyr's `CONFIG_MCUBOOT_IMGTOOL_UUID_VID`, `_VID_NAME`, `CONFIG_MCUBOOT_IMGTOOL_UUID_CID` and `_CID_NAME` (Zephyr v4.4.2, `modules/Kconfig.mcuboot:125-158`), which Zephyr's `cmake/mcuboot.cmake` passes to imgtool as `--vid` and `--cid`. imgtool derives each UUID with `uuid5` and adds both to the protected TLVs, which the image's hash and signature cover (MCUboot `docs/design.md`, Protected TLVs).
 
 | TLV | Name it is derived from | UUID |
 |---|---|---|
@@ -16,50 +16,49 @@ The mark is MCUboot's image class, `IMAGE_TLV_UUID_CID` (0x75), with the vendor 
 | 0x75, class | `skyblip_go`, in the vendor's namespace | `d1d4d665-5f2b-5695-ad59-f122902c2120` |
 | 0x75, class | `skyblip_bravo`, in the vendor's namespace | `46d97790-da40-5396-a354-779456a09465` |
 
-The class name is the product's directory under `products/`, which is also its link name (`dfu::Product`) and, with dashes, the start of its release files. `scripts/build_image.sh` fails a build whose base, full or confirmed image does not carry its product's class (`scripts/check_image_product.py`).
+The class name is the product's directory under `products/`, also its link name (`dfu::Product`). `scripts/build_image.sh` fails a build whose images do not carry their product's class (`scripts/check_image_product.py`).
 
 ### Why a TLV and not a key per product
 
-The decision was between the two, and the TLV wins on the evidence:
+- MCUboot built the class for this case: `CONFIG_MCUBOOT_UUID_CID` is there "to prevent processing images for a different CPU or device produced by the same vendor" (MCUboot `boot/zephyr/Kconfig:1192-1196`, at `6d3b3d2c`, the revision Zephyr v4.4.2 pins).
+- The key already means the channel (`firmware/keys/README.md`), and a key per product would double the private keys for a boundary the signed TLV already draws.
+- A key per product would not refuse earlier: the key hash, like the class, sits in the TLV area after the body.
 
-- MCUboot built the class for this case. The help of `CONFIG_MCUBOOT_UUID_CID` says it is there "to prevent processing images for a different CPU or device produced by the same vendor" (MCUboot `boot/zephyr/Kconfig:1192-1196`, at `6d3b3d2c`, the revision Zephyr v4.4.2 pins in its `west.yml`).
-- The key already means the channel. `firmware/keys/README.md` ties the bootloader's downgrade rule to the key, and `firmware.yml` and `release.yml` verify every image against `development.pub.pem` or `production.pub.pem`. A key per product would double the private keys in both GitHub environments and the public keys CI checks, for a boundary the signed TLV draws already.
-- A key per product would not refuse earlier. The key hash, like the class, sits in the TLV area after the body (`docs/design.md`, Protected TLVs), so the hook would wait for the same last bytes either way.
-
-A key per product does buy one thing the TLV does not have yet: MCUboot would refuse the foreign image at boot. See the open items below.
+A key per product would make MCUboot refuse the foreign image at boot, which the TLV does not do yet (Open, below).
 
 ### Where the unit refuses
 
-`mcumgr_hooks.cpp` listens to `MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK`. Zephyr's img_mgmt raises it before it writes each chunk of every upload, whatever client sent it, the update page or a bare `mcumgr` (Zephyr v4.4.2 `subsys/mgmt/mcumgr/grp/img_mgmt/src/img_mgmt.c:837-857`). So a direct mcumgr upload meets the same check as the page.
+`mcumgr_hooks.cpp` listens to `MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK`, which Zephyr's img_mgmt raises before it writes each chunk of every upload (Zephyr v4.4.2 `subsys/mgmt/mcumgr/grp/img_mgmt/src/img_mgmt.c:837-857`). So a bare `mcumgr` upload meets the same check as the update page.
 
-`ProductCheck` reads the header off the first chunk and copies the protected area, and the 4-byte info of the TLV area after it, as the chunks pass. On the chunk that completes them, it compares the image's class with the class of the image in slot0, which is the image running, and the upload's declared length with the image's end, the info's `it_tlv_tot` past the protected area. A different class, a missing one or a length that is not exactly the image's refuses that chunk before img_mgmt writes it, with the image group's `IMG_MGMT_ERR_INVALID_TLV` (5), and every later chunk of that upload until a new one starts at offset 0. The slot never receives the signature that follows, img_mgmt never raises `PENDING`, and `ConfigService` never installs: nothing reaches a swap.
+`ProductCheck` reads the header off the first chunk, then copies the protected area and the 4-byte info of the TLV area after it as the chunks pass. On the chunk that completes them, it compares the image's class with the class of the image running in slot0, and the upload's declared length with the image's end. A different class, a missing one, or a length that is not exactly the image's refuses that chunk before img_mgmt writes it, with `IMG_MGMT_ERR_INVALID_TLV` (5), and every later chunk until a new upload starts at offset 0. Nothing reaches a swap.
 
-The check refuses at the first chunk when the image has no protected TLVs at all, when its protected area is wider than the 128 bytes the check holds (`scripts/check_image_product.py` fails a build past it), when the upload's declared length ends before that area and the info after it do, and when the unit cannot read its own class. img_mgmt never holds the declared length to the header, and a progressive erase leaves the slot past it as it was, so an upload that stopped short of the class would otherwise pass every chunk and still raise `PENDING` over bytes an earlier upload left. A Go image carries 85 bytes of protected TLVs: the 4-byte area header, the vendor and the class at 20 bytes each, then the hub image's two TLVs at 36 and 5 (`products/skyblip_go/sysbuild.cmake`). The check compares with what slot0 runs rather than with a constant, so no class is compiled into it, and the class a unit expects is the one its own build signed.
+- The check refuses at the first chunk an image with no protected TLVs, a protected area wider than the 128 bytes it holds (`scripts/check_image_product.py` fails such a build), a declared length that ends before that area, and a unit that cannot read its own class. img_mgmt never holds the declared length to the header, so an upload that stopped short of the class would otherwise raise `PENDING` over bytes an earlier upload left.
+- A Go image carries 85 bytes of protected TLVs: the 4-byte area header, the vendor and the class at 20 bytes each, and the hub image's two at 36 and 5 (`products/skyblip_go/sysbuild.cmake`).
+- The check compares with what slot0 runs, so no class is compiled in.
+- An upload declared longer than its image is refused, because a swap can carry slot1's sector past a shorter image onto slot0's first page past it, where Briefing's `.uf2` leaves the install trust record (`../comms/README.md`, The browser that installed the unit). imgtool writes nothing past the TLV area, so every image we sign uploads as exactly its own length.
 
-An upload declared longer than its image is refused too, because a swap can carry slot1's sector past a shorter image onto slot0's first page past it, where a `.uf2` from Briefing leaves the install trust record (`../comms/README.md`, The browser that installed the unit). The chunk that brings the TLV info comes before any byte past the image, so a refused upload writes none of them. imgtool writes nothing past the TLV area, so every image we sign uploads as exactly its own length.
-
-The `identity` frame names the product the unit runs, `go` or `bravo`, on every unit (`schemas/link.v1.json`), so the page offers a unit only its own product's published images. The update page reads the same class off the file before it sends anything (`server/app/javascript/skyblip/image.js`). A unit that answers no `identity` frame, on firmware built before it or on a link too narrow for it, names no product: the page offers it no published image and leaves the check to the unit. It refuses a file naming no product before anything is sent to a unit that names its product, and words error 5 as `wrong_product`, or as `unmarked_image` for a file naming no product.
+The update page offers a unit only its own product's images, by the `identity` frame, and reads the class off the file before it sends anything (`server/app/javascript/skyblip/image.js`). It words error 5 as `wrong_product`, or `unmarked_image` for a file naming no product.
 
 ### Open
 
-- MCUboot does not check the class at boot yet. MCUboot 2.4.0 has the check, `CONFIG_MCUBOOT_UUID_CID` in `boot/bootutil/src/image_validate.c`, but no implementation of the `boot_uuid_init()` and `boot_uuid_cid_match()` it calls: `boot/bootutil/include/bootutil/mcuboot_uuid.h` declares them and nothing in the tree defines them. Until a bootloader implements them, the app's hook is the boundary. An image reaches a swap only through the app, because `smp_policy.h` refuses every SMP image state write and reset. Turning the bootloader's check on needs that implementation, a new bootloader on every unit and a bench test on silicon.
-- A Go on firmware built before this check takes any image signed by its key, and names no product, so the page checks nothing: a Bravo image chosen by hand reaches it.
-- An image built before this check names no product, so a unit on a newer image refuses it over the air. Going back to one is a drag-and-drop of its `.uf2`, though a `.uf2` built before November 15, 2026 hangs a unit that has swapped over Bluetooth: it leaves that swap's status in slot0 and wipes its size, so MCUboot resumes a swap it can never finish. A current `.uf2` blanks that sector (`scripts/mkuf2.py`) and recovers the unit. A unit that names no product cannot be told apart from one without the check, so the page sends such a file to it, and a unit with the check refuses it once the upload reaches its protected area, near its end.
-- The hook itself has run only on `native_sim`, in `test/twister/smp_gate`. The refusal on an nRF52840, through the page and through `mcumgr`, is a hardware acceptance item of #187.
+- MCUboot does not check the class at boot yet. MCUboot 2.4.0 calls `boot_uuid_init()` and `boot_uuid_cid_match()` under `CONFIG_MCUBOOT_UUID_CID`, but nothing in its tree defines them. Until a bootloader implements them, the app's hook is the boundary, and `smp_policy.h` refuses every SMP image state write and reset so an image reaches a swap only through the app.
+- A Go on firmware built before this check takes any image signed by its key and names no product, so a Bravo image chosen by hand reaches it.
+- An image built before this check names no product, so a newer unit refuses it over the air. Go back to one by drag-and-drop of its `.uf2`. A `.uf2` built before November 15, 2026 hangs a unit that has swapped over Bluetooth, and a current one recovers it (`scripts/mkuf2.py` blanks the swap status).
+- The hook has run only on `native_sim`, in `test/twister/smp_gate`. The refusal on an nRF52840 is a hardware acceptance item of #187.
 
 ## The keys the bootloader verifies
 
-A unit installs over the air only an image signed by a key its MCUboot verifies, so an image MCUboot would refuse at boot is refused before the restart. `bootloader_keys.h` reads those keys off MCUboot itself, the image in `boot_partition`. MCUboot holds each P-256 key as its DER SubjectPublicKeyInfo, 91 bytes that open on the same 26-byte header (`autogen-pubkey.c`, which `imgtool getpub` writes), and imgtool's KEYHASH TLV is the SHA-256 of those 91 bytes. So the unit finds every key by its header, hashes each, and compares the staged image's KEYHASH with them. The bytes CI's development bootloader embeds hash to `212602f2...`, the KEYHASH of every development image.
+A unit installs over the air only an image signed by a key its MCUboot verifies, so an image MCUboot would refuse at boot is refused before the restart. `bootloader_keys.h` reads those keys off the MCUboot image in `boot_partition`. MCUboot holds each P-256 key as its DER SubjectPublicKeyInfo, 91 bytes that open on the same 26-byte header (`autogen-pubkey.c`, which `imgtool getpub` writes), and imgtool's KEYHASH TLV is the SHA-256 of those 91 bytes. So the unit finds every key by its header, hashes each, and compares the staged image's KEYHASH with them.
 
-The bootloader changes only by drag-and-drop, which restarts the app, so `platform/zephyr/dfu.h` reads it once. A unit that cannot read it, or finds no key, falls back on the key that signed the running image, which was the whole rule before Zephyr 4.5 let MCUboot embed more than one. The `update` frame names the keys as `bootloader_keys`, and `ConfigService::signed_by_trusted_key()` applies the rule when an upload lands. Which bootloader holds which keys is `firmware/keys/README.md`'s.
+The bootloader changes only by drag-and-drop, which restarts the app, so `hardware/platform/zephyr/dfu.h` reads it once. A unit that cannot read it, or finds no key, falls back on the key that signed the running image. The `update` frame names the keys as `bootloader_keys`, and `ConfigService::signed_by_trusted_key()` applies the rule when an upload lands (`firmware/keys/README.md`).
 
 ## Before the restart
 
-`ConfigLinkService::install()` asks `Dfu::request_swap()` before it restarts the unit. On the device, `request_swap()` hashes slot1's header, body and protected TLVs, as MCUboot does, and compares the digest with the image's SHA-256 TLV (`check_image()` in `image.h`). Only an image that matches is marked for a test swap with `boot_request_upgrade()`. The unit then reads MCUboot's swap type back from the slots into the install report. It restarts whatever the result, because it has already parked its parts, and the old image comes back to say what went wrong. `test/core/test_dfu_check.cpp` holds the check to an image `imgtool sign` made, protected TLVs included.
+`ConfigLinkService::install()` asks `Dfu::request_swap()` before it restarts the unit. On the device, `request_swap()` hashes slot1's header, body and protected TLVs as MCUboot does, and compares the digest with the image's SHA-256 TLV (`check_image()` in `image.h`). Only an image that matches is marked for a test swap with `boot_request_upgrade()`. The unit reads MCUboot's swap type back into the install report, then restarts whatever the result, because it has already parked its parts and the old image comes back to say what went wrong.
 
 ## The install report
 
-The install report says why an update did not land, so the events the briefing app sends are enough to diagnose a unit far away (#278). It has two parts.
+The install report says why an update did not land, so the briefing app's events diagnose a unit far away (#278). It has two parts.
 
 The install's part is one entry of 9 bytes in NVS, under the key `install.report`, beside the update record:
 
@@ -71,22 +70,22 @@ The install's part is one entry of 9 bytes in NVS, under the key `install.report
 | `probation_boots`, `proof` | the new image, on probation | how many times it ran, and how far its last run got: `booted`, `started`, `gnss_heard`, `hub_bootable`, `proven` or `confirm_failed` |
 | `reset` | every image that boots | the reason for the latest restart. After a revert, it names what ended the new image's run |
 
-The install's part lives exactly as long as the update record. `install()` writes a new one, and an image that confirms itself, or that finds an image the record does not name, erases both. A boot that finds no record erases the report too, so an entry an older image left behind does not outlive the next boot of an image that knows the key. The new image writes at most six times during its probation, unplaced, because only the first minute after an install pays for them.
+The install's part lives as long as the update record. `install()` writes a new one, and an image that confirms itself, or that finds an image the record does not name, erases both. A boot that finds no record erases the report too. The new image writes at most six times during its probation, unplaced, because only the first minute after an install pays for them.
 
-The landing's part is what `ConfigService::refuse_landing()` finds when it refuses an upload that landed, `nothing_staged`, `not_approved` or `wrong_key`. Those three words name what failed, not why, and a `wrong_key` from a key that does not match reads the same as one from a slot the unit could not read back:
+The landing's part is what `ConfigService::refuse_landing()` finds when it refuses an upload that landed, `nothing_staged`, `not_approved` or `wrong_key`. Those words name what failed, not why:
 
 | Field | What it says |
 |---|---|
 | `landed_check` | what `check_image()` found in slot1 at the refusal. `matched` means slot1 holds the whole image its digest names, so the refusal is about the image. Anything else means the flash does not hold what was sent, or would not read |
 | `staged_key` | the first four bytes of the KEYHASH the unit read in slot1, beside the running key the `update` frame names. Absent when the unit found none |
 
-The unit keeps the landing's part in memory only, from the refusal until the next upload window opens or the unit restarts, and hashes slot1 only on a refusal: an upload that installs is hashed once, before the restart. The page asks for the report as soon as the refusal arrives. A host asks for it with the bare `install_report` command, and the answer is 30 bytes at its widest.
+The unit keeps the landing's part in RAM from the refusal until the next upload window opens or the unit restarts. It hashes slot1 only on a refusal, so an upload that installs is hashed once, before the restart. A host asks for the report with the bare `install_report` command, and the answer is 30 bytes at its widest.
 
 ### When an update does not land
 
-From a distance: the user opens the unit's firmware page in the briefing app and connects. The page asks for the report on every connect. When the unit says its image reverted or was refused, the page names the cause in plain words and shows one line with a Copy the report button. It does the same when the unit comes back from the install's restart on its old version with no record. The unit keeps the install's part until its next install, so a page reopened days later still reads it. The page also sends every report to skyblip.eu, the install's part as `device.install_reported` and a refused landing as `device.upload_refused`, so the events alone say which row below applies, with no need to ask the user for anything.
+The briefing app's firmware page asks for the report on every connect and names the cause. It sends every report to skyblip.eu, the install's part as `device.install_reported` and a refused landing as `device.upload_refused`, so the events alone say which row below applies.
 
-On the bench, before anything else touches the unit: `./scripts/blip.py --name "skyBlip Bravo" command '{"command":"update"}'`, then `command '{"command":"install_report"}'`.
+On the bench, before anything else touches the unit, run `./scripts/blip.py --name "skyBlip Bravo" command '{"command":"update"}'`, then `command '{"command":"install_report"}'`.
 
 | What the report says | What happened |
 |---|---|

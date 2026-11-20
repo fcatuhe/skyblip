@@ -30,7 +30,8 @@ class Pps {
     bool locked() const {
         const uint64_t edge_us = last_edge_us();
         const uint64_t now_us = k_ticks_to_us_floor64(k_uptime_ticks());
-        return edge_us != 0 && timing::since_edge_us(edge_us, now_us) < kHoldoverUs;
+        return edge_us != 0 &&
+               timing::since_edge_us(edge_us, now_us) < uint64_t{timing::kPpsLockTailMs} * 1000;
     }
 
     uint32_t since_edge_ms(uint64_t now_us) const {
@@ -48,8 +49,6 @@ class Pps {
     uint32_t edges() const { return edges_; }
 
    private:
-    static constexpr uint64_t kHoldoverUs = 3000000;
-
     static void on_edge(const struct device*, struct gpio_callback*, gpio_port_pins_t) {
         if (self_ == nullptr) return;
         self_->edge_us_ = k_ticks_to_us_floor64(k_uptime_ticks());

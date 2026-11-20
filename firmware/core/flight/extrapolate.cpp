@@ -16,9 +16,7 @@ namespace {
 
 constexpr int64_t kMicrometresPerMetre = 1000000;
 constexpr int64_t kMicrometresPerMillimetre = 1000;
-// Below this cosine a metre of easting is more than a degree of longitude and
-// the scaling stops meaning anything. 88 degrees of latitude is 500 km further
-// north than anything this device will fly over.
+// INFO: fc 20nov26 near 88 degrees of latitude easting stops scaling, far north of any flight
 constexpr int64_t kLatitudeCosineFloor = 512;
 
 int64_t latitude_cosine(int32_t latitude_1e7) {

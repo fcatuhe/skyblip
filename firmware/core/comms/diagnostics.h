@@ -15,6 +15,7 @@
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
 #include "core/timing/channel.h"
+#include "core/timing/transmit_gate.h"
 #include "ports/adsb_receiver.h"
 #include "ports/gnss.h"
 #include "protocols/adsb/message.h"
@@ -61,6 +62,7 @@ struct Diagnostics {
     uint32_t tx_busy_missed{0};
     uint32_t tx_held_for_fix{0};
     uint32_t tx_redrawn_for_fix{0};
+    timing::NoTx no_tx{timing::NoTx::None};
     uint16_t tx_keyed_us{0};
     uint16_t tx_span_us{0};
     bool dio1_armed{false};

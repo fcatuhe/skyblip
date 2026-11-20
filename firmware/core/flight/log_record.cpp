@@ -151,9 +151,7 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* ou
     wire::put_uint32(out + 2, static_cast<uint32_t>(record.latitude_1e7));
     wire::put_uint32(out + 6, static_cast<uint32_t>(record.longitude_1e7));
     wire::put_uint16(out + 10, static_cast<uint16_t>(clamp_int16(record.altitude_msl_m)));
-    // Height above the ellipsoid is stored as its distance from mean sea level:
-    // EGM96 runs -107 m to +85 m over the whole planet, so one signed byte
-    // carries the pair that two four-byte altitudes would have cost.
+    // INFO: fc 20nov26 EGM96 runs -107 m to +85 m, so the geoid separation fits one signed byte
     out[12] = static_cast<uint8_t>(clamp_int8(record.altitude_hae_m - record.altitude_msl_m));
     wire::put_uint16(out + 13, record.speed_q);
     wire::put_uint16(out + 15, record.track_c9 & kTrackMask);

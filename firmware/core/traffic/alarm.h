@@ -30,9 +30,7 @@ constexpr int32_t kAdvisoryDistanceM = 3000;
 // INFO: fc 14sep26 a relayed target arrives with no velocity, and zero would make it the safest dot
 constexpr int32_t kUnknownTargetSpeedMps = 30;
 
-// INFO: al 02aug26 SoftRF alerts only on targets seen within ALERT_EXPIRATION_TIME
-// (5 s) and re-checks no more often than every 2 s
-// (oss/SoftRF-lyusupov .../src/TrafficHelper.h:58-59, .../src/TrafficHelper.cpp:236-260).
+// INFO: al 02aug26 SoftRF alerts on targets seen within 5 s, at most every 2 s (TrafficHelper.h)
 constexpr uint32_t kAlertMaxAgeMs = 5000;
 constexpr uint32_t kRenotifyFloorMs = 2000;
 // INFO: fc 11oct26 a touch-and-go or a stop-and-go is back in the air well inside a minute

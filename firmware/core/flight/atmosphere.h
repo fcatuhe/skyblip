@@ -1,12 +1,3 @@
-// core/flight/atmosphere.h: the standard atmosphere, as integer math.
-//
-// Pressure is the only altitude source that is datum-free in a useful way: a
-// RATE derived from it needs no agreement with anyone. That is what this is for:
-// vertical speed. It is deliberately NOT used for the altitude skyBlip
-// broadcasts, because the collision alarm compares RELATIVE altitude against
-// other aircraft (core/traffic/alarm.h, +/-300 m window), so every participant
-// must share one datum, and which datum that is belongs to the ADS-L spec, not
-// to this file.
 #ifndef SKYBLIP_CORE_FLIGHT_ATMOSPHERE_H
 #define SKYBLIP_CORE_FLIGHT_ATMOSPHERE_H
 
@@ -14,7 +5,6 @@
 
 namespace skyblip::flight {
 
-// ISA sea-level pressure.
 constexpr uint32_t kIsaSeaLevelPa = 101325;
 constexpr int16_t kIsaSeaLevelDeciCelsius = 150;
 
@@ -23,14 +13,11 @@ int16_t isa_temperature_dc(int32_t altitude_mm);
 int32_t pressure_to_altitude_mm(uint32_t pressure_mpa);
 int32_t pressure_to_altitude_cm(uint32_t pressure_pa);
 
-// The inverse, by bisection over the SAME table, so a caller that needs to go
-// the other way (a modelled barometer, a test) cannot drift from the forward
-// curve. Slower, and never on the flight path.
+// INFO: fc 20nov26 bisects the forward table, so a modelled barometer cannot drift from the curve
 uint32_t altitude_mm_to_pressure_mpa(int32_t altitude_mm);
 uint32_t altitude_cm_to_pressure_pa(int32_t altitude_cm);
 
-// Shortest window that still averages out sensor noise, and the longest one
-// whose answer is still "now" rather than a history lesson.
+// INFO: fc 20nov26 shorter and the sensor noise is the rate, longer and the rate is history
 constexpr uint32_t kClimbWindowFloorMs = 500;
 constexpr uint32_t kClimbWindowCeilingMs = 10000;
 

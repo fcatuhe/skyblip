@@ -10,8 +10,7 @@
 
 namespace skyblip::protocol {
 
-uint8_t alptas_type_to_adsl_category(
-    uint8_t alptas_type);  // inverse of adsl_category_to_alptas_type
+uint8_t alptas_type_to_adsl_category(uint8_t alptas_type);
 uint8_t alptas_flight_state(uint8_t alptas_airborne);
 uint8_t alptas_urgency_to_emergency(uint8_t alptas_urgency);
 
