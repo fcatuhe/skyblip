@@ -1,6 +1,7 @@
 // The transmit gate on a flying Go: each requirement, on the radio and receiver behind it.
 #include <cstdint>
 
+#include "core/diagnostics/payload.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit_gate.h"
 #include "doctest/doctest.h"
@@ -89,6 +90,8 @@ TEST_CASE("rf gate: a PPS lost past its holdover stops the bursts and reads PPS"
     simulator.world().set_pps_locked(true);
     run_on(simulator, settled_ms + timing::kPpsHoldoverMs + 11020, 2000);
     CHECK(gate_of(simulator).transmits());
+    run_on(simulator, settled_ms + timing::kPpsHoldoverMs + 13025,
+           timing::TransmitGate::kNoTxHoldMs);
     CHECK(gate_of(simulator).shown() == timing::NoTx::None);
 }
 
@@ -170,5 +173,108 @@ TEST_CASE("rf gate: an activation after a long wait is no radio fault") {
     armings.state.activation.serial = 0x7E57;
     armings.tick_in(12, 500);
     CHECK(armings.state.transmit.unmet() == timing::NoTx::None);
-    CHECK(armings.state.transmit.shown() == timing::NoTx::None);
+    CHECK(armings.state.transmit.shown() != timing::NoTx::Radio);
+}
+
+namespace {
+
+ports::RfPlan first_with_burst(const Armings& armings) {
+    for (uint32_t i = 0; i < armings.rf.handed; i++)
+        if (armings.rf.plans[i].tx != nullptr) return armings.rf.plans[i];
+    return ports::RfPlan{};
+}
+
+}  // namespace
+
+// The bursts stop on the pass a requirement fails, the one already handed to the executor too.
+TEST_CASE("rf gate: a burst already armed is withdrawn on the pass the gate closes") {
+    Armings armings;
+    armings.ready_to_transmit(1000);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_in(0, 420);
+    REQUIRE(armings.rf.with_tx == 1);
+    const ports::RfPlan drawn = first_with_burst(armings);
+
+    armings.receiver.rate_held = false;
+    armings.tick_in(0, 430);
+    CHECK(armings.rf.withdrawn == 1);
+    CHECK(armings.rf.withdrawn_at_us == drawn.tx_at_us);
+    tick_seconds(armings, 1, 3);
+    CHECK(armings.rf.with_tx == 1);
+}
+
+// A burst the executor already listens for stays its own, and a busy channel then re-arms nothing.
+TEST_CASE("rf gate: a burst found busy after the gate closed is not armed again") {
+    Armings armings;
+    armings.ready_to_transmit(1000);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_in(0, 420);
+    REQUIRE(armings.rf.with_tx == 1);
+    const ports::RfPlan drawn = first_with_burst(armings);
+
+    armings.rf.listening = true;
+    armings.receiver.rate_held = false;
+    armings.tick_in(0, 430);
+    REQUIRE(armings.rf.withdrawn == 0);
+    armings.state.rf.note_busy({drawn.tx_at_us, -60, true});
+    armings.tick_in(0, static_cast<int>((drawn.tx_at_us - Armings::kEdgeUs) / 1000) + 1);
+    CHECK(armings.rf.with_tx == 1);
+    CHECK(armings.state.air.tx_deferred == 0);
+}
+
+// A turn the gate kept off the air is no turn given up: tx_given_up counts what was owed.
+TEST_CASE("rf gate: turns the gate holds back are not counted as given up") {
+    Armings armings;
+    armings.ready_to_transmit(1000);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    tick_seconds(armings, 0, 4);
+    const uint32_t given_up = armings.state.air.tx_given_up;
+    armings.receiver.rate_held = false;
+    tick_seconds(armings, 4, 30);
+    CHECK(armings.state.air.tx_given_up == given_up);
+}
+
+TEST_CASE("rf gate: a dwell the gate kept quiet records gate_closed, not off schedule") {
+    Armings armings;
+    armings.recorder.arm();
+    armings.ready_to_transmit(1000);
+    armings.receiver.rate_held = false;
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    tick_seconds(armings, 0, 2);
+
+    diagnostics::Record records[diagnostics::Recorder::kMaxRecords];
+    const int count = armings.recorder.peek(records, diagnostics::Recorder::kMaxRecords);
+    int closed = 0;
+    int off_schedule = 0;
+    for (int i = 0; i < count; i++) {
+        diagnostics::Dwell dwell{};
+        if (!diagnostics::read(records[i], dwell)) continue;
+        if (dwell.refusal == diagnostics::Refusal::GateClosed) closed++;
+        if (dwell.refusal == diagnostics::Refusal::OffSchedule) off_schedule++;
+    }
+    CHECK(closed > 0);
+    CHECK(off_schedule == 0);
+}
+
+// A transient SPI timeout costs one dwell, not three seconds of positions.
+TEST_CASE(
+    "rf gate: dwells refused 3 s apart are transients, two inside 3 s a radio not answering") {
+    Armings armings;
+    armings.ready_to_transmit(1000);
+    tick_seconds(armings, 0, 2);
+    REQUIRE(armings.state.transmit.transmits());
+    armings.rf.refused_dwells = 1;
+    tick_seconds(armings, 2, 1);
+    CHECK(armings.state.transmit.transmits());
+    tick_seconds(armings, 3, 3);
+    CHECK(armings.state.transmit.transmits());
+    armings.rf.refused_dwells = 2;
+    armings.tick_in(6, 0);
+    armings.tick_in(6, 50);
+    CHECK(armings.state.transmit.transmits());
+    armings.rf.refused_dwells = 3;
+    armings.tick_in(6, 100);
+    armings.tick_in(6, 150);
+    CHECK_FALSE(armings.state.transmit.transmits());
+    CHECK(armings.state.transmit.unmet() == timing::NoTx::Radio);
 }

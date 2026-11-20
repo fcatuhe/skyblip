@@ -29,6 +29,8 @@ class RadioService : public runtime::Service {
     static constexpr uint32_t kTxOutcomeMaxAgeMs = 250;
     // INFO: fc 19nov26 three dwells and readings a second, so nine missed is a radio not answering
     static constexpr uint32_t kRadioAnswerMaxAgeMs = 3000;
+    // INFO: fc 19nov26 one refused dwell is a transient, a second inside the age a fault
+    static constexpr uint32_t kRadioRefusalSamples = 2;
 
     RadioService(runtime::Context& context, const Settings& settings)
         : runtime::Service(context), settings_(settings) {}
@@ -110,6 +112,7 @@ class RadioService : public runtime::Service {
     // counter (ports/clock.h).
     bool identified();
     void judge_transmit(uint32_t now_ms);
+    void withdraw_carried();
     bool radio_answers(uint32_t now_ms);
     bool receiver_holds_rate() const;
     int phase_ms() const;
@@ -215,7 +218,8 @@ class RadioService : public runtime::Service {
     uint32_t seen_carrier_samples_{0};
     std::optional<uint32_t> channel_read_ms_{};
     std::optional<uint32_t> dwell_started_ms_{};
-    std::optional<uint32_t> dwell_refused_ms_{};
+    std::optional<uint32_t> dwells_refused_ms_[kRadioRefusalSamples]{};
+    bool transmitted_{false};
     uint32_t seen_refused_{0};
     uint32_t seen_switches_{0};
     uint32_t seen_busy_{0};

@@ -109,7 +109,7 @@ enum class Refusal : uint8_t {
     None = 0,
     OverBudget = 1,
     Unarmed = 2,
-    Unsettled = 3,
+    GateClosed = 3,
     OffSchedule = 4,
     HeldForFix = 5
 };

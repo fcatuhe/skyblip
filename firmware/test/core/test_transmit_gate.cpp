@@ -121,7 +121,25 @@ TEST_CASE("transmit gate: a fix lost in flight stops the burst at once and shows
 
     gate.judge(all_met(), 80000);
     CHECK(gate.transmits());
+    CHECK(gate.shown() == NoTx::Fix);
+    judge_between(gate, all_met(), 80050, 80000 + TransmitGate::kNoTxHoldMs - 50);
+    CHECK(gate.shown() == NoTx::Fix);
+    gate.judge(all_met(), 80000 + TransmitGate::kNoTxHoldMs);
     CHECK(gate.shown() == NoTx::None);
+}
+
+// A requirement that fails and holds again in turn would otherwise redraw the mark every 10 s.
+TEST_CASE("transmit gate: a mark stays through a short recovery, and names the new failure") {
+    TransmitGate gate;
+    judge_between(gate, all_met(), 0, 60000);
+    judge_between(gate, without(&Requirements::pps), 60050, 70050);
+    REQUIRE(gate.shown() == NoTx::Pps);
+    judge_between(gate, all_met(), 70100, 75000);
+    CHECK(gate.transmits());
+    CHECK(gate.shown() == NoTx::Pps);
+    gate.judge(without(&Requirements::fix), 75050);
+    CHECK_FALSE(gate.transmits());
+    CHECK(gate.shown() == NoTx::Fix);
 }
 
 TEST_CASE("transmit gate: a gap shorter than the hold never shows, and a new gap starts afresh") {

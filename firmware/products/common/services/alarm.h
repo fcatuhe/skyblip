@@ -124,7 +124,7 @@ class AlarmService : public runtime::Service {
     AlarmGrader grader_{context_};
     bool bravo_lost_{false};
     bool following_go_{false};
-    bool no_tx_shown_{false};
+    bool no_tx_in_flight_{false};
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
     indication::SignPlayer sign_{};

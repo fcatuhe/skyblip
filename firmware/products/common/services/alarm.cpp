@@ -43,12 +43,12 @@ bool AlarmService::lost_go() {
     return lost;
 }
 
-// INFO: fc 19nov26 one pulse in flight as the NO TX mark appears, and none while it stays
+// INFO: fc 19nov26 one pulse as the NO TX mark and flight first stand together, a takeoff included
 bool AlarmService::stopped_transmitting_in_flight() {
     const bool shown = context_.state.transmit.shown() != timing::NoTx::None;
     const bool airborne = context_.state.flight.confirmed_state == flight::FlightState::Airborne;
-    const bool stopped = shown && !no_tx_shown_ && airborne;
-    no_tx_shown_ = shown;
+    const bool stopped = shown && airborne && !no_tx_in_flight_;
+    no_tx_in_flight_ = shown && airborne;
     return stopped;
 }
 

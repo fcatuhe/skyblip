@@ -156,6 +156,8 @@ struct RfSwitching {
     uint32_t switches{0};
     // INFO: fc 19nov26 dwells the radio would not enter: wake, configure or receive went unanswered
     uint32_t refused{0};
+
+    void refuse() { refused++; }
     RfSwitch last{};
 
     void note(const RfSwitch& change) {

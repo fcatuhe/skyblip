@@ -61,9 +61,11 @@ struct Armings {
         ports::RfSwitching switching() const override {
             ports::RfSwitching started{};
             started.switches = stalled ? 0 : arms;
+            started.refused = refused_dwells;
             return started;
         }
         Status withdraw(uint64_t tx_at_us) override {
+            if (listening) return Status::WouldBlock;
             withdrawn++;
             withdrawn_at_us = tx_at_us;
             return Status::Ok;
@@ -82,6 +84,9 @@ struct Armings {
         bool refuse{false};
         bool deaf{false};
         bool stalled{false};
+        // INFO: fc 19nov26 the executor already reading the channel, so the burst is its own
+        bool listening{false};
+        uint32_t refused_dwells{0};
     } rf{};
     bus::Bus bus{};
     bus::State state{};

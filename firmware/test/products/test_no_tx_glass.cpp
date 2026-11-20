@@ -4,6 +4,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/transmit_gate.h"
 #include "doctest/doctest.h"
+#include "products/skyblip_go/pages/nearby.h"
 #include "products/skyblip_go/pages/no_tx.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/self_test_parts.h"
@@ -72,8 +73,12 @@ TEST_CASE("no tx glass: a PPS lost past holdover puts NO TX PPS on the radar, th
     CHECK(wears_no_tx(simulator, "PPS"));
 
     simulator.world().set_pps_locked(true);
-    run_on(simulator, lost_ms + timing::kPpsHoldoverMs + timing::TransmitGate::kNoTxHoldMs + 3005,
-           3000);
+    const uint32_t back_ms =
+        lost_ms + timing::kPpsHoldoverMs + timing::TransmitGate::kNoTxHoldMs + 3005;
+    run_on(simulator, back_ms, timing::TransmitGate::kNoTxHoldMs - 2000);
+    CHECK(simulator.product().state().transmit.transmits());
+    CHECK(wears_no_tx(simulator, "PPS"));
+    run_on(simulator, back_ms + timing::TransmitGate::kNoTxHoldMs - 1995, 3000);
     CHECK_FALSE(wears_no_tx(simulator, "PPS"));
 }
 
@@ -121,7 +126,8 @@ TEST_CASE("no tx glass: in flight the Go shakes once as NO TX appears, not again
     CHECK(simulator.platform().annunciator().guard_cuts() == cuts);
 }
 
-TEST_CASE("no tx glass: on the ground NO TX appears without a shake") {
+// The case that matters most: a Go that takes off already saying NO TX.
+TEST_CASE("no tx glass: on the ground NO TX appears without a shake, which comes at takeoff") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
@@ -134,6 +140,12 @@ TEST_CASE("no tx glass: on the ground NO TX appears without a shake") {
            timing::kPpsHoldoverMs + timing::TransmitGate::kNoTxHoldMs + 3000);
     REQUIRE(wears_no_tx(simulator, "PPS"));
     CHECK(simulator.platform().annunciator().motor_starts() == before);
+
+    simulator.world().set_speed_kt(120);
+    run_on(simulator,
+           settled_ms + timing::kPpsHoldoverMs + timing::TransmitGate::kNoTxHoldMs + 3005, 30000);
+    REQUIRE(simulator.product().state().flight.confirmed_state == flight::FlightState::Airborne);
+    CHECK(simulator.platform().annunciator().motor_starts() == before + 1);
 }
 
 TEST_CASE("no tx glass: a radio that stops answering reads NO CCA and NO TX on the self test") {
@@ -163,4 +175,23 @@ TEST_CASE("no tx glass: the status page names what the Go waits on beside TX OFF
     simulator.world().set_pps_locked(false);
     run_on(simulator, now_ms, timing::kPpsHoldoverMs + 2000);
     CHECK(reads_in(simulator.panel(), "TX OFF PPS", 100, 0, go::kGlassWidth, go::kGlassHeight));
+}
+
+TEST_CASE("no tx glass: nearby's Go row reads its figures, and TX OFF once the gate closes") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    uint32_t now_ms = past_settling(simulator);
+    now_ms = tap(simulator, now_ms);
+    REQUIRE(simulator.product().screen().page() == go::Page::Nearby);
+    run_on(simulator, now_ms, 2000);
+    const int row_bottom = go::kNearbyUnitY + go::kNearbyLineHeight;
+    CHECK_FALSE(reads_in(simulator.panel(), "TX OFF", 0, go::kNearbyUnitY, go::kGlassWidth,
+                         row_bottom, go::kNearbyScale));
+
+    simulator.world().set_pps_locked(false);
+    run_on(simulator, now_ms + 2005, timing::kPpsHoldoverMs + 2000);
+    REQUIRE_FALSE(simulator.product().state().transmit.transmits());
+    CHECK(reads_in(simulator.panel(), "TX OFF", 0, go::kNearbyUnitY, go::kGlassWidth, row_bottom,
+                   go::kNearbyScale));
 }
