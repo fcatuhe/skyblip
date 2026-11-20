@@ -43,8 +43,7 @@ inline char* information_text(adsl::Packet& packet) {
     return reinterpret_cast<char*>(packet.payload + kInformationTextOffset);
 }
 
-// INFO: fc 18nov26 the table has no default, as in encode_traffic: it is the integrator's
-// assignment
+// INFO: fc 18nov26 no default address table, as in encode_traffic: the integrator assigns it
 void encode_registration(adsl::Packet& packet, uint32_t address, uint8_t address_mapping_table,
                          const char* text, int length);
 
