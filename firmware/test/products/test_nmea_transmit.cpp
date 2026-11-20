@@ -40,7 +40,7 @@ TEST_CASE("nmea: PFLAU's TX field is the transmit gate's, so a silent device adm
 
     simulator.world().set_pps_locked(false);
     const uint32_t lost_ms = settled_ms + 2010;
-    run_on(simulator, lost_ms, timing::kPpsHoldoverMs + 2000);
+    run_on(simulator, lost_ms, timing::kPpsLockTailMs + 1000);
     REQUIRE_FALSE(simulator.product().state().transmit.transmits());
     CHECK(last_pflau_tx(simulator) == "0");
     CHECK(simulator.product().state().own.fix_valid);

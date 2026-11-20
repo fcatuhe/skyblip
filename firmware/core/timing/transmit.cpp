@@ -177,7 +177,6 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
         return attempt;
     }
     const int at_ms = instant.value_or(drawn_ms);
-    if (!clear_of_drift(payload, dwell_slot, at_ms, plan.drift_ms)) return attempt;
     attempt.redrawn = late;
 
     if (!air_time_.may_spend(now_ms, kAirTimeMs)) {
@@ -189,13 +188,6 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     attempt.frequency_hz = Scheduler::slot_frequency_hz(dwell_slot);
     attempt.at_ms = at_ms;
     return attempt;
-}
-
-// INFO: fc 19nov26 C.5 on a held second: an instant nearer its window's edges than the drift waits
-bool Transmitter::clear_of_drift(Payload payload, int slot, int at_ms, int drift_ms) {
-    if (drift_ms == 0) return true;
-    return at_ms >= window_of(payload, slot).start_ms + drift_ms &&
-           at_ms <= last_instant(payload, slot) - drift_ms;
 }
 
 bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne) const {

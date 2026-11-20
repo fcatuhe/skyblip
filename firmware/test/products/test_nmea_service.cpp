@@ -237,7 +237,7 @@ TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent dev
     REQUIRE(fields(last_of(rig, "$PFLAU"))[2] == "1");
 
     rig.platform.pps().set_locked(false);
-    fly(rig, now_ms, timing::kPpsHoldoverMs / 1000 + 1);
+    fly(rig, now_ms, timing::kPpsLockTailMs / 1000 + 1);
     rig.platform.link().clear();
     fly(rig, now_ms, 2);
     const std::vector<std::string> values = fields(last_of(rig, "$PFLAU"));

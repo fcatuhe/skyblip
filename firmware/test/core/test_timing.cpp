@@ -118,26 +118,13 @@ TEST_CASE("timing: TX only in M-band direct slots when clock is anchored" *
     CHECK(plan.band == Band::O);
 }
 
-// C.5: the held edge keeps the second, so the direct slot stays the direct slot.
-TEST_CASE("timing: PPS lost within holdover keeps the dwells and transmits on the held edge" *
+TEST_CASE("timing: PPS lost within holdover, still receiving, no slotted TX" *
           doctest::test_suite("main")) {
     Scheduler scheduler;
     ClockState clock{true, false, 5000, kLastEdgeUs};
     SlotPlan plan = scheduler.plan(500, clock);
     CHECK_FALSE(plan.listen_only);
-    CHECK(plan.tx_allowed);
-    CHECK(plan.drift_ms == 1);
-    CHECK(scheduler.plan(500, anchored()).drift_ms == 0);
-}
-
-// The bench's 152 ppm over a whole minute held is 9.1 ms, inside G.1.1's 10 ms.
-TEST_CASE("timing: a held second drifts by the bench's 152 ppm, at most 10 ms") {
-    CHECK(drift_ms_after(0) == 0);
-    CHECK(drift_ms_after(1) == 1);
-    CHECK(drift_ms_after(kPpsHoldoverMs) == 10);
-    CHECK(holdover_drift_ms(ClockState{true, false, kPpsHoldoverMs, kLastEdgeUs}) == 10);
-    CHECK(holdover_drift_ms(ClockState{true, false, kPpsHoldoverMs + 1, kLastEdgeUs}) == 0);
-    CHECK(holdover_drift_ms(ClockState{true, true, 900, kLastEdgeUs}) == 0);
+    CHECK_FALSE(plan.tx_allowed);
     CHECK(pps_anchored(ClockState{true, false, kPpsHoldoverMs, kLastEdgeUs}));
     CHECK_FALSE(pps_anchored(ClockState{true, false, kPpsHoldoverMs + 1, kLastEdgeUs}));
 }
@@ -203,8 +190,7 @@ TEST_CASE("timing: an edge never seen is no holdover, and plans the same dwells 
     for (int phase = 0; phase < 1000; phase++) {
         const SlotPlan plan = Scheduler::plan(phase, never);
         CHECK(same_dwell(plan, Scheduler::plan(phase, past)));
-        CHECK(plan.start_ms == Scheduler::plan(phase, held).start_ms);
-        CHECK(plan.end_ms == Scheduler::plan(phase, held).end_ms);
+        CHECK(same_dwell(plan, Scheduler::plan(phase, held)));
         CHECK_FALSE(plan.tx_allowed);
         CHECK(plan.listen_only == Scheduler::plan(phase, past).listen_only);
     }

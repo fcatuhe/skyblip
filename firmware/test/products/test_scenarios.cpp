@@ -7,6 +7,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/protocol/nmea_out.h"
+#include "core/timing/slot.h"
 #include "core/timing/transmit_gate.h"
 #include "core/traffic/alarm.h"
 #include "core/units/units.h"
@@ -117,14 +118,16 @@ TEST_CASE("scenario: the committed files replay with their expectations met") {
     }
 }
 
-// The simulator's forced fault: a PPS gone past holdover reads NO TX PPS, until the edge.
-TEST_CASE("scenario: a PPS lost past its holdover shows NO TX PPS until the edge comes back") {
+// The simulator's forced fault: a lost PPS reads NO TX PPS 10 s after its lock tail, until the
+// edge.
+TEST_CASE("scenario: a PPS lost shows NO TX PPS through its holdover until the edge comes back") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/pps_loss.json"));
-    simulator.run(95000);
+    simulator.run(45000);
     CHECK(simulator.product().state().transmit.shown() == timing::NoTx::Pps);
-    for (uint32_t now_ms = 95005; now_ms <= simulator.scenario().duration_ms;
+    CHECK(timing::in_pps_holdover(simulator.product().state().clock));
+    for (uint32_t now_ms = 45005; now_ms <= simulator.scenario().duration_ms;
          now_ms += simulator::Simulator::kStepMs)
         simulator.step(now_ms);
     CHECK(simulator.product().state().transmit.shown() == timing::NoTx::None);

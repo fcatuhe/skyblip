@@ -14,7 +14,7 @@ void RadioService::judge_transmit(uint32_t now_ms) {
     met.fix = own.fix_valid;
     met.settled = own.tx_settled;
     met.utc = own.utc_valid;
-    met.pps = timing::pps_anchored(clock);
+    met.pps = clock.pps_locked;
     context_.state.transmit.judge(met, now_ms);
     if (transmitted_ && !context_.state.transmit.transmits()) withdraw_carried();
     transmitted_ = context_.state.transmit.transmits();

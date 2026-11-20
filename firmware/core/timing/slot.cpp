@@ -60,10 +60,6 @@ bool in_pps_holdover(const ClockState& clock) {
 
 bool pps_anchored(const ClockState& clock) { return clock.pps_locked || in_pps_holdover(clock); }
 
-int holdover_drift_ms(const ClockState& clock) {
-    return in_pps_holdover(clock) ? drift_ms_after(clock.since_edge_ms) : 0;
-}
-
 std::optional<uint64_t> utc_ms(const ClockState& clock) {
     if (!clock.pps_locked || clock.utc_s == 0 || clock.since_edge_ms >= 1000) return std::nullopt;
     return static_cast<uint64_t>(clock.utc_s) * 1000u + clock.since_edge_ms;
@@ -91,6 +87,7 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
     const Dwell& dwell = dwell_at(phase_ms);
     const Window span = dwell_of(dwell.window);
     const bool anchored = clock.utc_valid && pps_anchored(clock);
+    const bool latched = clock.utc_valid && clock.pps_locked;
 
     SlotPlan slot_plan{};
     slot_plan.state = state_at(phase_ms);
@@ -98,9 +95,8 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
     slot_plan.frequency_hz = dwell.frequency_hz;
     slot_plan.start_ms = span.start_ms;
     slot_plan.end_ms = span.end_ms;
-    slot_plan.tx_allowed = anchored && dwell.band == Band::M;
+    slot_plan.tx_allowed = latched && dwell.band == Band::M;
     slot_plan.listen_only = !anchored;
-    slot_plan.drift_ms = holdover_drift_ms(clock);
     return slot_plan;
 }
 

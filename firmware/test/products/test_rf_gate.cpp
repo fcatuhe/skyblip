@@ -72,25 +72,26 @@ TEST_CASE("rf gate: a receiver that will not take 2 Hz never transmits, and read
     CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypePosition) == 0);
 }
 
-TEST_CASE("rf gate: a PPS lost past its holdover stops the bursts and reads PPS") {
+// The pulse reads locked kPpsLockTailMs past its last edge, and the gate closes as it stops.
+TEST_CASE("rf gate: a PPS lost stops the bursts by the end of its lock tail and reads PPS") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
     const uint32_t settled_ms = past_settling(simulator);
     simulator.world().set_pps_locked(false);
-    run_on(simulator, settled_ms, timing::kPpsHoldoverMs - 1000);
+    run_on(simulator, settled_ms, timing::kPpsLockTailMs - 2000);
     CHECK(gate_of(simulator).transmits());
-    run_on(simulator, settled_ms + timing::kPpsHoldoverMs - 995, 2000);
+    run_on(simulator, settled_ms + timing::kPpsLockTailMs - 1995, 2000);
     CHECK_FALSE(gate_of(simulator).transmits());
     CHECK(gate_of(simulator).unmet() == timing::NoTx::Pps);
-    run_on(simulator, settled_ms + timing::kPpsHoldoverMs + 1010,
-           timing::TransmitGate::kNoTxHoldMs);
+    run_on(simulator, settled_ms + timing::kPpsLockTailMs + 10, timing::TransmitGate::kNoTxHoldMs);
     CHECK(gate_of(simulator).shown() == timing::NoTx::Pps);
+    CHECK(timing::in_pps_holdover(simulator.product().state().clock));
 
     simulator.world().set_pps_locked(true);
-    run_on(simulator, settled_ms + timing::kPpsHoldoverMs + 11020, 2000);
+    run_on(simulator, settled_ms + timing::kPpsLockTailMs + 10020, 2000);
     CHECK(gate_of(simulator).transmits());
-    run_on(simulator, settled_ms + timing::kPpsHoldoverMs + 13025,
+    run_on(simulator, settled_ms + timing::kPpsLockTailMs + 12025,
            timing::TransmitGate::kNoTxHoldMs);
     CHECK(gate_of(simulator).shown() == timing::NoTx::None);
 }
