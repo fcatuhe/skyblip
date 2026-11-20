@@ -14,9 +14,6 @@
 
 namespace skyblip::platform::host {
 
-// The radio executor on virtual time: the same arm/abort contract the silicon
-// executor implements, driven by whatever clock the caller advances. Slot
-// deadlines are therefore testable to the microsecond with no hardware.
 class Rf : public ports::Rf {
    public:
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::RfQueue& out)
@@ -111,8 +108,8 @@ class Rf : public ports::Rf {
         radio_.service(elapsed_ms, runtime::kRadioRxSilenceCeilingMs);
 
         fly(now_us);
-        // The receiver keeps reporting between dwells: a frame that arrived
-        // while the next plan was being armed is in the chip, not lost.
+        // INFO: fc 20nov26 a frame that arrived while the next plan was armed stays in the chip,
+        // not lost
         if (started_ || radio_.mode() == parts::RadioMode::Rx) drain(now_us);
         if (armed_ && now_us >= flying_plan_.end_us) finish(now_us);
         if (!armed_ && queued_) {
@@ -242,9 +239,8 @@ class Rf : public ports::Rf {
         started_ = false;
     }
 
-    // The whole modem, not just the synthesiser: the two bands are two
-    // modulations (ADS-L 4 SRD-860 issue 2 §C.2 against §C.4) and the plan
-    // carries both halves.
+    // INFO: fc 20nov26 the bands are two modulations, ADS-L 4 SRD-860 issue 2 §C.2 against §C.4, so
+    // the plan carries both
     static parts::RadioConfig dwell_config(const ports::RfPlan& plan) {
         parts::RadioConfig config{};
         config.frequency_hz = plan.frequency_hz;
@@ -302,11 +298,8 @@ class Rf : public ports::Rf {
         }
     }
 
-    // The frame is already in the event that will carry it. An O-band uplink
-    // packet is up to 230 bytes, and staging one on the stack as well as on the
-    // queue would be the same bytes twice. The band the dwell was armed for
-    // travels with it: the O band carries one system and the M band two, and
-    // only the arming knows which of them this burst is.
+    // INFO: fc 20nov26 staged in its event, not copied to the stack, with its dwell's band, which
+    // only the arming knows
     void push_rx(const parts::RadioEvent& event, uint64_t now_us) {
         rx_.type = events::RfEventType::RxDone;
         rx_.band = band_;

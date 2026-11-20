@@ -1,8 +1,3 @@
-// A GNSS receiver has no registers to drive: it produces. This driver owns the
-// UART and the NMEA parser and hands out a fix, which the board pushes onto the bus.
-// It also owns the two things the receiver will not do for us: come up in the
-// aviation dynamic model, on the constellations and at the rate we need, and say
-// whether what it is producing is a fix at all.
 #ifndef SKYBLIP_HARDWARE_PARTS_L76K_H
 #define SKYBLIP_HARDWARE_PARTS_L76K_H
 
@@ -13,8 +8,8 @@
 
 namespace skyblip::parts {
 
-// The rate port is io::UartRate (hardware/io/io.h): a board whose platform can
-// retune the port hands the driver one, and autobaud recovery becomes available.
+// INFO: fc 20nov26 autobaud works only when the platform hands over an io::UartRate that can retune
+// the port
 
 class L76k : public ports::Gnss {
    public:
@@ -40,12 +35,8 @@ class L76k : public ports::Gnss {
     // INFO: fc 19sep26 SoftRF measures this part talking 70 ms after the second (GNSS.cpp:83-91)
     static constexpr uint32_t kBurstStartMs = 70;
 
-    // INFO: fc 03aug26 A receiver that comes up at another rate (a returned unit
-    // reflashed by someone else, a module whose backup domain kept a $PCAS01) is
-    // silently GNSS-less forever if 9600 is an assumption. moshe-braner walks the
-    // rates until NMEA appears (.../src/driver/GNSS.cpp:1700-1739); OGN cycles to
-    // the next rate after 2 s with no valid data (src/gps.cpp:89-96, 1205-1222).
-    // Ours is the AT6558's own list, most likely first.
+    // INFO: fc 03aug26 a receiver left at another rate stays silent if 9600 is assumed, so the
+    // AT6558's rates are walked
     static constexpr int kBaudCandidateCount = 6;
     static constexpr uint32_t kBaudCandidates[kBaudCandidateCount] = {
         9600, 115200, 38400, 57600, 19200, 4800,
@@ -59,17 +50,13 @@ class L76k : public ports::Gnss {
     static constexpr uint32_t kBurstBytes = 320;
     static constexpr uint32_t kBurstMs = io::wire_ms(kBurstBytes, kTargetBaudRate);
 
-    // INFO: fc 03aug26 The L76K wakes on UART activity, so a receiver that is
-    // asleep when we start talking eats the first thing we say. SoftRF sends one
-    // 0x00 and waits 500 ms before it probes anything (oss/SoftRF-lyusupov
-    // .../src/driver/GNSS.cpp:1383-1387).
+    // INFO: fc 03aug26 the L76K wakes on UART activity and eats the first bytes, so one byte and
+    // 500 ms come first
     static constexpr uint8_t kWakeByte = 0x00;
     static constexpr uint32_t kWakeDelayMs = 500;
 
-    // INFO: fc 03aug26 $PCAS06 asks the receiver to name itself and it answers
-    // "$GPTXT,01,01,02,SW=<version>". SoftRF treats that exchange as the proof
-    // the part is an AT6558 before it trusts a single $PCAS sentence
-    // (.../src/driver/GNSS.cpp:981-1010), and logs the version for support.
+    // INFO: fc 03aug26 the $GPTXT answer proves an AT6558 before any $PCAS sentence is trusted, as
+    // SoftRF does
     static constexpr const char* kIdentifyCommand = "$PCAS06,0*1B\r\n";
     static constexpr uint32_t kIdentifyWindowMs = 1000;
 
@@ -116,8 +103,7 @@ class L76k : public ports::Gnss {
     static_assert(kSearchingBurstMs < kSolutionPeriodMs,
                   "the burst must fit inside one solution period, satellites in view and all");
 
-    // $PCAS10 reboots the receiver. It answers nothing for about a second after
-    // it, so the sequence behind a factory reset waits before it starts talking.
+    // INFO: fc 20nov26 $PCAS10 reboots the receiver, which then answers nothing for about a second
     static constexpr uint32_t kRestartSettleMs = 1000;
     static constexpr const char* kRestartCommands[4] = {
         "$PCAS10,0*1C\r\n",
@@ -150,8 +136,6 @@ class L76k : public ports::Gnss {
     static constexpr int32_t kDayMs = 86400000;
     static constexpr uint8_t kMaxConfigAttempts = 3;
 
-    // Drive the configuration sequence. Until it has run the receiver is on its
-    // factory defaults, which is a degraded receiver wearing a working one's face.
     void service(uint32_t now_ms);
 
     ConfigStage config_stage() const { return stage_; }
@@ -171,27 +155,19 @@ class L76k : public ports::Gnss {
     bool degraded() const { return stage_ == ConfigStage::Degraded; }
     bool probing() const { return stage_ == ConfigStage::Probing; }
 
-    // Drain whatever the receiver has said into the parser. Returns true when
-    // that produced a NEW fix, or when the fix we already published stopped
-    // being one: a receiver that goes silent has to be reported, and it says
-    // nothing by definition.
+    // INFO: fc 20nov26 also true when the published fix stopped being one, because a silent
+    // receiver must still be reported
     bool poll(uint32_t now_ms);
 
-    // The board polls immediately after service(), so the instant of the last
-    // service call is this poll's instant. Ages measured from anywhere else
-    // would be measured from a clock this part does not have.
+    // INFO: fc 20nov26 the board polls right after service(), so the last service instant is this
+    // poll's clock
     bool poll() { return poll(serviced_ms_); }
 
     const gnss::GnssSolution& solution() const { return solution_; }
 
-    // Why the last solution was not a fix, and how many times that has happened.
-    // Both are for the self-test page and a support case, and nothing else reads
-    // them: the fix's own `valid` is the answer every service uses.
     gnss::FixReject last_reject() const { return validity_.last_reject(); }
     uint32_t rejected() const { return validity_.rejected(); }
 
-    // The rate we are actually talking to the receiver at, which is only the
-    // devicetree's rate until autobaud has had to move.
     uint32_t baud_rate() const { return kBaudCandidates[baud_index_]; }
 
     // INFO: gn 09jun25 SoftRF subtracts a per-chip latency the same way (driver/RF.cpp:236-260)
@@ -217,28 +193,24 @@ class L76k : public ports::Gnss {
         return reported;
     }
 
-    // Did the part name itself, and as what. An unidentified receiver still gets
-    // the $PCAS sequence, because the alternative is no configuration at all,
-    // but the self-test says so and a support case has the firmware string.
     bool identified() const { return parser_.identified(); }
     const char* firmware_version() const { return parser_.firmware_version(); }
 
-    // Throw away the receiver's stored state. A factory reset takes our
-    // configuration with it, so the sequence runs again behind it.
+    // INFO: fc 20nov26 a factory reset loses our configuration, so the sequence runs again behind
+    // it
     void request_restart(ports::Restart kind) override;
 
     void request_satellites_in_view(bool wanted) { satellites_in_view_wanted_ = wanted; }
     bool satellites_in_view_live() const {
         return satellites_in_view_every_ != 0 && satellites_in_view_wanted_;
     }
-    // The last published solution closed a burst that carried a GSV set.
+    // INFO: fc 20nov26 true when the last published solution closed a burst that carried a GSV set
     bool levels_fresh() const { return levels_fresh_; }
 
     const gnss::SkyView& sky() const { return parser_.sky(); }
 
-    // Sentences the parser accepted since boot. A receiver that is wired but
-    // silent (or babbling at the wrong baud) never moves this off zero, which is
-    // what the DFU health gate watches.
+    // INFO: fc 20nov26 the DFU health gate watches this, which a silent or wrong-baud receiver
+    // never moves off zero
     uint32_t sentences() const { return parser_.solution().sentences; }
 
    private:

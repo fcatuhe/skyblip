@@ -12,19 +12,14 @@
 
 namespace skyblip::platform::zephyr {
 
-// A vibration motor wired straight to a pin. This is what the annunciator used
-// to be, inlined and named "vibro", and it is the wrong part for the T-Echo
-// Plus: P0.08 there is a DRV2605's enable, so driving it high brings a waveform
-// driver out of standby and moves nothing. Kept as the platform's default
-// haptic, because a pin is always a pin, and because a board that IS fitted with
-// a bare motor needs exactly this and nothing more.
+// INFO: fc 20nov26 the default haptic for a bare motor on a pin, which the board replaces when it
+// finds a DRV2605
 class PinMotor : public ports::Haptic {
    public:
     explicit PinMotor(const struct gpio_dt_spec& pin) : pin_(pin) {}
 
-    // Configured on use, not at bring-up. The same pin is a DRV2605's enable on
-    // this board, and a begin() that parked it low would switch the waveform
-    // driver off after the board had just enabled it.
+    // INFO: fc 20nov26 configured on use, because on the T-Echo this pin enables the DRV2605 and
+    // must not be parked low
     void start() override { gpio_pin_configure_dt(&pin_, GPIO_OUTPUT_ACTIVE); }
     void stop() override { gpio_pin_configure_dt(&pin_, GPIO_OUTPUT_INACTIVE); }
 

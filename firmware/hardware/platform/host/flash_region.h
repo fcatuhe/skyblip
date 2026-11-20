@@ -8,18 +8,11 @@
 
 namespace skyblip::platform::host {
 
-// A partition of the external NOR as the silicon has it, with NOR's two awkward
-// truths kept rather than smoothed away: erased flash reads 0xFF, and a program can only
-// clear bits. A fake that lets a caller overwrite a byte would pass tests the
-// device fails.
-//
-// It also knows how to die. cut_power_after(n) programs the next n bytes and
-// then refuses everything, which is the one fault that matters here: a record
-// half-written when the cell went.
+// INFO: fc 20nov26 erased flash reads 0xFF and a program only clears bits, as on NOR, so an
+// overwrite fails here too
 class FlashRegion : public ports::FlashRegion {
    public:
-    // 0x12A000 of log_partition in 4 KB sectors, from
-    // boards/lilygo/t_echo_plus/t_echo_plus.dts.
+    // INFO: fc 20nov26 log_partition in boards/lilygo/t_echo_plus/t_echo_plus.dts, in 4 KB sectors
     static constexpr uint32_t kSectorBytes = 4096;
     static constexpr uint32_t kSectorCount = 298;
     // INFO: fc 03oct26 the driver programs a write one 256 B page at a time (spi_nor.c write)
@@ -73,13 +66,9 @@ class FlashRegion : public ports::FlashRegion {
         return Status::Ok;
     }
 
-    // The cell dies partway through the next program, and stays dead until the
-    // rig builds a new device - which is what a reboot is.
     void cut_power_after(int32_t bytes) { cut_after_bytes_ = bytes; }
     bool dead() const { return dead_; }
 
-    // A second device over the same silicon: what survives a power cut is
-    // whatever is in here, so a reboot is a new product handed these bytes.
     const std::vector<uint8_t>& bytes() const { return bytes_; }
     void restore(const std::vector<uint8_t>& image) { bytes_ = image; }
 

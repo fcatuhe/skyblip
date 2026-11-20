@@ -14,11 +14,8 @@ class Link : public ports::Link {
    public:
     Status begin();
 
-    // INFO: fc 04aug26 Read from the connection every time rather than latched
-    // at connect: bt_gatt_get_mtu() already tracks the exchange, so a central
-    // that negotiates late (iOS exchanges after it has discovered the service)
-    // cannot leave a stale figure behind. The unit asks for one too, at
-    // connect - see core/comms/README.md.
+    // INFO: fc 04aug26 read from the connection every time, so a late MTU exchange, as iOS makes,
+    // leaves no stale figure
     uint16_t payload_bytes() const override;
     uint16_t payload_bytes_to(uint16_t session_id) const override;
     uint32_t connection(uint16_t session_id) const override;

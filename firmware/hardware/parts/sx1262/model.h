@@ -1,6 +1,3 @@
-// hardware/parts/sx1262/model.h: a behavioural SX1262 model at the SPI/GPIO seam, so
-// the REAL parts::Sx1262 runs against it unchanged: it answers opcodes, raises
-// DIO1 on Rx/Tx-done, and can be stuck busy or made to report a CRC error.
 #ifndef SKYBLIP_HARDWARE_MODEL_SX1262_H
 #define SKYBLIP_HARDWARE_MODEL_SX1262_H
 
@@ -15,8 +12,6 @@ namespace skyblip::models {
 
 class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
    public:
-    // What this chip refuses to do, and why. The model is the datasheet's half
-    // of the contract: the driver either honours it or lands here.
     enum class Fault : uint8_t {
         None,
         ShortReset,
@@ -24,12 +19,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         TxWithoutPower,
         FrameWithoutModulation,
         ImageCalibrationTooEarly,
-        // Stricter than the silicon on purpose, and it is the DC-DC that is
-        // required, not merely a SetRegulatorMode: a real SX1262 runs perfectly
-        // well on its LDO and simply draws about twice the current, so there is
-        // no symptom to find in a log, only a flat pack. A board that has no
-        // inductor on DCC_SW would have to relax this, and would then owe the
-        // reason here.
+        // INFO: fc 20nov26 stricter than silicon on purpose, since an LDO-only part works and only
+        // drains the pack faster
         RegulatorLeftOnLdo,
         // INFO: fc 05sep26 DS 13.1.2: the configuration save takes 500 us and no SPI
         SpiBeforeSleepSettled,
@@ -69,8 +60,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     void select(bool on) override {
         if (on) {
             if (busy_stuck && !sleeping) note_fault(Fault::CommandWhileBusy);
-            // DS 9.3: the falling edge on NSS is the wake-up. Whatever the host
-            // meant to send, the first thing it does is bring the part back.
+            // INFO: fc 20nov26 DS 9.3: the falling edge on NSS wakes the part, whatever the host
+            // meant to send
             if (sleeping) {
                 slept_us = elapsed_us - slept_since_us_;
                 if (slept_us < kSleepSettleFloorUs) note_fault(Fault::SpiBeforeSleepSettled);
@@ -82,8 +73,6 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
             opcode_ = 0xFF;
         }
     }
-    // A part that is not fitted, or whose MISO pad never got soldered, still
-    // lets the host clock bytes out and still lets BUSY be read low.
     void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
         for (size_t i = 0; i < bytes; i++) {
             uint8_t in = tx ? tx[i] : 0;
@@ -93,9 +82,6 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         }
     }
 
-    // A burst arrives as chips. The detector slides its configured pattern over
-    // them, and what the chip reports is the bytes that follow the match: a
-    // pattern the transmitter never sent is a frame this radio never saw.
     static uint16_t deliver_after_sync(const uint8_t* chips, uint16_t chip_bytes,
                                        const uint8_t* sync, uint8_t sync_bits, uint8_t* out,
                                        uint16_t capacity) {
@@ -120,13 +106,10 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         return 0;
     }
 
-    // The chip rate the burst was sent at is part of the burst. A modem framing
-    // 100 kbps does not recover a 200 kbps carrier, so a transmitter and a dwell
-    // that disagree here are as deaf as a wrong sync word - and a good deal
-    // harder to see, because everything else about the dwell looks right.
+    // INFO: fc 20nov26 a modem at another chip rate recovers nothing, so a bitrate mismatch is as
+    // deaf as a wrong sync word
     bool receive_air(const uint8_t* chips, uint16_t chip_bytes, bool crc_error = false,
                      int8_t frame_rssi_dbm = -80, uint32_t burst_bitrate = 100000) {
-        // A modem still on its reset defaults does not frame GFSK at all.
         if (!modulation_set) return false;
         if (bitrate != burst_bitrate) return false;
         if (sync_bits == 0 || payload_bytes == 0) return false;
@@ -156,8 +139,6 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         for (uint8_t i = 0; i < rssi_sequence_length; i++) rssi_sequence[i] = levels[i];
     }
 
-    // The chip's own SetTx timeout running out. A SetTx issued with timeout 0
-    // has nothing to run out, which is the PA left keyed for ever.
     bool expire_tx() {
         if (tx_timeout_ticks == 0) return false;
         irq_flags = parts::sx1262::kIrqTimeout;
@@ -165,9 +146,6 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         return true;
     }
 
-    // What the world needs to know to be an honest channel: where this radio is
-    // tuned, whether it is listening, and what it just put on the air.
-    //
     // INFO: fc 15sep26 DS 6.2.2: the part inserts its sync register on transmit as on receive
     bool take_tx(uint8_t* out, uint8_t& bytes) {
         if (!tx_pending) return false;
@@ -196,8 +174,6 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint32_t frequency_hz{0};
     bool receiving{false};
     bool tx_pending{false};
-    // The carrier the radio would measure on the tuned channel right now, and
-    // the level the last delivered frame arrived with.
     int8_t rssi_dbm{-110};
     int8_t rx_rssi_dbm{-80};
     // INFO: fc 15sep26 a repeating sequence, one entry per read, is a channel changing mid-window
@@ -217,8 +193,6 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     bool standby{false};
     bool regulator_dcdc{false};
     uint8_t regulator_mode{parts::sx1262::kRegulatorLdo};
-    // DS 9.6: the receive gain register and the retention list that decides
-    // whether it survives a warm start. Reset default is the power-saving gain.
     uint8_t rx_gain{parts::sx1262::kRxGainPowerSaving};
     uint8_t retention_list[3]{};
     // INFO: fc 05sep26 DS table 13-45: the reset values these three come up on
@@ -258,7 +232,6 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint32_t faults{0};
     std::vector<uint8_t> commands_seen;
 
-    // Where an opcode sits in the order it was actually issued, -1 if never.
     int command_order(uint8_t opcode) const {
         for (size_t i = 0; i < commands_seen.size(); i++)
             if (commands_seen[i] == opcode) return static_cast<int>(i);
@@ -294,17 +267,13 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         faults++;
     }
 
-    // DS 9.6: a warm start retains the configuration, EXCEPT the registers that
-    // are not on the retention list. The receive gain is the one that matters
-    // here, and losing it costs 3 dB with nothing in any log to say so.
+    // INFO: fc 20nov26 DS 9.6: a warm start keeps only the registers on the retention list
     bool rx_gain_retained() const {
         return retention_list[0] >= 1 &&
                retention_list[1] == static_cast<uint8_t>(parts::sx1262::kRxGainRegister >> 8) &&
                retention_list[2] == static_cast<uint8_t>(parts::sx1262::kRxGainRegister & 0xFF);
     }
 
-    // NRESET returns every block to its reset default, including the IRQ mask
-    // and the modem: everything the driver programmed is gone.
     void power_on_reset() {
         standby = true;
         sleeping = false;
@@ -324,8 +293,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         tx_timeout_ticks = 0;
     }
 
-    // DS 13.1: these are accepted in standby only. Issued on a chip that is
-    // still receiving, they are silently dropped on silicon.
+    // INFO: fc 20nov26 DS 13.1: silicon silently drops these outside standby
     static bool standby_only(uint8_t opcode) {
         return opcode == parts::sx1262::kSetPacketType ||
                opcode == parts::sx1262::kSetRfFrequency ||
@@ -426,7 +394,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
                 if (sequence_ == 2) register_offset_ = 0;
                 return 0;
             }
-            if (sequence_ == 3) return 0;  // the NOP the chip answers nothing to
+            if (sequence_ == 3) return 0;
             const uint16_t address = static_cast<uint16_t>(register_address_ + register_offset_++);
             if (address >= parts::sx1262::kSyncWordRegister &&
                 address < parts::sx1262::kSyncWordRegister + sizeof(sync))
@@ -519,13 +487,12 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         }
         if (opcode_ == parts::sx1262::kSetRfFrequency) {
             pll_word_ = (pll_word_ << 8) | in;
-            // The inverse of the driver's PLL word: frf = freq << 25 / 32 MHz.
             if (sequence_ == 4)
                 frequency_hz = static_cast<uint32_t>((pll_word_ * 32000000ULL) >> 25);
             return 0;
         }
         switch (opcode_) {
-            // DS 13.3.1: the status register only ever shows unmasked bits.
+            // INFO: fc 20nov26 DS 13.3.1: the status register only ever shows unmasked bits
             case parts::sx1262::kGetIrqStatus:
                 if (sequence_ == 2) return static_cast<uint8_t>((irq_flags & irq_mask) >> 8);
                 if (sequence_ == 3) return static_cast<uint8_t>(irq_flags & irq_mask);

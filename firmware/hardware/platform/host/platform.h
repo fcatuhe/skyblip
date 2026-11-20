@@ -163,8 +163,6 @@ class Barometer : public io::I2c {
     bool fitted{true};
 };
 
-// The cell the world charges and drains. What the divider reads is the only thing
-// the board can read on silicon, so it is the only thing settable here.
 class Battery {
    public:
     bool ready() const { return fitted; }
@@ -178,10 +176,8 @@ class Battery {
     bool external_power{false};
 };
 
-// The same PPS surface the silicon platform offers: a phase, and the instant the
-// edge itself arrived. The modelled receiver pulses on the whole second of the
-// clock the caller advances, so the edge is that second - not the phase rounded
-// to the millisecond whoever asked happened to ask on.
+// INFO: fc 20nov26 the edge is the whole second of the advanced clock, not the phase rounded to
+// whenever someone asked
 class GnssRate : public io::UartRate {
    public:
     explicit GnssRate(io::UartRate& chip) : chip_(chip) {}
@@ -215,8 +211,6 @@ class Pps {
     bool locked_{true};
 };
 
-// The host platform: the same role surface the silicon platform offers, backed
-// by part models and a clock the caller advances. A board cannot tell them apart.
 class Platform {
    public:
     using Rf = host::Rf;
@@ -228,8 +222,6 @@ class Platform {
         ports::Capability::Buzzer | ports::Capability::Haptic | ports::Capability::Contacts |
         ports::Capability::Battery | ports::Capability::Indicator | ports::Capability::Inclinometer;
 
-    // A host board can be fitted with less than everything, which is how the
-    // degraded paths get exercised without a soldering iron.
     explicit Platform(ports::Capabilities fitted = kFullyFitted,
                       std::optional<uint16_t> serial = Identity::kSerial)
         : identity_(serial), fitted_(fitted) {
@@ -282,10 +274,6 @@ class Platform {
 
     static parts::GlassRotation glass_rotation() { return parts::GlassRotation::Degrees0; }
 
-    // The panel ID, as the silicon platform's board port takes it: 11
-    // bytes of register 0x2D then 10 of 0x2E. The virtual panel carries which lot
-    // it is from, so a host test flies a panel that cannot be powered off after a
-    // partial update without a soldering iron.
     bool read_panel_id(parts::PanelId& out) const {
         out = chips_.epd.panel_id;
         return out.valid;
@@ -314,8 +302,6 @@ class Platform {
     bool external_power() const { return battery_.external_power; }
     Chips& chips() { return chips_; }
     Gpio& board_gpio() { return gpio_; }
-    // The bus itself, so a test can fit a unit that came off the line with the
-    // other barometer address, or with a part nobody expected.
     I2cBus& i2c_bus() { return i2c_; }
 
     ports::Capabilities capabilities() const {

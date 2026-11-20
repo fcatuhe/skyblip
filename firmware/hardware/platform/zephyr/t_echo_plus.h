@@ -36,17 +36,8 @@
 #include "hardware/platform/zephyr/watchdog.h"
 #include "ports/capabilities.h"
 
-// Two questions only the board port can answer, because on this SoC they have to
-// be asked BEFORE the bus drivers claim the pins at POST_KERNEL: the e-paper's
-// ID (its one data line has to be reversed, and the SPIM owns MOSI and
-// SCK from init onwards) and the buzzer pin read high-Z against a pull-up (the
-// PWM peripheral drives it from init onwards). Both are taken once, at
-// PRE_KERNEL_1, by boards/<board>/board.c, and read back here.
-//
-// This is the Zephyr board-hook idiom - the same shape as upstream's
-// board_early_init_hook() - and it is why the acquisition is not in the panel
-// driver: a driver that could only be called during board init would be a driver
-// nothing could call.
+// INFO: fc 20nov26 board.c takes these at PRE_KERNEL_1, before the SPIM and PWM drivers claim the
+// pins at POST_KERNEL
 extern "C" {
 size_t board_panel_id(uint8_t* out, size_t capacity);
 int board_buzzer_pin_held_low(void);
@@ -69,13 +60,12 @@ class TEchoPlus {
         if (!device_is_ready(gpio0_) || !device_is_ready(gpio1_)) return Status::Down;
         if (!device_is_ready(radio_spi_device_)) return Status::Down;
         if (gnss_uart_.begin() != Status::Ok) return Status::Down;
-        // The gated rails are raised at board level so MCUboot sees them too;
-        // what is still owed here is the SX1262 TCXO settling time.
+        // INFO: fc 20nov26 board.c raised the rails for MCUboot too, so only the SX1262 TCXO's
+        // settling is owed here
         k_msleep(50);
         (void)key_value_.begin();
-        // A log partition that refuses to open is a device that flies and logs
-        // nothing, not a device that refuses to fly: the region reports its own
-        // readiness and the flight log service reads it.
+        // INFO: fc 20nov26 a log partition that fails to open still flies, since the flight log
+        // reads the region's readiness
         (void)log_flash_.begin();
         (void)imu_flash_.begin();
         annunciator_.begin();
@@ -131,8 +121,6 @@ class TEchoPlus {
     // INFO: fc 12sep26 the Plus mounts the glass a quarter turn off the scan (SoftRF EPD.cpp:84)
     parts::GlassRotation glass_rotation() const { return parts::GlassRotation::Degrees270; }
 
-    // The 21 bytes the board port clocked out of the panel, or false if it could
-    // not take them at all.
     bool read_panel_id(parts::PanelId& out) {
         uint8_t raw[parts::kPanelIdBytes] = {0};
         if (board_panel_id(raw, sizeof(raw)) != sizeof(raw)) return false;
@@ -169,13 +157,11 @@ class TEchoPlus {
         if (device_is_ready(epd_spi_device_)) found |= ports::Capability::Display;
         if (device_is_ready(gnss_uart_device_)) found |= ports::Capability::Gnss;
         if (device_is_ready(battery_device_)) found |= ports::Capability::Battery;
-        // Only when the driver answered. A build with no CONFIG_TEMP_NRF5, or a
-        // devicetree without the node, is a device with no die reading - and
-        // saying so once here is what keeps a zero out of the status reply.
+        // INFO: fc 20nov26 only when the driver answered, so a build without the sensor reports no
+        // die temperature rather than zero
         if (die_temperature_.ready()) found |= ports::Capability::DieTemperature;
-        // All three lamps or none. A partially populated LED node would be a
-        // board file half-edited, and a table that can show two of its three
-        // colours is a vocabulary a pilot cannot read.
+        // INFO: fc 20nov26 all three lamps or none, because a table showing two of three colours
+        // cannot be read
         if (indicator_.ready()) found |= ports::Capability::Indicator;
         return found;
     }
@@ -197,18 +183,16 @@ class TEchoPlus {
     const struct device* gnss_uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
     const struct device* battery_device_{DEVICE_DT_GET(DT_NODELABEL(vbatt))};
     const struct device* sensor_i2c_device_{DEVICE_DT_GET(DT_ALIAS(sensor_i2c))};
-    // Assigned, not brace-initialised: the DT_SPEC macros ARE brace lists, so
-    // member{MACRO} nests them one level too deep and the first field eats the
-    // whole struct.
+    // INFO: fc 20nov26 assigned, because the DT_SPEC macros are brace lists and member{MACRO} would
+    // nest them one level too deep
     struct pwm_dt_spec buzzer_ = PWM_DT_SPEC_GET(DT_ALIAS(buzzer));
     struct gpio_dt_spec haptic_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(haptic_enable), gpios);
     struct gpio_dt_spec button_ = GPIO_DT_SPEC_GET(DT_ALIAS(button), gpios);
     struct gpio_dt_spec pad_ = GPIO_DT_SPEC_GET(DT_ALIAS(pad), gpios);
     struct gpio_callback button_edges_{};
     struct gpio_callback pad_edges_{};
-    // _OR, not _GET: a board file with no LED node has to build. That is the seam
-    // - the specs come back null, ready() answers false, and the device runs the
-    // same table and lights nothing.
+    // INFO: fc 20nov26 _OR so a board without an LED node builds, and the indicator reports not
+    // ready
     struct gpio_dt_spec led_green_ = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led_green), gpios, {0});
     struct gpio_dt_spec led_red_ = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led_red), gpios, {0});
     struct gpio_dt_spec led_blue_ = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led_blue), gpios, {0});
@@ -223,9 +207,6 @@ class TEchoPlus {
     Uart gnss_uart_{gnss_uart_device_};
     I2c sensor_i2c_{sensor_i2c_device_};
     parts::Bme280 bme280_{sensor_i2c_};
-    // The default haptic: the pin, driven directly. The board replaces it the
-    // moment it finds a waveform driver on the bus, which on this board is the
-    // only way a pulse is ever produced.
     PinMotor motor_{haptic_enable_};
     Annunciator annunciator_{buzzer_, motor_};
     Indicator indicator_{led_green_, led_red_, led_blue_};

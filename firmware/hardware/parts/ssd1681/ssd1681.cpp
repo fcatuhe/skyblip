@@ -1,4 +1,3 @@
-// GDEH0154D67 panel on the SSD1681 controller, over io::Spi / io::Gpio only.
 #include "hardware/parts/ssd1681/ssd1681.h"
 
 #include <cstring>
@@ -28,7 +27,8 @@ constexpr uint8_t kSequencePartial = 0xFF;
 // INFO: fc 09mar26 0xFF less its two power-down bits: the frame behind a wipe reuses the rails
 constexpr uint8_t kSequenceWipe = 0xFC;
 
-// INFO: fc 09mar26 VBD follows LUT1 at 0x05 and greys over a run of partials; 0x80 holds it at VCOM
+// INFO: fc 09mar26 VBD follows LUT1 at 0x05 and greys over a run of partials, while 0x80 holds it
+// at VCOM
 constexpr uint8_t kBorderFollowLut1 = 0x05;
 constexpr uint8_t kBorderVcom = 0x80;
 
@@ -190,13 +190,14 @@ void Ssd1681::initialise_panel() {
     command(kSoftwareReset);
     wait_busy();
 
+    // INFO: fc 20nov26 0xC7 is the last of 200 gates, and data entry 0x03 increments X then Y
     command(kDriverOutputControl);
-    data(0xC7);  // 200 - 1 gates
+    data(0xC7);
     data(0x00);
     data(0x00);
 
     command(kDataEntryMode);
-    data(0x03);  // X inc, Y inc
+    data(0x03);
 
     set_window(0, 0, kGlassWidth - 1, kGlassHeight - 1);
 

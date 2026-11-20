@@ -7,10 +7,8 @@
 
 namespace skyblip::platform::host {
 
-// The lamp a test can watch. It counts show() calls as well as recording the
-// lamp, because the difference between a wink and an LED re-driven on every pass
-// of the loop is exactly that count - and the second one is a device that spends
-// a register write a hundred times a second on no light.
+// INFO: fc 20nov26 counts show() calls, because an LED re-driven every pass costs a register write
+// a hundred times a second
 class Indicator : public ports::Indicator {
    public:
     void show(indication::Colour colour) override {
@@ -28,8 +26,6 @@ class Indicator : public ports::Indicator {
 
     indication::Colour lamp() const { return lamp_; }
     bool lit() const { return lamp_ != indication::Colour::None; }
-    // True once park() has run and until the next show(). The silicon adapter has
-    // let go of the pins at that point; here it is the fact a test asserts.
     bool parked() const { return parked_; }
     uint32_t shows() const { return shows_; }
     uint32_t lightings() const { return lightings_; }
