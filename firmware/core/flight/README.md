@@ -17,11 +17,15 @@ What the aircraft is doing, decided from the fix stream and the barometer. Pure,
 | `arc` | where an aircraft will be, out to the look-ahead the radar draws |
 | `log_record`, `log_session`, `log_events` | what a flight leaves behind, when a session runs, and what was around it |
 
+## Measured for the glass, sent as measured
+
+The climb and the turn exist twice: the measurement, in `state.own`, and a damped copy for the glass, in `state.indicated`. The ball is damped for the glass alone. ADS-L, the residual, `$LK8EX1`, the logs and the `status` page read the measurement. Only the six-pack and own-ship's leader on the radar read the damped copy. A receiver two kilometres away needs what the aircraft is doing now, and a tablet's vario damps by its own setting, so nothing in this directory's filters may sit on the way to `core/protocol`.
+
 ## atmosphere
 
-Pressure is the only altitude source that is datum-free in a useful way: a rate derived from it needs no agreement with anyone. That is what the module is for. It is deliberately not the altitude skyBlip broadcasts, because the collision alarm compares relative altitude against other aircraft (`core/traffic/alarm.h`, a 300 m window), so every participant must share one datum and which one belongs to the ADS-L spec, not to us.
+Pressure gives a vertical rate that needs no agreement with anyone, and that is what this module is for. It is not the altitude skyBlip broadcasts: the alarm compares relative altitudes (`core/traffic/alarm.h`), so every participant must share the datum ADS-L names.
 
-The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpolated, in millipascals to millimetres. Those units are not ambition, they are what the part resolves and where the resolution goes:
+The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpolated, in millipascals to millimetres, so the chain never loses what the part resolves:
 
 | Link | Resolution | As altitude |
 |---|---|---|
@@ -33,87 +37,74 @@ The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpol
 | table interpolation against the closed form | | under 25 cm, a bias, not jitter |
 | `climb_e8_from_mm_s`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
 
-The chain used to truncate the driver's reading to a whole pascal, which is nine centimetres at sea level, twice the sensor's own noise and forty times what the driver handed over: over a one-second window that is 17 ft/min of quantisation invented after the measurement. Millipascals cost nothing here - the table lookup is the same two loads and a multiply - and what they buy is a vertical speed whose error is the barometer's rather than ours.
+A whole pascal would add 17 ft/min of invented rate over a one-second window. The rate is measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`).
 
-The rate is therefore measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`). Every screen, and the `$LK8EX1` vario, reads the measurement. `kClimbWindowFloorMs` and `kClimbWindowCeilingMs` bound the interval a rate may be taken over: too short and the sensor noise is the answer, too long and it is history.
+`kClimbWindowFloorMs` and `kClimbWindowCeilingMs` bound the interval a rate may be taken over: too short and the sensor noise is the answer, too long and it is history. In `products/common/services/ownship`, `kBarometerClimbWindowMs` is the floor, one second, and `kGnssClimbWindowMs` four times that, because a GNSS height jitters by metres. A barometer, once it has spoken, owns the rate, and the GNSS rate keeps running underneath so losing the part falls back without a step.
 
-Two sources are differentiated over two windows, and `products/common/services/ownship` names both: `kBarometerClimbWindowMs` is `kClimbWindowFloorMs` itself, so every barometric sample yields a rate over the second before it, and `kGnssClimbWindowMs` is four times that, because a GNSS height jitters by metres where the barometer jitters by centimetres and a metre over a second is 200 ft/min of invented climb. A barometer, once it has spoken, owns the rate; the GNSS reference keeps moving underneath so losing the part falls back without a step.
-
-The barometer converts four times a second on the PPS quarters and the conversion triggered on the edge is the one published (`boards/lilygo/t_echo_plus/board.h`), so the second a rate is taken over is the second the fix stream is dated in. Forced mode starts the conversion when we ask, so the sample is dated at its pressure phase, 21 ms after the edge trigger, at the same offset from PPS every second, and the difference is still the true rate. The part's IIR 4 runs over all four conversions, a 0.75 s delay that is the same every second. The board does not wait for it: a later pass reads the result once the part's status says it is done (`hardware/parts/bme280/README.md`).
+The barometer converts four times a second on the PPS quarters and publishes the conversion triggered on the edge (`boards/lilygo/t_echo_plus/board.h`), so a rate covers the second the fix stream is dated in. Its delays are the same every second, so the difference is still the true rate (`hardware/parts/bme280/README.md`).
 
 ## force
 
-One accelerometer, two instruments: the ball and the g-meter. What they share is here rather than copied into each, because a floor, an expiry or a filter length that differed between them would be two answers to one question about one sensor.
+One accelerometer feeds two instruments, the ball and the g-meter, and what they share lives here so the two never give two answers about one sensor.
 
-`kResultantFloorMg` is the magnitude below which a specific force cannot be divided by, 200 mg: `resultant_mg` is the magnitude and `slip` is the caller that refuses one. `kLevelFlightMg` is one g, the g-meter's datum and the unit the pages print in tenths of.
-
-`kIndicatedStaleMs` is two seconds, and it is how long any reading off the hub stands after its last sample. The hub is drained at 12.5 Hz, so two seconds is 25 missed samples: a part that has stopped answering takes its instrument off the glass rather than freezing it somewhere plausible.
-
-`kIndicatedDampingSamples` is the length of the first-order filter the glass is fed through, four samples, about a third of a second. The glass shows one frame a second, so the filter is lag on top of a lag: at four a step is within a pixel of itself after ten samples, 800 ms, so on the frame that follows it, where eight took 1.7 s and left the ball a frame behind the rudder. It is a display figure and nothing else reads it: `status` prints `SlipBall::measured_mg`, the last sample as the hub gave it. What ADS-L reports is the measurement, encoded by `core/units` and never damped: a receiver two kilometres away needs what the aircraft is doing, where a pilot a foot from the glass needs a needle that does not chatter. The two are the same number smoothed differently, and nothing in this file may be applied on the way to `core/protocol`.
+- `kResultantFloorMg`, 200 mg, is the magnitude below which a specific force cannot be divided by. `slip` refuses below it.
+- `kLevelFlightMg` is one g, the g-meter's datum and the unit the pages print in tenths of.
+- `kIndicatedStaleMs`, 2 s, is how long a reading off the hub stands after its last sample. The hub is drained at 12.5 Hz, so that is 25 missed samples, and a part that stopped answering takes its instrument off the glass rather than freezing it.
+- `kIndicatedDampingSamples`, four samples, about a third of a second, is the glass's filter length. A step settles within a pixel in 800 ms, before the next one-second frame. `status` prints `SlipBall::measured_mg`, the undamped sample.
 
 ## slip
 
-The turn coordinator's ball, from the only sensor on this device that measures a force: the BHI260AP (`hardware/parts/bhi260/`). Two things happen here, and both are the instrument's rather than the sensor's.
+The turn coordinator's ball, from the BHI260AP (`hardware/parts/bhi260/`).
 
-The first is the geometry. A ball in a curved tube hangs along the resultant of gravity and the aircraft's acceleration, so what it shows is the lateral component of the specific force **as a fraction of that resultant**, not the lateral axis on its own: the same rudder mistake in a 2 g turn moves the ball half as far, because the resultant it hangs from is twice as heavy. `slip_from_specific_force` is that fraction in thousandths of g, which is the unit `sixpack` draws with, and `kSlipFullScaleMg` is the full travel its cage allows. The page reads that figure from here rather than keeping its own copy of 200: the cage and the ball are one instrument.
-
-The sign is the reading, and it is the opposite of the axis. A case accelerating left - a left turn with too little rudder - measures a leftward specific force, and the ball, free to slide, goes right: the pilot steps on the right rudder. So the ball's deflection is minus the lateral force, and the page's `lateral_mg` is a ball position, never an accelerometer reading.
-
-Below `kResultantFloorMg` of resultant there is nothing to hang from, and the reading is refused rather than scaled: in free fall a real ball floats, and a fraction of nothing is noise at full amplitude.
-
-The second is the damping. A real ball is a mass in a damped tube and it does not chatter; this one is sampled at 12.5 Hz and drawn on e-paper, where a jittering figure costs a partial refresh a second for nothing. `SlipBall` is a first-order filter over `kIndicatedDampingSamples`, which settles to within a pixel of a step and turns turbulence into a ball that leans rather than one that rattles. It is the ball's position that is damped, never the force: `GMeter` beside it holds peaks, and a peak that had been through a filter would be a peak the airframe never pulled.
+- A ball hangs along the resultant of gravity and the aircraft's acceleration, so it shows the lateral specific force **as a fraction of that resultant**. The same rudder mistake in a 2 g turn moves the ball half as far. `slip_from_specific_force` is that fraction in thousandths of g, the unit `sixpack` draws with.
+- `kSlipFullScaleMg` is the full travel the cage allows, and the page reads it from here, because the cage and the ball are one instrument.
+- The ball's deflection is minus the lateral force: a case accelerating left measures a leftward force, and the ball goes right. So the page's `lateral_mg` is a ball position, never an accelerometer reading.
+- Below `kResultantFloorMg` there is nothing to hang from, and the reading is refused rather than scaled.
+- `SlipBall` damps the position over `kIndicatedDampingSamples`, so e-paper is not refreshed for jitter. The force is never damped, because `GMeter` holds peaks and a filtered peak is one the airframe never pulled.
 
 ## turn
 
-`turn` differentiates the GNSS track, and it is the only rate of turn this device has. The track is a cordic9 word, 45/64 of a degree, differenced over a second, so the smallest turn it can express is 0.7 deg/s and the number is always a second old. It is also a *track* rate, so a changing wind moves it without the aircraft turning.
+`turn` differentiates the GNSS track, a cordic9 word of 45/64 of a degree, over a second. So the smallest turn it expresses is 0.7 deg/s, the figure is a second old, and a changing wind moves it. The hub's gyroscope is not read, because it costs the better part of a milliamp (`hardware/parts/bhi260/README.md`).
 
-The gyroscope in the sensor hub would be neither, and it is deliberately not read: it costs the better part of a milliamp where the accelerometer costs tens of microamps (`hardware/parts/bhi260/README.md`), and the instruments it would sharpen are a turn coordinator and a horizon nobody flies on. The bank the six-pack draws is the one a coordinated turn implies, worked from this rate and the ground speed on the page itself.
+`kTurnWindowMs` is the shortest window a 1 Hz track says anything over. It lives here because own-ship (`products/common/services/ownship`) and a target's history (`core/traffic/table`) both differentiate a track with it.
 
-`kTurnWindowMs` is the shortest window a 1 Hz track says anything over, and it lives here because both callers differentiate a track with it: own-ship's own in `products/common/services/ownship`, a target's in `core/traffic/table`.
+The rate is zero whenever `FlightMonitor::rolling()` is false, and restarts from the first fix that rolls, because below walking pace the track is receiver noise.
 
-A stopped aircraft is not turning, whatever its track says. Below walking pace the track is the receiver's noise rather than a direction, and differenced once a second it read as a turn on every frame of a device sitting on a bench. So the rate is zero whenever `FlightMonitor::rolling()` is false, and it restarts from the first fix that rolls rather than from the last one that did not. There is no constant of its own: `rolling` already decides moving from stopped, on `kRollingSpeedMmS` and `kGroundSpeedMmS` with the hysteresis between them, and a second threshold here would be a second opinion about the same speed. It covers a paraglider hovering over one spot too, whose track means as little.
-
-`own.turn_cdps` carries hundredths, where `own.turn_dps` rounds to whole degrees a second for the residual and the alarm's arcs, which is all those need.
+`own.turn_cdps` carries hundredths. `own.turn_dps` rounds to whole degrees for the residual and the alarm's arcs.
 
 ## indicated
 
-The climb and the turn are measured once a second, each a difference over the second before it, and each second's figure carries that second's noise whole: a BME280 differenced over one second jitters by about 12 ft/min on its own noise (6.2 and 6.6 cm/s RMS measured by build 895 on two units at rest, four conversions a second behind IIR 4), the air in a cockpit or a hangar moves it by more, and a track differenced over a second carries every degree the receiver wanders. On a page that redraws once a second, that is a number that changes on every frame. `IndicatedRate` is the needle's damping, a first-order lag, which is what a vertical speed indicator is mechanically (a capsule behind a calibrated leak) and what a turn coordinator's damper is.
+`IndicatedRate` is the needle's damping, a first-order lag, as a vertical speed indicator's capsule and leak are. A BME280 differenced over one second jitters by about 12 ft/min at rest (6.2 and 6.6 cm/s RMS measured by build 895 on two units), so an undamped page would change on every frame.
 
-`kIndicatedRateDampingMs` is its time constant, 2 s, and both rates take it because they arrive at the same cadence and are drawn on the same page: a needle that settled at a different speed from its neighbour would be two answers to one question about one glass. Each reading moves the needle `dt / (dt + damping)` of the way to it, a third at one reading a second, so a step shows a third of itself after a second, 70% after three and 94% after seven. White noise on the altitude comes out at about a quarter of what the one-second difference carries, so the barometer's own 12 ft/min is 3. The GNSS climb, taken over two seconds when there is no barometer, moves it half the way per reading and settles in about the same time, because the damping is in milliseconds rather than readings. The ball's filter is in samples, `kIndicatedDampingSamples`, because the hub hands it one every 80 ms without fail; four of them is a third of a second, and at one reading a second the same lag would pass each reading almost whole.
+`kIndicatedRateDampingMs` is its time constant, 2 s, for both rates, because they arrive at the same cadence on the same page. Each reading moves the needle `dt / (dt + damping)` of the way, a third at one reading a second, so a step shows 70% after three seconds and 94% after seven, and the barometer's 12 ft/min of noise reads as 3. The damping is in milliseconds, so the GNSS climb, taken over two seconds, settles in the same time. The ball's filter is in samples instead, because the hub hands it one every 80 ms without fail.
 
-A climb that stops being valid resets the damping, so the next one is shown as measured rather than blended with a climb from before the outage. A gap without a reset is handled by the arithmetic: a reading ten seconds after the last one moves the needle five sixths of the way.
-
-What is damped is the glass and only the glass: the six-pack and own-ship's leader on the radar read `state.indicated`. ADS-L G.1.9, the residual, `$LK8EX1`, the logs and the `status` page read `state.own`, which is the measurement, for the reason `force` gives: a receiver two kilometres away needs what the aircraft is doing now, and a tablet's vario damps what it is given by its own setting, so a second filter here would be a lag stacked on a lag.
+A climb that stops being valid resets the damping, so the next one is shown as measured.
 
 ## gload
 
-`GMeter` is the sensor with nothing done to it but a sign: the largest and smallest of each axis held, in thousandths of g, with no fusion, no assumption and no fix required. It is the one instrument here that cannot be wrong about anything but its own calibration.
+`GMeter` holds the largest and smallest of each axis, in thousandths of g, with no fusion and no fix required. Each axis takes the instrument's sign, not the accelerometer's:
 
-The sign of each axis is the instrument's, not the accelerometer's, and there is no single aviation convention covering all three.
+- Normal load is the load factor every g-meter shows: positive up, 1 g in level flight. The page calls it `G`.
+- Lateral follows the ball, minus the measured force, so the two instruments never disagree.
+- Longitudinal is the flight-test `Ax`, positive accelerating forward. The page draws it nose up, labelled `DEC` and `ACC`, so the marker sits where the load throws you.
 
-Normal load is the load factor every g-meter in every cockpit shows: positive up, 1 g in level flight, negative in outside figures, and the limits an airframe carries are written in it. The page calls it `G`, because that is what a pilot calls it; the field names here are the flight-test ones, which is what a file of arithmetic should use and what a page should not.
-
-Lateral follows the ball. It is the side the load throws a loose object, which is minus the measured force, because the turn coordinator two pages away shows exactly this quantity as a ball in a tube and two instruments on one device must not disagree. No cockpit has a lateral number; the ball and the slip string are what a pilot flies.
-
-Longitudinal is the flight-test quantity, `Ax`, positive accelerating forward and negative braking, because it is the one axis with no companion instrument to agree with and the only reference is the convention telemetry uses. The page draws it with the nose at the top, so the marker still sits where the load throws you - forward under braking, back into the seat under power - and labels the ends `DEC` and `ACC` so the direction needs no sign to read.
-
-The peaks reset when the flight timer starts, so they are this flight's, and a unit left on the bench holds what the bench did to it.
+The peaks reset when the flight timer starts, so they are this flight's.
 
 ## arc
 
-`extrapolate` and `arc` answer the same question over two horizons, and they are deliberately not one function. `extrapolate` closes the gap between the instant a fix was solved and the instant a position is used, so its ceiling is `kExtrapolationCeilingMs`, a little over a second: a neighbour reports once a second, an ALP-TAS frame leaves up to 1.2 s after its fix, and past that the position would be invented. Own Traffic does not use it: it goes on air as the receiver solved it (`core/protocol/README.md`). `arc` is asked about a future nobody has to stand behind. It is what the radar's leader line draws, so it runs to a minute and carries no obligation to the radio at all. Widening the first to serve the second was the tempting mistake.
+`extrapolate` and `arc` are the same model over two horizons, and stay two functions. `extrapolate` carries own-ship and a neighbour to one instant for the alarm and the radar, where every 100 ms at 50 m/s is 5 m of error in a separation. `kExtrapolationCeilingMs` is a little over a second, because a neighbour reports once a second and an ALP-TAS frame leaves up to 1.2 s after its fix. Past it the last fix stands where it was, never at an invented position. Own Traffic is never carried: it goes on air as the receiver solved it (`core/protocol/README.md`). `arc` draws the radar's leader line, runs to a minute, and owes the radio nothing.
 
-The model is the same one, OGN's: constant ground speed on a constant turn rate, the turn applied half before the step and half after, which keeps a circling aircraft on its arc instead of on the tangent. A path is walked, never indexed: `Arc::advance()` rotates the velocity vector by half a step's worth of turn, moves, and rotates again, so a whole minute costs two sine lookups per aircraft rather than two per sample. Position is carried in millimetres and rotations are rounded rather than truncated, because a Q14 rotation applied thirty times in a row loses a metre a step otherwise.
+The model is OGN's (nrf52-ogn-tracker `src/ogn.h:1735-1790`): constant ground speed on a constant turn rate, the turn applied half before the step and half after, which keeps a circling aircraft on its arc instead of on the tangent. `Arc::advance()` walks the path, two sine lookups per aircraft per minute. Position is in millimetres and rotations are rounded, because a truncated Q14 rotation applied thirty times loses a metre a step.
 
-A target's turn rate is not on the wire. ADS-L carries position, speed, track and climb, so `motion_of(observation, ...)` takes the rate `core/traffic` estimated from that target's own track history, and flies it straight when there is no estimate yet. The screen draws that estimate, and the tag beside a turning target is the same number the table holds.
+ADS-L carries no turn rate, so `motion_of(observation, ...)` takes the rate `core/traffic` estimated from the target's track history, and flies straight with no estimate yet.
 
-`kTurnCeilingDps` is 30. Above it the number is describing the receiver rather than the aircraft: a differentiated 1 Hz track produces tens of degrees per second out of a bad fix, and no aeroplane this device rides in holds that rate for the length of the projection. The clamp is applied where a motion is built, so nothing downstream has to remember it.
+`kTurnCeilingDps` is 30. A differentiated 1 Hz track produces tens of degrees per second out of a bad fix, and no aircraft this device rides in holds that rate for the length of the projection. The clamp is applied where a motion is built, so nothing downstream has to remember it.
 
 ## state
 
-Airborne or on the ground, from the fix stream alone. It is not a display value: it gates the DFU lockout and the transmit rate, so the two ways of being wrong are not symmetric. Declaring a takeoff that did not happen locks the update out on the ground and drains the cell at the airborne burst rate; missing one leaves an aircraft transmitting at the rate a parked device uses, unlocked, in the air. The receiver solves four times a second, and own-ship hands the monitor only the solution on each whole second, so every hold and gate below counts solutions a second apart, as it did at 1 Hz (`products/common/services/ownship.cpp`).
+Airborne or on the ground, from the ground speed alone. It gates the DFU lockout and the transmit rate, and the two errors are not symmetric: a false takeoff locks updates on the ground and drains the cell at the airborne rate, while a missed one leaves an aircraft transmitting at the parked rate, unlocked, in the air.
 
-Two bands and one hold, and nothing between them moves:
+The receiver solves four times a second, and own-ship hands the monitor only the solution on each whole second (`products/common/services/ownship.cpp`). So every hold and gate below counts solutions a second apart.
 
 | | Condition | Constant | Meaning |
 |---|---|---|---|
@@ -123,69 +114,57 @@ Two bands and one hold, and nothing between them moves:
 | rolling | ground speed >= 1.5 m/s, on the ground | `kRollingSpeedMmS` | the word TAXI rather than GROUND |
 | between | keep the state you had | | |
 
-Ground speed is the whole rule. There is no altitude in it, no vertical rate and no barometer, so what decides the two states a radio and a firmware lock depend on is one number the receiver solves directly, on every fix, whether or not any other sensor on the board is alive.
+There is no altitude, vertical rate or barometer in the rule, so it rests on one number the receiver solves on every fix. An MSL altitude rule would read airborne while parked at Samedan (1707 m) or Leadville (3026 m).
 
-The takeoff waits for nothing, and it does not have to: the gap between 12.0 and 1.0 is the hysteresis, twelve times where the thresholds it replaced were two apart. That gap is not decoration. A glider thermalling in a 15 m/s wind swings its ground speed from 5 m/s upwind to 40 downwind every circle, and a single threshold in the middle of that would land it and launch it once a turn, a log session and a firmware lock cycle each time.
+### Takeoff, 12.0 m/s
 
-1.0 m/s is the ground speed, and what it separates is an aircraft stopped from an aircraft moving at all. A receiver at a standstill reports 0.05 to 0.3 m/s of Doppler speed, spiking to a metre a second on multipath, so the threshold is three times the noise it normally sits above and the spikes cost a solution or two before a landing latches. It is also where the word on the glass goes back to GROUND. Lower and a finished flight keeps running; higher and an aircraft creeping on an apron reads parked, and the ground band widens under a wing hovering over one spot.
+- 12.0 m/s is 23 knots. Under it are a taxi at 5 to 8 m/s and a tug hurrying back to the grid at 10, the fastest thing on an airfield that is not flying. Over it are a glider on aerotow at 20 and a light aircraft rotating at 28.
+- Lower buys little: at about 2 m/s gained each second, 10 m/s would declare the takeoff two and a half seconds earlier, still on the runway.
+- Higher fails into wind: liftoff is an airspeed, and a 120 kg class microlight into an 8 m/s breeze crosses the fence at 9 m/s over the ground.
+- The gap to the 1.0 m/s ground band is the hysteresis. A glider thermalling in a 15 m/s wind swings from 5 to 40 m/s over the ground every circle, and one threshold in the middle would land and launch it once a turn.
 
-1.5 m/s is the third band, and unlike the other two it is not a state: ADS-L G.1.2 has two codes, and a glider being pushed to the grid is on the ground in both of them. `FlightMonitor::rolling()` answers the question the glass asks instead, stopped or moving, which is the difference between the words GROUND and TAXI (`products/skyblip_go/pages/README.md`). It picks up at 1.5 m/s and lets go below the 1.0 a stop needs, so the gap is the hysteresis again, half a metre a second of it: a parked receiver spiking to a metre a second on multipath never reaches the word, and a taxi slowing for a turn keeps the one it has. At 1.0 alone the word changed every few seconds on a device nobody had touched, and every change was a partial refresh of the panel spent on a state the aircraft was not in. The pick-up is a brisk walk, so what a pilot would call a taxi still reads as one. It holds through an outage the way the state does, because an antenna that drops out is not an aircraft that stopped.
+A paraglider, a hang glider on a ridge or a balloon may never reach 12 m/s over the ground, and reads on the ground from launch to landing. `announced_state` sends on-ground as G.1.2's Undefined for every G.1.3 category that can fly at no ground speed, which G.1.16 transmits at the full rate, and the flight log opens on `rolling` for them (`log_session`). No vertical rate decides a takeoff, because on this board it is a gust or a pressure step as often as a climb.
 
-It is decided here rather than on the page for the reason the takeoff is: a band is a fact about the aircraft, and a page that owns one is a second opinion waiting to drift from this file. The monitor is already fed every whole-second solution, so all three speeds are read in one place, off one sample, and `products/common/services/ownship.cpp` publishes the answer as `state.flight.rolling` for whoever draws it.
+### Ground, 1.0 m/s, and rolling, 1.5 m/s
 
-12.0 m/s is 23 knots. Under it are a glider on tow to the grid at 4, a taxi at 5 to 8, and a tug hurrying back to the grid at 10; over it are a glider unsticking on aerotow at 20 and rotating off the winch at 23, a light aircraft at 28, a flexwing microlight whose stall is 16.9. The tug is the case that sets it, because it is the fastest thing on an airfield that is not flying and it carries one of these: a false takeoff there is a phantom log session, a firmware lock its pilot cannot clear between flights, an afternoon of the airborne transmit rate, and an ADS-L G.1.2 code on the air that tells every other aircraft not to suppress a target that is on the ground.
+A receiver at a standstill reports 0.05 to 0.3 m/s of Doppler speed, spiking to 1 m/s on multipath, so 1.0 m/s is three times the noise it sits above. Lower and a finished flight keeps running. Higher and an aircraft creeping on an apron reads parked.
 
-Going lower buys less than it looks. A light aircraft gains about two metres a second of speed every second, so 12 m/s is reached six seconds before a 28 m/s rotation and 10 m/s only two and a half seconds before that: both declare the takeoff while the aircraft is still on the runway, and the difference is runway, not air.
+`FlightMonitor::rolling()` is not a G.1.2 state: it decides GROUND against TAXI on the glass (`products/skyblip_go/pages/README.md`). It picks up at 1.5 m/s and lets go below 1.0, so a parked receiver's multipath spike never flips the word. It holds through an outage, and `products/common/services/ownship.cpp` publishes it as `state.flight.rolling`.
 
-What keeps it from going higher is the wind. Rotation is an airspeed and this threshold is a ground speed, so a headwind moves every takeoff down the scale. In still air nothing here unsticks slowly: no aeroplane flown in this airspace may stall below 55 km/h, the German 120 kg class limit, and the FAI and UK 450 kg classes are capped at 65 km/h, which puts their liftoff at 17 to 20 m/s, a glider's on aerotow at 21 and a light aircraft's at 28. Into an 8 m/s breeze the same 120 kg class crosses the fence at 9 m/s over the ground, and a hang glider on tow leaves it at 13 to 15 before any wind at all. A threshold set at the still-air figures is a threshold that declares those launches late or never, and late here means an aircraft transmitting at the parked rate in the air, which is the only failure in this file that costs more than a log line.
+### Landing, 8.0 m/s for 10 s
 
-What ground speed alone cannot see is a wing that does not need any. A paraglider trims at 10 m/s of airspeed, so into a 5 m/s breeze its ground speed is 5 for the whole flight; a hang glider working a ridge and a balloon in any wind are the same shape of problem. Those read on the ground from launch to landing: no clock, and the firmware lock open, in the air. What goes on air is not left to this rule, and neither is the flight log (`log_session` below): `announced_state` turns on-ground into ADS-L G.1.2's Undefined, which G.1.16 transmits at the full rate, for every G.1.3 category that can fly at no ground speed, so a paraglider on a ridge is never broadcast as parked. A barometric climb used to catch them, and it is gone deliberately, because the vertical rate on this board is a gust, a canopy, a pressure step and a 3 m/s spike whenever the barometer is out, and paying for it was a takeoff declared in the hangar queue. This is the trade the device makes: nothing is declared airborne that a pilot would not call airborne, and three classes of aircraft that never roll are not declared at all.
+A landing is a stop, declared on the solution that shows it, or a taxi held under 8.0 m/s for 10 s, so a landing reads TAXI before the aircraft comes to rest. 8.0 m/s sits above a taxi and 4 m/s clear of the takeoff. 10 s is what no circle can fake: a glider at 22 m/s airspeed in a 20 m/s wind is under 8 m/s over the ground for three seconds of a 25-second turn, and the hold restarts on the first solution above the ceiling. A glider beating a ridge into a 15 m/s wind can still read landed after 10 s, and the next solution at 12 m/s puts it back in the air.
 
-A landing is a stop, or a taxi held long enough to be one. The stop is declared on the solution that shows it; the taxi needs 10 s under 8.0 m/s, and it is the only hold left in this file. It is there because a landing that could only be a standstill was a landing the word TAXI could never follow: `rolling()` below picks up at 1.5 m/s and lets go under the same 1.0 a stop needs, so the two flags could not both be true on one solution and every flight ended FLIGHT, GROUND, with the taxi in reaching the word only after coming to rest. A tug that lands and taxis straight back now reads TAXI while it is still rolling, which is what its pilot would call it and what ADS-L G.1.2 already has a code for.
+### Evidence
 
-8.0 m/s is the ceiling because a taxi is 5 to 8 and a tug hurrying back to the grid does 10: under it nothing on an airfield is doing anything but taxiing, and it stays 4 m/s clear of the 12.0 a takeoff needs, so the ground roll that crosses one never trips the other. 10 s is what no circle can fake. A glider circling at 22 m/s airspeed in a 20 m/s wind is under 8 m/s over the ground for only 21 degrees of arc either side of upwind, three seconds of a 25-second turn, and the hold restarts on the first solution above the ceiling.
-
-What it cannot tell from a taxi is a wing hovering: a glider on a ridge beat into a 15 m/s wind holds 5 m/s over the ground for the length of the beat, and after 10 s of it this file says it has landed. That costs the parked transmit rate and an ADS-L code that tells other aircraft it is on the ground, in the air, on the one wing whose neighbours are closest - the same class of aircraft that `12.0 m/s` already fails to declare airborne at all. The next takeoff or any 12 m/s over the ground puts it back on the same solution it happens.
-
-Evidence for flight is divided by the fix's own dilution of precision, the way OGN does it, so a solution nobody should trust cannot declare a takeoff. Evidence for the ground is not derated, and that asymmetry is deliberate: a derated figure is a smaller figure, and a smaller figure must never be the thing that puts an aircraft on the ground. The jerk gate is the other defence, and it guards the speed alone: a speed that jumps more than fourfold between two consecutive solutions a second apart is a receiver at a standstill, not an aircraft accelerating, so it costs one sample at the start of every roll.
-
-The first solution after power-on decides on its own evidence rather than waiting: a device rebooted in flight that answers `Unknown` hands both the transmit rate and the update lockout their wrong default. In the band between the two, it decides for the ground, because switching on while being towed to the grid is the common case, and an aircraft rebooted in flight is doing more than 12 m/s over the ground within the minute.
-
-What the missing takeoff hold costs is one case: an aircraft that stops on the runway and rolls again, a backtrack after a landing, is a second takeoff and a second session in the flight log the moment it passes 12 m/s.
-
-There is no longer an altitude that means flight on its own either. The 2000 m rule this replaced was MSL, so any airfield above it - Samedan at 1707 m, Courchevel at 2008 m, Leadville at 3026 m - was a device that read airborne while parked, transmitting at 1 Hz with its update locked out for good.
+- Evidence for flight is divided by the fix's dilution of precision, as OGN does, so an untrustworthy solution cannot declare a takeoff. Evidence for the ground is not derated, because a smaller figure must never be what lands an aircraft.
+- The jerk gate refuses a speed that jumps more than fourfold between two solutions a second apart, a receiver at a standstill. It costs one sample at the start of every roll.
+- The first solution after power-on decides on its own evidence, because `Unknown` would hand a unit rebooted in flight the wrong transmit rate and lockout. Between the bands it decides for the ground, the common case of switching on while towed to the grid.
+- An aircraft that stops on the runway and rolls again past 12 m/s is a second takeoff and a second log session.
 
 ## ground
 
-`state` answers one question about one solution, and the bus carries that answer as the ADS-L G.1.2 code in `own.flight_state`. `state_from` reads it back, and it is the only place that does: G.1.2 is two bits and we own neither the sender nor the future, so a code this build does not name is `Unknown`, never a state the sender did not say.
+The bus carries `state`'s answer as the ADS-L G.1.2 code in `own.flight_state`. `state_from` is the only reader, and a code this build does not name is `Unknown`, never a state the sender did not say.
 
-`report_period_s` hangs off the same two bits, because G.1.16 sets the rate by the state: `kAirborneReportPeriodS` is 1 s and `kGroundReportPeriodS` is 10. It is here rather than in the transmitter because both directions need it. Own-ship's schedule is one reader (`core/timing/transmit.h`); the other is `core/traffic/lease.h`, which counts a neighbour's silence in that neighbour's own intervals, and a target of `Unknown` state gets the airborne one because an emitter that does not say is heard at 1 Hz or not at all.
+`report_period_s` maps the same two bits to the G.1.16 rate: `kAirborneReportPeriodS`, 1 s, and `kGroundReportPeriodS`, 10 s. Own-ship's schedule reads it (`core/timing/transmit.h`), and so does `core/traffic/lease.h`, which counts a neighbour's silence in its own intervals. An `Unknown` target gets the airborne period, because an emitter that does not say is heard at 1 Hz or not at all.
 
-`GroundLatch` is the second question, the one a door asks: may this device be written to, erased, updated. Only `Airborne` shuts the door. `Unknown`, a device with no fix since boot, sends no position and grades no traffic, so it shuts nothing (`core/comms/README.md`, The flight gate). Once `Airborne` has been seen, only a positive `Ground` clears it. A fix lost in flight is therefore never a landing, and never `Unknown`: without the latch, a receiver dropping out over a ridge would unlock the firmware update mid-flight, which is the one failure `state` itself has no hold left to prevent.
-
-There is one latch, owned by the service that owns the monitor (`products/common/services/ownship.cpp`) and published as `state.flight.confirmed_state`. The companion link's flight gate in `core/comms/config.h` and the flight log's offload gate both read that one value rather than deriving a second opinion or asking each other, so "in flight" means the same thing to all three.
+`GroundLatch` answers whether the device may be written, erased or updated. Only `Airborne` shuts the door. `Unknown`, no fix since boot, sends no position and grades no traffic, so it shuts nothing (`core/comms/README.md`, The flight gate). Once `Airborne` has been seen, only a positive `Ground` clears it, so a receiver dropping out over a ridge never unlocks an update mid-flight. There is one latch, in `products/common/services/ownship.cpp`, published as `state.flight.confirmed_state`, and the companion link's flight gate and the flight log's offload gate both read it.
 
 ## timer
 
-`FlightTimer` counts from the takeoff `state.h` declares, and from no other event. One takeoff, so the clock on the glass, the log session on flash and the transmit rate cannot disagree about when the flight began. The takeoff is declared on the solution that shows it, so the clock starts within a second of the wheels.
+`FlightTimer` counts from the takeoff `state.h` declares and from nothing else, so the clock, the log session and the transmit rate agree on when the flight began.
 
-It freezes at the landing rather than clearing, and the next takeoff carries on from the figure it froze at. The count is airborne time since the device was switched on, not time since the last takeoff: a circuit detail or a touch and go is one line in a logbook, and a pilot should not have to add up the legs the state machine happened to split the day into. It also makes a false landing cheap. A glider bouncing on a ridge that loses `Airborne` for twenty seconds costs those twenty seconds, where a resetting clock would cost the whole flight.
-
-Nothing but a takeoff starts it and nothing but switching the device off clears it.
-
-`FlightState::Unknown` is not a landing, and it is not a pause either. It is a solution the receiver could not give, so a flight already running keeps its takeoff instant and keeps counting across the outage, exactly as `FlightMonitor` holds its own state through it. A minute under a wing in the circuit is a minute flown: the aeroplane did not stop being in the air because the antenna did, and the figure a pilot copies into a logbook is wall time since takeoff, not time the receiver was well. Only a takeoff starts the clock, so `Unknown` before anything has flown still starts nothing.
-
-`flown()` separates "no flight yet this power cycle" from "a flight zero minutes old", which are the same number and not the same answer: the page draws its no-answer dashes for the first and `0:00` for the second. `running()` is the other half the page needs, and it is not `own.flight_state`: that one reports `Unknown` on every bad solution, so a title driven from it would flicker between states in an outage.
-
-A device switched on in the air is timed from the first solution rather than from the wheels, because `FlightMonitor` declares `Airborne` immediately in that case and nothing on board saw the takeoff. The alternative is withholding the number from exactly the pilot who has been flying longest.
-
-The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `ports::Clock::milliseconds()` is one ordinary second of flight.
+- It freezes at a landing and carries on at the next takeoff: it is airborne time since switch-on, so a touch and go is one logbook line and a false landing costs only its own seconds. Only switching off clears it.
+- `Unknown` is neither a landing nor a pause: a flight already running keeps counting through an outage, as `FlightMonitor` holds its state.
+- `flown()` tells no flight yet, drawn as dashes, from a flight zero minutes old, drawn `0:00`. The page reads `running()`, not `own.flight_state`, which reports `Unknown` on every bad solution.
+- A unit switched on in the air is timed from its first solution, because `FlightMonitor` declares `Airborne` at once.
+- The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `ports::Clock::milliseconds()` is harmless.
 
 ## log_record
 
-A record is 24 bytes and a sector holds 170 of them behind a 16-byte label. The label is not this module's: the log partition is a pool shared with the diagnostics ring, and which sector either ring is handed next is [`core/store`](../store/README.md)'s decision. What lives here is the record and where in a sector it sits.
+A record is 24 bytes and a sector holds 170 of them behind a 16-byte label. The label, and which sector a ring gets next, belong to [`core/store`](../store/README.md). Every field is written one at a time, little-endian, so the host reader sees no hidden padding. The device never writes IGC: the host converts the records.
 
-Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its track there as the high byte of a nine-bit cordic word, so the byte is only ever 0 or 1; an event sets its top bit and names its kind in the other seven. Bytes 0-1, the seconds since the session opened, and bytes 22-23, the CRC, are the same in both, so recovery, the torn-tail check and the offload never ask which one a slot holds. `decode_log_record` answers `Unsupported` for an event and `decode_log_event` for a fix, so neither is ever read as the other, and a kind a later build adds is refused rather than guessed at. The kinds are a wire format: a flight on the partition outlives the firmware that wrote it, so a kind is retired and never renumbered.
+Byte 16 tells a fix from an event. A fix carries its track's high bit there, so the byte is 0 or 1. An event sets the top bit and names its kind in the other seven. Bytes 0-1 and 22-23 are the same in both, so recovery, the torn-tail check and the offload never ask which a slot holds. `decode_log_record` answers `Unsupported` for an event and `decode_log_event` for a fix, and a kind a later build adds is refused. A kind is retired, never renumbered, because a flight outlives the firmware that wrote it.
 
 | Byte | Fix | Status | Alarm, encounter |
 |---|---|---|---|
@@ -201,15 +180,16 @@ Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its
 | 21 | flags and the G.1.2 flight state | | |
 | 22-23 | CRC-16-CCITT over 0-21 | the same | the same |
 
-A `bravo` record, `0x84` in byte 16, carries one byte after the seconds: in byte 2 the `comms::BravoState` code a paired Go made of its Bravo, the link registry's `bravo` enum with 0 for unpaired. Every other byte up to the CRC is 0.
+- The seconds since the session opened saturate at 65535, about 18 hours, rather than wrap into the past.
+- Byte 12 fits in one signed byte because EGM96 runs from -107 m to +85 m over the planet.
+- A `bravo` record, `0x84` in byte 16, carries in byte 2 the `comms::BravoState` code a paired Go made of its Bravo, the link registry's `bravo` enum with 0 for unpaired. Every other byte up to the CRC is 0.
+- A target's flags are bit 0 dismissed, bit 1 in formation, bit 2 altitude recorded and bit 3 relative altitude valid. A target with no altitude writes 0 m, and bit 3 says whether those bytes are a separation. Bit 2 is set on every target this firmware writes, so a reader of an older flight knows its 0 m may be unknown.
 
-A target's flags are bit 0 dismissed, bit 1 in formation, bit 2 altitude recorded and bit 3 relative altitude valid. Since #161 a target can have no altitude, and its record still writes 0 m for it, so bit 3 says whether those bytes are a separation. Bit 2 is set on every target this firmware writes and clear on every one written before the flag, so a reader of an older flight knows its 0 m may be unknown rather than level with us.
-
-The enum codes are the diagnostics capture's, pinned by the same tests (`../diagnostics/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
+The enum codes are the diagnostics capture's, pinned by the same tests (`../diagnostics/README.md`). [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is one decoded record, and `scripts/test_blip.py` holds the host decoder to it.
 
 ## log_events
 
-The track says where the flight went. `LogEvents` says what was around it and what the cell did, in the same session and the same sectors, so one read offloads both and one eviction loses both together. It is sampled with the fix, once a second while a session is open and never on the ground, so every event is dated by a second the track holds.
+`LogEvents` writes what was around the flight and what the cell did, in the same session and sectors as the track, so one read offloads both and one eviction loses both. It samples with the fix, once a second while a session is open, so every event is dated by a second the track holds.
 
 | Kind | When | What |
 |---|---|---|
@@ -218,20 +198,18 @@ The track says where the flight went. `LogEvents` says what was around it and wh
 | encounter | a contact leaves the table, another aircraft takes its slot, or the flight ends | the contact at its closest pass, dated at that pass, with the highest level it reached and how long it was heard |
 | bravo | a paired Go's Bravo is lost, including on the first second of the session, and when it is no longer lost | the state, a reason when lost (`../comms/README.md`, What the Go makes of its Bravo) and `live` or `unpaired` when back, or `waiting` when back from a Bravo that has not sent UTC since the Go booted or paired |
 
-A status a minute is one record in sixty of the track's. An alarm and an encounter cost one record each, so a busy sky costs what it has in it rather than a record per target per second, which at ten targets would have filled the partition in under two hours. The table has no ADS-B gate (`../traffic/README.md`, No gate), so on a Bravo, and on a Go paired with one, every airliner that takes a slot writes its own encounter, however far away it stayed, and the record's distance stops at 65535 m. An aircraft that a nearer one evicts writes one, and writes another if it takes a slot again.
-
-The geometry is `traffic::assess`, the function the alarm and `$PFLAU` already read, carried to the same instant for both aircraft, and the level is the one the alarm service published on the target, so the log, the buzzer and the tablet cannot disagree about whether a contact was a threat. A target whose report carries no valid position cannot be placed, so it is not tracked until it does.
-
-The events are drained before the fixes. That is what keeps the landing's `session_end` fix the last record of the file, which is how `list` tells a flight that ended from one the power ended: a landing ends every encounter still running, and those are written ahead of the fix that closes the session. Records are therefore in the order they were written and not the order they describe, since an encounter is dated at its closest pass and written when it is over: a reader sorts by `utc`.
-
-`kLogEventBacklogRecords` is sixteen alarms and encounters waiting on a writer that drains every pass. A backlog that overflows loses its oldest and counts it, the same accounting the fix ring keeps.
+- The table has no ADS-B gate (`../traffic/README.md`, No gate), so on a Bravo, and on a Go paired with one, every airliner that takes a slot writes an encounter. Its distance saturates at 65535 m.
+- The geometry is `traffic::assess` and the level is the one the alarm service published, so the log, the buzzer and the tablet agree. A target with no valid position is not tracked.
+- Events drain before fixes, so the landing's `session_end` fix stays the last record of the file, and its absence is how `list` tells a flight the power ended. Records are in write order, and an encounter is dated at its closest pass, so a reader sorts by `utc`.
+- `kLogEventBacklogRecords` holds sixteen events for a writer that drains every pass. An overflow loses the oldest and counts it.
 
 ## log_session
 
-The log reads `state.own_second`, own-ship as the receiver's last whole-second solution left it, one stamped within 10 ms of `.000`, and a fix or UTC withdrawn on `.500` withdraws it too, so a record holds the position of the second it is dated by and not the `.500` solution solved 500 ms later. A second whose `.000` was lost has no such solution, and `LogSession` writes one record per UTC second, so that second writes none rather than its `.500` solution dated by it. `kLogRecordPeriodMs` is one second, the rate ADS-L G.1.16 reports an aircraft in flight at, so the log holds what every receiver in range was told, as often as it was told. It was four seconds, the moshe-braner SoftRF fork's default (`oss/SoftRF-moshe-braner .../src/driver/Settings.cpp:838`) and inside every fix interval a badge or an OLC claim is scored on. That is enough for scoring and not for an incident: a flight reconstructed beside a neighbour's track, or an alarm replayed against the geometry that raised it, needs the same second the radio spoke in. It costs four times the bytes, 86.4 KB a flight hour, so the partition's 298 sectors hold 14 hours rather than 56, and the floor a capture may not cross went from twelve hours to six (`../store/README.md`).
+A session opens on `Airborne` and closes on the landing, so the log and the transmitter agree on when the aircraft flew, and a unit parked on a trailer writes nothing.
 
-`kLogPreTakeoffRecords` is sixty records of slack, a minute at one a second, held in RAM and handed to the file the moment it opens. A takeoff is declared at 12 m/s over the ground, so the session opens partway down the runway and the roll that produced it is already history; the ring is what puts it back. It is the same trick the moshe-braner SoftRF fork plays with its pre-position ring (`oss/SoftRF-moshe-braner .../src/protocol/data/IGC.cpp:1105-1125`). The ground is not logged at the 10 s ADS-L reports it at: a session that opened on a taxi would be a file for every tug run and every push to the grid, and flash cannot take a file back once it is written. The minute in the ring is the taxi before a takeoff, and the landing's own ten-second hold is the taxi after it.
+The log reads `state.own_second`, own-ship as the receiver's last whole-second solution left it, stamped within 10 ms of `.000`. A fix or UTC withdrawn on `.500` withdraws it too. So a record holds the position of the second it is dated by, and a second whose `.000` solution was lost writes no record.
 
-A landing closes the session, and since a landing is now a taxi held for ten seconds as well as a stop (`state` above), a tug that rolls in and taxis back gets one file for the flight rather than one that runs until it parks.
-
-A wing that flies at no ground speed is the exception, for the reason `state` gives: a paraglider soaring into wind reads on the ground for the whole flight, so a session that waited for `Airborne` never opened, and one that did open on a downwind leg closed on the next upwind one. For those G.1.3 categories, `flies_at_no_ground_speed`, a session opens on `rolling` as well, and closes once the aircraft has stood still for `kLogStillHoldMs`, two minutes. The radio's own answer for them, full rate whatever the speed, is not the trigger: it is the right rate for a wing on a ridge and the wrong one for a wing packed away on a shelf, which would log for as long as the cell lasts. What two minutes cannot tell from a landing is a wing hovering under 1 m/s over the ground for that long, which splits the flight into two files rather than losing any of it.
+- `kLogRecordPeriodMs` is one second, the ADS-L G.1.16 airborne rate, so an incident is reconstructed on the second the radio spoke in. It costs 86.4 KB a flight hour, so the 298 sectors hold 14 hours (`../store/README.md`).
+- `kLogPreTakeoffRecords` holds sixty records in RAM, a minute at one a second, and hands them to the file when it opens. A takeoff is declared at 12 m/s, partway down the runway, so the ring puts the roll back. The ground is not logged at its 10 s rate: every tug run would open a file, and flash cannot take one back. The ring holds the taxi before a takeoff, and the landing's ten-second hold the taxi after it.
+- On the ground the ring is meant to turn over. Only a record the writer owed and did not take counts as a loss.
+- For a G.1.3 category that flies at no ground speed, `flies_at_no_ground_speed`, a session opens on `rolling` too, and closes once the aircraft has stood still for `kLogStillHoldMs`, two minutes. Its full transmit rate is not the trigger, because a wing packed away on a shelf would log until the cell died. A wing hovering under 1 m/s for two minutes splits its flight into two files and loses nothing.

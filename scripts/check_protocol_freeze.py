@@ -4,17 +4,14 @@
     python3 scripts/check_protocol_freeze.py
     python3 scripts/check_protocol_freeze.py --reseal adsl
 
-A stack is frozen once firmware/protocols/<stack>/version.lock exists, and a stack at 1.0.0 or
-later must have one. The lock names the
-stack's version and the roots its conformance rests on, files or directories from the
-repository root, and holds the SHA-256 of every file under them. The protocols/common/ files the
-frozen files include are frozen too, followed include by include, each header with its .cpp
-beside it. The check fails when a file under the roots changed, appeared or went, and when the
-lock's version is not the kVersion in the stack's version.h.
+A stack is frozen once firmware/protocols/<stack>/version.lock exists, and one at 1.0.0 or
+later must have one. The lock holds the version, the roots its conformance rests on and the
+SHA-256 of every file under them and of every protocols/common/ file they include. The check
+fails when one of those files changed, appeared or went, or when the version is not kVersion.
 
---reseal rewrites the digests of the roots the lock names, under the current kVersion. Run it after moving kVersion, or after
-a change that leaves what the stack puts on air and reads off it as it was, and say which in the
-pull request: the lock's diff is what review sees (firmware/protocols/README.md, Versions).
+--reseal rewrites the digests under the current kVersion. Run it after moving kVersion, or
+after a change that leaves what the stack puts on air and reads off it as it was, and say
+which in the pull request (firmware/protocols/README.md, Versions).
 """
 import hashlib
 import os

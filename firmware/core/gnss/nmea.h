@@ -1,4 +1,3 @@
-// core/gnss/nmea.h: GNSS NMEA-0183 line parser (the L76K and the AG3335).
 #ifndef SKYBLIP_CORE_GNSS_NMEA_H
 #define SKYBLIP_CORE_GNSS_NMEA_H
 
@@ -9,30 +8,18 @@
 
 namespace skyblip::gnss {
 
-// INFO: gn 09Jun25 GGA field 11 is the geoid separation and plenty of receivers
-// either omit it or answer "0.0,M" forever. OGN falls back to a manual parameter
-// defaulting to 40 m (oss/nrf52-ogn-tracker src/main.h:38, src/gps.cpp:526-529);
-// SoftRF special-cases the always-zero chipsets (oss/SoftRF-lyusupov
-// .../src/driver/GNSS.cpp:1681-1684). Our operating region is central Europe,
-// where EGM96 separation runs 45-48 m, so 46 m is the assumption we make and
-// declare through geoid_measured.
+// INFO: fc 20nov26 many receivers omit GGA's geoid separation or send 0, so we assume 46 m, EGM96
+// over central Europe
 constexpr int32_t kDefaultGeoidSeparationMm = 46000;
 
-// INFO: fc 03aug26 A GGA that stops mid-sentence still carries a checksum over
-// what did arrive, so the checksum cannot catch it. moshe-braner refuses any GGA
-// shorter than 40 characters and drops the fix with it (oss/SoftRF-moshe-braner
-// .../src/driver/GNSS.cpp:2226-2236, `write_size > 40` else `badGGA`).
+// INFO: fc 20nov26 a GGA cut short still checksums, so moshe-braner's 40-byte floor refuses it
+// (GNSS.cpp:2226-2236)
 constexpr int kGgaLengthFloorBytes = 40;
 
-// INFO: fc 03aug26 An MTK-lineage receiver with no almanac reports a date in
-// 1980 next to a position that looks perfectly ordinary; OGN refuses any
-// two-digit year at or above 70 for that reason (oss/nrf52-ogn-tracker
-// src/ogn.h:737-738, "MTK GPS can produce fake date with year 1980"). Every date
-// this device will ever see is 20xx.
+// INFO: fc 20nov26 an MTK receiver with no almanac dates itself 1980, so OGN refuses a two-digit
+// year of 70 or more (ogn.h:737-738)
 constexpr int kTwoDigitYearCeiling = 70;
 
-// Which sentence a parse consumed. The caller ages GGA and RMC separately, so it
-// has to be told which one just arrived; a fix is not a fix on one of them.
 enum class Sentence : uint8_t { None, Rmc, Gga, Gsa, Gsv, Txt };
 
 // INFO: fc 13sep26 GSA holds twelve satellite slots before its DOPs, so VDOP is field 17
@@ -57,10 +44,8 @@ struct GnssSolution {
     bool utc_valid{false};
     int32_t latitude_1e7{0};
     int32_t longitude_1e7{0};
-    // INFO: gn 09Jun25 altitude_hae_mm is height above the WGS-84 ELLIPSOID (HAE), which is
-    // what ADS-L 4 SRD860 issue 2 G.1.7 transmits and what every received
-    // neighbour altitude is measured in. altitude_msl_mm is GGA field 9, the value a
-    // panel or an IGC file wants.
+    // INFO: fc 20nov26 ADS-L 4 SRD860 issue 2 G.1.7 transmits height above the WGS-84 ellipsoid,
+    // and a panel or IGC wants MSL
     int32_t altitude_hae_mm{0};
     int32_t altitude_msl_mm{0};
     int32_t geoid_separation_mm{kDefaultGeoidSeparationMm};
@@ -70,12 +55,9 @@ struct GnssSolution {
     uint32_t utc_s{0};
     // INFO: fc 18nov26 the milliseconds of RMC's hhmmss.sss: at 2 Hz they name the quarter solved
     uint16_t utc_ms{0};
-    // Horizontal dilution of precision in hundredths, GGA field 8.
     uint16_t hdop_e2{0};
     // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution
     uint16_t vdop_e2{0};
-    // How late this solution reached us relative to the PPS edge it describes.
-    // Zero until a driver that knows its part stamps it.
     uint16_t pps_latency_ms{0};
     // INFO: fc 18nov26 the drain that closed it closed an older pair too: the host was late
     bool backlogged{false};
@@ -99,13 +81,9 @@ class NmeaParser {
     const GnssSolution& solution() const { return solution_; }
     void reset() { line_bytes_ = 0; }
 
-    // Which sentence the last accepted parse was. Only meaningful right after
-    // feed() or parse_line() returned true.
+    // INFO: fc 20nov26 meaningful only right after feed() or parse_line() returned true
     Sentence last_sentence() const { return last_sentence_; }
 
-    // The receiver's answer to $PCAS06, "$GPTXT,01,01,02,SW=<version>": empty
-    // until the part has named itself. SoftRF takes the same substring and logs
-    // it (oss/SoftRF-lyusupov .../src/driver/GNSS.cpp:1015-1025).
     const char* firmware_version() const { return firmware_version_; }
     bool identified() const { return firmware_version_[0] != 0; }
 

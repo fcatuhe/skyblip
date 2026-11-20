@@ -18,8 +18,6 @@ struct AccelerometerSample {
     uint32_t at_ms;
 };
 
-// What the divider read, and whether something is feeding the charger. Whether
-// that reading is the cell at all is core/power's problem, not the board's.
 struct BatterySample {
     uint16_t divider_mv;
     bool external_power;

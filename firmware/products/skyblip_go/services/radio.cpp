@@ -22,12 +22,13 @@ Status RadioService::setup() {
 // thread. A pass of this loop only ever notices an edge after it went by.
 void RadioService::tick(uint32_t now_ms) {
     pass_us_ = context_.roles.clock.microseconds();
+    judge_transmit(now_ms);
     if (!identified()) return;
     accrue_armed();
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
     context_.state.rf.plan = plan;
     count_given_up(now_ms);
-    take_carrier_samples();
+    take_carrier_samples(now_ms);
     take_switching(now_ms);
     collect_outcome(now_ms);
     collect_busy(now_ms);
@@ -111,7 +112,7 @@ int RadioService::phase_ms() const { return phase_at(pass_us_); }
 
 int RadioService::phase_at(uint64_t now_us) const {
     const timing::ClockState& clock = context_.state.clock;
-    if (clock.pps_locked && now_us >= clock.pps_edge_us)
+    if (timing::pps_anchored(clock) && now_us >= clock.pps_edge_us)
         return static_cast<int>((now_us - clock.pps_edge_us) / 1000 % 1000);
     return static_cast<int>(now_us / 1000 % 1000);
 }
@@ -121,7 +122,7 @@ int RadioService::phase_at(uint64_t now_us) const {
 int64_t RadioService::second_origin_us() const {
     const timing::ClockState& clock = context_.state.clock;
     const uint64_t now_us = pass_us_;
-    if (clock.pps_locked && now_us >= clock.pps_edge_us)
+    if (timing::pps_anchored(clock) && now_us >= clock.pps_edge_us)
         return static_cast<int64_t>(clock.pps_edge_us +
                                     (now_us - clock.pps_edge_us) / kSecondUs * kSecondUs);
     return static_cast<int64_t>(now_us - now_us % kSecondUs);
@@ -249,11 +250,7 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
 timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan, int64_t origin_us,
                                                    uint32_t now_ms, Payload payload) const {
     const model::Ownship& own = context_.state.own;
-    // F5: a cold receiver's first solutions walk, and the flight state derived
-    // from them decides our transmit rate. Nothing goes on air until own-ship
-    // says the solution behind it has settled.
-    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
-        return timing::Transmitter::Attempt{};
+    if (!context_.state.transmit.transmits()) return timing::Transmitter::Attempt{};
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
     timing::Transmitter::Attempt owed =
@@ -273,9 +270,7 @@ bool RadioService::full_rate() const {
 }
 
 void RadioService::count_given_up(uint32_t now_ms) {
-    const model::Ownship& own = context_.state.own;
-    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
-        return;
+    if (!context_.state.transmit.transmits()) return;
     context_.state.air.tx_given_up +=
         transmitter_.give_up(slot_utc_s(now_ms), full_rate(), settings_.callsign[0] != 0);
 }

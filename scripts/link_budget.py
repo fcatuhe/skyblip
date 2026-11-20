@@ -6,14 +6,9 @@
     python3 scripts/link_budget.py a.ndjson b.ndjson --distance 16.7 --height 1.2 \\
         --antenna-a ANT-868-CW-QW-SMA --antenna-b ANT-868-CW-QW-SMA
 
-No meter stands between the two units, so nothing here measures watts. Each
-unit's Burst records say when it transmitted and what it heard, at what level,
-from whom; its Config record says what the transmitter was asked for. A burst
-sent by one and heard by the other is one instant read twice, so the pairs give
-a level per direction, and the distance gives the free-space loss it crossed.
-What the receiver heard, plus that loss, less its own antenna, is what the
-sender radiated. Every term the arithmetic leans on is in TERMS with its source,
-and the answer is printed with all of them. scripts/README.md says how to run one.
+A burst one unit sent and the other heard gives a level per direction, and the distance
+gives the free-space loss it crossed. Every term the arithmetic leans on is in TERMS with
+its source. scripts/README.md says how to run one.
 """
 import argparse
 import bisect
@@ -72,7 +67,6 @@ TERMS = (
 
 
 class Side:
-    """One unit's capture, as the link reads it."""
 
     def __init__(self, label, path, antenna):
         self.label = label
@@ -90,14 +84,12 @@ class Side:
 
 
 def instant(record):
-    """Seconds on the UTC clock both units share, or None when the phase was never measured."""
     if not (record["utc_dated"] and record["phase_valid"]):
         return None
     return record["at_s"] + record["into_ms"] / 1000.0
 
 
 def transmitter(side):
-    """The address and the transmit power a capture names, or None and why not."""
     configs = side.configs()
     if not configs:
         return None, "%s holds no config record, so it cannot say who sent what" % side.path
@@ -111,7 +103,6 @@ def transmitter(side):
 
 
 def pair(sender, sender_address, receiver):
-    """Each transmission of the sender with the reception of it at the receiver, if any."""
     sent = [record for record in sender.bursts() if record["verdict"] == "transmitted"]
     heard = [record for record in receiver.bursts()
              if record["verdict"] not in OWN_VERDICTS and record["address_valid"] and record["rssi_valid"]
@@ -143,11 +134,7 @@ def free_space_db(distance_m, frequency_hz=MBAND_HZ):
 
 
 def ground_band(distance_m, height_m, frequency_hz=MBAND_HZ):
-    """How far a flat ground can move this path against free space, as (weakest, strongest) dB.
-
-    Two rays at equal heights, the reflected one flipped in phase as grazing incidence
-    flips it, with any strength between none and total.
-    """
+    # INFO: fc 20nov26 two rays at equal heights, the reflection phase-flipped as at grazing incidence, any strength from none to total
     wavelength = SPEED_OF_LIGHT_M_S / frequency_hz
     reflected_m = math.hypot(distance_m, 2.0 * height_m)
     turn = cmath.exp(-2j * math.pi * (reflected_m - distance_m) / wavelength)
@@ -158,7 +145,6 @@ def ground_band(distance_m, height_m, frequency_hz=MBAND_HZ):
 
 
 def quiet_distance_m(height_m, frequency_hz=MBAND_HZ):
-    """Where the reflected ray arrives half a wave late: the ground can only strengthen the path."""
     return 4.0 * height_m * height_m * frequency_hz / SPEED_OF_LIGHT_M_S
 
 
@@ -167,7 +153,6 @@ def spread(figure):
 
 
 def direction(link, sender_tx, sender_antenna, receiver_antenna, distance_m, height_m):
-    """Path loss and e.r.p. for one direction, or None when no burst crossed it."""
     levels = link["levels"]
     if not levels:
         return None
@@ -193,7 +178,6 @@ def direction(link, sender_tx, sender_antenna, receiver_antenna, distance_m, hei
 
 
 def gnss_distance(receiver, sender_address):
-    """The median distance the receiver's own traffic picture put the sender at, and how many."""
     metres = [record["distance_m"] for record in receiver.records
               if record["type"] == "traffic" and record["address"] == sender_address and record["position_valid"]]
     return (statistics.median(metres), len(metres)) if metres else (None, 0)
@@ -243,7 +227,6 @@ def direction_lines(name, link, sender_tx, result, distance_m, height_m, out):
 
 
 def settings_lines(results, tx, antenna, height_m, out):
-    """What the two estimates set in sx1262.h, taking the unit that radiates more."""
     out("")
     out("what it sets")
     ceiling = max(result["erp_high"] for result in results)

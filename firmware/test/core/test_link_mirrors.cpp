@@ -13,6 +13,7 @@
 #include "core/power/reset_reason.h"
 #include "core/settings/blob.h"
 #include "core/store/sector.h"
+#include "core/timing/transmit_gate.h"
 #include "core/traffic/alarm.h"
 #include "ports/dfu.h"
 #include "ports/gnss.h"
@@ -287,6 +288,19 @@ constexpr bool on_the_wire(dfu::Proof value) {
     return false;
 }
 
+constexpr bool on_the_wire(timing::NoTx value) {
+    switch (value) {
+        case timing::NoTx::Address:
+        case timing::NoTx::Radio:
+        case timing::NoTx::Gnss:
+        case timing::NoTx::Fix:
+        case timing::NoTx::Utc:
+        case timing::NoTx::Pps: return true;
+        case timing::NoTx::None: return false;
+    }
+    return false;
+}
+
 }
 
 static_assert(code(go::Alarm::Off) == 0, "alarm off");
@@ -448,5 +462,13 @@ static_assert(code(dfu::Proof::HubBootable) == 4, "proof hub_bootable");
 static_assert(code(dfu::Proof::Proven) == 5, "proof proven");
 static_assert(code(dfu::Proof::ConfirmFailed) == 6, "proof confirm_failed");
 static_assert(on_the_wire(dfu::Proof::None), "proof");
+
+static_assert(code(timing::NoTx::Address) == 1, "no_tx address");
+static_assert(code(timing::NoTx::Radio) == 2, "no_tx radio");
+static_assert(code(timing::NoTx::Gnss) == 3, "no_tx gnss");
+static_assert(code(timing::NoTx::Fix) == 4, "no_tx fix");
+static_assert(code(timing::NoTx::Utc) == 5, "no_tx utc");
+static_assert(code(timing::NoTx::Pps) == 6, "no_tx pps");
+static_assert(on_the_wire(timing::NoTx::Address), "no_tx");
 
 }

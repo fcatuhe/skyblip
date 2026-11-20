@@ -21,6 +21,7 @@ void AlarmService::tick(uint32_t now_ms) {
         sign_on_pending_ = false;
         sign_.begin(indication::kSignOn, now_ms);
     }
+    if (stopped_transmitting_in_flight()) sign_.begin(indication::kSignNoTx, now_ms);
     const annunciation::Command command = annunciation_.update(situation, now_ms);
     if (annunciation_.voice() == annunciation::Voice::Traffic) sign_.cancel();
     const indication::Signal signal = sign_.update(now_ms);
@@ -45,6 +46,15 @@ bool AlarmService::lost_go() {
     const bool lost = following_go_ && !following && settings_.paired && airborne;
     following_go_ = following;
     return lost;
+}
+
+// INFO: fc 19nov26 one pulse as the NO TX mark and flight first stand together, a takeoff included
+bool AlarmService::stopped_transmitting_in_flight() {
+    const bool shown = context_.state.transmit.shown() != timing::NoTx::None;
+    const bool airborne = context_.state.flight.confirmed_state == flight::FlightState::Airborne;
+    const bool stopped = shown && airborne && !no_tx_in_flight_;
+    no_tx_in_flight_ = shown && airborne;
+    return stopped;
 }
 
 void AlarmService::sign_off(uint32_t now_ms) {

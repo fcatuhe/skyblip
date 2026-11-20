@@ -59,7 +59,7 @@ constexpr int64_t kSpeedCeilingMmS = 514444;
 constexpr int64_t kAltitudeCeilingM = 100000;
 constexpr int64_t kAltitudeFloorM = -1000;
 
-// Rounded, not truncated: "46.9" is 47 m of geoid separation, not 46.
+// INFO: fc 20nov26 rounded, not truncated: "46.9" is 47 m of geoid separation, not 46
 bool parse_scaled(const char* text, int64_t scale, int64_t& out) {
     if (!text || !text[0]) return false;
     bool negative = false;
@@ -241,19 +241,11 @@ bool NmeaParser::apply_gsv(const char* talker, const char* fields[], int field_c
     return true;
 }
 
-// $GPTXT,01,01,02,SW=URANUS5,V5.1.0.0 - the CASIC firmware banner, and the only
-// evidence that the part answering us speaks $PCAS at all. The version text is
-// everything after "SW=", which is where SoftRF reads it from too.
-// The version text carries commas of its own ("SW=URANUS5,V5.1.0.0"), so it is
-// read off the raw line rather than out of the split fields: it is one string,
-// not three, and SoftRF takes the same run of characters up to the checksum.
+// INFO: fc 20nov26 the version "SW=URANUS5,V5.1.0.0" holds commas, so it is read off the raw line
 bool NmeaParser::apply_txt(const char* line, int bytes) {
     int at = 0;
     for (int commas = 0; at < bytes && commas < 4; at++)
         if (line[at] == ',') commas++;
-    // Only the SW= banner. The part also emits $GPTXT for antenna status and
-    // start-up notices, and a version field that is sometimes an antenna warning
-    // is worse than no version field.
     if (bytes - at < 3 || line[at] != 'S' || line[at + 1] != 'W' || line[at + 2] != '=')
         return false;
     at += 3;
@@ -264,18 +256,12 @@ bool NmeaParser::apply_txt(const char* line, int bytes) {
     last_sentence_ = Sentence::Txt;
     if (written == 0) return false;
     std::memcpy(firmware_version_, version, sizeof(version));
-    // Not a solution: `updates` counts fixes, and the verification window that
-    // reads it must not be satisfied by the receiver introducing itself.
+    // INFO: fc 20nov26 no sentences++ here: verification counts solutions, and a banner is none
     return true;
 }
 
-// INFO: fc 03aug26 RMC fields 1 and 9 are UTC as the receiver already resolved
-// it, so the GPS-UTC leap second count never enters this arithmetic. The
-// moshe-braner fork queries and persists the count and reboots when it changes
-// (.../src/driver/GNSS.cpp:1610-1679) because it reads u-blox NAV-TIMEGPS, which
-// reports GPS time; that correction has no reader here and adding one would be a
-// second, wrong, clock. This device's only failure mode in that direction is a
-// receiver whose almanac is stale, and the date sanity below is what catches it.
+// INFO: fc 03aug26 RMC fields 1 and 9 are UTC the receiver already resolved, so no GPS-UTC leap
+// second correction belongs here
 bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
     if (field_count < 10) return false;
     last_sentence_ = Sentence::Rmc;
@@ -292,8 +278,6 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
             seconds = two_digits(fields[1] + 4);
         int day = two_digits(fields[9]), month = two_digits(fields[9] + 2),
             year = two_digits(fields[9] + 4);
-        // The MTK 1980 lie and its neighbours: a two-digit year of 70 or more is
-        // a receiver that has not decoded the almanac, not a date.
         const bool date_sane = year < kTwoDigitYearCeiling && month >= 1 && month <= 12 &&
                                day >= 1 && day <= 31 && hours < 24 && minutes < 60 && seconds < 62;
         if (date_sane) {
@@ -323,8 +307,6 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
 }
 
 bool NmeaParser::apply_gga(const char* fields[], int field_count, int bytes) {
-    // A sentence that stopped early still checksums: length is the only thing
-    // that catches it, which is why moshe-braner measures it.
     const int32_t stamp_ms = field_count > 1 ? stamp_ms_of_day(fields[1]) : -1;
     // INFO: fc 18nov26 a 31-byte no-time GGA pairs with its no-time RMC, a torn timed one never
     if (field_count < 10 || bytes < kGgaLengthFloorBytes) {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { goAlarmOf, heardSettings, settingsOf, soundsOf, statusOf } from '#skyblip/settings';
+import { goAlarmOf, heardSettings, noTxMark, settingsOf, soundsOf, statusOf } from '#skyblip/settings';
 
 const GO = { aircraft_type: 1, callsign: 'F-JXYZ', aircraft_address: '', units: 'nautical' };
 const BRAVO = { alarm_enabled: true, alarm_volume: 'loud', aircraft_address: '' };
@@ -16,6 +16,14 @@ test('status reads the transponder Bravo hears in the shape the form shows', () 
 test('status says whether a Go holds a Bravo, and what it makes of it', () => {
   assert.equal(statusOf({ command: 'status', flight: 'ground', bravo: 'live' }).bravo, 'live');
   assert.equal(statusOf({ command: 'status', flight: 'ground' }).bravo, null);
+});
+
+test('status names why a Go does not transmit in the words its glass draws', () => {
+  assert.equal(statusOf({ command: 'status', flight: 'airborne', no_tx: 'pps' }).noTx, 'pps');
+  assert.equal(noTxMark(statusOf({ command: 'status', no_tx: 'pps' })), 'NO TX PPS');
+  assert.equal(noTxMark(statusOf({ command: 'status', no_tx: 'radio' })), 'NO TX RADIO');
+  assert.equal(noTxMark(statusOf({ command: 'status', no_tx: 'address' })), 'NO TX ADDRESS');
+  assert.equal(noTxMark(statusOf({ command: 'status', flight: 'airborne' })), null);
 });
 
 test('a Go takes the address, the callsign and the type, as its AIRCRAFT menu does', () => {

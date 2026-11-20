@@ -14,7 +14,6 @@ constexpr size_t blob_bytes(size_t payload) { return payload + kBlobOverhead; }
 
 constexpr uint8_t blob_version(const uint8_t* data) { return data[0]; }
 
-// What the settings in use are, when they are not the blob a product stores.
 enum class Fallback : uint8_t { None, Prior, Defaults };
 
 void seal(uint8_t version, const void* payload, size_t payload_bytes, uint8_t* out,

@@ -3,14 +3,11 @@
 
     python3 scripts/check_image_product.py <image.signed.bin> <product>
 
-Every product signs with the same key, so the image says which product it is
-for in its protected TLVs, as MCUboot's image class: 0x74 is the vendor, the
-uuid5 of skyblip.eu, and 0x75 the class, the uuid5 of the product directory in
-the vendor's namespace, as imgtool derives them from the product's prj.conf.
-A unit refuses an upload whose class is not the one it runs
-(firmware/core/dfu/README.md), and a unit running an image without one refuses
-every upload. So does a unit sent an image whose protected TLVs are wider than
-its check holds, which fails here too.
+Every product signs with the same key, so the image names its product in its protected
+TLVs as MCUboot's image class: 0x74 is the uuid5 of skyblip.eu, and 0x75 the uuid5 of the
+product directory in that namespace. A unit refuses an upload of another class, and every
+upload while it runs an image without one (firmware/core/dfu/README.md). It also
+refuses protected TLVs wider than PROTECTED_AREA_BYTES, and so does this check.
 """
 import pathlib
 import struct
@@ -24,7 +21,7 @@ from check_imu_image import protected_tlvs  # noqa: E402
 TLV_VENDOR = 0x74
 TLV_CLASS = 0x75
 VENDOR = uuid.uuid5(uuid.NAMESPACE_DNS, "skyblip.eu")
-# ProductCheck::kProtectedAreaBytes, which test_check_image_product.py holds this to
+# INFO: fc 20nov26 ProductCheck::kProtectedAreaBytes on the device, and test_check_image_product.py holds the two equal
 PROTECTED_AREA_BYTES = 128
 
 

@@ -3,37 +3,16 @@
 
     python3 scripts/size_check.py <zephyr.elf>
 
-The budgets are the build's own, read off the .config beside the ELF, as the
-linker derives its regions (Zephyr v4.4.2,
-include/zephyr/arch/arm/cortex_m/scripts/linker.ld:57-64):
+The budgets are read off the .config beside the ELF, as the linker derives its regions:
+flash is slot0 less CONFIG_ROM_END_OFFSET, the trailer and TLVs MCUboot reserves, and RAM
+is CONFIG_SRAM_SIZE. Each figure runs from the region's start to the end of the last
+segment the image places in it, so every declared stack is counted.
 
-    flash  the code partition, slot0, less CONFIG_ROM_END_OFFSET, the image
-           trailer and TLVs that MCUboot's sysbuild reserves at its end
-           (MCUboot 6d3b3d2c, boot/zephyr/sysbuild/CMakeLists.txt:59-65)
-    RAM    CONFIG_SRAM_SIZE, which the devicetree's zephyr,sram sets
-
-Each figure is what the linker's memory region table prints: from the start
-of the region to the end of the last segment the image places in it. Flash
-holds the code, the read-only data and the initial values of data. RAM holds
-data, bss and noinit, so every stack a build declares is in it: the main, ISR,
-idle and workqueue stacks its Kconfig sizes and each K_THREAD_STACK_DEFINE in
-noinit, and a stack member such as the radio thread's
-(hardware/platform/zephyr/rf.h) in the object that holds it.
-
-Every build fails RAM at link before it can fail here, because the linker
-holds every board to CONFIG_SRAM_SIZE. It also fails flash at link, because the
-linker holds it to the same slot: for both, this prints the headroom. A build
-with no slot links against the whole flash, over the factory SoftDevice and
-bootloader, so it fails here. An ELF with no loadable segment, or with one
-outside both the flash and the SRAM, fails here too. Each budget is the board's
-slot0 less the footer its build's CONFIG_ROM_END_OFFSET reserves.
-
-A swap-using-offset build is held to a second limit, on the signed image beside
-the ELF: the slot less two sectors, one for MCUboot's trailer and one the
-secondary slot keeps free to move sectors through (MCUboot swap_offset.c,
-app_max_size()). The footer counts 150 B of TLVs and one sector, so an image can
-pass the first limit by up to a sector and still be one MCUboot refuses to swap
-in or out over the air, while a drag-and-drop of it boots.
+The linker already fails a build over either budget, so this prints the headroom. It fails
+a build with no slot, which links over the factory SoftDevice and bootloader, and an ELF
+with no loadable segment or one outside both regions. A swap-using-offset build must also
+fit its signed image in the slot less two sectors (MCUboot swap_offset.c, app_max_size()),
+or MCUboot refuses to swap it over the air.
 """
 import os
 import struct

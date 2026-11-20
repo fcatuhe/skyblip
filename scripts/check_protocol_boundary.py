@@ -3,14 +3,12 @@
 
     python3 scripts/check_protocol_boundary.py
 
-Each radio protocol stack in firmware/protocols/ is copied into other projects with its tests, so
-it must build with nothing from skyBlip (firmware/protocols/README.md). Every file is read,
-whatever its extension. A quoted include names a path from firmware/, written plainly with no
-`..`: a file in protocols/<stack>/ may include protocols/<stack>/, protocols/common/ and the stack
-EXTENDS names, a file directly under protocols/ only protocols/common/, and a test file may also
-include the vendored doctest. An angle include must be a C++ standard library header, so no Zephyr, no platform and no
-vendor header gets in that way. An include that names no header in <> or "", such as one built
-from a macro, is refused, because nothing can say where it leads.
+A stack must build with nothing from skyBlip (firmware/protocols/README.md). A quoted include
+names a path from firmware/ with no `..`: a file in protocols/<stack>/ may include its stack,
+protocols/common/ and the stack EXTENDS names, a file directly under protocols/ only
+protocols/common/, and a test file also the vendored doctest. An angle include must be a C++
+standard library header. An include that names no header, such as one built from a macro, is
+refused.
 """
 import os
 import posixpath

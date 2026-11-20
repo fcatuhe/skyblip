@@ -3,12 +3,10 @@
 
     python3 scripts/check_bootloader_keys.py <mcuboot zephyr.bin> <public.pem>...
 
-MCUboot holds each P-256 verification key as its DER SubjectPublicKeyInfo, and
-imgtool's KEYHASH TLV is the SHA-256 of those bytes. A unit reads the same keys
-off its bootloader and installs over the air only an image signed by one of
-them (firmware/core/dfu/README.md). A development bootloader trusts its signing
-key and firmware/keys/production.pub.pem, a release bootloader the production
-key alone (firmware/keys/README.md).
+A unit installs over the air only an image signed by a key its bootloader embeds
+(firmware/core/dfu/README.md). A development bootloader trusts its signing key and
+firmware/keys/production.pub.pem, a release bootloader the production key alone
+(firmware/keys/README.md).
 """
 import base64
 import hashlib

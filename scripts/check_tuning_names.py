@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 """Fail if a tuning constant in the firmware's logic layers is named off-vocabulary.
 
-Three rules, written out in firmware/README.md under "Naming a tuning constant":
+The rules are firmware/README.md's "Naming a tuning constant":
 
-  unit last     a name that carries a mechanism ends in the unit it is measured in
-  subject first a mechanism on its own is ambiguous at the call site: kForgetMs
-                forgets what? The subject comes before it
-  one word each a mechanism has one approved name, so a grep for every hold in
-                the tree finds every hold
+  unit last      a name that carries a mechanism ends in its unit
+  subject first  the subject comes before the mechanism: kForgetMs forgets what?
+  one word each  a mechanism has one approved name, so one grep finds every hold
 
-`hardware/`, `boards/` and `ports/` are out of scope: those figures are a
-datasheet's, under the datasheet's name, and a rename would hide where they came
-from.
+`hardware/`, `boards/` and `ports/` are out of scope, because those figures keep
+their datasheet's name.
 """
 import os
 import sys

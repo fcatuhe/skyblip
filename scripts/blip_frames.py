@@ -1,12 +1,10 @@
 """The companion link's frames: CBOR maps with numbered keys, to and from dicts keyed by name.
 
-The numbers come from schemas/link.v1.json, read here as it stands. The codec is
-the grammar the registry describes: one map of unsigned keys in ascending order,
-every head in its shortest form and its argument within 32 bits, definite lengths,
-arrays of unsigned integers only, text in UTF-8, no floats, no tags, nothing nested
-but those arrays. Anything else is refused on the way in, so a frame this decodes is
-one the unit would read, and every value is checked against its key's type on the
-way out, so a frame this encodes is one the unit could have been sent.
+The numbers come from schemas/link.v1.json as it stands. The codec accepts only the
+registry's grammar: one map of unsigned keys in ascending order, shortest heads, arguments
+within 32 bits, definite lengths, arrays of unsigned integers only, UTF-8 text, no floats,
+no tags. A frame it decodes is one the unit would read, and one it encodes is one the unit
+could have been sent.
 """
 import asyncio
 import json
@@ -73,7 +71,6 @@ ACCEPTS = {
 
 
 def encode_frame(fields, registry=REGISTRY):
-    """A dict keyed by name, command first among them, as the CBOR bytes the unit reads."""
     if not isinstance(fields, dict):
         raise FrameError("a frame is an object of names, not %s" % type(fields).__name__)
     fields = dict(fields)
@@ -123,7 +120,6 @@ def enum_code(enum, name):
 
 
 def decode_frame(data, registry=REGISTRY):
-    """CBOR bytes from the unit as a dict keyed by name; a key or code it does not know stays a number."""
     entries = decode(data)
     if not is_unsigned(entries.get(COMMAND_KEY)):
         raise FrameError("key 0 names the frame, and %r does not" % (entries.get(COMMAND_KEY),))
@@ -151,7 +147,6 @@ def enum_name(enum, code):
 
 
 async def next_frame(link, commands, timeout, awaited, decode=None):
-    """The next frame commanded one of commands, past the frames the unit pushes unasked."""
     decode = decode or decode_frame
     deadline = time.monotonic() + timeout
     while True:
@@ -166,12 +161,10 @@ async def next_frame(link, commands, timeout, awaited, decode=None):
 
 
 def more_follows(frame):
-    """A multi-frame reply says so in every frame but its last."""
     return frame.get("more") is True
 
 
 def printable(frame):
-    """A decoded frame as JSON text, byte strings in hex, for a person to read."""
     return json.dumps({name: value.hex() if isinstance(value, bytes) else value
                        for name, value in frame.items()}, separators=(",", ":"))
 

@@ -1,6 +1,3 @@
-// ports/system_power.h: capability port: why the device came up, and how it goes
-// away again. What the causes mean and when to use system_off() is decided in
-// core/power; this is the call.
 #ifndef SKYBLIP_PORTS_SYSTEM_POWER_H
 #define SKYBLIP_PORTS_SYSTEM_POWER_H
 
@@ -13,31 +10,17 @@ class SystemPower {
    public:
     virtual ~SystemPower() = default;
 
-    // Read once at boot and cleared there: a latching cause register reports
-    // the same reason after every following reset until it is cleared.
+    // INFO: fc 20nov26 read and cleared at boot, since a latching register repeats it until cleared
     virtual power::ResetCause reset_causes() const { return power::ResetCause::None; }
 
     virtual void system_off() {}
 
-    // THE POWER-FAILURE COMPARATOR.
-    //
-    // Absence is a capability and it is reported here, by the one object that
-    // could raise the warning: a platform with no comparator answers false to
-    // armed() and never raises a warning, so core/power's rule
-    // (core/power/cutoff.h::may_write) degrades to the voltage half by itself and
-    // no service branches on a pointer or a flag. It lives on this port rather
-    // than on a role of its own because it is the same peripheral: on the
-    // nRF52840 RESETREAS, SYSTEMOFF and POFCON are three registers of POWER, and
-    // ports::Roles is assembled by the board, which has no way to probe a
-    // comparator that has no pin.
+    // INFO: fc 20nov26 false with no comparator, so core/power's may_write keeps its voltage half
     virtual bool supply_monitor_armed() const { return false; }
 
-    // Latched by the comparator's interrupt, read and cleared here. Returns true
-    // once per warning, because what reads it hands it to core/power, which
-    // latches it for good.
     virtual bool take_supply_warning() { return false; }
 
-    // INFO: fc 21sep26 the bits that outlive the rails; nowhere to keep them reads false: README.md
+    // INFO: fc 20nov26 these bits outlive the rails, and a platform without storage answers None
     virtual power::CellOnGlass cell_on_glass() const { return power::CellOnGlass::None; }
     virtual void set_cell_on_glass(power::CellOnGlass word) { (void)word; }
     virtual bool went_dark_flat() const { return false; }

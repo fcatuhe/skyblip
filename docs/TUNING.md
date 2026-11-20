@@ -19,7 +19,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kShortestBlipEarCanPlaceMs` | 90 | milliseconds | - | A piezo reaches full amplitude in a couple of milliseconds, so this is an ear figure, not a driver one: shorter than this and a blip is a click that a pilot cannot place, and cannot count. |
+| `kShortestBlipEarCanPlaceMs` | 90 | milliseconds | - | a piezo sounds at once, so this is an ear figure: the shortest blip ears count |
 | `kTuneSixteenthMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
 | `kAdvisorySkyMs` | `2 * kTuneSixteenthMs` = 180 | milliseconds | - | - |
 | `kAdvisoryBlipMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
@@ -69,15 +69,15 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kTurnCeilingDps` | 30 | degrees per second | Ceiling | [README](../firmware/core/flight/README.md) argues it |
-| `kClimbWindowFloorMs` | 500 | milliseconds | Floor | Shortest window that still averages out sensor noise, and the longest one whose answer is still "now" rather than a history lesson. |
+| `kClimbWindowFloorMs` | 500 | milliseconds | Floor | shorter and the sensor noise is the rate, longer and the rate is history |
 | `kClimbWindowCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | [README](../firmware/core/flight/README.md) argues it |
-| `kExtrapolationCeilingMs` | 1500 (1.5 s) | milliseconds | Ceiling | The model is OGN's, in oss/nrf52-ogn-tracker src/ogn.h:1735-1790: constant ground speed on a constant turn rate, the turn applied as half before the velocity is resolved and half after, plus a constant climb. |
+| `kExtrapolationCeilingMs` | 1500 (1.5 s) | milliseconds | Ceiling | past this the last fix stands where it was, never at an invented position |
 | `kLevelFlightMg` | 1000 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kResultantFloorMg` | 200 | thousandths of g | Floor | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedStaleMs` | 2000 (2 s) | milliseconds | Stale | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedDampingSamples` | 4 | samples | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedRateDampingMs` | 2000 (2 s) | milliseconds | Damping | [README](../firmware/core/flight/README.md) argues it |
-| `kLogStatusPeriodMs` | 60000 (1 min) | milliseconds | Period | the cell and the aircraft heard, once a minute: one record in sixty of the track's |
+| `kLogStatusPeriodMs` | 60000 (1 min) | milliseconds | Period | the cell and the aircraft heard, once a minute: one record in sixty |
 | `kLogEventBacklogRecords` | 16 | records | - | alarms and encounters waiting on a writer that drains every pass |
 | `kTimeOffsetCeilingS` | `0xFFFF` = 65535 | seconds | Ceiling | - |
 | `kLogRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the ADS-L G.1.16 airborne rate, so the log holds what neighbours were told |
@@ -95,10 +95,10 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kFirstFixSettleMs` | 20000 (20 s) | milliseconds | Settle | the moshe-braner SoftRF fork holds transmission for 20 s after the first fix and 5 s after a re-fix (SoftRF.ino:552-580). |
+| `kFirstFixSettleMs` | 20000 (20 s) | milliseconds | Settle | the moshe-braner SoftRF fork waits 20 s after a first fix and 5 s after a re-fix (SoftRF.ino:552-580) |
 | `kRefixSettleMs` | 5000 (5 s) | milliseconds | Settle | [README](../firmware/core/gnss/README.md) argues it |
 | `kSettleResidualM` | `flight::kFlightSpeedMmS / 1000` = 12 | metres | Settle | the takeoff speed over the second a residual spans, so no smaller error invents a flight |
-| `kConvergedFixes` | 3 | fixes | Fixes | - |
+| `kConvergedFixes` | 3 | fixes | Fixes | [README](../firmware/core/gnss/README.md) argues it |
 | `kTornStampMs` | -2 | milliseconds | - | - |
 | `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea |
 | `kAltitudeCeilingM` | 100000 | metres | Ceiling | - |
@@ -112,7 +112,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kShortestFlashEyeCanCatchMs` | 20 | milliseconds | - | An LED reaches full brightness in microseconds, so core/annunciation's 90 ms floor - an ear figure, the shortest blip a pilot can place and count - does not apply. |
+| `kShortestFlashEyeCanCatchMs` | 20 | milliseconds | - | an LED lights at once, so this is an eye figure: the shortest flash eyes catch |
 | `kShortestPhaseMs` | `shortest_phase_ms()` | milliseconds | - | - |
 | `kUtcGridMs` | 60000 (1 min) | milliseconds | - | every row's cycle divides the UTC minute, so a flash starts on second 00 |
 | `kSignOnPulseMs` | 400 | milliseconds | - | no hand has felt these through a motor that spins up, until #169 benches one |
@@ -125,11 +125,11 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kWindowSamples` | 3 | samples | Window | - |
-| `kLevelSamples` | 3 | samples | Samples | More than two consecutive samples, so the third one acts. |
-| `kRailSettleMs` | 20 | milliseconds | Settle | the 20 ms MB spends between driving the enable pins low and releasing them (nRF52.cpp:2075). |
-| `kLongPressHoldMs` | 2000 (2 s) | milliseconds | Hold | Long enough that it cannot be the page press, short enough to do with gloves on. |
-| `kParkSettleMs` | 3000 (3 s) | milliseconds | Settle | A power-off parks the panel with a full refresh, which the SSD1681 clocks out in about 2.5 s, and an install or a recovery through black, about a second. |
-| `kReleaseSettleMs` | 100 | milliseconds | Settle | nRF52 SENSE is a level detect, not an edge, so arming the wake pin while the button is still down wakes the device the instant SYSTEM OFF latches. |
+| `kLevelSamples` | 3 | samples | Samples | [README](../firmware/core/power/README.md) argues it |
+| `kRailSettleMs` | 20 | milliseconds | Settle | the rail's discharge before the wake pin is armed, the 20 ms MB waits after driving the enables low (nRF52.cpp:2075) |
+| `kLongPressHoldMs` | 2000 (2 s) | milliseconds | Hold | long enough that it cannot be a page press, short enough to do with gloves on |
+| `kParkSettleMs` | 3000 (3 s) | milliseconds | Settle | the SSD1681 clocks out a full park refresh in about 2.5 s, and rails dropped earlier leave half an image |
+| `kReleaseSettleMs` | 100 | milliseconds | Settle | SENSE detects a level, so the button stays up 100 ms before the wake pin is armed, as in SoftRF (src/platform/nRF52.cpp:3199-3203) |
 
 ## [`firmware/core/protocol`](../firmware/core/protocol/README.md)
 
@@ -194,7 +194,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kGroundEmitStartMs` | `kUplinkWindowMs.start_ms` | milliseconds | - | - |
 | `kGroundEmitEndMs` | `kUplinkWindowMs.end_ms - kCompletionAllowanceMs` | milliseconds | - | a completion deadline, not a start deadline |
 | `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
-| `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | - |
+| `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kPpsLockTailMs` | 3000 (3 s) | milliseconds | - | a pulse reads locked this long past its last edge, so one missed edge keeps it |
+| `kPpsEdgeMaxAgeMs` | `static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms)` | milliseconds | MaxAge | C.5: the latest instant a burst planned from an edge keys at, window B's close |
 | `kRetuneUs` | 30 | microseconds | - | - |
 | `kSwitchMarginUs` | `kSwitchMarginMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kSwitchRetuneUs` | `kSwitchRetuneMs * 1000` = 5000 (5 ms) | microseconds | - | - |
@@ -207,6 +209,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFixInHandEarlyMs` | -1000000 | milliseconds | - | a fix in hand before every instant, for a caller that names no arrival |
 | `kRedrawLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | a redrawn instant leaves the channel check its listen before it |
 | `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
+| `kNoTxHoldMs` | 10000 (10 s) | milliseconds | Hold | a failure shown only once it lasts, so a short gap never flickers |
+| `kVerdictSettleMs` | 10000 (10 s) | milliseconds | Settle | the sky's requirements are judged this long after the first fix |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -215,7 +219,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAdvisoryAltitudeM` | 300 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kAdvisoryDistanceM` | 3000 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kUnknownTargetSpeedMps` | 30 | metres per second | - | a relayed target arrives with no velocity, and zero would make it the safest dot |
-| `kAlertMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | SoftRF alerts only on targets seen within ALERT_EXPIRATION_TIME (5 s) and re-checks no more often than every 2 s (oss/SoftRF-lyusupov .../src/TrafficHelper.h:58-59, .../src/TrafficHelper.cpp:236-260). |
+| `kAlertMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | SoftRF alerts on targets seen within 5 s, at most every 2 s (TrafficHelper.h) |
 | `kRenotifyFloorMs` | 2000 (2 s) | milliseconds | Floor | [README](../firmware/core/traffic/README.md) argues it |
 | `kGroundRenotifyFloorMs` | 60000 (1 min) | milliseconds | Floor | a touch-and-go or a stop-and-go is back in the air well inside a minute |
 | `kCallsignForgetS` | 600 | seconds | Forget | a name outlives the target it belongs to, which ages out in seconds |
@@ -231,8 +235,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kAirborneTargetForgetS` | `kTargetForgetReports * adsl::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kGroundTargetForgetS` | `kTargetForgetReports * adsl::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
-| `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | The honest ceiling of our own link, computed rather than borrowed:  +14 dBm e.r.p. transmitted, which is the ERC 70-03 band h1.4 limit and what the driver programs (hardware/parts/sx1262/sx1262.h); about -107 dBm of receive sensitivity at the M band's 100 kchip/s with the boosted gain of J1 - a bench figure, not a datasheet one; dipole-referenced antennas at both ends and nothing at all in the way. |
-| `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | A relayed target did not travel that path. |
+| `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | [README](../firmware/core/traffic/README.md) argues it |
+| `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | [README](../firmware/core/traffic/README.md) argues it |
 | `kAdsbRangeCeilingM` | 1115000 | metres | Ceiling | 1090 MHz line of sight between two aircraft at FL600, worked out in README.md |
 | `kReceptionAheadCeilingS` | 2 | seconds | Ceiling | our second lags our clock by one, a paired Bravo's runs one ahead: no further |
 | `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
@@ -337,6 +341,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAheadCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | unverified: two GNSS clocks part by a second at most, and more is no clock |
 | `kFarewellCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | two health periods for Bravo to answer an unpairing Go, then the link drops |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
+| `kRadioAnswerMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | three dwells and readings a second, so nine missed is a radio not answering |
+| `kRadioRefusalSamples` | 2 | samples | Samples | one refused dwell is a transient, a second inside the age a fault |
 | `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -416,13 +422,13 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServicePassCeilingMs` | 10 | milliseconds | Ceiling | - |
 | `kServiceRestCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | the longest the loop sleeps with nothing due, well inside the silence ceiling |
 | `kServicePassFloorMs` | 2 | milliseconds | Floor | a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second |
-| `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
-| `kHardwareWatchdogCeilingMs` | 12000 (12 s) | milliseconds | Ceiling | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
+| `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
+| `kHardwareWatchdogCeilingMs` | 12000 (12 s) | milliseconds | Ceiling | SoftRF's nRF52 figure (src/platform/nRF52.cpp:4558), above kServiceSilenceCeilingMs so the loop refuses to feed first |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 | `kBarometerPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kBarometerPpsWindowMs` | `2 * kServicePassCeilingMs` = 20 | milliseconds | Window | - |
 | `kBarometerConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA |
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
-| `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
+| `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | the gauge needs three readings to reject a transient, so this still shows charge on the first screen |
 
-280 constants over 26 folders.
+286 constants over 26 folders.

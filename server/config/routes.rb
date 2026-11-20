@@ -1,8 +1,4 @@
 Rails.application.routes.draw do
-  constraints host: "www.#{URI(Rails.configuration.x.public_url).host}" do
-    get "(*path)", format: false, to: redirect { |_params, request| "#{Rails.configuration.x.public_url}#{request.fullpath}" }
-  end
-
   constraints ->(request) { request.original_fullpath.match?(%r{\A/[^?]+/(\?|\z)}) } do
     get "*path", format: false, to: redirect { |_params, request| request.original_fullpath.sub(%r{/+(\?|\z)}, '\\1') }
   end

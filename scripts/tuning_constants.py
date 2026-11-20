@@ -1,20 +1,10 @@
 #!/usr/bin/env python3
-"""Collect the firmware's tuning constants: the numbers a behavior is tuned by.
+"""Collect the firmware's tuning constants, for check_tuning_names.py and tuning_index.py.
 
-One parse, two readers. `check_tuning_names.py` holds the vocabulary to it and
-`tuning_index.py` writes docs/TUNING.md out of it, so a constant cannot be
-documented under one name and checked under another.
-
-A tuning constant is a `constexpr` in the logic layers, the protocol stacks
-among them and their tests not, whose name ends in a unit:
-a duration, a speed, a distance, a force or a count of samples. `hardware/`,
-`boards/` and `ports/` are out of scope on purpose - a datasheet's 2.6 s busy
-time is the part's figure under the part's name, and renaming it would hide
-where it came from.
-
-MECHANISMS is the closed vocabulary: the word in front of the unit, and the one
-a reader takes the mechanism from. firmware/README.md carries the rules the
-checker enforces.
+A tuning constant is a `constexpr` in the logic layers, the protocol stacks included and their
+tests not, whose name ends in a unit. `hardware/`, `boards/` and `ports/` are out of scope,
+because a datasheet's figure keeps the part's name. MECHANISMS is the closed vocabulary of the
+word before the unit (firmware/README.md).
 """
 import os
 import re

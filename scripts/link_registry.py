@@ -2,9 +2,6 @@
 """Write the files generated from schemas/link.v1.json, the companion link's registry.
 
     python3 scripts/link_registry.py
-
-Stdlib only. scripts/check_link_registry.py runs the same generation and fails
-on any file that differs from what this would write.
 """
 import json
 import os
@@ -34,7 +31,6 @@ def load(path=REGISTRY):
 
 
 def normalised(registry):
-    """The registry with every frame's key table resolved and the command enum spelled out."""
     frames = registry["frames"]
     enums = dict(registry["enums"])
     refuse_duplicates("command", [frame["command"] for frame in frames])
@@ -97,7 +93,6 @@ def constant(name):
 
 
 def generated(registry):
-    """Every generated file, relative to the repository root, and its text."""
     return {
         FIRMWARE_HEADER: firmware_header(registry),
         NAMES_HEADER: names_header(registry),
@@ -142,7 +137,6 @@ def firmware_header(registry):
 
 
 def host_keys(frames):
-    """The key numbers a host frame of each command may carry, one bit each: a bare ask carries none."""
     commands_by_bits = {}
     for frame in frames:
         numbers = [key["number"] for key in frame["keys"]] if frame["sender"] == "host" else [0]
@@ -226,7 +220,7 @@ def mirrors_test(registry):
 
 
 def exhaustive_switch(enum):
-    """A switch -Wswitch refuses to compile once the C++ enum holds a value the registry lacks."""
+    # INFO: fc 20nov26 the switch has no default so -Wswitch refuses a C++ enum value the registry lacks
     cpp = enum["mirrors"]["type"]
     lines = ["constexpr bool on_the_wire(%s value) {" % cpp, "    switch (value) {"]
     lines += ["        case %s::%s:" % (cpp, value["mirrors"]) for value in enum["values"]]
@@ -244,7 +238,6 @@ def javascript_module(registry):
 
 
 def undocumented(node):
-    """The registry without its descriptions, which no page reads."""
     if isinstance(node, dict):
         return {name: undocumented(value) for name, value in node.items() if name != "description"}
     if isinstance(node, list):
@@ -253,7 +246,6 @@ def undocumented(node):
 
 
 def written(registry, clang_format):
-    """Every generated file and its text as committed: the C++ ones through clang-format."""
     return {relative: formatted(relative, text, clang_format) if is_cpp(relative) else text
             for relative, text in generated(registry).items()}
 
@@ -269,7 +261,6 @@ def formatted(relative, text, clang_format):
 
 
 def stale(expected, read):
-    """The generated files whose committed text is not, byte for byte, what the registry writes."""
     return [relative for relative, text in expected.items() if read(relative) != text]
 
 

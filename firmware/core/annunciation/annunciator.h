@@ -9,9 +9,7 @@
 
 namespace skyblip::annunciation {
 
-// A piezo reaches full amplitude in a couple of milliseconds, so this is an ear
-// figure, not a driver one: shorter than this and a blip is a click that a
-// pilot cannot place, and cannot count.
+// INFO: fc 20nov26 a piezo sounds at once, so this is an ear figure: the shortest blip ears count
 constexpr uint16_t kShortestBlipEarCanPlaceMs = 90;
 
 constexpr uint16_t kTuneSixteenthMs = kShortestBlipEarCanPlaceMs;
@@ -119,33 +117,23 @@ static_assert(longest_call_ms(kAdvisoryTune) < kAnnunciatorOnCeilingMs &&
                   longest_call_ms(kPeerLostTune) < kAnnunciatorOnCeilingMs,
               "the guard would cut a call the policy means to play");
 
-// Who is holding the buzzer. Traffic outranks a lost peer, which outranks the
-// fix chirp, always: the rule is written here and nowhere else.
 enum class Voice : uint8_t { None, FirstFix, PeerLost, Traffic };
 
 constexpr bool felt(Voice voice) { return voice == Voice::Traffic; }
 
 Tune tune_for(Voice voice, traffic::Level level);
 
-// Everything the decision depends on, gathered by the service that owns the
-// annunciator and passed in whole.
 struct Situation {
-    // The level being announced right now, after the tracker's hysteresis.
     traffic::Level level{traffic::Level::None};
     bool announced{false};
-    // The first fix landed on this pass.
     bool first_fix{false};
     // INFO: fc 17nov26 a Go lost its Bravo on this pass, or a Bravo in flight lost its Go
     bool peer_lost{false};
-    // An alarm setting of soft or loud.
     bool enabled{true};
-    // False from the moment the device starts going down.
     bool running{true};
 };
 
-// What the buzzer and the motor should be doing, and whether each differs from
-// what it was already told. A PWM re-armed on every service pass is a click,
-// not a tone, so the service acts on a change and on nothing else.
+// INFO: fc 20nov26 a PWM re-armed every pass clicks instead of sounding, so act on a change only
 struct Command {
     bool tone_on{false};
     uint16_t tone_hz{0};
@@ -159,8 +147,6 @@ class Policy {
     Command update(const Situation& situation, uint32_t now_ms);
 
     Voice voice() const { return voice_; }
-    // The level being announced, gaps included: a tune between two notes is
-    // still announcing. 0 when the buzzer has been released.
     traffic::Level announcing_level() const {
         return voice_ == Voice::Traffic ? level_ : traffic::Level::None;
     }

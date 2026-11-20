@@ -3,18 +3,12 @@
 
     python3 scripts/check_no_dfu_package.py
 
-The factory Adafruit bootloader starts the application only while
-bootloader_app_is_valid() holds (Adafruit_nRF52_Bootloader
-lib/sdk11/components/libraries/bootloader_dfu/bootloader.c:175-223). A UF2
-install stores bank_0_crc as 0, which turns the check off for good. A Nordic DFU
-install over BLE or serial stores a real CRC of the image as delivered, and the
-first MCUboot swap rewrites those bytes: the bootloader then refuses the
-application and the device sits in DFU mode until someone drops a .uf2 on it.
-
-So the one install artifact is mkuf2.py's .uf2, and this gate fails the pull
-request that adds nrfutil, adafruit-nrfutil, genpkg or a .zip to a workflow or a
-script. The fix is never to make a .zip work: that needs the bootloader's
-settings page to know about MCUboot, and the bootloader is factory-programmed.
+The factory Adafruit bootloader runs the application only while
+bootloader_app_is_valid() holds. A UF2 install stores bank_0_crc as 0, which
+turns that check off. A Nordic DFU install stores a real CRC, which the first
+MCUboot swap breaks, leaving the device in DFU mode. So mkuf2.py's .uf2 is the
+one install artifact, and this gate refuses nrfutil, adafruit-nrfutil, genpkg
+or a .zip in a workflow or a script.
 """
 import os
 import re

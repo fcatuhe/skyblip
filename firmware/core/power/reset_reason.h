@@ -1,5 +1,3 @@
-// core/power/reset_reason.h: why the device came up, and which cause wins when
-// the silicon reports several at once.
 #ifndef SKYBLIP_CORE_POWER_RESET_REASON_H
 #define SKYBLIP_CORE_POWER_RESET_REASON_H
 
@@ -7,9 +5,6 @@
 
 namespace skyblip::power {
 
-// The causes a reset-cause register can raise, as our own bits. The platform
-// adapter translates whatever the silicon calls them into this set, which is
-// what keeps the priority rule below testable without a framework header.
 enum class ResetCause : uint32_t {
     None = 0,
     PowerOn = 1u << 0,
@@ -20,13 +15,8 @@ enum class ResetCause : uint32_t {
     Lockup = 1u << 5,
     LowPowerWake = 1u << 6,
     Debug = 1u << 7,
-    // INFO: fc 05aug26 A separate cause and not a flavour of PowerOn, because
-    // the boot path turns on it (core/power/wake.h): VBUS rising is what a
-    // charger does to a device that was switched off, and a device that switches
-    // itself on in a flight bag because someone plugged it in arrives flat.
-    // Zephyr's hwinfo cannot carry it - drivers/hwinfo/hwinfo_nrf.c maps
-    // NRFX_RESET_REASON_VBUS_MASK onto RESET_POR, the same flag a genuine
-    // power-on would raise - so the adapter reads the bit itself.
+    // INFO: fc 05aug26 Zephyr's hwinfo maps VBUS onto RESET_POR, so the adapter reads the bit
+    // itself and wake.h can refuse a charger wake
     UsbVbus = 1u << 8,
 };
 
@@ -56,12 +46,8 @@ enum class ResetReason : uint8_t {
     Debug = 9,
 };
 
-// One reason out of a set of bits.
-//
-// INFO: hk 02aug26 nRF52 RESETREAS latches and is cleared only by writing ones
-// back, so a soft reset that followed a watchdog bite comes up with both bits
-// set (nRF52840 PS v1.8 §5.3.3). The diagnosis a pilot needs is the fault, so a
-// fault cause outranks a benign one whatever else is also set.
+// INFO: hk 02aug26 RESETREAS latches until written back (nRF52840 PS v1.8 §5.3.3), so a fault cause
+// outranks a benign one set beside it
 ResetReason classify(ResetCause causes);
 
 const char* to_string(ResetReason reason);

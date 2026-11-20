@@ -1,5 +1,3 @@
-// INFO: fc 06aug26 SoftRF toggles its status LED every 300 ms when low (LED.cpp:204-219)
-
 // INFO: fc 18sep26 charge is not a row: this board's charger IC drives its own LED
 
 #ifndef SKYBLIP_CORE_INDICATION_LAMP_H
@@ -31,10 +29,7 @@ enum class Condition : uint8_t {
     Count
 };
 
-// An LED reaches full brightness in microseconds, so core/annunciation's 90 ms
-// floor - an ear figure, the shortest blip a pilot can place and count - does not
-// apply. This is the eye figure: a flash shorter than about this is missed by a
-// glance rather than seen dimly.
+// INFO: fc 20nov26 an LED lights at once, so this is an eye figure: the shortest flash eyes catch
 constexpr uint16_t kShortestFlashEyeCanCatchMs = 20;
 
 struct Indication {
@@ -45,15 +40,9 @@ struct Indication {
     uint16_t between_ms{0};
 };
 
-// Whose budget the row is spending. This is the honest half of "keep it cheap":
-// the ceiling a row is held to is a property of the row, so a test walks the
-// table instead of a comment claiming the numbers are small.
 enum class Budget : uint8_t {
-    // Nothing lit.
     Dark,
-    // Held for hours, on the pack. Has to be very nearly free.
     Steady,
-    // Minutes at most, on the pack: an alarm that stands, a cell about to go.
     Transient,
 };
 
@@ -104,8 +93,6 @@ constexpr uint16_t duty_ceiling_permille(Budget budget) {
     }
 }
 
-// The enum is closed and the table has one row per value, so "no duplicates" and
-// "every condition present" are the same statement.
 constexpr bool table_lists_each_condition_once() {
     for (int i = 0; i < kRowCount; i++)
         for (int j = i + 1; j < kRowCount; j++)
@@ -178,20 +165,11 @@ const char* to_string(Condition condition);
 const char* to_string(Colour colour);
 uint32_t until_edge_ms(const Indication& indication, uint32_t into_cycle_ms);
 
-// Everything the decision depends on, gathered by the one service that owns the
-// indicator and passed in whole. Every field is already published on bus::State
-// by some other service; nothing here is derived twice.
 struct Situation {
-    // False from the moment the device starts going down.
     bool running{true};
-    // The worst level standing, the same number the panel uses to decide whether
-    // the settings page gives the glass back. NOT the announced level: a lamp
-    // that went dark in the gaps of the buzzer's pulse train would be reporting
-    // the cadence of the sound rather than the presence of the threat.
+    // INFO: fc 20nov26 the worst level standing, not the announced one, so buzzer gaps stay lit
     traffic::Level alarm_level{traffic::Level::None};
-    // What the cutoff monitor made of the samples. Read rather than re-derived,
-    // so the lamp says LOW at exactly the voltage the panel and the tablet do,
-    // with the same debounce and the same sanity floor.
+    // INFO: fc 20nov26 the cutoff monitor's level, so the lamp says low when the panel does
     power::PowerLevel power_level{power::PowerLevel::Unknown};
     bool fix_valid{false};
     // INFO: fc 12nov26 only a product without a screen sets these | 19nov26 through lamp_shows_link
@@ -204,14 +182,10 @@ struct Situation {
 
 constexpr traffic::Level kAlarmTakesLamp = traffic::Level::Advisory;
 
-// The priority order, as code. This is the only function allowed to know it.
 Condition condition_for(const Situation& situation);
 
 struct Command {
     Colour lamp{Colour::None};
-    // The lamp has to be told something different from what it was last told.
-    // An LED re-driven on every pass is a register write a hundred times a
-    // second for no light.
     bool changed{false};
 };
 
@@ -220,7 +194,6 @@ class Policy {
     Command update(const Situation& situation, uint32_t now_ms, const timing::ClockState& clock);
 
     Condition condition() const { return condition_; }
-    // What is lit right now, gaps included: None during the off phase of a wink.
     Colour lamp() const { return shown_; }
     bool on_utc_grid() const { return on_grid_; }
     // INFO: fc 19nov26 until the lamp next lights or darkens, from the phase the last update found

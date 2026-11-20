@@ -47,7 +47,7 @@ class DevReleaseTest < Minitest::Test
 
     **Full Changelog**: https://github.com/fcatuhe/skyblip/compare/dev-1005...dev-1010
   NOTES
-  SHARED_FILES = %w[Apache-2.0.txt LICENSE NOTICE.md SHA256SUMS TinyCrypt.txt embed.js scenarios.json skyblip_simulator.js skyblip_simulator.wasm].freeze
+  SHARED_FILES = %w[NOTICE.md SHA256SUMS embed.js scenarios.json skyblip_simulator.js skyblip_simulator.wasm].freeze
   GO_FILES = %w[skyblip-go-%s.full.signed.bin skyblip-go-%s.signed.bin skyblip-go-%s.uf2].freeze
   BRAVO_FILES = %w[skyblip-bravo-%s.signed.bin skyblip-bravo-%s.uf2].freeze
 
@@ -115,6 +115,37 @@ class DevReleaseTest < Minitest::Test
       create = run.creates.first
       assert_equal (SHARED_FILES + GO_FILES.map { |file| file % "dev-1010" }).sort, create[3...create.index("--target")]
       assert_equal "#{NOTES_START}\n\n#{GO_NOTES}", create[create.index("--notes") + 1]
+    end
+  end
+
+  def test_the_notices_and_every_license_text_ship_as_one_file
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go], tags: [])
+
+      assert run.success, run.output
+      assert_equal <<~NOTICE, File.read(File.join(root, "gh/uploads/dev-1010/NOTICE.md"))
+        NOTICE.md
+
+        ## License texts
+
+        ### LICENSE
+
+        ```
+        LICENSE
+        ```
+
+        ### LICENSES/Apache-2.0.txt
+
+        ```
+        LICENSES/Apache-2.0.txt
+        ```
+
+        ### LICENSES/TinyCrypt.txt
+
+        ```
+        LICENSES/TinyCrypt.txt
+        ```
+      NOTICE
     end
   end
 

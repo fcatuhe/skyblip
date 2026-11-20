@@ -1,16 +1,8 @@
 #!/usr/bin/env python3
 """Generate docs/TUNING.md: every number the firmware's behavior is tuned by.
 
-Nothing here is authored twice. The constants are read out of the sources by
-`tuning_constants.py`, the same parse `check_tuning_names.py` holds to the
-vocabulary, and the reason beside each one is the comment already above it. A
-folder's README is linked rather than quoted: the argument for a threshold is
-prose, and prose belongs next to the code it defends.
-
-The index exists because these numbers are the device's behavior and they are
-spread over forty files on purpose. One view of the whole surface is worth
-having; one home for the values would leave every one of them without its
-paragraph.
+Each constant's reason is the comment above it in the source. A folder's README that names
+the constant is linked, not quoted.
 """
 import os
 import sys

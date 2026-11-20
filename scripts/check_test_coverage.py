@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """Fail if a logic module or a part has no host test that reaches it.
 
-Structural gate, not line coverage. Tests live in firmware/test/, one folder per
-layer, and never beside the code they test: every directory with a header under
-protocols/, core/, ui/, products/, runtime/ and simulator/ must be included by
-some test the host suite compiles, and every part with a driver must have
-test/hardware/test_<part>.cpp that includes both the driver and its model. A part
-with no test is a datasheet transcription nothing checks. A radio protocol stack
-under protocols/ is the one exception: it travels with its tests, so they live in
-its own test/ folder.
+This is a structural gate, not line coverage. Every directory with a header under
+protocols/, core/, ui/, products/, runtime/ and simulator/ must be included by a
+test the host suite compiles. Every part with a driver must have
+test/hardware/test_<part>.cpp including both the driver and its model. Tests live
+in firmware/test/, never beside the code, except a protocol stack's, which travel
+in its own test/ folder.
 """
 import os
 import sys
@@ -56,7 +54,6 @@ def has_driver(part):
 
 
 def strays():
-    """Test files that crept back in beside the code they test."""
     found = []
     for layer in ("protocols", "core", "ui", "ports", "hardware", "boards", "runtime", "products",
                   "simulator"):
@@ -86,8 +83,6 @@ def main():
             continue
         with open(test) as fh:
             body = fh.read()
-        # The point of a part test is the driver running against its own model,
-        # so a file that includes neither is not one.
         for header in (f"hardware/parts/{part}/{part}.h", f"hardware/parts/{part}/model.h"):
             if f'#include "{header}"' not in body:
                 missing.append(f"{PART_TEST_DIR}/test_{part}.cpp (does not include {header})")
