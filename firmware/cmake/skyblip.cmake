@@ -1,6 +1,4 @@
-# Shared by every product's Zephyr build: the shared Kconfig, the include root and the layers that
-# go into an image. A product's own CMakeLists declares its board and adds
-# itself; nothing here knows which product is being built.
+# Shared by every product's Zephyr build, and blind to which product is being built.
 
 set(SKYBLIP_FIRMWARE ${CMAKE_CURRENT_LIST_DIR}/..)
 
@@ -96,12 +94,9 @@ function(skyblip_imu_image)
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${image})
 endfunction()
 
-# One product, one board. Called before find_package(Zephyr) so a mismatched
-# pair is refused at configure time rather than diagnosed by the compiler.
+# Called before find_package(Zephyr), so a product built for the wrong board fails at configure time.
 function(skyblip_product_board board)
-  # Compared bare: the first configure resolves t_echo_plus to
-  # t_echo_plus/nrf52840 and caches that, and the qualified name is what a
-  # reconfigure of an existing build directory hands back.
+  # Compared bare, because a reconfigure hands back the qualified name the first configure cached.
   string(REGEX REPLACE "/.*$" "" requested "${BOARD}")
   if(DEFINED BOARD AND NOT "${requested}" STREQUAL "${board}")
     message(FATAL_ERROR
