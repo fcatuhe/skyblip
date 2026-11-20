@@ -118,8 +118,7 @@ TEST_CASE("scenario: the committed files replay with their expectations met") {
     }
 }
 
-// The simulator's forced fault: a lost PPS reads NO TX PPS 10 s after its lock tail, until the
-// edge.
+// The simulator's forced fault: NO TX PPS from 10 s after the gate closes until the edge.
 TEST_CASE("scenario: a PPS lost shows NO TX PPS through its holdover until the edge comes back") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);

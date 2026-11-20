@@ -58,6 +58,8 @@ static_assert(switched(kUplinkWindowMs, kWindowAMs) && switched(kWindowAMs, kWin
 constexpr uint32_t kPpsHoldoverMs = 60000;
 // INFO: fc 20nov26 a pulse reads locked this long past its last edge, so one missed edge keeps it
 constexpr uint32_t kPpsLockTailMs = 3000;
+// INFO: fc 20nov26 C.5: the latest instant a burst planned from an edge keys at, window B's close
+constexpr uint32_t kPpsEdgeMaxAgeMs = static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms);
 
 // One name for the band, spelled where a received burst can carry it.
 using model::Band;
@@ -100,6 +102,9 @@ bool in_pps_holdover(const ClockState& clock);
 
 // INFO: fc 20nov26 the dwells run on the latched edge, or the last one held, which keys no burst
 bool pps_anchored(const ClockState& clock);
+
+// INFO: fc 20nov26 a burst is timed only from an edge as recent as a locked second's
+bool pps_fresh(const ClockState& clock);
 
 // INFO: fc 12nov26 UTC to the millisecond, none without a PPS lock and a dated second
 std::optional<uint64_t> utc_ms(const ClockState& clock);

@@ -68,7 +68,7 @@ TEST_CASE("no tx glass: a PPS lost puts NO TX PPS on the radar, then takes it of
 
     simulator.world().set_pps_locked(false);
     const uint32_t lost_ms = settled_ms + 3005;
-    const uint32_t hold_ms = timing::kPpsLockTailMs + timing::TransmitGate::kNoTxHoldMs;
+    const uint32_t hold_ms = timing::kPpsEdgeMaxAgeMs + timing::TransmitGate::kNoTxHoldMs;
     run_on(simulator, lost_ms, hold_ms - 1500);
     CHECK_FALSE(simulator.product().state().transmit.transmits());
     CHECK_FALSE(wears_no_tx(simulator, "PPS"));
@@ -85,6 +85,28 @@ TEST_CASE("no tx glass: a PPS lost puts NO TX PPS on the radar, then takes it of
     CHECK_FALSE(wears_no_tx(simulator, "PPS"));
 }
 
+// The bursts wait for the edge, and the 10 s hold keeps the mark and the shake off the glass.
+TEST_CASE("no tx glass: a single missing edge stops the bursts for a second, and no mark shows") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(120);
+    const uint32_t settled_ms = past_settling(simulator);
+    run_on(simulator, settled_ms, 20000);
+    const uint32_t shakes = simulator.platform().annunciator().motor_starts();
+
+    const uint32_t lost_ms = settled_ms + 20005;
+    simulator.world().set_pps_locked(false);
+    run_on(simulator, lost_ms, timing::kPpsEdgeMaxAgeMs + 300);
+    CHECK_FALSE(simulator.product().state().transmit.transmits());
+    simulator.world().set_pps_locked(true);
+    run_on(simulator, lost_ms + timing::kPpsEdgeMaxAgeMs + 305, 15000);
+    CHECK(simulator.product().state().transmit.transmits());
+    CHECK(simulator.product().state().transmit.shown() == timing::NoTx::None);
+    CHECK_FALSE(wears_no_tx(simulator, "PPS"));
+    CHECK(simulator.platform().annunciator().motor_starts() == shakes);
+}
+
 TEST_CASE("no tx glass: the self test says how the radio and the receiver work now") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
@@ -97,7 +119,7 @@ TEST_CASE("no tx glass: the self test says how the radio and the receiver work n
     CHECK(row_reads(simulator, ports::Capability::Gnss, "PASS"));
 
     simulator.world().set_pps_locked(false);
-    run_on(simulator, now_ms, timing::kPpsLockTailMs + timing::TransmitGate::kNoTxHoldMs + 2000);
+    run_on(simulator, now_ms, timing::kPpsEdgeMaxAgeMs + timing::TransmitGate::kNoTxHoldMs + 2000);
     REQUIRE(simulator.product().screen().page() == go::Page::SelfTest);
     CHECK(row_reads(simulator, ports::Capability::Gnss, "L76K NO PPS"));
     CHECK(row_reads(simulator, ports::Capability::Gnss, go::kSelfTestNoTxVerdict));
@@ -116,7 +138,8 @@ TEST_CASE("no tx glass: in flight the Go shakes once as NO TX appears, not again
 
     simulator.world().set_pps_locked(false);
     const uint32_t lost_ms = settled_ms + 20005;
-    const uint32_t shown_ms = lost_ms + timing::kPpsLockTailMs + timing::TransmitGate::kNoTxHoldMs;
+    const uint32_t shown_ms =
+        lost_ms + timing::kPpsEdgeMaxAgeMs + timing::TransmitGate::kNoTxHoldMs;
     run_on(simulator, lost_ms, shown_ms - lost_ms - 2000);
     const uint32_t before = simulator.platform().annunciator().motor_starts();
     const uint32_t cuts = simulator.platform().annunciator().guard_cuts();
@@ -140,13 +163,13 @@ TEST_CASE("no tx glass: on the ground NO TX appears without a shake, which comes
     const uint32_t before = simulator.platform().annunciator().motor_starts();
     simulator.world().set_pps_locked(false);
     run_on(simulator, settled_ms,
-           timing::kPpsLockTailMs + timing::TransmitGate::kNoTxHoldMs + 3000);
+           timing::kPpsEdgeMaxAgeMs + timing::TransmitGate::kNoTxHoldMs + 3000);
     REQUIRE(wears_no_tx(simulator, "PPS"));
     CHECK(simulator.platform().annunciator().motor_starts() == before);
 
     simulator.world().set_speed_kt(120);
     run_on(simulator,
-           settled_ms + timing::kPpsLockTailMs + timing::TransmitGate::kNoTxHoldMs + 3005, 30000);
+           settled_ms + timing::kPpsEdgeMaxAgeMs + timing::TransmitGate::kNoTxHoldMs + 3005, 30000);
     REQUIRE(simulator.product().state().flight.confirmed_state == flight::FlightState::Airborne);
     CHECK(simulator.platform().annunciator().motor_starts() == before + 1);
 }
@@ -176,7 +199,7 @@ TEST_CASE("no tx glass: the status page names what the Go waits on beside TX OFF
     REQUIRE(simulator.product().screen().page() == go::Page::Status);
     CHECK(reads_in(simulator.panel(), "TX ON", 100, 0, go::kGlassWidth, go::kGlassHeight));
     simulator.world().set_pps_locked(false);
-    run_on(simulator, now_ms, timing::kPpsLockTailMs + 2000);
+    run_on(simulator, now_ms, timing::kPpsEdgeMaxAgeMs + 2000);
     CHECK(reads_in(simulator.panel(), "TX OFF PPS", 100, 0, go::kGlassWidth, go::kGlassHeight));
 }
 
@@ -193,7 +216,7 @@ TEST_CASE("no tx glass: nearby's Go row reads its figures, and TX OFF once the g
                          row_bottom, go::kNearbyScale));
 
     simulator.world().set_pps_locked(false);
-    run_on(simulator, now_ms + 2005, timing::kPpsLockTailMs + 2000);
+    run_on(simulator, now_ms + 2005, timing::kPpsEdgeMaxAgeMs + 2000);
     REQUIRE_FALSE(simulator.product().state().transmit.transmits());
     CHECK(reads_in(simulator.panel(), "TX OFF", 0, go::kNearbyUnitY, go::kGlassWidth, row_bottom,
                    go::kNearbyScale));

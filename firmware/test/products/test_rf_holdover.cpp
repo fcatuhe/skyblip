@@ -23,8 +23,8 @@ int positions_between(const simulator::Air& air, uint64_t from_us, uint64_t to_u
 
 }  // namespace
 
-// The device reads a lost pulse locked for 3 s past its last edge, and no longer than that.
-TEST_CASE("rf holdover: a Go that loses its PPS stops transmitting 3 s after the last edge") {
+// A burst keys at most window B's close after its edge, as on a lock, never on a later second.
+TEST_CASE("rf holdover: a Go that loses its PPS keys nothing past the last edge's second") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
@@ -38,7 +38,7 @@ TEST_CASE("rf holdover: a Go that loses its PPS stops transmitting 3 s after the
     run_on(simulator, lost_ms, 30000);
 
     const simulator::Air& air = simulator.world().air();
-    const uint64_t silent_us = last_edge_us + 3'000'000;
+    const uint64_t silent_us = last_edge_us + uint64_t{timing::kPpsEdgeMaxAgeMs} * 1000;
     CHECK(positions_between(air, uint64_t{lost_ms} * 1000, silent_us) >= 1);
     CHECK(positions_between(air, silent_us, uint64_t{lost_ms + 30000} * 1000) == 0);
     CHECK(simulator.product().state().transmit.unmet() == timing::NoTx::Pps);

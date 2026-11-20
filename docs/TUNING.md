@@ -196,6 +196,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
 | `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kPpsLockTailMs` | 3000 (3 s) | milliseconds | - | a pulse reads locked this long past its last edge, so one missed edge keeps it |
+| `kPpsEdgeMaxAgeMs` | `static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms)` | milliseconds | MaxAge | C.5: the latest instant a burst planned from an edge keys at, window B's close |
 | `kRetuneUs` | 30 | microseconds | - | - |
 | `kSwitchMarginUs` | `kSwitchMarginMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kSwitchRetuneUs` | `kSwitchRetuneMs * 1000` = 5000 (5 ms) | microseconds | - | - |
@@ -430,4 +431,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-285 constants over 26 folders.
+286 constants over 26 folders.

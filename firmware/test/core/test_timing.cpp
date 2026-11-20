@@ -129,6 +129,16 @@ TEST_CASE("timing: PPS lost within holdover, still receiving, no slotted TX" *
     CHECK_FALSE(pps_anchored(ClockState{true, false, kPpsHoldoverMs + 1, kLastEdgeUs}));
 }
 
+// C.5: a burst keys at most window B's close after the edge it was planned from, as on a lock.
+TEST_CASE("timing: an edge is fresh until window B's dwell closes after it, and no longer") {
+    CHECK(kPpsEdgeMaxAgeMs == 1202u);
+    CHECK(pps_fresh(ClockState{true, true, 999, kLastEdgeUs}));
+    CHECK(pps_fresh(ClockState{true, true, kPpsEdgeMaxAgeMs - 1, kLastEdgeUs}));
+    CHECK_FALSE(pps_fresh(ClockState{true, true, kPpsEdgeMaxAgeMs, kLastEdgeUs}));
+    CHECK_FALSE(pps_fresh(ClockState{true, true, 2500, kLastEdgeUs}));
+    CHECK_FALSE(pps_fresh(ClockState{true, false, 500, kLastEdgeUs}));
+}
+
 // A burst drained between the edge and the sentence naming it was dated a second early.
 TEST_CASE("timing: the dated second moves with the edge, not with the sentence") {
     ClockState clock{};

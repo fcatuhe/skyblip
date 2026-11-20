@@ -58,6 +58,10 @@ bool in_pps_holdover(const ClockState& clock) {
            clock.since_edge_ms <= kPpsHoldoverMs;
 }
 
+bool pps_fresh(const ClockState& clock) {
+    return clock.pps_locked && clock.since_edge_ms < kPpsEdgeMaxAgeMs;
+}
+
 bool pps_anchored(const ClockState& clock) { return clock.pps_locked || in_pps_holdover(clock); }
 
 std::optional<uint64_t> utc_ms(const ClockState& clock) {

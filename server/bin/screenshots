@@ -483,7 +483,7 @@ const scenes = [
     shot: device =>
       device.fly(CRUISE).run(20_000).openMenu(PAGE.Nearby, NEARBY_MENU.SelfTest).press()
   },
-  // The pulse gone for its 3 s lock tail and the 10 s the mark waits: every page wears NO TX PPS.
+  // The pulse gone past its second and the 10 s the mark waits: every page wears NO TX PPS.
   {
     name: "no-tx",
     page: PAGE.Radar,

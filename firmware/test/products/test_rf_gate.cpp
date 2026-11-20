@@ -72,27 +72,31 @@ TEST_CASE("rf gate: a receiver that will not take 2 Hz never transmits, and read
     CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypePosition) == 0);
 }
 
-// The pulse reads locked kPpsLockTailMs past its last edge, and the gate closes as it stops.
-TEST_CASE("rf gate: a PPS lost stops the bursts by the end of its lock tail and reads PPS") {
+// The device still reads the pulse locked for 3 s, but no burst is timed from so old an edge.
+TEST_CASE("rf gate: a PPS lost closes the gate on the first second without an edge") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
     const uint32_t settled_ms = past_settling(simulator);
+    run_on(simulator, settled_ms, 1000);
+    const uint32_t lost_ms = settled_ms + 1005;
+    const uint32_t edge_ms = lost_ms / 1000 * 1000;
     simulator.world().set_pps_locked(false);
-    run_on(simulator, settled_ms, timing::kPpsLockTailMs - 2000);
+    run_on(simulator, lost_ms, edge_ms + timing::kPpsEdgeMaxAgeMs - 10 - lost_ms);
     CHECK(gate_of(simulator).transmits());
-    run_on(simulator, settled_ms + timing::kPpsLockTailMs - 1995, 2000);
+    run_on(simulator, edge_ms + timing::kPpsEdgeMaxAgeMs - 5, 15);
+    CHECK(simulator.product().state().clock.pps_locked);
     CHECK_FALSE(gate_of(simulator).transmits());
     CHECK(gate_of(simulator).unmet() == timing::NoTx::Pps);
-    run_on(simulator, settled_ms + timing::kPpsLockTailMs + 10, timing::TransmitGate::kNoTxHoldMs);
+    run_on(simulator, edge_ms + timing::kPpsEdgeMaxAgeMs + 15, timing::TransmitGate::kNoTxHoldMs);
     CHECK(gate_of(simulator).shown() == timing::NoTx::Pps);
     CHECK(timing::in_pps_holdover(simulator.product().state().clock));
 
+    const uint32_t back_ms = edge_ms + timing::kPpsEdgeMaxAgeMs + 10020;
     simulator.world().set_pps_locked(true);
-    run_on(simulator, settled_ms + timing::kPpsLockTailMs + 10020, 2000);
+    run_on(simulator, back_ms, 2000);
     CHECK(gate_of(simulator).transmits());
-    run_on(simulator, settled_ms + timing::kPpsLockTailMs + 12025,
-           timing::TransmitGate::kNoTxHoldMs);
+    run_on(simulator, back_ms + 2005, timing::TransmitGate::kNoTxHoldMs);
     CHECK(gate_of(simulator).shown() == timing::NoTx::None);
 }
 
