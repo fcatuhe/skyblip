@@ -49,63 +49,42 @@
 			label = "haptic-enable";
 		};
 
-		/* Main button (P1.10), active-low with a pull-up. */
 		button_gpio: button {
 			gpios = <&gpio1 10 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 			label = "button";
 		};
 
-		/* Capacitive touch pad (P0.11), external pull-up, touched reads low.
-		 * SoftRF iomap/LilyGO_TEcho.h:68 names the pin and nRF52.cpp:4937
-		 * reads it as a plain input; nobody has read it on our own unit. Held
-		 * through a two-second press it makes the power-off a stow, and that
-		 * is the whole of what it can do. */
+		/* Capacitive touch pad, touched reads low, from SoftRF iomap/LilyGO_TEcho.h:68. */
 		pad_gpio: pad {
 			gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
 			label = "pad";
 		};
 
-		/* L76K 1 PPS (P1.04): the slot clock's only hardware anchor. */
+		/* L76K 1 PPS: the slot clock's only hardware anchor. */
 		gnss_pps_gpio: gnss_pps {
 			gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
 			label = "gnss-pps";
 		};
 	};
 
-	/*
-	 * Every pin that switches power or holds a part in reset, in one place, so
-	 * board.c and the shutdown path read the same numbers.
-	 *
-	 * `status = "disabled"` is load-bearing and not a mistake: this node is a
-	 * pin map, never a device. The gpio-keys binding is borrowed because it is
-	 * the one upstream binding that declares a plain `gpios` property, and its
-	 * driver (CONFIG_INPUT_GPIO_KEYS) walks DT_INST_FOREACH_STATUS_OKAY. Left
-	 * enabled, the day a product turns CONFIG_INPUT on, that driver would
-	 * reconfigure a rail enable as an interrupt input at POST_KERNEL and the
-	 * board would switch its own peripherals off while booting. Disabled, the
-	 * DT_NODELABEL/GPIO_DT_SPEC macros still resolve and no driver ever binds.
-	 */
+	/* Power and reset pins, a pin map disabled so no driver binds it: README.md */
 	board_power_gpios {
 		compatible = "gpio-keys";
 		status = "disabled";
 
-		/* PIN_POWER_EN (P0.12): e-paper, external flash, GNSS and the sensor
-		 * bus on REV_2 and the Plus. SoftRF iomap/LilyGO_TEcho.h:80-81. */
+		/* The e-paper, flash, GNSS and sensor rail, SoftRF LilyGO_TEcho.h:80-81. */
 		peripheral_rail_gpio: peripheral_rail {
 			gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
 			label = "peripheral-rail";
 		};
 
-		/* P0.13 (PWR_EN) enables U11, the AP2112K-3.3 that feeds the nRF52840 and
-		 * the SX1262 (Xinyuan-LilyGO/T-Echo schematic/T-Echo_Schematic.pdf), so it
-		 * is raised at boot and never lowered. LilyGO's pin_config.h never defines it. */
+		/* Enables U11, which feeds the SoC and the SX1262, so it is never lowered. */
 		regulator_enable_gpio: regulator_enable {
 			gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
 			label = "regulator-enable";
 		};
 
-		/* Flash WP# (IO2) and HOLD# (IO3) in single-line mode: real inputs, and
-		 * a floating one write-protects the chip or stalls a transfer. */
+		/* Flash WP# and HOLD#, real inputs in single-line mode, held high by board.c. */
 		flash_write_protect_gpio: flash_write_protect {
 			gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
 			label = "flash-write-protect";
@@ -116,10 +95,7 @@
 			label = "flash-hold";
 		};
 
-		/* L76K WAKE_UP (P1.02) and active-low RESET_N (P1.05). SoftRF drives both
-		 * high for the Plus (platform/nRF52.cpp:1589-1593); meshcore's
-		 * lilygo_techo variant.h:139-140 has the same pins with
-		 * PIN_GPS_RESET_ACTIVE=LOW. */
+		/* L76K WAKE_UP and RESET_N, SoftRF nRF52.cpp:1589-1593. */
 		gnss_wake_gpio: gnss_wake {
 			gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
 			label = "gnss-wake";
@@ -130,32 +106,19 @@
 			label = "gnss-reset";
 		};
 
-		/* SX1262 NRESET (P0.25). The radio driver drives it through io::Gpio
-		 * with a flat pin number from pins.h, which checks it against this node. */
+		/* SX1262 NRESET, which pins.h checks its flat pin number against. */
 		radio_reset_gpio: radio_reset {
 			gpios = <&gpio0 25 GPIO_ACTIVE_LOW>;
 			label = "radio-reset";
 		};
 	};
 
-	/*
-	 * The pins board.c has to ask a question BEFORE any bus driver claims them,
-	 * and the only place on this SoC where that is possible: the e-paper's
-	 * ID needs its single data line reversed (the SPIM owns MOSI and SCK
-	 * from POST_KERNEL onwards, and this board's SPI MISO is a placeholder), and
-	 * the buzzer pin has to be read high-Z against a pull-up before the PWM
-	 * peripheral starts driving it.
-	 *
-	 * `status = "disabled"` for the same load-bearing reason as board_power_gpios
-	 * above: this is a pin map, never a device.
-	 */
+	/* Pins board.c reads before any bus driver claims them, disabled like board_power_gpios. */
 	board_probe_gpios {
 		compatible = "gpio-keys";
 		status = "disabled";
 
-		/* SSD1681 control lines. DC and RST are plain GPIOs in normal
-		 * operation too; MOSI and SCK are bit-banged for the ID read
-		 * and belong to spi2's pinctrl for everything else. */
+		/* MOSI and SCK are bit-banged for the panel ID, then spi2 owns them. */
 		epd_dc_gpio: epd_dc {
 			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
 			label = "epd-dc";
@@ -181,56 +144,30 @@
 			label = "epd-sck";
 		};
 
-		/* The same P0.06 the buzzer PWM drives. Read once, before pwm0 binds. */
+		/* The buzzer PWM's P0.06, read once before pwm0 binds. */
 		buzzer_sense_gpio: buzzer_sense {
 			gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
 			label = "buzzer-sense";
 		};
 	};
 
-	/*
-	 * The part control lines the drivers drive themselves, through io::Gpio and a
-	 * flat pin number rather than a gpio_dt_spec. They are named here so that the
-	 * board says the whole of its wiring, and so the static_assert block at the
-	 * foot of pins.h can hold the two copies of these three numbers together.
-	 *
-	 * `status = "disabled"` for the same load-bearing reason as the two nodes
-	 * above: a pin map, never a device.
-	 *
-	 * One pin is deliberately not here, because nothing drives it and a node is a
-	 * claim that something might: P0.18, the button LilyGO labels reset. It is the
-	 * SoC's nRESET and cannot be read at all: the factory UF2 bootloader is built
-	 * with CONFIG_GPIO_AS_PINRESET (Adafruit_nRF52_Bootloader Makefile:354), so its
-	 * SystemInit writes UICR->PSELRESET = 18 and resets whenever that word is not
-	 * already programmed (nrfx mdk system_nrf52.c:341-355). Erasing the UICR over
-	 * SWD buys one boot. Meshtastic's variants/nrf52840/t-echo/variant.h:63 calls
-	 * it a regular GPIO, and their own bootloader fork sets the same flag
-	 * (Makefile:254); do not copy that. A second is P0.21, which LilyGO's README
-	 * pin table wires to the SX1262's DIO3: the part drives that line itself to
-	 * power its TCXO (hardware/parts/sx1262/sx1262.cpp:89-96), so the SoC end
-	 * stays an input. meshcore's variant.cpp:30-31 drives it high; do not copy that.
-	 */
+	/* Lines the drivers drive through io::Gpio, named so pins.h can check them: README.md */
 	board_part_gpios {
 		compatible = "gpio-keys";
 		status = "disabled";
 
-		/* SX1262 BUSY (P0.17). High while the part is working, which is what
-		 * wait_busy_low() spins on before every command. */
 		radio_busy_gpio: radio_busy {
 			gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
 			label = "radio-busy";
 		};
 
-		/* SX1262 DIO1 (P0.20), the radio's one interrupt line. Read as a level:
-		 * a dwell is driven by a deadline, not by an edge. */
+		/* SX1262 DIO1, read as a level, because a dwell runs on a deadline, not an edge. */
 		radio_dio1_gpio: radio_dio1 {
 			gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;
 			label = "radio-dio1";
 		};
 
-		/* P1.11 is the e-paper's front light (SoftRF iomap/LilyGO_TEcho.h:78
-		 * SOC_GPIO_PIN_EPD_BLGT), not a panel enable: nothing raises it at boot and
-		 * the panel refreshes all the same. */
+		/* The e-paper's front light, not a panel enable, SoftRF iomap/LilyGO_TEcho.h:78. */
 		epd_backlight_gpio: epd_backlight {
 			gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
 			label = "epd-backlight";
@@ -244,56 +181,7 @@
 		};
 	};
 
-	/*
-	 * The RGB status LEDs. Until now the only `pwmleds` node on this board was
-	 * the buzzer and nothing named an LED anywhere, which meant an off device and
-	 * a running device looked identical: e-paper holds its last image with the
-	 * rails down, which is why the wordmark is painted before power off. What
-	 * each state looks like is one table, core/indication/lamp.h.
-	 *
-	 * REV_2 / Plus map, active-low, and NOT the map on the older T-Echo, which is
-	 * the trap here. SoftRF platform/iomap/LilyGO_TEcho.h:22-24 gives REV_2 GREEN
-	 * P1.01, RED P1.03, BLUE P0.14, and platform/nRF52.cpp:1595-1601 applies
-	 * exactly those three under the one case label that covers
-	 * NRF52_LILYGO_TECHO_REV_2 and NRF52_LILYGO_TECHO_PLUS. nrf52-ogn-tracker
-	 * variants/t_echo/variant.h:20-24 independently gives 35u = P1.03, commented
-	 * "red LED on common T-Echo rev2 boards", with LED_STATE_ON 0.
-	 *
-	 * meshcore variants/lilygo_techo/variant.h:77-79 disagrees: 13 / 14 / 15. That
-	 * is SoftRF's REV_1 map (iomap:19-21), so that variant targets the older board
-	 * - and P0.13 is this board's regulator enable (regulator_enable above), so
-	 * the two cannot both be true of a Plus. Every other pin on this board is
-	 * already the REV_2 map, which is the tie-break.
-	 *
-	 * Unread on our own unit, but LilyGO's README pin table gives exactly these
-	 * three (Red P1.3, Blue P0.14, Green P1.1), so the map is vendor-documented
-	 * and not SoftRF's alone. If a bench says otherwise, these three numbers are the
-	 * only place to change - nothing above the board knows a pin.
-	 *
-	 * LED_STATE_ON is LOW on every nRF52 T-Echo in both references (SoftRF
-	 * platform/nRF52.h:53, nrf52-ogn-tracker variants/t_echo/variant.h:23), which
-	 * is the GPIO_ACTIVE_LOW below, and why the way down releases these lines
-	 * instead of leaving them driven into a rail that has gone (ports/indicator.h
-	 * park()).
-	 *
-	 * `gpio-leds`, NOT the disabled `gpio-keys` trick that board_power_gpios,
-	 * board_probe_gpios and board_part_gpios above use, and the difference is
-	 * worth stating because the
-	 * two look interchangeable. That trick exists because there is no upstream
-	 * binding for "a list of pins that is not a device", so gpio-keys is borrowed
-	 * and then disabled to keep CONFIG_INPUT_GPIO_KEYS from binding a rail enable
-	 * as an interrupt input. Here there IS an exact upstream binding and these ARE
-	 * LEDs, so the node is left enabled: with no CONFIG_LED_GPIO in the image
-	 * nothing binds and GPIO_DT_SPEC_GET_OR still resolves, and if some later
-	 * product does enable the LED subsystem, led_gpio_init configures each pin
-	 * GPIO_OUTPUT_INACTIVE, which on an active-low LED is off. Either way the
-	 * board does not switch anything on behind our back, which is the property the
-	 * disabled nodes above had to buy the hard way.
-	 *
-	 * These sit on the P0.12 peripheral rail - SoftRF's comment on that pin reads
-	 * "Power: EINK, RGB, CN1" - so they go dark on their own when the rail drops.
-	 * That is not licence to leave them driven: see ports/indicator.h park().
-	 */
+	/* The REV_2 and Plus status LEDs, active-low, not the older T-Echo's map: README.md */
 	leds {
 		compatible = "gpio-leds";
 
@@ -313,14 +201,7 @@
 		};
 	};
 
-	/*
-	 * Battery sense: the pack sits behind a 100K + 100K divider on P0.04
-	 * (AIN2), so the ADC sees half the cell voltage. Ratio lives here, not in
-	 * code: it is a fact about the board, and the divider driver scales the
-	 * reading back with it.
-	 * sources: SoftRF platform/nRF52.h SOC_GPIO_PIN_BATTERY = P0.04 with
-	 * SOC_ADC_VOLTAGE_DIV 2.0, and Meshtastic's t-echo variant (same net).
-	 */
+	/* The cell behind a 100K over 100K divider: README.md */
 	vbatt: vbatt {
 		compatible = "voltage-divider";
 		io-channels = <&adc 2>;
@@ -329,11 +210,7 @@
 	};
 };
 
-/*
- * SAADC for the battery divider. 0.6 V internal reference at gain 1/6 gives a
- * 3.6 V full scale, against the 2.1 V the divider presents at full charge; 40 us
- * of acquisition is what a 100K source impedance needs to settle.
- */
+/* A 3.6 V full scale over the divider's 2.1 V, and 40 us for a 100K source to settle. */
 &adc {
 	status = "okay";
 	#address-cells = <1>;
@@ -350,7 +227,6 @@
 };
 
 &pinctrl {
-	/* Radio SPI (SX1262): SCK P0.19, MOSI P0.22, MISO P0.23. Confirmed. */
 	spi3_default: spi3_default {
 		group1 {
 			psels = <NRF_PSEL(SPIM_SCK, 0, 19)>,
@@ -367,14 +243,7 @@
 		};
 	};
 
-	/*
-	 * E-paper SPI (SSD1681): SCK P0.31, MOSI P0.29, MISO P1.07.
-	 *
-	 * P1.07 is a placeholder MISO: the panel is write-only. It is P1.07 and
-	 * not P0.07 on purpose: P0.07 belongs to the external flash (IO2/WP#, see
-	 * board.c), and Meshtastic's t-echo-plus variant.h:113 picks P1.07 for the
-	 * same reason.
-	 */
+	/* The panel is write-only, and the placeholder MISO avoids P0.07, the flash's WP#. */
 	spi2_default: spi2_default {
 		group1 {
 			psels = <NRF_PSEL(SPIM_SCK, 0, 31)>,
@@ -391,15 +260,7 @@
 		};
 	};
 
-	/* External flash, on SPIM1 rather than the QSPI peripheral - see the node
-	 * below for why. Same six lines as the QSPI wiring:
-	 *   SCK P1.14  CS P1.15  IO0/MOSI P1.12  IO1/MISO P1.13  IO2 P0.07  IO3 P0.05
-	 * IO2/IO3 are WP# and HOLD# in single-line mode and are driven high by
-	 * board.c, not by pinctrl, because they must be high before MCUboot's flash
-	 * driver runs.
-	 * sources: Meshtastic t-echo-plus variant.h:70-75, nrf52-ogn-tracker
-	 * variants/t_echo/variant.h:56-61, and SoftRF iomap/LilyGO_TEcho.h:88-93.
-	 */
+	/* External flash on SPIM1, single-line, so board.c holds IO2 and IO3 high: README.md */
 	spi1_default: spi1_default {
 		group1 {
 			psels = <NRF_PSEL(SPIM_SCK, 1, 14)>,
@@ -416,7 +277,6 @@
 		};
 	};
 
-	/* GNSS UART (L76K): nRF TX P1.08 -> GPS RX, nRF RX P1.09 <- GPS TX. Confirmed. */
 	uart0_default: uart0_default {
 		group1 {
 			psels = <NRF_PSEL(UART_TX, 1, 8)>;
@@ -433,9 +293,7 @@
 		};
 	};
 
-	/* Sensor I2C (BME280 @ 0x76): SDA P0.26, SCL P0.27.
-	 * TWIM0 shares its peripheral ID with SPIM0/SPIS0, which this board does
-	 * not use (the radio is on spi3, the panel on spi2), so i2c0 is free. */
+	/* TWIM0 is free, because nothing uses SPIM0, which shares its peripheral ID. */
 	i2c0_default: i2c0_default {
 		group1 {
 			psels = <NRF_PSEL(TWIM_SDA, 0, 26)>, <NRF_PSEL(TWIM_SCL, 0, 27)>;
@@ -448,7 +306,7 @@
 		};
 	};
 
-	/* Buzzer PWM on P0.06 (Meshtastic t-echo-plus PIN_BUZZER). Plus-only. */
+	/* Buzzer PWM, Plus only (Meshtastic t-echo-plus PIN_BUZZER). */
 	pwm0_default: pwm0_default {
 		group1 {
 			psels = <NRF_PSEL(PWM_OUT0, 0, 6)>;
@@ -479,7 +337,7 @@
 	pinctrl-0 = <&spi3_default>;
 	pinctrl-1 = <&spi3_sleep>;
 	pinctrl-names = "default", "sleep";
-	/* CS driven manually by the SX1262 driver (io::Spi::select) on P0.24. */
+	/* The SX1262 driver drives CS itself through io::Spi::select. */
 	cs-gpios = <&gpio0 24 GPIO_ACTIVE_LOW>;
 };
 
@@ -489,65 +347,18 @@
 	pinctrl-0 = <&spi2_default>;
 	pinctrl-1 = <&spi2_sleep>;
 	pinctrl-names = "default", "sleep";
-	/* CS driven manually by the SSD1681 driver on P0.30. */
+	/* The SSD1681 driver drives CS itself through io::Spi::select. */
 	cs-gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
 };
 
-/* Sensor I2C. Nothing on this bus is guaranteed to be fitted.
- *
- * The BME280 is "optional, selected" in our BOM, AND its address is disputed:
- * Our BOM says 0x76, LilyGO's own README I2C table and SoftRF's
- * platform/nRF52.h both say 0x77. Nobody has checked a unit. So
- * hardware/parts/bme280 probes 0x76 then 0x77 for the chip id and
- * takes whichever answered: one image that boots on either variant instead of
- * silently having no barometer on half of them. It is not declared: Zephyr's
- * driver fetch sleeps through each conversion.
- *
- * The IMU header (0x28 BHI260AP / 0x68 ICM-20948) is not declared, for the same
- * reason the DRV2605 below is not: Zephyr has no driver for a sensor hub that is
- * booted from a host image, so we drive it with our own part
- * (hardware/parts/bhi260/) and let the bus scan say whether it is fitted.
- *
- * Nor is the DRV2605 haptic driver at 0x5A, and that is not an omission: we DO
- * drive it, with our own part under hardware/parts/drv2605/, because a haptic
- * pulse is a handful of register writes, and Zephyr has no haptic subsystem to
- * put it behind. It is found by the bus scan, not declared here, for the reason
- * the barometer is probed at both addresses: what is fitted on this footprint is a
- * procurement question the device answers about itself.
- *
- * Nor is the PCF8563 RTC at 0x51 that project/2-DEVICES.md:73 records as fitted,
- * and that IS a decision. Zephyr has an `nxp,pcf8563` driver, so adding it is a
- * node and CONFIG_RTC. It is deferred, on three findings:
- *
- *  1. Time across a POWER CYCLE needs the part powered across the power cycle.
- *    P0.12 gates this bus (see board_power_gpios above: "REV_2: FLASH, GNSS,
- *    SENSOR"), and dropping that rail on the way down is the whole point of the
- *    shutdown work. There is no coin cell on this board and the PCF8563 has one
- *    supply pin, so as fitted it cannot keep time through the state a flight log
- *    would want it for. Confirming that needs the schematic, which is not in
- *    project/reference/.
- *  2. Neither reference reads it. SoftRF sets the RTC from GNSS
- *    (platform/nRF52.cpp:2638) and never reads it back on the nRF52; it is a
- *    PASS line on a self-test page and nothing else.
- *  3. Our log record already says "no UTC" honestly: core/flight/log_record.h
- *    carries kLogFlagUtcValid per record, so a pre-fix record is representable
- *    without inventing a clock.
- *
- * What flips it: a schematic showing 0x51 fed from the ungated 3V3, plus a
- * reader in the flight log. Then the node, `nxp,pcf8563`, CONFIG_RTC in the
- * board defconfig, and a capability nothing is allowed to depend on. Until then
- * the bus scan reports 0x51 on the self-test page, so the device answers the
- * presence question itself rather than a table doing it for us.
- */
+/* Our own parts probe this bus, so nothing on it is declared: README.md */
 &i2c0 {
 	compatible = "nordic,nrf-twim";
 	status = "okay";
 	pinctrl-0 = <&i2c0_default>;
 	pinctrl-1 = <&i2c0_sleep>;
 	pinctrl-names = "default", "sleep";
-	/* Fast mode, for the 101 KB the BHI260AP is booted from at every power-up:
-	 * at 100 kHz one 240-byte chunk is 22 ms, which is longer than the service
-	 * loop's own pass. Every part on this bus is rated for 400 kHz. */
+	/* At 100 kHz one 240-byte BHI260AP chunk outlasts the service pass. */
 	clock-frequency = <I2C_BITRATE_FAST>;
 };
 
@@ -560,46 +371,12 @@
 	pinctrl-names = "default", "sleep";
 };
 
-/*
- * GPREGRET is a hardware-retained byte that survives a warm reset. The factory
- * Adafruit bootloader reads it on every boot and enters USB mass-storage DFU
- * when it holds 0x57 (DFU_MAGIC_UF2_RESET, Adafruit_nRF52_Bootloader
- * src/main.cpp:109). Exposing it as a Zephyr `retention` area is how the
- * application asks to be rebooted into drag-and-drop mode without touching a
- * register directly. Same shape ZMK uses (app/dts/common/nordic/
- * nrf52840_uf2_boot_mode.dtsi).
- *
- * No `prefix` and no `checksum` on purpose: the binding defaults both off
- * (dts/bindings/retention/zephyr,retention.yaml), so a one-byte
- * retention_write() puts exactly 0x57 in the register, which is what the
- * bootloader compares against.
- */
-/*
- * The SoC's own REG1 DC-DC converter instead of the LDO the SoC resets into
- * (nrf52840.dtsi gives reg1 regulator-initial-mode = NRF5X_REG_MODE_LDO). It is
- * a statement about THIS BOARD and not about the product: DC-DC needs the
- * inductor on DCC/DEC4 to be fitted, and an nRF52840 switched to it without one
- * does not regulate.
- *
- * The evidence that it is fitted is meshcore's shipped firmware for this exact
- * board - variants/lilygo_techo/TechoBoard.h:16 derives TechoBoard from
- * NRF52BoardDCDC, whose begin() writes NRF_POWER->DCDCEN = 1
- * (src/helpers/NRF52Board.cpp:227-238). The T-Echo schematic is NOT in
- * project/reference/, so this is a second-source claim and the bench measurement
- * is what closes it.
- *
- * Devicetree and not Kconfig, and no driver is involved: soc/nordic/nrf52/soc.c
- * :35-36 reads THIS PROPERTY at compile time and calls nrf_power_dcdcen_set()
- * during SoC init. Zephyr 4.5 removed CONFIG_SOC_DCDC_NRF52X, the Kconfig route
- * to the same line. CONFIG_BOARD_ENABLE_DCDC, which most
- * out-of-tree nRF52 boards still carry, does not exist unless the board itself
- * defines it, and assigning an undefined symbol is the Kconfig warning that
- * failed this build the first time.
- */
+/* DC-DC needs the inductor on DCC/DEC4, which meshcore shows fitted: README.md */
 &reg1 {
 	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
 };
 
+/* The bootloader's GPREGRET, unprefixed, so a one-byte write is the magic. */
 &gpregret1 {
 	uf2_boot_retention: retention@0 {
 		compatible = "zephyr,retention";
@@ -608,14 +385,7 @@
 	};
 };
 
-/*
- * The second retention byte, and it is the application's alone: the factory
- * bootloader reads GPREGRET and never this one. It survives SYSTEM OFF, which is
- * the whole reason it is used - it carries what the e-paper is wearing while the
- * rails are down, so a refused boot knows whether it owes the glass a frame, and
- * whether the unit last went dark on a flat cell, so the boot that runs can say
- * so (core/power/README.md).
- */
+/* The application's own byte, kept through SYSTEM OFF: core/power/README.md */
 &gpregret2 {
 	glass_retention: retention@0 {
 		compatible = "zephyr,retention";
@@ -624,32 +394,14 @@
 	};
 };
 
-/*
- * Internal 1 MB flash. The factory Adafruit UF2 bootloader owns both ends and
- * we never write either: MBR + SoftDevice below 0x26000, bootloader + MBR
- * params + settings from 0xF4000. MCUboot is chain-loaded as the "application"
- * the UF2 bootloader starts.
- *
- * The drag-and-drop write window is USER_FLASH_START..USER_FLASH_END =
- * 0x1000..0xEA000 (Adafruit_nRF52_Bootloader src/usb/uf2/uf2cfg.h:25-26 with
- * DFU_APP_DATA_RESERVED = 10*4096, Makefile:139). Everything a .uf2 must carry
- * (MCUboot and slot0) therefore lives strictly below 0xEA000. Above it, inside
- * the 40 KB the bootloader reserves for application data, live the unit's
- * unlock code at 0xEA000 (identity_partition, core/identity/README.md) and NVS
- * from 0xEC000: no .uf2 can write either.
- *
- * The secondary slot is NOT here: it is on the external SPI NOR part (&ext_flash
- * below), which is what buys slot0 its full 728 KB.
- */
+/* A .uf2 writes 0x1000..0xEA000 only, MCUboot and slot0: README.md */
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		/* MBR (4 KB) + SoftDevice S140 6.1.1 (148 KB). Factory-programmed,
-		 * never linked against, never enabled: Zephyr's own BLE controller
-		 * drives the radio. Declared only so nothing can allocate over it. */
+		/* MBR and SoftDevice S140 6.1.1, declared so nothing allocates over them. */
 		softdevice_partition: partition@0 {
 			label = "softdevice";
 			read-only;
@@ -666,7 +418,7 @@
 			reg = <0x00034000 0x000B6000>;
 		};
 
-		/* The unlock code, above USER_FLASH_END and below the LittleFS other firmwares keep at 0xED000. */
+		/* Above USER_FLASH_END, below the LittleFS others keep at 0xED000. */
 		identity_partition: partition@ea000 {
 			label = "identity";
 			reg = <0x000EA000 0x00001000>;
@@ -677,10 +429,7 @@
 			reg = <0x000EC000 0x00008000>;
 		};
 
-		/* Adafruit bootloader (40 KB) + MBR params + bootloader settings.
-		 * Factory-programmed. This is the recovery path: it is in a region
-		 * the application cannot write, so a bad MCUboot is a double-tap
-		 * and a drag-and-drop rather than an SWD session. */
+		/* Out of the application's reach, so a bad MCUboot needs no SWD. */
 		uf2_boot_partition: partition@f4000 {
 			label = "uf2-bootloader";
 			read-only;
@@ -689,36 +438,7 @@
 	};
 };
 
-/*
- * On-board external 2 MiB SPI NOR flash. THE PART IS NOT FIXED.
- *
- * LilyGO's own README states it: "Flash Chip Variants: Flash will choose either
- * MX25R1635FZUIL0 or ZD25WQ16B depending on availability." There is no revision
- * or date split - you cannot tell from the board rev, the silkscreen or the
- * serial. SoftRF and nrf52-ogn-tracker both keep BOTH parts in a runtime JEDEC
- * probe table for every revision.
- *
- * That is why this is `jedec,spi-nor` with CONFIG_SPI_NOR_SFDP_RUNTIME=y and not
- * `nordic,qspi-nor`. The QSPI driver compares the devicetree `jedec-id` against
- * the chip and returns -ENODEV on mismatch (drivers/flash/nrf_qspi_nor.c), which
- * leaves the device permanently not-ready: the unit boots, flies, and - because
- * slot1 lives here - can NEVER be updated over the air, silently. The generic
- * driver compiles that check out under SFDP_RUNTIME and reads geometry, page
- * size, erase sizes and the quad-enable requirement from the chip's own SFDP
- * tables, so one image serves both parts and any future third source.
- *
- * A single image could not use quad mode anyway: the two parts differ in
- * quad-enable bit (MX25R SR1 bit 6 vs ZD25 SR2 bit 1) and in quad page-program
- * opcode (38h vs 32h), and both are compile-time devicetree properties. Plain
- * 03h READ is spec'd at 33 MHz on both, which is why `use-fast-read` is NOT set:
- * 0Bh is capped at 8 MHz on the MX25R in its default ultra-low-power mode.
- *
- * SPIM1, not SPIM3: SPIM3 is the only 32 MHz instance and the SX1262 has it.
- * SPIM1 tops out at 8 MHz, so this is ~1 MB/s against the ~4 MB/s of the old
- * 8 MHz quad setup. That does not matter - an MCUboot swap is dominated by
- * nRF52840 internal page erases (~85 ms x 182 pages is over 15 s), against which
- * the extra ~1.5 s of external transfer disappears.
- */
+/* One of two NOR parts is fitted, so the generic driver reads SFDP at runtime: README.md */
 &spi1 {
 	compatible = "nordic,nrf-spim";
 	status = "okay";
@@ -730,19 +450,13 @@
 	ext_flash: flash@0 {
 		compatible = "jedec,spi-nor";
 		reg = <0>;
-		/* 8 MHz is the SPIM1 ceiling and is within 03h READ spec on both parts. */
+		/* The SPIM1 ceiling, within 03h READ spec on both parts. */
 		spi-max-frequency = <8000000>;
-		/* NOT read under CONFIG_SPI_NOR_SFDP_RUNTIME - the driver takes both
-		 * from SFDP. Kept because the binding wants them and because they
-		 * record what we EXPECT to find; they are not enforced, which is the
-		 * entire point of this node. */
+		/* Unenforced under SFDP_RUNTIME, kept because the binding wants it. */
 		jedec-id = [c2 28 15];
-		/* BITS, not bytes: this binding's `size` is a bit count (upstream
-		 * nrf52840dk gives its 8 MiB MX25R64 as 67108864). 16 Mbit = 2 MiB. */
+		/* Bits, not bytes: 16 Mbit is 2 MiB. */
 		size = <16777216>;
-		/* Both parts support B9h/ABh. MCUboot or a previous image may have left
-		 * the chip in deep power-down, so the driver must issue the release -
-		 * SoftRF sends a bare ABh before probing for the same reason. */
+		/* A previous image may leave the chip in deep power-down. */
 		has-dpd;
 		t-enter-dpd = <10000>;
 		t-exit-dpd = <35000>;
@@ -752,41 +466,18 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			/*
-			 * Secondary slot, EXACTLY THE SAME SIZE as slot0 (182 sectors
-			 * of 4 KB = 0xB6000). Not one sector larger, even though
-			 * mcuboot docs/design.md:296-299 calls that the most
-			 * memory-efficient swap-using-offset layout.
-			 *
-			 * Zephyr derives imgtool's --slot-size from slot1, not slot0 -
-			 * "Slot 1 size is used instead of slot 0 size"
-			 * (zephyr/cmake/mcuboot.cmake:96-102). So --pad --confirm pads
-			 * the image to slot1's length, and that padded image is what
-			 * gets written straight into slot0 by the .uf2. Make slot1
-			 * bigger and the trailer lands one sector past the end of
-			 * slot0, above USER_FLASH_END, where the UF2 bootloader
-			 * silently drops it. scripts/mkuf2.py caught exactly that.
-			 *
-			 * design.md:299 permits equal slots. The first sector of the
-			 * secondary is still reserved for sector movement, so the
-			 * usable image size is unchanged either way.
-			 *
-			 * Both slots must have the same sector size for this mode:
-			 * nRF52840 page = 4096 B, and 4 KB sectors on both candidate
-			 * external parts (they differ in quad config, not geometry).
-			 */
+			/* Exactly slot0's size: README.md */
 			slot1_partition: partition@0 {
 				label = "image-1";
 				reg = <0x00000000 0x000B6000>;
 			};
 
-			/* ~1.16 MB left for flight logging, 298 sectors. */
 			log_partition: partition@b6000 {
 				label = "logs";
 				reg = <0x000B6000 0x0012A000>;
 			};
 
-			/* The BHI260AP image a slim OTA image boots the hub from, last so the log keeps its offset. */
+			/* The BHI260AP image, last so the log keeps its offset. */
 			imu_image_partition: partition@1e0000 {
 				label = "imu-image";
 				reg = <0x001E0000 0x00020000>;

@@ -25,10 +25,7 @@ struct PinRole {
     int pin;
 };
 
-// What a board tells its platform about its own wiring. The silicon platform
-// ignores it (the pins are already in the devicetree and in the drivers' own
-// arguments). The host platform uses it to route a pin to the part model that
-// owns it.
+// INFO: fc 20nov26 only the host platform reads this, to route each pin to its part model
 struct PinMap {
     const PinRole* roles;
     int count;
@@ -75,16 +72,12 @@ class Uart {
     virtual uint32_t overruns() const { return 0; }
 };
 
-// Retuning the port, which the byte pipe above deliberately cannot do: the rate
-// is the platform's, not the stream's. It lives here rather than beside the one
-// driver that needs it because a platform must not include a part to implement a
-// seam, and this header is the bus vocabulary both ends already share.
+// INFO: fc 20nov26 here, not beside its one driver, because a platform must not include a part to
+// fill a seam
 class UartRate {
    public:
     virtual ~UartRate() = default;
-    // False means this port cannot change rate. That is a capability we do not
-    // have, not a call that silently did nothing, and the caller is expected to
-    // behave differently rather than to hope.
+    // INFO: fc 20nov26 false means this port cannot change rate, and the caller must act on it
     virtual bool set(uint32_t baud) = 0;
 };
 
@@ -93,8 +86,6 @@ class FixedUartRate : public UartRate {
     bool set(uint32_t) override { return false; }
 };
 
-// The null port, so a board without the capability passes an object rather than a
-// null pointer.
 inline FixedUartRate kFixedUartRate{};
 
 }  // namespace skyblip::io

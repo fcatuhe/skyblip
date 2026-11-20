@@ -26,11 +26,8 @@ class Ssd1681 : public ports::Display {
 
     void begin();
 
-    // Which panel the board found glued to it. The ID read is the
-    // board's, not the driver's: on silicon it needs the panel's one data line
-    // reversed, which is only possible before a bus driver owns the pins
-    // (hardware/parts/ssd1681/panel.h). Called before begin(); not calling it at
-    // all leaves the identity Unknown, which is the safe policy.
+    // INFO: fc 20nov26 call before begin(), and never calling it leaves the panel Unknown, the safe
+    // default
     void adopt(const PanelId& id) { panel_ = identify_panel(id); }
     Panel panel() const { return panel_; }
     const char* panel_name() const { return parts::panel_name(panel_); }
@@ -102,7 +99,8 @@ class Ssd1681 : public ports::Display {
 using Ssd1681Glass = ui::Bitmap<Ssd1681::kGlassWidth, Ssd1681::kGlassHeight>;
 
 namespace epd {
-// INFO: fc 04sep26 GxEPD2, Good Display, SoftRF hold RES# 10 ms; only this reset ends deep sleep
+// INFO: fc 04sep26 GxEPD2, Good Display and SoftRF hold RES# 10 ms, the only reset that ends deep
+// sleep
 constexpr uint32_t kResetHoldUs = 10000;
 }  // namespace epd
 

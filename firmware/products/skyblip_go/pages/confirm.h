@@ -1,8 +1,4 @@
-// The authorisation prompt, on the glass. Nothing sensitive the companion link
-// asks for happens without this page having been read: it names the operation,
-// says in a sentence what confirming it will do, and states the gesture that
-// allows it next to the gesture that refuses it. A pilot who cannot tell from
-// the glass what they are about to authorise has not authorised anything.
+// INFO: fc 20nov26 nothing sensitive the link asks for happens unless this page names it first
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_CONFIRM_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_CONFIRM_H
 

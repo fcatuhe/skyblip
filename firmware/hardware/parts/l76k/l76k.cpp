@@ -26,7 +26,7 @@ void L76k::start_sequence(uint32_t now_ms) {
     sequence_count_ = kCommandCount;
     next_command_ = 0;
     cadence_ = Cadence::Second;
-    satellites_in_view_every_ = 0;  // kCommands sets nGSV to 0, whatever the receiver was doing
+    satellites_in_view_every_ = 0;
     levels_heard_ = false;
     enter(ConfigStage::Sending, now_ms);
     send_next(now_ms);
@@ -118,9 +118,8 @@ bool L76k::adopt_baud(uint32_t baud) {
     return false;
 }
 
-// One byte of nothing, then silence long enough for the receiver to have come
-// up. Every attempt starts here, including the ones after a baud change: a
-// receiver we could not hear may also have been asleep.
+// INFO: fc 20nov26 every attempt starts here, even after a baud change, because a receiver we could
+// not hear may be asleep
 void L76k::begin_wake(uint32_t now_ms) {
     flush();
     wake(now_ms);
@@ -136,7 +135,7 @@ bool L76k::next_baud() {
 
 bool L76k::step_baud() {
     const int next = (baud_index_ + 1) % kBaudCandidateCount;
-    if (!rate_.set(kBaudCandidates[next])) return false;  // this port cannot retune
+    if (!rate_.set(kBaudCandidates[next])) return false;
     baud_index_ = next;
     return true;
 }
@@ -147,10 +146,8 @@ void L76k::verify_failed(uint32_t now_ms) {
         rate_failed(now_ms);
         return;
     }
-    // Two different failures wearing one face. A receiver that answered nothing
-    // at all is a receiver we cannot hear, and the rate is the first suspect. A
-    // receiver that is talking has the right rate and is simply not obeying, and
-    // walking the baud rates would only lose the sentences we do get.
+    // INFO: fc 20nov26 only silence blames the rate, since a talking receiver that disobeys is
+    // already at the right one
     if (heard_nothing && sentences() == 0 && next_baud()) {
         attempts_ = 1;
         begin_wake(now_ms);
@@ -177,10 +174,8 @@ void L76k::service(uint32_t now_ms) {
         const bool factory = pending_restart_ == static_cast<uint8_t>(ports::Restart::Factory);
         send(kRestartCommands[pending_restart_], now_ms);
         pending_restart_ = kNoRestart;
-        // A factory reset takes the constellations, the sentence set, the
-        // dynamic model and the rate with it, so the receiver that comes back is
-        // not the one we configured. A cold or warm start only throws away the
-        // orbit data, which is the whole point of asking for one.
+        // INFO: fc 20nov26 a factory reset also drops our rate and configuration, while a cold or
+        // warm start drops only orbit data
         if (factory) {
             validity_.reset();
             adopt_baud(kFactoryBaudRate);
@@ -205,9 +200,8 @@ void L76k::service(uint32_t now_ms) {
             enter(ConfigStage::Identifying, now_ms);
             break;
         case ConfigStage::Identifying:
-            // Either it named itself or it did not answer in time. It gets the
-            // sequence regardless: the only alternative on this board is a
-            // receiver left on its factory defaults.
+            // INFO: fc 20nov26 an unidentified receiver still gets the sequence, since the
+            // alternative is factory defaults
             if (parser_.identified() || now_ms - last_command_ms_ >= kIdentifyWindowMs)
                 start_sequence(now_ms);
             break;

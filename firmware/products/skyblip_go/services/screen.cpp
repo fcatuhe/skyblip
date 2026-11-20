@@ -36,14 +36,7 @@ void ScreenService::handle_input(uint32_t now_ms) {
         prompt_on_glass_ = false;
     }
     if (answering()) {
-        // INFO: cf 02aug26 The two conditions that make a press an answer
-        // rather than an accident: the question has reached the glass where it
-        // can be read, and the thumb is up and has stopped. A run of presses
-        // that began before the prompt - pages being cycled, a value being
-        // stepped on the settings page, or a button still held - keeps the
-        // gesture disarmed until it ends, so nothing already in flight can be
-        // spent on an authorisation. With no panel fitted there is nothing to
-        // read and presence is all there is.
+        // INFO: cf 02aug26 a press authorises only once the prompt is readable and the thumb quiet
         const bool readable = prompt_on_glass_ ||
                               !ports::has(context_.roles.capabilities, ports::Capability::Display);
         answer_.arm_once_quiet(readable, now_ms);
@@ -208,8 +201,6 @@ void ScreenService::page_forward(uint32_t now_ms) {
 
 void ScreenService::next_page() { show_page(next_fitted_page(page_)); }
 
-// A page whose sensor is not on the board is not a stop on the walk: a plain
-// T-Echo has no inertial sensor, so the g-meter is not one of its pictures.
 Page ScreenService::next_fitted_page(Page from) const {
     Page page = page_after(from);
     for (int i = 0; i < kWalkedPages && !sensor_fitted(page); i++) page = page_after(page);
@@ -262,11 +253,7 @@ void ScreenService::step_editor(uint32_t now_ms) {
     switch (editor_.tick(now_ms, current, next)) {
         case MenuAction::Changed:
             settings_ = next.settings;
-            // INFO: cf 02aug26 One owner of the flash blob. The page changes the
-            // struct the config service was already given a reference to and
-            // says so with the same flag the companion link raises; the write
-            // itself stays in common::ConfigLinkService::persist, so there is never
-            // a second writer and never two versions of the blob.
+            // INFO: cf 02aug26 ConfigLinkService::persist is the blob's one writer, so flag it
             config_.note_settings_changed();
             dirty_ = true;
             break;
@@ -415,7 +402,7 @@ void ScreenService::wipe_glass(uint32_t now_ms) {
     change_ = Change::Wiped;
 }
 
-// INFO: fc 09mar26 SoftRF changes page on partials alone: all black through the waveform, then it
+// INFO: fc 09mar26 as in SoftRF, a page change is partials alone: all black, then the page
 void ScreenService::paint_black(uint32_t now_ms) {
     framebuffer_.clear(/*white=*/false);
     context_.roles.display.paint_black(now_ms);

@@ -6,9 +6,6 @@
 
 namespace skyblip::platform::host {
 
-// The rails a test can watch go down, and a cause register it can load with
-// whatever the field would have handed us. The order they go down in is the
-// same core::power sequence the silicon walks, recorded rather than performed.
 class SystemPower : public ports::SystemPower, private power::PowerDownSink {
    public:
     power::ResetCause reset_causes() const override { return causes; }
@@ -32,7 +29,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     bool went_dark_flat() const override { return retained_went_dark_flat; }
     void set_went_dark_flat(bool flat) override { retained_went_dark_flat = flat; }
 
-    // Where a step ended up in what actually ran, -1 if it never did.
     int order_of(power::PowerDownStep step) const {
         for (int i = 0; i < performed_count; i++)
             if (performed_steps[i] == step) return i;
@@ -40,12 +36,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     }
 
     power::ResetCause causes{power::ResetCause::PowerOn};
-    // A host board carries the comparator, because the policy above it is the
-    // thing worth testing and a platform that could never warn would leave it
-    // unreachable. Settable, so the absent case is a case too.
+    // INFO: fc 20nov26 carried so the policy above it is testable, and settable so its absence is
+    // too
     bool supply_monitor_fitted{true};
-    // What a collapsing rail does to this platform: a case sets it, the product
-    // polls it exactly as it polls the silicon.
     bool supply_warning{false};
     // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
     power::CellOnGlass retained_cell_on_glass{power::CellOnGlass::None};

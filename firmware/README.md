@@ -1,26 +1,50 @@
 # firmware
 
-The C++ tree: `protocols/` is the radio protocols, each a stack another project can take with its tests, `core/` is the portable logic, `ports/` the roles a product needs from a board, `hardware/` the parts and platforms that fill them, `ui/` the drawing kit, `products/` the pages and services that make one device what it is, `boards/` the Zephyr boards, `test/` the host suite, `simulator/` the world it flies in. Each directory carries its own README for what it decides.
+The C++ tree. Each directory carries its own README for what it decides:
 
-A file lives in the narrowest layer that decides its content. What a radio protocol's specification decides is `protocols/`, and it includes nothing of skyBlip's ([`protocols/README.md`](protocols/README.md)); a spec, a physical law or arithmetic is otherwise `core/`; what the core needs done for it is `ports/`; a datasheet is `hardware/`; a schematic is `boards/`; which pages exist, what a press means and which settings a pilot gets is the product's; pixels that any product would draw the same way are `ui/`.
+| Directory | What it holds |
+|---|---|
+| `protocols/` | the radio protocols, each a stack another project can take with its tests |
+| `core/` | the portable logic |
+| `ports/` | the roles a product needs from a board |
+| `hardware/` | the parts and platforms that fill those roles |
+| `ui/` | the drawing kit |
+| `products/` | the pages and services that make one device what it is |
+| `boards/` | the Zephyr boards |
+| `test/` | the host suite |
+| `simulator/` | the world the host build flies in |
 
-A service that more than one product runs lives in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)). It does not go in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone or an alarm. A shared service decides product content: the cadence a phone's map is fed at, which claim turns it on, which settings it reads. That belongs to the products layer, shared by more than one product. No file in `products/common/` includes a product's header. A product hands a shared service what it reads of the product's settings as a small struct the product fills. The config link also loads and writes the settings, so it takes the product's `common::SettingsStore` instead. The host build, the tuning index and the clang-format job already walk `products/*`, and the device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`. Every later move of a service out of a product follows the same rule.
+Put a file in the narrowest layer that decides its content. A radio protocol's specification is `protocols/`, which includes nothing of skyBlip's ([`protocols/README.md`](protocols/README.md)). Any other spec, physical law or arithmetic is `core/`. What the core needs done for it is `ports/`. A datasheet is `hardware/` and a schematic is `boards/`. Which pages exist, what a press means and which settings a pilot gets belong to the product. Pixels any product would draw the same way are `ui/`.
 
-`ports/` is a port layer, not a hardware abstraction layer, and it is named for what it is: it declares the roles the core needs filled, in the core's own vocabulary, and `hardware/` is where a part or a platform fills one. A port is what the core calls; what the world does to a sensor arrives as an `events::` value on a queue instead, and `hardware/README.md` is where that half of the contract is written down. Register code belongs there, never here. `protocols/`, `core/` and `ui/` compile with no framework headers at all, which is what buys the host suite and the WASM simulator; Zephyr is used freely below `ports/` and never above it.
+Put a service that more than one product runs in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)), not in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone or an alarm. No file in `products/common/` includes a product's header. A product hands a shared service the settings it needs as a small struct the product fills. The config link loads and writes the settings, so it takes the product's `common::SettingsStore` instead. The device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`.
 
-`make test` runs the host suite, the protocol stacks' tests among it, `make test-protocols` builds and runs each stack alone from a copy holding nothing else, `make test-sanitize` runs it again under ASan and UBSan in `build/sanitize/`, `make fuzz` runs the libFuzzer harnesses in `test/fuzz/` with clang, `ABI=ilp32` builds any of them for i386 where `long` is 32 bits as on the nRF52, `scripts/build_local.sh` from the repo root builds the device images.
+`ports/` declares the roles the core needs filled, in the core's own vocabulary. It is a port layer, not a hardware abstraction layer, and holds no register code. `hardware/` fills the roles. The core calls a port. What the world does to a sensor arrives as an `events::` value on a queue instead ([`hardware/README.md`](hardware/README.md)). `protocols/`, `core/` and `ui/` compile with no framework headers, so the host suite and the WASM simulator can build them. Zephyr is used freely below `ports/` and never above it.
 
-`.clang-format` and `.clang-tidy` live here rather than at the root because this is the only C++ in the repository, and both tools read the nearest config above the file they are given. `make tidy` runs the linter over what the host build compiles; CI runs the same target.
+| Command | What it does |
+|---|---|
+| `make test` | runs the host suite, the protocol stacks' tests among it |
+| `make test-protocols` | builds and runs each stack alone, from a copy holding nothing else |
+| `make test-sanitize` | runs the suite under ASan and UBSan, in `build/sanitize/` |
+| `make fuzz` | runs the libFuzzer harnesses in `test/fuzz/` with clang |
+| `make fuzz-<name>` | runs one harness: `nmea`, `air`, `adsb`, `adsb_assembly` or `link` |
+| `make tidy` | runs clang-tidy over what the host build compiles, as CI does |
+| `make browser` | compiles the WASM that the Rails app's `/briefing/simulator` loads from a release |
+| `make watch` | rebuilds and reruns the host tests on every save, or the WASM with `WATCH=browser` |
+| `make clean` | removes `build/` |
+| `make ... ABI=ilp32` | builds any of the above for i386, where `long` is 32 bits as on the nRF52 |
+| `scripts/build_local.sh`, from the repo root | builds the device images |
+
+`.clang-format` and `.clang-tidy` live here because this is the only C++ in the repository, and both tools read the nearest config above the file.
 
 ## Versions
 
-Four versions move apart. [`VERSION`](VERSION) is the firmware version, one for every product: it moves with anything a product does, such as a page, an alarm or a power saving, and a `v<version>` tag releases every product at it (`.github/workflows/release.yml`). Each `products/<product>/VERSION` is a link to it, because Zephyr reads the version from the application's own directory.
+Four versions move apart. [`VERSION`](VERSION) is the firmware version, one for every product. It moves with anything a product does, such as a page, an alarm or a power saving. A `v<version>` tag releases every product at it (`.github/workflows/release.yml`). Each `products/<product>/VERSION` is a link to it, because Zephyr reads the version from the application's own directory.
 
-The other three are the radio protocols' versions, one per stack under `protocols/`: `protocols/adsl/version.h` for ADS-L, `protocols/adsb/version.h` for ADS-B and `protocols/alptas/version.h` for ALP-TAS, each a `kVersion` string beside the `kSpecification` it implements. Each stays at 0.1.0 until its protocol is ready for production, whatever changes before then. From then on a protocol version moves only when a change alters a rule its conformance rests on: what the stack itself decides about its frames, its encoding, its channels, its timing or its transmit rules, or a reading the frozen conformance suite pins. A change inside those rules, such as which second a burst takes, moves the firmware version alone. Each product lists the protocols it carries in `products/<product>/PROTOCOLS`, one stack name per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md` (`lib/radio_protocols.rb`), and a unit names its own over the companion link's `protocols` command. `protocols/README.md` says what hangs on them and which skyBlip files outside a stack still change what it puts on air.
+The other three are the radio protocols' versions, a `kVersion` string beside the `kSpecification` it implements: `protocols/adsl/version.h`, `protocols/adsb/version.h` and `protocols/alptas/version.h`. Each stays at 0.1.0 until its protocol is ready for production. From then on a protocol version moves only when a change alters a rule its conformance rests on: the stack's frames, encoding, channels, timing or transmit rules, or a reading the frozen conformance suite pins. A change inside those rules, such as which second a burst takes, moves the firmware version alone. Each product lists its stacks in `products/<product>/PROTOCOLS`, one per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md` (`lib/radio_protocols.rb`). A unit names its own over the companion link's `protocols` command. `protocols/README.md` says what hangs on them and which skyBlip files outside a stack still change what it puts on air.
 
 ## Before you ship a copy
 
-This tree is open source, and some of what it compiles in names skyBlip and nobody else. A product built from it replaces each of these with its own before a unit leaves the bench. They are listed here and none of them changes:
+Some of what this tree compiles in names skyBlip and nobody else. A product built from it replaces each of these with its own before a unit leaves the bench:
 
 | Identity | Where | What a copy does |
 |---|---|---|
@@ -35,20 +59,20 @@ This tree is open source, and some of what it compiles in names skyBlip and nobo
 
 ## Naming a boolean
 
-A boolean field says which kind of fact it is in its suffix, never in a prefix. `has_` and `have_` both read as "somebody has something" and the two were two lines apart in one struct before this rule existed.
+A boolean field says which kind of fact it is in its suffix, never in a prefix, because `has_` and `have_` both read as "somebody has something".
 
 | Suffix | Fact | Example |
 |---|---|---|
 | `_valid` | the value beside it is a real reading, taken and trustworthy now | `fix_valid`, `lateral_valid`, `flight_time_valid` |
 | `_fitted` | the hardware is on this unit, whatever it is currently reporting | `inclinometer_fitted` |
 
-A state is neither, and takes the adjective the domain already uses: `airborne`, `charging`, `transmitting`, `flyable`, `battery_low`. A device that measures something it is not measuring right now is two facts and two fields, because a page draws them differently: a plain T-Echo has no inclinometer and prints none, a Plus whose sensor has not answered yet prints the empty cage.
+A state is neither, and takes the adjective the domain already uses: `airborne`, `charging`, `transmitting`, `flyable`, `battery_low`. Fitted and valid are two fields, because a page draws them differently: a plain T-Echo has no inclinometer and prints none, and a Plus whose sensor has not answered yet prints the empty cage.
 
-`has_` survives as a verb on a container that is asked a question, where it is a call and not a field: `ports::has(capabilities, Capability::Rf)`, `Inventory::has_i2c_address(0x28)`.
+`has_` survives as a call on a container, not as a field: `ports::has(capabilities, Capability::Rf)`, `Inventory::has_i2c_address(0x28)`.
 
 ## Naming a quantity
 
-A number carries its unit in its suffix, for the same reason a boolean carries its kind in one: the field is read far from the code that scaled it, and a fixed-point value with no suffix is a bug waiting for a reader who assumes SI.
+A number carries its unit in its suffix, because the field is read far from the code that scaled it and a reader assumes SI.
 
 | Suffix | Unit | Example |
 |---|---|---|
@@ -72,13 +96,13 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 | `_dbhz` | dB-Hz, a carrier-to-noise density | `cn0_dbhz` |
 | `_px` | pixels on the glass | `kDashPx`, `kMinLeaderPx` |
 
-`core/units/units.h` carries the same units as types, and the conversions between them. It is what `ui/` reads in, because a page that prints knots and feet should be converting from a type rather than from a name. On the wire and in `bus::State` the suffix is the convention, because a struct that crosses a queue is a layout as well as a vocabulary.
+`core/units/units.h` carries the same units as types, with the conversions between them. `ui/` reads those types, so a page that prints knots and feet converts from a type rather than from a name. On the wire and in `bus::State` the suffix is the convention, because a struct that crosses a queue is a layout.
 
 ## Naming a tuning constant
 
-A constant that tunes a behavior reads `k<Subject><Mechanism><Unit>`, unit last and always spelled: `kLandingHoldMs`, `kPresentFloorMs`, `kTargetForgetReports`. `scripts/check_tuning_names.py` holds the tree to it and CI runs it; [`docs/TUNING.md`](../docs/TUNING.md) is generated from the same parse, so every number below is listed with its value and the line that justifies it.
+A constant that tunes a behavior reads `k<Subject><Mechanism><Unit>`, unit last and always spelled: `kLandingHoldMs`, `kPresentFloorMs`, `kTargetForgetReports`. CI runs `scripts/check_tuning_names.py` to hold the tree to it. [`docs/TUNING.md`](../docs/TUNING.md) is generated from the same parse and lists every constant with its value and the comment that justifies it.
 
-The mechanism is the half people get wrong, because four different things all read as "a delay" in conversation and behave nothing alike:
+Pick the mechanism from this table. A hold, a settle, a floor and a period all read as "a delay" in conversation and behave nothing alike:
 
 | Mechanism | What it means | Reset by | Example |
 |---|---|---|---|
@@ -93,15 +117,15 @@ The mechanism is the half people get wrong, because four different things all re
 | `Forget` | past this the record itself is dropped | a fresh report | `kTargetForgetReports`, `kCallsignForgetS` |
 | `Samples`, `Fixes` | consecutive readings that must agree | one reading the other way | `kLevelSamples`, `kConvergedFixes` |
 
-Hysteresis is not on the list and is usually no constant: it is the gap between two named thresholds, like the 12.0 m/s a takeoff needs and the 1.0 m/s a landing does, and naming the gap would be a third number nobody reads. The exception is a gap measured once and shared by every step of a ladder, which is named for what was measured: `kRecoveryMarginMv` is the spread a parked cell reads across, and each battery level is left upwards by that much above the step it was entered under (`core/power/README.md`).
+Hysteresis is usually no constant. It is the gap between two named thresholds, like the 12.0 m/s a takeoff needs and the 1.0 m/s a landing does, and naming the gap would add a third number nobody reads. The exception is a gap measured once and shared by every step of a ladder, named for what was measured: `kRecoveryMarginMv` is the spread a parked cell reads across, and each battery level is left upwards by that much above the step it was entered under (`core/power/README.md`).
 
-The subject comes first because a mechanism on its own is ambiguous where it is used: `kForgetMs` forgets what? Two of those existed, in two namespaces, 30 s each by coincidence. A constant inside a class takes the class as its subject, so `ScreenService::kPresentFloorMs` needs no more. `Delay`, `Grace`, `Debounce` and `Steady` are spelled as one of the words above, so that a grep for every hold in the tree finds every hold.
+The subject comes first because a mechanism alone is ambiguous: `kForgetMs` forgets what? A constant inside a class takes the class as its subject, so `ScreenService::kPresentFloorMs` needs no more. Spell `Delay`, `Grace`, `Debounce` and `Steady` as one of the words above, so a grep for every hold finds every hold.
 
-Out of scope, deliberately: `hardware/`, `boards/` and `ports/`. A datasheet's 2.6 s busy time is the part's figure under the part's name, and renaming it would hide where it came from.
+`hardware/`, `boards/` and `ports/` are out of scope. A datasheet's 2.6 s busy time keeps the part's name for it, so a reader can find where it came from.
 
 ## Naming a part of the device
 
-Each word below names one thing, in code and in prose. A word that names two things makes a reader check which one is meant every time, and it hides a bug where the two differ.
+Each word below names one thing, in code and in prose. A word that names two things hides a bug where the two differ.
 
 | Word | What it names | Not |
 |---|---|---|
@@ -125,7 +149,7 @@ Each word below names one thing, in code and in prose. A word that names two thi
 
 ## Naming a test case
 
-A test case states a claim, and [`docs/BEHAVIOR.md`](../docs/BEHAVIOR.md) and the pages under `docs/behavior/` are generated from the claims (`scripts/behavior_index.py`). Name a case `subject: what holds`, as in `button: a stable press emits exactly one event`, because the subject groups the cases on their area's page. Open every test file with a comment that says what it pins down. A comment above a case is quoted under its claim.
+A test case states a claim. `scripts/behavior_index.py` generates [`docs/BEHAVIOR.md`](../docs/BEHAVIOR.md) and the pages under `docs/behavior/` from the claims. Name a case `subject: what holds`, as in `button: a stable press emits exactly one event`, because the subject groups the cases on their area's page. Open every test file with a comment that says what it pins down. A comment above a case is quoted under its claim.
 
 A claim is main or it is an edge case. Mark a main case with the `main` test suite, the only one the suite uses, and leave every other case unmarked:
 
@@ -140,7 +164,7 @@ TEST_CASE("button: a stable press emits exactly one event" * doctest::test_suite
 
 A failure, a refusal or a guard is main when a pilot sees it or relies on it for safety, when it changes what goes on air, or when a standard requires it. How the firmware recovers from it is a detail. When in doubt, leave the case unmarked.
 
-Keep main small, about 10 to 15% of an area's cases. Give a subject a user would recognize at least one main case when one qualifies, and give a purely internal subject none. That rule does not hold on the pages whose cases are named after a clause of a standard: `adsl`, `adsb`, `en300220` and the `protocols-*-conformance` pages, where nearly every subject is a clause. There a case is main when it states a rule of the clause on what the device puts on air or reads off it, and the 10 to 15% still holds. Each area's page lists its main claims first and folds the rest below them, and `docs/BEHAVIOR.md` lists every main claim. `build/skyblip_tests -ts=main` runs the main cases alone. `scripts/behavior_index.py` refuses a name without a subject and a claim on either side of `: `, a file with no opening comment, a test suite other than `main`, and a skipped case marked main, because a skipped case claims nothing.
+Keep main small, about 10 to 15% of an area's cases. Give a subject a user would recognize at least one main case when one qualifies, and give a purely internal subject none. The pages whose cases are named after a clause of a standard are different: `adsl`, `adsb`, `en300220` and the `protocols-*-conformance` pages, where nearly every subject is a clause. There a case is main when it states a rule of the clause on what the device puts on air or reads off it, and the 10 to 15% still holds. Each area's page lists its main claims first and folds the rest, and `docs/BEHAVIOR.md` lists every main claim. `build/skyblip_tests -ts=main` runs the main cases alone. `scripts/behavior_index.py` refuses a name without a subject and a claim on either side of `: `, a file with no opening comment, a test suite other than `main`, and a skipped case marked main, because a skipped case claims nothing.
 
 ## License
 

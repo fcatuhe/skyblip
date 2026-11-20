@@ -4,7 +4,7 @@ The Semtech SX1262 radio, driven over `io::Spi` and `io::Gpio` by `Sx1262`, with
 
 ## Names
 
-The constants are spelled in full, so the datasheet's own spelling is what a reader searches for when a comment cites a section. Where the two differ, this is the pair, the right column spelled as this tree's comments or earlier identifiers cited it.
+The constants are spelled in full. Where the datasheet spells one differently, this is the pair.
 
 | Our name | Datasheet name |
 |---|---|

@@ -9,9 +9,6 @@
 
 namespace skyblip::platform::host {
 
-// A vibration motor wired straight to a pin: on while it is driven. The virtual
-// twin of what the silicon platform does with a GPIO, and what the T-Echo Plus
-// turns out NOT to be fitted with.
 class PinMotor : public ports::Haptic {
    public:
     void start() override { driving = true; }

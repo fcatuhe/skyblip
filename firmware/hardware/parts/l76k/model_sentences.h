@@ -1,4 +1,3 @@
-// hardware/parts/l76k/model_sentences.h: what the L76K model says, one NMEA sentence at a time.
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 
@@ -31,8 +30,6 @@ inline void L76k::emit_burst() {
     if (vtg_enabled) emit_vtg();
 }
 
-// $GPTXT,01,01,02,SW=<version>: the reply SoftRF matches on
-// (oss/SoftRF-lyusupov .../src/driver/GNSS.cpp:981-1010, 1015-1025).
 inline void L76k::emit_version() {
     char line[128];
     int written = format_string(line, "$GPTXT,01,01,02,SW=");
@@ -41,7 +38,6 @@ inline void L76k::emit_version() {
     pending_.append(line, static_cast<size_t>(written));
 }
 
-// $GPRMC,hhmmss.sss,A,ddmm.mmmm,N,dddmm.mmmm,E,speed_kn,track,ddmmyy,,,A*cs
 inline void L76k::emit_rmc() {
     char line[128];
     int written = format_string(line, "$GPRMC,");
@@ -176,7 +172,6 @@ inline void L76k::emit_vtg() {
     say(line, written);
 }
 
-// $GPGGA,hhmmss.sss,ddmm.mmmm,N,dddmm.mmmm,E,q,sats,hdop,msl,M,separation,M,,*cs
 inline void L76k::emit_gga() {
     char line[128];
     int written = format_string(line, "$GPGGA,");

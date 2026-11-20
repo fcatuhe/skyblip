@@ -77,8 +77,8 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
                             refresh_since_ms_ = clock_->milliseconds();
                             refresh_span_ms_ = last_full ? kFullBusyMs : partial_busy_ms();
                         }
-                        // In deep sleep the panel's charge pump is off: it latches
-                        // nothing, and keeps the last image it did latch.
+                        // INFO: fc 20nov26 in deep sleep the charge pump is off, so the last
+                        // latched image stays
                         if (powered) rasterise();
                     }
                 }
@@ -100,9 +100,8 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
                            [opcode](uint8_t seen) { return seen == opcode; });
     }
 
-    // What the panel would be showing: RAM read back through the driver's own
-    // inversion, so a polarity bug in the driver shows up as an inverted screen
-    // in the simulator instead of passing unnoticed.
+    // INFO: fc 20nov26 read back through the driver's inversion, so a polarity bug shows as an
+    // inverted screen
     const parts::Ssd1681Glass& framebuffer() const { return panel_; }
 
     bool save_pgm(const char* path) const {
@@ -119,12 +118,8 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
         return true;
     }
 
-    // Which lot the virtual panel is from. Not served over the SPI seam, because
-    // on real hardware it is not readable there either: the ID needs the
-    // panel's single data line reversed, so the board port takes it before any
-    // bus driver owns the pins and the platform hands it over. The default is an
-    // ID that was never taken, which is what this board is expected to
-    // report until a bench read exists.
+    // INFO: fc 20nov26 not served over SPI, as on silicon, and it defaults to an ID never taken, as
+    // this board reports
     parts::PanelId panel_id{};
 
     std::vector<uint8_t> commands;

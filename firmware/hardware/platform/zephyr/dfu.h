@@ -29,24 +29,8 @@ extern "C" int img_mgmt_read_info(int image_slot, struct image_version* version,
 
 namespace skyblip::platform::zephyr {
 
-// THE TWO MAGICS, and they are a pair. Both are one byte at offset 0 of the
-// retention area declared on &gpregret1 in the board devicetree, which is the
-// GPREGRET the factory Adafruit bootloader reads on every boot
-// (Adafruit_nRF52_Bootloader src/main.c:106-110, check_dfu_mode at :241-270).
-// Nothing else in this firmware writes that byte, and 0xA8 / 0xB1 - the
-// bootloader's own OTA magics, which would hand control to its unsigned BLE
-// update path - are written nowhere in the tree.
-//
-// 0x57 is deliberate recovery: come up as USB mass storage instead of
-// chain-loading MCUboot. It is the SOFTWARE route into the factory bootloader,
-// for a device whose reset button is awkward or enclosed. The other route is the
-// bootloader's own and works whatever state this firmware is in: a double-click
-// on RESET within 0.5 s on the T-Echo, and on the X1, which has no reset button,
-// the button held while the cable goes in (boards/seeed/meshtracker_x1/factory/).
-
-// One writer for both. False when the board declares no retention area or the
-// device is not ready: the caller decides what that means, and neither caller
-// treats it as fatal - a board with no UF2 bootloader has nothing to ask.
+// INFO: fc 20nov26 the only writer of the bootloader's GPREGRET byte, which must never hold its
+// unsigned OTA magics 0xA8 or 0xB1
 inline bool write_boot_magic(uint8_t magic) {
 #if DT_NODE_EXISTS(DT_NODELABEL(uf2_boot_retention))
     const struct device* retention = DEVICE_DT_GET(DT_NODELABEL(uf2_boot_retention));
@@ -139,7 +123,7 @@ class Dfu : public ports::Dfu {
     bool upload_finished() override { return UploadGate::finished(); }
     void forget_upload() override { UploadGate::forget_finished(); }
 
-    // INFO: fc 04sep26 the WDT survives a soft reset, not SYSTEM OFF; it would cut the UF2 session
+    // INFO: fc 04sep26 the WDT survives a soft reset, not SYSTEM OFF, and would cut the UF2 session
     ports::RecoveryPath recovery_path() const override {
         return watchdog_running() ? ports::RecoveryPath::PowerOffToFinish
                                   : ports::RecoveryPath::Rebooted;

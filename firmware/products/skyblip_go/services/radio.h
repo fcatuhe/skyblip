@@ -109,20 +109,16 @@ class RadioService : public runtime::Service {
         uint64_t first_us{0};
     };
 
-    // Both from microseconds(), which is 64-bit and does not wrap: nothing about where
-    // the radio believes it is inside the second reads the 32-bit millisecond
-    // counter (ports/clock.h).
     bool identified();
     void judge_transmit(uint32_t now_ms);
     void withdraw_carried();
     bool radio_answers(uint32_t now_ms);
     bool receiver_holds_rate() const;
+    // INFO: fc 20nov26 phases read microseconds() (ports/README.md, The millisecond clock wraps)
     int phase_ms() const;
     int phase_at(uint64_t now_us) const;
     int64_t second_origin_us() const;
-    // Slot 1 spans the UTC second, so inside its tail the dwell, the burst it
-    // carries and the second they are accounted to all belong to the second the
-    // slot started in.
+    // INFO: fc 20nov26 slot 1 spans the UTC second, so its tail belongs to the second it started in
     int64_t dwell_origin_us() const;
     static uint64_t at_us(int64_t origin_us, int phase_ms);
     Upcoming upcoming_after(const timing::SlotPlan& plan, int64_t origin_us) const;
@@ -184,17 +180,7 @@ class RadioService : public runtime::Service {
 
     timing::Transmitter transmitter_{};
     timing::NoiseFloor noise_floor_{};
-    // The transmit buffer, and the only writer it has: protocol::from_own, out of
-    // own-ship state, the device address and the settings. There is deliberately no
-    // loopback guard in front of it. SoftRF has one, because a transmission that
-    // was the last frame received did happen to it ("$PSRFE,RF loopback is
-    // detected on Tx", src/driver/RF.cpp:381-396), and the shape of that firmware
-    // is why: one driver owning a shared Tx/Rx buffer pair, with relay and bridge
-    // paths that do put received traffic back on air. Here a received frame's only
-    // path is the RfEvent queue into TrafficService and the traffic table, and
-    // nothing transmits from either. Adding the comparison would put work inside a
-    // dwell to defend against a state this composition cannot reach; the property
-    // is asserted over the air instead, in test/products/test_rf_timing.cpp.
+    // INFO: fc 20nov26 no loopback guard, as SoftRF has: no received frame reaches this buffer
     adsl::Packet outgoing_{};
     // INFO: fc 13nov26 B.5: the second a position was last held, so each held second counts once
     uint32_t held_for_b5_s_{0};

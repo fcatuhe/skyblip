@@ -5,8 +5,6 @@
 
 namespace skyblip::platform::host {
 
-// Counts what the silicon would do, so a test can assert the loop armed the dog
-// after setup and fed it only while it was allowed to.
 class Watchdog : public ports::Watchdog {
    public:
     Status arm(uint32_t timeout_ms) override {

@@ -13,14 +13,8 @@
 
 namespace skyblip::platform::zephyr {
 
-// The cell, read through the board's divider. Zephyr's voltage-divider driver
-// owns the ADC and the ratio (the resistors are a devicetree fact, not a
-// constant in code). We own what the millivolts mean, in core/power.
-//
-// INFO: fc 09mar26 the T-Echo family exposes no charger status pin - SoftRF's
-// nRF52 port says the same ("the T-Echo has no ext_power_pin") - so the only
-// charge signal is the USB regulator's VBUS detect. Nothing here can measure
-// charge current, which is why "charging" ends at a voltage plateau.
+// INFO: fc 09mar26 the T-Echo has no charger status pin, so VBUS is the only charge signal and
+// charging ends at a plateau
 class Battery {
    public:
     explicit Battery(const struct device* divider) : divider_(divider) {}

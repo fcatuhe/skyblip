@@ -3,10 +3,7 @@
 #if defined(__ZEPHYR__)
 
 #include <errno.h>
-#include <zephyr/drivers/flash.h>  // flash_pages_info, flash_get_page_info_by_offs
-// NVS moved to the KVSS subsystem in Zephyr 4.4. zephyr/fs/nvs.h is now a
-// deprecated shim that warns. The API is identical - same nvs_fs, same nvs_mount
-// / nvs_read / nvs_write / nvs_delete - so this is a relocation, not a redesign.
+#include <zephyr/drivers/flash.h>
 #include <zephyr/kvss/nvs.h>
 #include <zephyr/storage/flash_map.h>
 
@@ -17,11 +14,7 @@ namespace skyblip::platform::zephyr {
 
 class KeyValueStore : public ports::KeyValueStore {
    public:
-    // Mount NVS on the DT-defined `storage_partition`, first erasing what another firmware left
-    // there. Returns Ok on success.
     Status begin() {
-        // FIXED_PARTITION_* are __DEPRECATED_MACRO aliases in Zephyr 4.4, and the
-        // PARTITION_* spellings are the same macros under the intended names.
         file_system_.flash_device = PARTITION_DEVICE(storage_partition);
         if (!device_is_ready(file_system_.flash_device)) return Status::Down;
         file_system_.offset = PARTITION_OFFSET(storage_partition);
@@ -86,7 +79,8 @@ class KeyValueStore : public ports::KeyValueStore {
         uint32_t hash = 2166136261u;
         for (const char* character = key; *character; ++character)
             hash = (hash ^ static_cast<uint8_t>(*character)) * 16777619u;
-        return static_cast<uint16_t>(hash & 0xFFFF) | 1u;  // avoid id 0
+        // INFO: fc 20nov26 the low bit is forced so that no key hashes to id 0
+        return static_cast<uint16_t>(hash & 0xFFFF) | 1u;
     }
     struct nvs_fs file_system_{};
     bool mounted_{false};

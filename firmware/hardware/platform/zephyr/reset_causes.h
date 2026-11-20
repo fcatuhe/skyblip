@@ -11,20 +11,13 @@
 namespace skyblip::platform::zephyr {
 
 inline power::ResetCause translate_reset_flags(uint32_t flags) {
-    // INFO: hk 02aug26 the nRF52 leaves RESETREAS all-zero after a power-on
-    // or brown-out reset: it latches only the other seven causes (nRF52840
-    // PS v1.8 §5.3.3). An empty register is therefore the power-on case, not
-    // an unread one.
-    //
-    // The other half of that: RESET_POR coming back SET is not a power-on at
-    // all on this SoC - it is the VBUS bit, which hwinfo_nrf.c folds into
-    // RESET_POR. read_reset_causes() has already reported that as UsbVbus from the
-    // register itself, and core/power::classify ranks the specific cause
-    // above PowerOn, so the extra bit costs nothing and is left as the driver
-    // reported it rather than second-guessed here.
+    // INFO: hk 02aug26 RESETREAS stays all-zero after a power-on or brown-out (nRF52840 PS v1.8
+    // §5.3.3), so empty means power-on
     if (flags == 0) return power::ResetCause::PowerOn;
 
     power::ResetCause causes = power::ResetCause::None;
+    // INFO: fc 20nov26 a set RESET_POR is hwinfo's fold of the VBUS bit, which classify ranks below
+    // UsbVbus anyway
     if (flags & RESET_POR) causes |= power::ResetCause::PowerOn;
     if (flags & RESET_PIN) causes |= power::ResetCause::Pin;
     if (flags & RESET_BROWNOUT) causes |= power::ResetCause::Brownout;
@@ -39,12 +32,8 @@ inline power::ResetCause translate_reset_flags(uint32_t flags) {
 inline power::ResetCause read_reset_causes() {
     power::ResetCause causes = power::ResetCause::None;
 #if NRFX_RESET_REASON_HAS_VBUS
-    // Read straight from the register, because Zephyr cannot carry this one:
-    // drivers/hwinfo/hwinfo_nrf.c maps NRFX_RESET_REASON_VBUS_MASK onto
-    // RESET_POR, so through hwinfo alone a charger plugged into a sleeping
-    // device is indistinguishable from a cell being connected for the first
-    // time - and core/power/wake.h refuses a boot on the difference. Done
-    // before hwinfo_clear_reset_cause(), which clears every bit.
+    // INFO: fc 20nov26 read from the register before hwinfo clears it, since hwinfo folds VBUS into
+    // RESET_POR and wake.h needs it
     if (nrfx_reset_reason_get() & NRFX_RESET_REASON_VBUS_MASK) causes |= power::ResetCause::UsbVbus;
 #endif
     uint32_t flags = 0;

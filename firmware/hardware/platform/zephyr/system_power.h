@@ -15,17 +15,12 @@
 
 namespace skyblip::platform::zephyr {
 
-// JESD216 / MX25R1635F 8.9 and ZD25WQ16B 8.20, the one opcode both parts spell
-// the same: Deep Power-Down.
-//
-// INFO: fc 04sep26 entered only on the way to SYSTEM OFF; ext_flash `has-dpd` sends RDPD at init
+// INFO: fc 04sep26 entered only on the way to SYSTEM OFF, and ext_flash `has-dpd` sends RDPD at
+// init
 constexpr uint8_t kFlashDeepPowerDown = 0xB9;
 
-// INFO: fc 03aug26 tDP for neither candidate part is in project/reference/, and
-// `t-enter-dpd` has no default in jedec,spi-nor-common.yaml, so reading it from
-// the devicetree would not compile. Both parts specify it in microseconds; this
-// is generous by any reading of that and costs nothing, because the next step
-// takes the supply away. Move it to the devicetree the day a datasheet lands.
+// TODO: fc 03aug26 a generous guess, since no datasheet gives tDP, until one lands and the
+// devicetree can carry it
 constexpr uint32_t kFlashDeepPowerDownSettleUs = 200;
 
 // INFO: fc 08nov26 MeshCore bounds the same BUSY wait at 10 ms (NRF52Board.cpp:338-359)
@@ -121,9 +116,7 @@ class SystemPower : public PowerDown {
             case power::PowerDownStep::RadioSleep: radio_sleep(); return;
             case power::PowerDownStep::ExternalFlashDeepPowerDown: flash_deep_power_down(); return;
             case power::PowerDownStep::ExternalFlashLinesReleased:
-                // The same three SoftRF releases, in the same place in its own
-                // teardown (nRF52.cpp:2914-2916). CS last: it is what latched
-                // the command above.
+                // INFO: fc 20nov26 CS goes last, because it latched the command above
                 release(flash_write_protect_);
                 release(flash_hold_);
                 release(flash_cs_);
@@ -140,11 +133,8 @@ class SystemPower : public PowerDown {
         }
     }
 
-    // DS 13.1.2 through the same SPI the driver uses, because the SX1262 is not
-    // a devicetree device and this object cannot reach parts::Sx1262. The radio
-    // executor has parked by now (ports::Rf::parked), so this is the only writer
-    // left on the bus. MeshCore's order (NRF52Board.cpp:338-359): NRESET pulsed,
-    // BUSY awaited, then SetSleep, which DS 13.1.1 accepts only from STDBY.
+    // INFO: fc 20nov26 the parked executor leaves this the bus's only writer, and the reset puts
+    // the part in STDBY for SetSleep
     void radio_sleep() {
         gpio_pin_configure_dt(&radio_cs_, GPIO_OUTPUT_INACTIVE);
         // INFO: fc 08nov26 an executor abandoned at the ceiling may hold the bus lock, so it gets
@@ -184,17 +174,13 @@ class SystemPower : public PowerDown {
         return false;
     }
 
-    // While the rail is still up, which is the whole point of where this sits in
-    // the order. SoftRF sends the same opcode at the head of its own teardown
-    // (nRF52.cpp:2795).
+    // INFO: fc 20nov26 sent while the rail is still up, which is why it comes early in the order
     void flash_deep_power_down() {
         uint8_t frame[1] = {kFlashDeepPowerDown};
         write_spi(flash_bus_, flash_cs_, frame, sizeof(frame));
         k_busy_wait(kFlashDeepPowerDownSettleUs);
     }
 
-    // Manual CS, matching the drivers: the transfer and the chip select are two
-    // separate things on this board.
     static void write_spi(const struct device* bus, const struct gpio_dt_spec& cs,
                           const uint8_t* data, size_t bytes) {
         if (!device_is_ready(bus)) return;

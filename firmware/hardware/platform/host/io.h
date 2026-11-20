@@ -32,11 +32,8 @@ class Delay : public io::Delay {
     Chips& chips_;
 };
 
-// The virtual I2C bus. Two kinds of thing hang off it, which is the truth of
-// this board: parts we drive, which get a model, and parts that are fitted and
-// deliberately unused - the RTC, the touch controller - which answer
-// their address and nothing more. A scan has to see both, or the self-test page
-// learns less than a bench multimeter.
+// INFO: fc 20nov26 fitted but unused parts such as the RTC answer their address too, so a scan sees
+// what the board carries
 class I2cBus : public io::I2c {
    public:
     static constexpr int kMaxDevices = 8;
@@ -49,8 +46,6 @@ class I2cBus : public io::I2c {
         answer(address, true);
     }
 
-    // A part that is fitted and mute to us: it acknowledges its address, and any
-    // read of it returns nothing.
     void answer(uint8_t address, bool on) {
         if (address >= kAddressSpace) return;
         if (on)
@@ -68,7 +63,7 @@ class I2cBus : public io::I2c {
         if (!answers(address)) return false;
         io::I2c* device = route(address);
         if (device) return device->write(address, data, bytes);
-        return true;  // acknowledged, and nothing listened
+        return true;
     }
 
     bool read(uint8_t address, uint8_t* out, size_t bytes) override {
@@ -98,8 +93,6 @@ class I2cBus : public io::I2c {
     uint8_t answers_[kAddressSpace / 8]{};
 };
 
-// The virtual wiring. A board hands over its pin map once. From then on a pin
-// number reaches the part model that owns it, exactly as a trace would.
 class Gpio : public io::Gpio {
    public:
     explicit Gpio(Chips& chips) : chips_(chips) {}

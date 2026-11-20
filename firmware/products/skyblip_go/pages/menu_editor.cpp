@@ -104,8 +104,7 @@ MenuAction MenuEditor::use_detected(const MenuValues& current, MenuValues& next)
     return MenuAction::Changed;
 }
 
-// Full width whatever is stored, so every position can be rolled and the ones a
-// pilot leaves blank are what the stored form drops.
+// INFO: fc 20nov26 full width whatever is stored, so every position can be rolled
 void MenuEditor::edit(MenuRow field, const MenuValues& current) {
     field_ = field;
     editing_ = true;
@@ -138,8 +137,6 @@ MenuAction MenuEditor::roll() {
     return MenuAction::Moved;
 }
 
-// The last character's button press is what stores the field: a field a pilot
-// walks off the end of is a field they have finished with.
 MenuAction MenuEditor::step(const MenuValues& current, MenuValues& next) {
     if (callsign_press_clears(text_, cursor_)) return clear(current, next);
     if (cursor_ + 1 < characters()) {

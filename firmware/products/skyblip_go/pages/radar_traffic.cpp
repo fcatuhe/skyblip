@@ -382,8 +382,7 @@ InView in_view(const RadarSnapshot& snapshot, int16_t track_angle16) {
     for (int i = 0; i < snapshot.target_count && view.target_count < kMaxRadarTargets; i++) {
         const Plotted plotted = plot_point(snapshot, snapshot.targets[i], track_angle16);
         if (!plotted.shown) continue;
-        // A member of the formation is drawn once, as the square around own ship
-        // and the count in its quadrant. Twice is two aircraft.
+        // INFO: fc 20nov26 the formation square already draws a member, and twice is two aircraft
         if (snapshot.targets[i].in_formation) continue;
         if (plotted.in_ring) view.in_ring++;
         view.shown[view.target_count] = plotted;

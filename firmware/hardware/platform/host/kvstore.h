@@ -42,10 +42,8 @@ class KeyValueStore : public ports::KeyValueStore {
         return Status::Ok;
     }
 
-    // Counted, not just stored. On the silicon behind this port a write is an
-    // NVMC stall on the core that arms PPS-anchored deadlines
-    // (core/timing/durable_write.h), so how MANY there are is the thing a test
-    // about coalescing has to be able to read.
+    // INFO: fc 20nov26 counted, because each write stalls the NVMC on the core that arms PPS
+    // deadlines, core/timing/durable_write.h
     uint32_t writes() const { return writes_; }
     bool refuse_writes{false};
     bool refuse_mount{false};
