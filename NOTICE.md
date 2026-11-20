@@ -1,6 +1,6 @@
 # Third-party notices
 
-skyBlip is MIT, see [`LICENSE`](https://github.com/fcatuhe/skyblip/blob/main/LICENSE). This file lists what other people wrote that the repository carries, that a firmware image is built from, or that the browser simulator is built from, each with the license it comes under. Every release ships this file beside the image, with `LICENSE` and the texts in [`LICENSES/`](https://github.com/fcatuhe/skyblip/tree/main/LICENSES).
+skyBlip is MIT, see [`LICENSE`](https://github.com/fcatuhe/skyblip/blob/main/LICENSE). This file lists what other people wrote that the repository carries, that a firmware image is built from, or that the browser simulator is built from, each with the license it comes under. Every release ships this file beside the images, with `LICENSE` and the texts in [`LICENSES/`](https://github.com/fcatuhe/skyblip/tree/main/LICENSES) appended at its end.
 
 ## Carried in this repository
 
@@ -278,4 +278,4 @@ software is freely granted, provided that this notice
 is preserved.
 ```
 
-The Apache License 2.0, TinyCrypt's two licenses and picolibc's licenses are in `LICENSES/` in the repository, and beside this file in a release.
+The Apache License 2.0, TinyCrypt's two licenses and picolibc's licenses are in `LICENSES/` in the repository, and at the end of this file in a release.
