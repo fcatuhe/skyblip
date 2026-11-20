@@ -46,10 +46,12 @@ class RecordPool {
     int reply_capacity() const { return static_cast<int>(sizeof(reply_)); }
     uint8_t* reply_buffer() { return reply_; }
     uint8_t* chunk_buffer() { return chunk_; }
-    // False when the frame was dropped. A link at its share holds it for deliver_held().
+    // INFO: fc 20nov26 false when the frame was dropped, while a link at its share holds it for
+    // deliver_held()
     bool send(const events::Peer& peer, int bytes, comms::LogStore store);
     void refuse_too_wide(const events::Peer& peer, comms::LogStore store);
-    // Ok once nothing is held, WouldBlock while the link still refuses, anything else a drop.
+    // INFO: fc 20nov26 Ok once nothing is held, WouldBlock while the link still refuses, anything
+    // else a drop
     Status deliver_held(uint32_t now_ms);
     bool holding() const { return held_bytes_ > 0; }
     uint32_t link_drops() const { return link_drops_; }

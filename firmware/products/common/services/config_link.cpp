@@ -25,21 +25,12 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     config_.set_flight_state(context_.state.flight.confirmed_state);
     publish_upload_verdict();
 
-    // INFO: cf 02aug26 core/power decided what the divider reading means and
-    // what a low cell is; this hands the already-decided numbers to the link
-    // rather than keeping a second opinion, same as the flight gate above it.
+    // INFO: cf 02aug26 core/power decided the level, and the link carries it rather than keeping a
+    // second opinion
     config_.set_battery_state(context_.state.power.battery, context_.state.power.level);
-    // And the half no voltage can report: the SoC's own power-failure comparator
-    // has fired. It is what turns a "set" from a phone into a refusal at the
-    // door, so it travels the same way the level does - decided in core/power,
-    // carried here, never re-derived.
+    // INFO: fc 20nov26 the comparator's warning turns a phone's set into a refusal at the door
     config_.set_supply_warned(power_.supply_warned());
-    // Read where it is already sampled, on the cadence the sensor deserves: the
-    // service that owns the cell owns the die too, and this only carries the
-    // number to the link.
     config_.set_die_temperature(context_.state.power.die_dc, context_.state.power.die_valid);
-    // The range gate's own counter, read off the table that keeps it rather than
-    // recounted here (core/traffic/table.h).
     config_.set_range_refused(context_.state.traffic.implausible());
     config_.set_hub_image(context_.state.imu.image);
     config_.set_bravo_state(context_.state.bravo);
@@ -188,12 +179,8 @@ void ConfigLinkService::watch_link_drops(uint32_t now_ms) {
     record_link(diagnostics::LinkAction::Dropped, config_.claim_holder(), 0, now_ms);
 }
 
-// INFO: le 04aug26 The single reader of the connection, drained once per pass and
-// first, because everything below it is said about a link: the standing prompt a
-// disconnect cancels, the upload window it closes, and the gauge that only
-// pushes while somebody is listening. Nothing published these events until the
-// board raised them from the platform; the host suite was green because every
-// case called on_link_up() by hand.
+// INFO: le 04aug26 the single reader of connection events, drained first, because the prompt, the
+// upload window and the gauge depend on the link
 void ConfigLinkService::drain_link_events(uint32_t now_ms) {
     events::LinkEvent event{};
     while (context_.bus.link_events.pop(event)) {
@@ -208,22 +195,15 @@ void ConfigLinkService::drain_link_events(uint32_t now_ms) {
     }
 }
 
-// The whole of the deferral, and it is short because the policy owns the
-// arithmetic: a request in, a verdict out, and one write when the verdict says so.
-// Taken the moment it is raised, and never held: the blob is read at the instant
-// it is written, so a stream of changes arrives here as a stream of requests and
-// leaves as one write.
+// INFO: fc 20nov26 taken at once and never held, so a stream of changes leaves as one write
 void ConfigLinkService::take_request(uint32_t now_ms) {
     if (!config_.settings_dirty()) return;
     config_.clear_dirty();
     writes_.request(now_ms);
 }
 
-// Asked BEFORE the request is taken, so a refusal leaves the change dirty rather
-// than pending: a pending change the policy cannot place is one the bound would
-// eventually force onto flash, which is exactly the write this refuses. Held
-// here, it survives until the cell does or does not come back. Counted once per
-// change rather than once per pass, so the number reads as changes waiting.
+// INFO: fc 20nov26 asked before the request is taken, so a refused change stays dirty and the bound
+// never forces it onto flash
 bool ConfigLinkService::hold_for_power() {
     if (may_persist()) {
         held_ = false;
@@ -337,11 +317,6 @@ void ConfigLinkService::record_write(const timing::DurableWriteWindow& window,
     context_.diagnostics.record(value, context_.instant(now_ms));
 }
 
-// The deliberate power-off. Same gate: a cell that is collapsing takes the log
-// record with it and leaves the settings sector alone, which is the whole of
-// core/power's rule. A LowBattery shutdown is therefore the one power-off that
-// does not flush, and that is the trade written down in the header - the change a
-// pilot was making, against every change they ever made.
 void ConfigLinkService::flush_settings(uint32_t now_ms) {
     if (hold_for_power()) return;
     if (config_.browsers_dirty() || browser_writes_.pending()) {

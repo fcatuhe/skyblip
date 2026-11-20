@@ -14,8 +14,6 @@ namespace skyblip::common {
 
 namespace {
 
-// 1 ft = 30.48 cm, and the altitude arrives in centimetres, so the division is
-// by 3048 hundredths of a centimetre with the half-foot carried in by hand.
 constexpr int32_t kHundredthCmPerFoot = 3048;
 constexpr int32_t kHalfFootHundredthCm = kHundredthCmPerFoot / 2;
 
@@ -26,12 +24,8 @@ int32_t centimetres_to_feet(int32_t altitude_cm) {
            kHundredthCmPerFoot;
 }
 
-// INFO: nm 04aug26 $PFLAU's relative bearing is signed, half a turn either way:
-// a threat 20 degrees off the left wing is -20 and not 340, and an app that
-// draws the arrow from it puts the same threat on the wrong side otherwise.
-// core/traffic assesses in whole degrees clockwise, so the wrap is the sender's
-// to make - it is the one both SoftRF forks make on the same field
-// (oss/SoftRF-lyusupov/.../protocol/data/NMEA.cpp, rel_bearing).
+// INFO: nm 04aug26 $PFLAU's relative bearing is signed, so a threat 20 degrees off the left wing is
+// -20 and not 340
 constexpr uint16_t kHalfTurnDeg = 180;
 constexpr int32_t kFullTurnDeg = 360;
 
@@ -47,11 +41,8 @@ Status NmeaService::setup() {
     return Status::Ok;
 }
 
-// INFO: nm 04aug26 Nobody listening costs one boolean and a null check: no walk
-// of the traffic table, no formatting, nothing handed to a link that would
-// refuse it. That matters because this runs in the same pass as the dwell map,
-// and because the common case in a club is a device flying with no phone paired
-// at all.
+// INFO: nm 04aug26 nobody listening costs one boolean, since this runs in the dwell map's pass and
+// most units fly with no phone
 bool NmeaService::listening() const {
     if (!enabled_) return false;
     return config_.link_up();
@@ -59,8 +50,6 @@ bool NmeaService::listening() const {
 
 void NmeaService::tick(uint32_t now_ms) {
     if (!listening()) {
-        // A tablet that comes back is a tablet that gets the whole table again,
-        // starting from the top, on its first pass.
         cursor_ = 0;
         passed_once_ = false;
         pass_bytes_ = pass_sent_ = resume_count_ = 0;
@@ -87,9 +76,8 @@ uint32_t NmeaService::due_in_ms(uint32_t now_ms) const {
     return kMovingTargetRedrawPeriodMs - since_ms;
 }
 
-// The order is the policy: the alarm sentence is written first and is never
-// inside the per-pass cap, so the one sentence a pilot's life may depend on
-// cannot be the one a full sky pushes off the end.
+// INFO: fc 20nov26 the alarm sentence goes first and outside the per-pass cap, so a full sky never
+// pushes it off the end
 void NmeaService::run_pass(uint32_t now_ms) {
     const int negotiated = static_cast<int>(context_.roles.link.payload_bytes());
     payload_ = negotiated < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes
@@ -105,10 +93,8 @@ void NmeaService::run_pass(uint32_t now_ms) {
     drain();
 }
 
-// $PFLAU: how many we hear, whether we have a fix, and the one target that
-// matters most - highest level, nearest at equal level. The level is the one
-// core/traffic already published on the target (products/.../alarm.cpp is its
-// single writer), so the tablet's alarm and the buzzer cannot disagree.
+// INFO: fc 20nov26 the level is the one core/traffic published, so the tablet's alarm and the
+// buzzer cannot disagree
 void NmeaService::emit_status(uint32_t now_ms) {
     const model::Ownship& own = context_.state.own;
     const traffic::Target* threat = nullptr;
@@ -146,12 +132,8 @@ void NmeaService::emit_status(uint32_t now_ms) {
     write(sentence_, length);
 }
 
-// $GPRMC/$GPGGA: ownship's own absolute position, for the EFB that has none of
-// its own - a panel-mounted tablet with no sky view is exactly the case this
-// closes, and it is the one sentence pair every EFB in project/reference/efb-
-// formats.md accepts unconditionally. Both are one call each, gated inside
-// core/protocol on the same fix and UTC validity $PGRMZ and $PFLAU already
-// read off own, so there is nothing to gate here a second time.
+// INFO: fc 20nov26 core/protocol gates both sentences on the fix and UTC validity, so nothing is
+// gated here a second time
 void NmeaService::emit_ownship() {
     const model::Ownship& own = context_.state.own_second;
     const int rmc = protocol::format_gprmc(sentence_, sizeof(sentence_), own);
@@ -160,17 +142,8 @@ void NmeaService::emit_ownship() {
     if (gga > 0) write(sentence_, gga);
 }
 
-// INFO: nm 04aug26 $PGRMZ is read as a BAROMETRIC altitude and the app applies
-// its own subscale to it (XCSoar hands it straight to its pressure-altitude
-// input), so what goes out is pressure altitude on 1013.25 hPa - the datum-free
-// figure core/flight/atmosphere.h exists to produce. Sending
-// bus::State::qnh_pa-corrected altitude instead would be corrected a second time
-// on the tablet and read hundreds of feet out on a low-pressure day; sending the
-// GNSS altitude under this sentence name would feed a geometric height into an
-// app's altimeter and vario. With no barometer contributing there is no such
-// figure and the sentence is not sent at all, which leaves the tablet on its own
-// GNSS altitude - both SoftRF forks gate the same sentence on a baro chip being
-// present for the same reason.
+// INFO: nm 04aug26 $PGRMZ is read as barometric, so it carries pressure altitude on 1013.25 hPa and
+// is not sent without a barometer
 void NmeaService::emit_altitude() {
     if (!context_.state.barometer.active) return;
     const int32_t altitude_cm = flight::pressure_to_altitude_cm(
@@ -180,17 +153,9 @@ void NmeaService::emit_altitude() {
                                  context_.state.own.fix_valid));
 }
 
-// $LK8EX1, on the same pass as $PGRMZ because it is the same second's answer to
-// the same question, and this is the whole route from our gauge to a pilot's
-// tablet: LK8000, XCSoar and their descendants already parse it, and none of
-// them learns the battery from $PFLAU or $PGRMZ. Unlike $PGRMZ it goes out with
-// no barometer fitted at all, carrying the sentinels for the three fields that
-// need one and the cell for the field that does not - the sentence is the only
-// one we speak that says anything about power, so silence here is a pilot with
-// no way to see a flat unit coming (SoftRF MB sends exactly the same
-// battery-only sentence in that case, src/protocol/data/NMEA.cpp:1398-1401).
-//
-// INFO: cc 19sep26 the BME280 sits inside the case, so field 4 goes out warm and uncorrected
+// INFO: fc 20nov26 sent without a barometer too, because it is the only sentence that carries the
+// battery to an EFB INFO: cc 19sep26 the BME280 sits inside the case, so field 4 goes out warm and
+// uncorrected
 void NmeaService::emit_vario_and_battery() {
     const model::Ownship& own = context_.state.own;
     protocol::Lk8Ex1 vario{};
@@ -199,9 +164,8 @@ void NmeaService::emit_vario_and_battery() {
         vario.pressure_pa =
             wire::divide_rounded<uint32_t>(context_.state.barometer.pressure_mpa, 1000);
         vario.pressure_valid = true;
-        // Field 2 is the 1013.25 datum, the same datum-free figure $PGRMZ
-        // carries and for the same reason: the consumer applies its own
-        // subscale. A consumer that read field 1 recomputes this and ignores it.
+        // INFO: fc 20nov26 field 2 is pressure altitude on 1013.25 hPa, as in $PGRMZ, because the
+        // consumer applies its own subscale
         vario.altitude_m =
             wire::divide_rounded(flight::pressure_to_altitude_cm(wire::divide_rounded<uint32_t>(
                                      context_.state.barometer.pressure_mpa, 1000)),
@@ -227,11 +191,8 @@ void NmeaService::emit_vario_and_battery() {
     write(sentence_, protocol::format_lk8ex1(sentence_, sizeof(sentence_), vario));
 }
 
-// The rotation: at most kTargetsPerPass targets, resuming where the last pass
-// stopped, wrapping the table. A busier sky than one pass can carry costs
-// latency on the tail and never a target - the alternative, a burst that sends
-// the first N slots every second, means slot 11 is a target the tablet is never
-// told about at all.
+// INFO: fc 20nov26 the rotation resumes where the last pass stopped, so a busy sky costs the tail
+// latency and never a target
 void NmeaService::emit_targets(uint32_t now_ms) {
     const model::Ownship own = flight::carried_to(context_.state.own, now_ms);
     if (!own.fix_valid) return;
@@ -255,24 +216,16 @@ void NmeaService::emit_targets(uint32_t now_ms) {
     }
 }
 
-// INFO: nm 04aug26 A frame is a slice of a byte stream, not a sentence: the
-// widest $PFLAA these targets can produce is longer than the 20 bytes BLE
-// guarantees (test/core/test_nmea_out.cpp pins exactly that), so one sentence
-// per frame would send a phone at the default ATT_MTU nothing at all - the very
-// silence this service exists to end. NMEA is line-delimited and every consumer
-// resynchronises on CRLF, which is why both SoftRF forks push their whole NMEA
-// output through a 20-byte BLE chunker. The cost is round trips, not integrity:
-// a measured full-table pass is 549 bytes, which is three notifications at a
-// negotiated 244, four at an iPhone's 182 and twenty-eight at the guaranteed 20.
-// INFO: fc 25sep26 more than the link's notify share, so the pass is held here and drained per tick
+// INFO: nm 04aug26 a frame is a slice of the byte stream, not a sentence, because a $PFLAA is wider
+// than BLE's guaranteed 20 bytes INFO: fc 25sep26 more than the link's notify share, so the pass is
+// held here and drained per tick
 void NmeaService::write(const char* sentence, int bytes) {
     if (bytes <= 0 || pass_bytes_ + bytes > kPassBytes) return;
     std::memcpy(pass_ + pass_bytes_, sentence, static_cast<size_t>(bytes));
     pass_bytes_ += bytes;
 }
 
-// A link that refuses outright ends the pass rather than being argued with: what
-// is left unsent is a second-old picture, and the next pass has a current one.
+// INFO: fc 20nov26 a refusing link ends the pass, because the next pass carries a current picture
 void NmeaService::drain() {
     while (pass_sent_ < pass_bytes_) {
         const int rest = pass_bytes_ - pass_sent_;

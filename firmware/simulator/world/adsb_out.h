@@ -1,5 +1,3 @@
-// Harness, not a test: the world's ADS-B Out on air, the preamble ahead of the stack's squitter
-// frames.
 #ifndef SKYBLIP_SIMULATOR_WORLD_ADSB_OUT_H
 #define SKYBLIP_SIMULATOR_WORLD_ADSB_OUT_H
 

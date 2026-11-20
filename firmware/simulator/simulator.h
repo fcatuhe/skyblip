@@ -13,8 +13,6 @@
 
 namespace skyblip::simulator {
 
-// A product on the host platform, inside a world. The browser frontend adds pixels
-// and controls. The tests add assertions. Neither adds behaviour.
 class Simulator {
    public:
     using Product = go::Product<platform::host::Platform>;
@@ -41,9 +39,8 @@ class Simulator {
         return product_.park_refusal(now_ms);
     }
 
-    // A step is how finely the one host loop stands in for the radio thread the
-    // silicon platform runs: coarser than the 5 ms guard on the O->M edge and
-    // the simulation, not the firmware, is what misses a slot boundary.
+    // INFO: fc 20nov26 finer than the 5 ms guard on the O to M edge, or the simulation misses a
+    // slot boundary the firmware keeps
     static constexpr uint32_t kStepMs = 5;
 
     void run(uint32_t until_ms, uint32_t step_ms = kStepMs) {
@@ -70,25 +67,21 @@ class Simulator {
     World<platform::host::Platform>& world() { return world_; }
     platform::host::Platform& platform() { return platform_; }
 
-    // What the device made of the phone the world connected: true only once the
-    // event has travelled platform -> board -> bus -> config service.
+    // INFO: fc 20nov26 true only once the event travelled platform, board, bus and config service
     bool companion_connected() { return product_.config_link().config().link_up(); }
     int companion_frames(events::Endpoint endpoint) { return platform_.link().count_on(endpoint); }
 
     const parts::Ssd1681Glass& panel() { return platform_.chips().epd.framebuffer(); }
-    // Firmware intent: the panel itself deep-sleeps between refreshes.
     bool panel_powered() { return product_.screen().powered(); }
     bool backlight() { return platform_.chips().epd.backlight; }
     int present_count() { return platform_.chips().epd.present_count; }
     bool panel_refreshing() { return panel_driver().refreshing(); }
     bool panel_refresh_is_full() { return panel_driver().refresh_mode() == ports::Refresh::Full; }
-    // What the buzzer is doing at this instant: 0 in the gaps of a pattern too,
-    // because a pattern is what an alarm sounds like.
+    // INFO: fc 20nov26 0 in the gaps of a pattern too
     uint8_t buzzer_level() {
         return platform_.annunciator().sounding() ? traffic::to_number(announcing_level()) : 0;
     }
-    // What is being announced, gaps included. This is the one to assert on when
-    // the question is whether traffic is being called out at all.
+    // INFO: fc 20nov26 gaps included, so assert on this to ask whether traffic is called out at all
     traffic::Level announcing_level() { return product_.alarm().announcing_level(); }
     indication::Colour lamp_since_last_look() { return lamp_.since_last_look(); }
 

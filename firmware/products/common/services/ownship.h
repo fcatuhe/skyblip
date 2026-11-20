@@ -27,8 +27,6 @@ struct OwnshipSettings {
     const uint8_t& aircraft_type;
 };
 
-// Owns state.own: sensor readings become the one state the protocol encoder, the
-// alarm logic and every screen read.
 class OwnshipService : public runtime::Service {
    public:
     OwnshipService(runtime::Context& context, OwnshipSettings settings,
@@ -40,7 +38,6 @@ class OwnshipService : public runtime::Service {
 
     bool barometer_active() const { return barometer_active_; }
 
-    // ADS-L G.1.2 FlightState, decided by core/flight from the fix stream.
     flight::FlightState flight_state_from(const model::Ownship& own, uint32_t now_ms);
 
     // INFO: fc 19nov26 the one first-fix watch, published as own.tx_settled and own.fix_acquired
