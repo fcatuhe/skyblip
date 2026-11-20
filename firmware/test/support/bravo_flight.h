@@ -90,7 +90,7 @@ struct Flight {
    private:
     void begin(bool paired, bool live_receiver = false) {
         tango.bravo.health.aircraft_address_set = true;
-        if (live_receiver) go().bring_receiver_up(tango.now_ms);
+        if (live_receiver) REQUIRE(go().bring_receiver_up(tango.now_ms));
         if (paired) tango.pair();
         go().long_touch(tango.now_ms);
         REQUIRE(go().product.screen().page() == go::Page::Radar);

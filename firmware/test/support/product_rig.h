@@ -60,7 +60,7 @@ struct Rig {
     // The L76K model brought up to 2 Hz at 115200 by the driver, as on the device, before any
     // fix. From then on the timed fixes a case flies are the model's own, reported through the
     // driver as on the device, so the Go transmits.
-    void bring_receiver_up(uint32_t& now_ms) {
+    [[nodiscard]] bool bring_receiver_up(uint32_t& now_ms) {
         models::L76k& chip = platform.chips().gnss;
         platform.retune_gnss_port(true);
         chip.fix_valid = false;
@@ -71,8 +71,8 @@ struct Rig {
             if (world) world(now_ms);
             now_ms += 50;
         }
-        REQUIRE(product.board().gnss().holds_rate());
         now_ms = (now_ms / 1000 + 1) * 1000;
+        return product.board().gnss().holds_rate();
     }
 
     bool receiver_live_{false};

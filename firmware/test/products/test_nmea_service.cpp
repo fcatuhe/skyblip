@@ -228,7 +228,7 @@ TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent dev
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
-    rig.bring_receiver_up(now_ms);
+    REQUIRE(rig.bring_receiver_up(now_ms));
     fly(rig, now_ms, 3);
     rig.raise_link();
     // Nothing goes on air before the first fix has settled, so neither does a TX of 1.
