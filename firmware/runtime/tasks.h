@@ -14,13 +14,10 @@ constexpr uint32_t kServicePassCeilingMs = 10;
 constexpr uint32_t kServiceRestCeilingMs = 1000;
 // INFO: fc 03oct26 a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second
 constexpr uint32_t kServicePassFloorMs = 2;
-// The longest a supervised service may go without reporting progress before the
-// loop stops feeding the dog. Five hundred passes: nothing healthy is that slow,
-// and it is well inside the hardware rope below.
+// INFO: fc 20nov26 five hundred passes without progress: nothing healthy is that slow
 constexpr uint32_t kServiceSilenceCeilingMs = 5000;
-// SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). The rope
-// the whole device gets: longer than kServiceSilenceCeilingMs so the loop's own refusal
-// to feed is what is seen first, and the bite is the backstop under it.
+// INFO: fc 20nov26 SoftRF's nRF52 figure (src/platform/nRF52.cpp:4558), above
+// kServiceSilenceCeilingMs so the loop refuses to feed first
 constexpr uint32_t kHardwareWatchdogCeilingMs = 12000;
 static_assert(kServiceRestCeilingMs < kServiceSilenceCeilingMs,
               "a loop with nothing due still ticks every service inside its silence ceiling");
@@ -31,9 +28,8 @@ constexpr uint32_t kBarometerPpsWindowMs = 2 * kServicePassCeilingMs;
 constexpr uint32_t kBarometerConversionPeriodMs = 250;
 // INFO: fc 03oct26 Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case
 constexpr uint32_t kBarometerConversionCeilingMs = 150;
-// A cell moves over minutes. The gauge needs three readings before it can throw
-// out a transient, so a second between them is the slowest cadence that still
-// shows the state of charge on the first screen a pilot sees.
+// INFO: fc 20nov26 the gauge needs three readings to reject a transient, so this still shows charge
+// on the first screen
 constexpr uint32_t kBatteryPeriodMs = 1000;
 
 }  // namespace skyblip::runtime

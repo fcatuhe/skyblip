@@ -1,53 +1,60 @@
 # ports
 
-The roles a product needs filled, declared in the core's own vocabulary. `hardware/` is where a part or a platform fills one.
+A port is a role the core needs filled, declared in the core's own vocabulary. `hardware/` fills it with a part or a platform.
 
-This is not a hardware abstraction layer, which is why it stopped being called one. A HAL wraps a chip: GPIO, SPI, timers. These types wrap nothing. `Rf::arm()` takes a dwell with a sync word, a chip rate and an instant the burst has to key at, because that is what ADS-L 4 SRD-860 §C.5 requires of a slot, not because an SX1262 has a register that shape. `Link` speaks in endpoints and sessions. `Annunciator` is asked for a pitch at a loudness, not for a PWM duty cycle. The vocabulary belongs to `core/`, and a port is where the core states what it needs.
-
-Register code belongs in `hardware/parts/` and `hardware/platform/`. Zephyr headers belong there too: nothing above this line includes a framework, which is what buys the host suite and the WASM simulator.
+Ports wrap no chip, so they are not a hardware abstraction layer. `Rf::arm()` takes a dwell with a sync word, a chip rate and the instant the burst keys at, because ADS-L 4 SRD-860 §C.5 asks that of a slot. Keep register code and Zephyr headers in `hardware/parts/` and `hardware/platform/`. Nothing at or above this layer includes a framework, so the host suite and the WASM simulator build.
 
 ## What is a port and what is an event
 
-A port is something the core calls: arm this dwell, send these bytes, paint this frame, read the die now. The core decides when, so it needs a name for what it decides against.
+A port is something the core calls: arm this dwell, send these bytes, paint this frame, read the die. What happens to the device, such as a received frame or a button press, reaches a service as an event on a queue declared in `core/events/`, so it needs no port. `hardware/README.md` lists what a platform owes the board for that half.
 
-A receiver, a barometer, a divider and a button are called by nobody. The world happens to them, the board polls them, and what reaches a service is an `events::BarometerSample` or an `events::ContactEvent` on a queue. The queue is already the interface, declared in `core/events/`, so a port in front of one would be an abstraction with no caller. `hardware/README.md` lists what a platform owes the board for that half.
+`AdsbReceiver` listens full time, so its frames arrive on a `bus::AdsbQueue` and the port keeps its counters and its sleep on the way to SYSTEM OFF. `Gnss` is a port because the core asks the receiver for a restart and reads its health.
 
-`Link` is the port with two shapes of send, and the split is the same one: `send()` puts one frame on every subscribed central because the traffic picture is everyone's, `send_to()` answers the connection that asked, named by its session id and its connection number, and answers `Down` once that connection is gone, even when its session id came back for another phone. `payload_bytes()` with no session is therefore the smallest central connected, since a broadcast frame is formatted once and has to fit the narrowest. `core/comms/README.md` has the rest, including which app may configure the device.
+`Link::send()` puts one frame on every subscribed central, because the traffic picture is everyone's. So `payload_bytes()` with no session is the smallest of the connected centrals: a broadcast frame is formatted once and must fit the narrowest. `core/comms/README.md` has the rest.
 
-`Link` also keeps one connection for a paired peer: `reserve_peer_connection(true)` lowers the phone ceiling by one, whether or not the peer is connected, and answers `Full` while phones hold every connection, so a Go never reserves what it cannot keep (#178). Bravo's paired Go is a central on Bravo's link, so `reserve_peer_connection_for()` keeps the slot for that Go's address, and `central_of()` names the address of the central a frame came from, or answers false once its connection is gone (#192). `phones()` counts the centrals connected now, less the pinned Go, so Bravo's lamp shows a phone and not its own Go.
+`Link` keeps one connection for a paired peer whether or not the peer is connected, so a Go never reserves what it cannot keep (#178). Bravo keeps it for its paired Go's address (#192), and `phones()` leaves that Go out so Bravo's lamp shows a phone and not its own Go.
 
-`Central` is the other side of that connection, the Go connecting to its Bravo: `scan()` and `connect()` take a `ScanDuty`, the window and the period the radio listens in, because how much of the radio a scan may take is the product's decision, `scan()` also takes the name prefix it reports, so the platform drops every other advertiser before it reaches a queue, `write()` puts a `peer_claim` on Bravo's peer characteristic, and what the world answers, an advertiser heard, the link up with its settled payload, the link gone and each notification, arrives as an `events::CentralEvent` or an `events::RxFrame` on the bus. It is not a field of `Roles`: only the Go uses it, so the board hands `central()` to the product, which hands it to its `BravoService`, and a board without Bluetooth hands `NullCentral`.
+`Central` is the Go's side of that connection. A scan takes a `ScanDuty` because how much of the radio it takes is the product's decision, and a name prefix so the platform drops other advertisers before they reach a queue. `Central` is not a field of `Roles` because only the Go uses it: the board hands `central()` to the product, or `NullCentral` without Bluetooth.
 
-`Rf` shows the line: the core calls `arm()`, so it is a port, and the executor pushes `RfEvent`, so the reception is an event. One device, two directions, two mechanisms. `AdsbReceiver` is the same line on Bravo's 1090 MHz receiver, which listens full time and is armed by nobody: each frame is an `events::AdsbFrame` on a `bus::AdsbQueue`, and the port is what the core still has to ask of it, its counters for the diagnostics dump (`statistics()`) and its sleep on the way to SYSTEM OFF (`sleep()`, `parked()`). `Gnss` is a port for one reason only - a cold start is a thing the core asks for - and everything else the receiver knows arrives as a solution on the bus, which is why the port has one method on it.
+`KeyValueStore` and `FlashRegion` share nothing but the word storage. The key/value store owns its layout on the 32 KB internal partition, where a write stalls the CPU. The flight log is an append-only stream on a 1.16 MB external partition, with its erase sectors exposed.
+
+## The millisecond clock wraps
+
+`Clock::milliseconds()` is a 32-bit counter that wraps every 49.7 days, and the device must fly through the wrap. Hold every deadline by these rules:
+
+1. Measure an interval as the unsigned difference `now - then` and compare it with a duration. Modulo 2^32, it is exact across the wrap for any interval under 49.7 days.
+2. Never compare two instants. `now < until` inverts once one operand wraps, and a two-second silence becomes seven weeks.
+3. Never cast the difference to a signed type first.
+4. Never use an instant as a sentinel. The counter passes through 0 at every wrap, so keep a bool beside the stamp.
+
+The longest deadline is the rolling duty-cycle hour (`core/timing/channel.h`), so nothing keeps a 64-bit millisecond count. `microseconds()` is 64-bit and never wraps in the device's life, so `Rf` arms slot deadlines on it.
 
 ## Absent is a role, not a null
 
-Every field of `Roles` is a reference. A board with no lamp, no die sensor and no radio still fills all thirteen, because a port whose methods do nothing is a smaller thing than a pointer every caller has to check. Some ports are their own absent part: `Indicator`, `DieTemperature` and `Gnss` are concrete, and the base class is what a board without one is handed. The rest have a null in `null.h`, next to the role it fills rather than in the loop that steps them.
+Every field of `Roles` is a reference, because a port that does nothing is simpler than a pointer every caller checks. `Indicator`, `DieTemperature` and `Gnss` are concrete, and the base class is the absent part. The other roles have a null in `null.h`.
 
-`Identity` is the one role with no capability bit: a unit that is activated has a DEVICEID, a key and somewhere to keep its unlock code, so the platform fills it directly (`core/identity/README.md`). A unit whose key could not be provisioned still fills it, and says so through `seed()` answering false. A product that is never activated, skyBlip Bravo, is handed `KeylessIdentity` from `null.h`: the DEVICEID and the Bluetooth tag its platform read off FICR, no key and nowhere to keep a code, so the activation commands answer `keyless` and `identity` names the chip.
+`capabilities.h` states once what is missing: the self-test page prints the row, a service skips the work. A capability never changes after `roles()` is taken. `inventory.h` names which part the board found, because LilyGO fits different silicon to the same footprint. Code branches on capabilities. A bench reads the inventory.
 
-`Random` is the RNG, a role of its own because a unit with no key still draws: the nonce of a browser challenge and the peer link's boot epoch (`core/comms/README.md`). `identity::Unit` draws its activation nonce from it too, and the Zephyr `Identity` its key material.
+`Identity` has no capability bit, because an activated unit always has a DEVICEID, a key and a place for its unlock code (`core/identity/README.md`). skyBlip Bravo is never activated and gets `KeylessIdentity`: its FICR identity, no key and no code store, so the activation commands answer `keyless`.
 
-What is missing is stated once, in `capabilities.h`, and read by the code that has something to say about it: the self-test page prints the row, a service skips the work. Never by dereferencing.
+`Random` is its own role because a unit with no key still draws: the browser challenge nonce and the peer link's boot epoch (`core/comms/README.md`).
 
-`Capability::AdsbReceiver` is Bravo's LR2021 answering its version over SPI, as `Capability::Rf` is the SX1262 answering on the Go. It is a separate bit because the two radios fill separate roles: one is armed per dwell, the other listens full time and feeds a queue.
+The power-failure comparator sits on `SystemPower`, because RESETREAS, SYSTEMOFF and POFCON are three registers of the nRF52840's POWER peripheral, and a board cannot probe a comparator that has no pin.
 
-`capabilities.h` is what the board found, `inventory.h` is which part it was. The first is what code branches on; the second is what a bench reads when two footprints ship with different silicon in them.
+These capabilities carry a decision:
 
-The role that shakes is `haptic`, the part that moves is a motor, and the verbs are `vibrate()` and `still()`. `Capability::Haptic` says a pulse can be made at all; `Capability::HapticDriver` says it is made by a DRV2605 on I2C rather than by a motor on a pin, because the two need different bring-up and a board wired for one and fitted with the other reports PASS and stays silent. `vibro` is LilyGO's and SoftRF's name for the pin, it named one of the two parts, and on the T-Echo Plus it named the wrong one: P0.08 there is a waveform driver's enable, not a motor. `ports::Inventory::haptic` carries the same fact for the bench; the capability is the half the code branches on.
+- `AdsbReceiver` and `Rf` are two bits because Bravo's LR2021 listens full time and the Go's SX1262 is armed per dwell.
+- `HapticDriver` says a DRV2605 on I2C makes the pulse rather than a motor on a pin, because the two need different bring-up and a board fitted with the other passes its self-test and stays silent. On the T-Echo Plus, LilyGO's `vibro` pin, P0.08, is the DRV2605's enable.
+- `Inclinometer` says a BHI260AP answered, not that it reads. The hub runs nothing until 101 KB of vendor firmware is pushed after boot, which can fail (`hardware/parts/bhi260/`), so the six-pack takes `inclinometer_fitted` from the capability and `lateral_valid` from a recent sample, and draws an empty cage in between.
+- `Indicator` says a lamp exists, not which colours it makes. A board with one green LED lights nothing on the red rows, and `core/indication` still tells its states apart by rhythm. E-paper keeps its last image with the rails down, so the lamp is the only outside sign that the device runs.
+- `DieTemperature` is the nRF52's own sensor, which OGN reads instead of the SX1262's (nrf52-ogn-tracker src/proc.cpp:1112-1114). It tells a support case whether the unit cooked on a canopy rail.
 
-`Capability::Inclinometer` says a BHI260AP answered the bus and named itself, and no more than that. It cannot say there is a reading: the hub is a processor with no program until 101 KB of vendor firmware has been pushed into it, which takes a few seconds of service passes after boot and can still fail (`hardware/parts/bhi260/`). So the six-pack takes two facts and not one - `inclinometer_fitted` from the capability, `lateral_valid` from a sample recent enough to draw - and prints an empty cage in between. A capability that waited for the reading would be a capability that changes after `roles()` is taken, which is the one thing a capability may never do.
-
-`Capability::Indicator` says a lamp exists, not which colours it can make. A board fitted with one green LED reports the capability and lights nothing on the red rows, and that is survivable because `core/indication` tells its states apart by rhythm as well as by colour: the wink rate carries the reading, the colour confirms it. A lamp set in `capabilities.h` would be a bit nothing branches on today, so there is none until a board differs.
-
-The colours themselves are `indication::Colour`, declared in `core/indication/colour.h` rather than here. The lamp is the light and the LED is the part: a board fills the lamp with one LED per colour, and only `boards/` and `hardware/` drive one. A colour is what a pilot reads, so the vocabulary belongs to the layer that decides what the device is saying; this port is where it is asked for.
+`indication::Colour` lives in `core/indication/colour.h`, because a colour is what a pilot reads. Only `boards/` and `hardware/` drive an LED.
 
 ## The annunciator has no cadence
 
-Both outputs work the same way. `tone()` opens a continuous tone that runs until `silence()`, and `vibrate()` starts the motor until `still()`: there is no cadence in the port and no duration argument, because a tune a driver plays is a tune nothing can test. Pitches, note lengths, which calls are felt and re-announcement are `core/annunciation`'s, driven by exactly one service, which is also the one that releases both outputs when the level falls, the target goes, the pilot switches alarms off or the device goes down.
+`tone()` sounds until `silence()`, and `vibrate()` runs until `still()`. The port takes no duration, because a tune a driver plays is a tune nothing can test. Tunes and their release belong to the one service that drives `core/annunciation`. `Indicator::show()` takes a level for the same reason.
 
-The one timer behind the port is a guard, not a cadence. An adapter cuts either output left on for longer than `annunciation::kAnnunciatorOnCeilingMs`, from a timer of its own, because a loop that stalls mid-call would otherwise hold a tone or a motor on until the watchdog bites, and a motor left on is a flat battery. The figure is well above the longest call any tune plays, and a tune never starts over a sounding one, which `core/annunciation` asserts and tests, so the guard never cuts what the policy meant. A cut is a bug: the Zephyr adapter prints it and the host one counts it. On Zephyr the guards are delayed work items, because the DRV2605 is stopped over I2C and never from an interrupt, and turning an output off cancels its guard in sync, so no cut is still writing the part once the service has let it go. The motor's guard therefore covers a stall that does not hold the sensor bus: a loop stalled inside an I2C transfer keeps the work queue waiting on the same bus, and the watchdog is what ends that.
+The one timer behind the port is a guard. An adapter cuts an output left on longer than `annunciation::kAnnunciatorOnCeilingMs`, because a loop that stalls mid-call would hold a tone or a motor on until the watchdog bites, and a running motor flattens the battery. The ceiling is well above the longest call, so a cut is a bug: the Zephyr adapter prints it and the host one counts it. On Zephyr the guards are delayed work items, because the DRV2605 is stopped over I2C and never from an interrupt. Turning an output off cancels its guard in sync, so no cut writes the part after the service lets it go. A loop stalled inside an I2C transfer also holds the guard's work queue, and the watchdog ends that.
 
-What the motor is reaches `haptic.h`, a motor on a pin on one board and a DRV2605 over I2C on another, and which of those is fitted is a capability, not something any caller of this port ever sees.
-
-`Loudness` is two words, `Soft` and `Loud`, and not a number: the core says how loud it wants to be heard and the platform says what that costs in duty cycle. There is no `Off`, because off is `silence()`.
+`Loudness` is `Soft` or `Loud`, not a number: the core says how loud it wants to be heard and the platform says what that costs in duty cycle. Off is `silence()`.

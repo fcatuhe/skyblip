@@ -1,12 +1,3 @@
-// ports/flash_region.h: capability port: a contiguous region of NOR flash, with
-// its erase granularity exposed rather than hidden.
-//
-// ports/kvstore.h is the other storage port and it is not this one. A key/value
-// store owns its own layout, garbage-collects when it feels like it, and is
-// mounted on the 32 KB internal partition where a write stalls the CPU. A flight
-// log is an append-only stream on a 1.16 MB external partition where a write
-// does not. The two have nothing in common but the word storage, so they are two
-// ports and not one with a mode flag.
 #ifndef SKYBLIP_PORTS_FLASH_REGION_H
 #define SKYBLIP_PORTS_FLASH_REGION_H
 
@@ -20,18 +11,14 @@ class FlashRegion {
    public:
     virtual ~FlashRegion() = default;
 
-    // False when the part did not answer its probe. Capability::Storage says the
-    // device is meant to have durable storage; this says this region of it came
-    // up. Absent either way means the device flies and logs nothing.
+    // INFO: fc 20nov26 the region came up, where Capability::Storage says storage is meant to be
     virtual bool ready() const = 0;
 
     virtual uint32_t sector_bytes() const = 0;
     virtual uint32_t sector_count() const = 0;
 
     virtual Status read(uint32_t offset, uint8_t* out, uint32_t bytes) = 0;
-    // NOR semantics, stated because callers depend on them: a program can only
-    // clear bits, so the target must have been erased and no byte may be written
-    // twice.
+    // INFO: fc 20nov26 NOR: a program only clears bits, so write each erased byte once
     virtual Status write(uint32_t offset, const uint8_t* data, uint32_t bytes) = 0;
     virtual Status erase_sector(uint32_t index) = 0;
 };

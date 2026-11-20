@@ -1,10 +1,3 @@
-// core/power/wake.h: what the wake cause is allowed to make of the boot.
-//
-// The reset cause has been read, named and shown on the self-test page since
-// pull request 14; nothing acted on it. This is the acting half, and it decides
-// exactly one thing: whether this boot becomes a device or goes straight back to
-// SYSTEM OFF. Everything here is a function of bits the platform reported, so the
-// rule is host-tested and the adapter only reports and performs.
 #ifndef SKYBLIP_CORE_POWER_WAKE_H
 #define SKYBLIP_CORE_POWER_WAKE_H
 
@@ -15,8 +8,6 @@
 
 namespace skyblip::power {
 
-// Run: bring the device up. SleepAgain: undo the wake - drop the rails and go
-// back to SYSTEM OFF without painting the panel or starting the loop.
 enum class BootPath : uint8_t { Run, SleepAgain };
 
 // INFO: fc 21sep26 what a refused boot owes the glass, and why the refusal owes it: README.md
@@ -41,10 +32,6 @@ static_assert(kBootLockoutMv < kCriticalMv,
 static_assert(kImplausibleFloorMv < kFlatMv,
               "an unpopulated divider must fall through the lockout, not into it");
 
-// The charger rule refuses RESETREAS.VBUS on its own, as SoftRF-lyusupov does on the X1
-// (d091924 src/platform/nRF52.cpp:925-931). nrf52-ogn-tracker's T_Echo_StayOffOnChargerWake
-// also asks for OFF, which no cable wake sets: README.md.
-//
 // INFO: fc 05aug26 charge mode was considered and refused: README.md
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell);
 

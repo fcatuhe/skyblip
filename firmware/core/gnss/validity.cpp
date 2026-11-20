@@ -31,10 +31,8 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
     rmc_fix_valid_ = solution.fix_valid;
     utc_valid_ = solution.utc_valid;
 
-    // The jump gate compares consecutive SOLUTIONS, so losing the fix drops the
-    // reference: a receiver that reacquires somewhere else has not jumped, it
-    // has been switched off in a car. moshe-braner keeps the stale reference and
-    // eats one bad fix on reacquisition; we would rather not transmit one.
+    // INFO: fc 20nov26 losing the fix drops the reference, since a receiver that reacquires
+    // elsewhere was carried there, not jumped
     if (!solution.fix_valid) {
         previous_valid_ = false;
         jumped_ = false;
@@ -46,9 +44,7 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
     jumped_ = previous_valid_ &&
               (std::abs(solution.latitude_1e7 - previous_latitude_1e7_) > kLatitudeJumpCeiling1e7 ||
                std::abs(longitude_step_1e7) > kLongitudeJumpCeiling1e7);
-    // The new position becomes the reference either way: one implausible step
-    // costs one fix, not every fix after it. Two receivers disagreeing about
-    // where we are is a stuck state; a single spike is a spike.
+    // INFO: fc 20nov26 a jump still becomes the reference, so one spike costs one fix, not all
     previous_latitude_1e7_ = solution.latitude_1e7;
     previous_longitude_1e7_ = solution.longitude_1e7;
     previous_valid_ = true;
@@ -56,9 +52,8 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
 
 FixReject FixValidity::check(uint32_t now_ms) {
     const FixReject reason = evaluate(now_ms);
-    // A run of refusals for the same reason is one event, not one per poll: the
-    // counter support reads should say "the antenna came off twice", not "the
-    // antenna came off four thousand times".
+    // INFO: fc 20nov26 a run of one reason counts once, so support reads the antenna came off
+    // twice, not four thousand times
     if (reason != FixReject::None && reason != last_reject_) rejected_++;
     last_reject_ = reason;
     return reason;

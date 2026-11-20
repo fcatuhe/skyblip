@@ -61,8 +61,6 @@ const char* to_string(Colour colour) {
 }
 
 Condition condition_for(const Situation& situation) {
-    // Read down the priority order in kTable. Nothing below a matching line is
-    // consulted, which is what makes the order the whole of the rule.
     if (!situation.running) return Condition::Off;
     if (situation.alarm_level >= kAlarmTakesLamp) return Condition::Alarm;
     if (situation.prompting) return Condition::Prompt;
@@ -87,9 +85,6 @@ Command Policy::update(const Situation& situation, uint32_t now_ms,
     if (wanted != condition_ || !started_) {
         condition_ = wanted;
         started_ = true;
-        // A condition that has just changed shows itself immediately: the flash a
-        // pilot is owed is the one that follows the event, not the one that
-        // follows the rest of the previous cycle.
         cycle_start_ms_ = now_ms;
         on_grid_ = false;
     }

@@ -18,8 +18,6 @@
 
 namespace skyblip::ports {
 
-// Every role is a reference: an absent capability is filled by its null part, so
-// no caller branches on a pointer. What is absent is stated once, in capabilities.
 struct Roles {
     Clock& clock;
     Rf& rf;

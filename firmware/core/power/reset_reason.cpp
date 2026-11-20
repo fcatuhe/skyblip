@@ -9,9 +9,8 @@ ResetReason classify(ResetCause causes) {
     if (has_cause(causes, ResetCause::Debug)) return ResetReason::Debug;
     if (has_cause(causes, ResetCause::Pin)) return ResetReason::Pin;
     if (has_cause(causes, ResetCause::Software)) return ResetReason::Software;
-    // Above the plain wake and below the reset pin, because a VBUS wake sets the
-    // wake bit too and "a charger was plugged in" is the more specific fact of
-    // the two, while a reset pin held at the same time is a deliberate reset.
+    // INFO: fc 20nov26 below the reset pin, a deliberate reset, and above PowerOn, which a VBUS
+    // wake also sets
     if (has_cause(causes, ResetCause::UsbVbus)) return ResetReason::ChargerWake;
     if (has_cause(causes, ResetCause::LowPowerWake)) return ResetReason::LowPowerWake;
     if (has_cause(causes, ResetCause::PowerOn)) return ResetReason::PowerOn;

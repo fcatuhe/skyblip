@@ -9,40 +9,23 @@ namespace skyblip::ports {
 
 enum class RfMode : uint8_t { Idle, RxMBand, RxOBand };
 
-// One armed dwell, in absolute microseconds on the clock the executor reads.
-// A dwell that cannot complete before end_us is refused, never truncated on air:
-// ADS-L 4 SRD-860 issue 2 §C.5 requires a burst to finish inside its slot.
-//
-// A dwell may carry one transmission: the executor receives on frequency_hz until
-// tx_at_us, puts the burst on air, and returns to receiving for the remainder.
-// Splitting that into two plans would leave the slot deaf between them.
+// INFO: fc 20nov26 refused if it cannot end by end_us: SRD-860 §C.5 ends a burst in its slot
 struct RfPlan {
     uint64_t start_us{0};
     uint64_t end_us{0};
     RfMode mode{RfMode::Idle};
     uint32_t frequency_hz{0};
-    // What the receiver's sync detector matches during this dwell, and how many
-    // bytes it reads once it has. A window can be shared by two systems
-    // (core/protocol/air.h), so this is what the dwell listens FOR, never which
-    // protocol it expects to get.
+    // INFO: fc 20nov26 what the dwell listens for, not a protocol: two systems can share a window
     const uint8_t* sync{nullptr};
     uint8_t sync_bits{0};
     uint8_t rx_bytes{0};
-    // And what the modem has to be programmed to before any of that means
-    // anything. The two bands are two modulations, not one modulation on two
-    // frequencies (ADS-L 4 SRD-860 issue 2 §C.2 against §C.4), so a dwell that
-    // carried only frequency_hz retuned the synthesiser and left the receiver
-    // framing the wrong band's chip rate. Zero means "whatever the last dwell
-    // used", which is what a plan built before this field existed asked for.
-    // gaussian_bt_e2 is the Gaussian filter's BT in hundredths; 0 is unshaped.
+    // INFO: fc 20nov26 modulation differs by band (SRD-860 §C.2, §C.4), and 0 keeps the last
     uint32_t bitrate{0};
     uint32_t deviation_hz{0};
     uint32_t bandwidth_hz{0};
+    // INFO: fc 20nov26 0 is unshaped
     uint16_t gaussian_bt_e2{0};
-    // The reference's own error, in tenths of a ppm, positive upwards. It travels
-    // with the dwell rather than being programmed once at boot because frequency_hz
-    // is: the executor retunes on every dwell, so a trim that was not part of the
-    // plan would be a value the next retune throws away.
+    // INFO: fc 20nov26 positive upwards, per dwell since each retune would drop a boot trim
     int16_t frequency_correction_e1_ppm{0};
     const uint8_t* tx{nullptr};
     uint8_t tx_bytes{0};
@@ -145,9 +128,7 @@ struct RfSwitch {
     bool late_start() const { return armed_ahead && ready_us > start_us; }
 };
 
-// What the executor measured of its own dwell changes, from the retune's first
-// command to the part reporting the new mode: the worst since boot for each kind
-// of change, and how many dwells armed ahead were still not listening at their start.
+// INFO: fc 20nov26 worst since boot, from a retune's first command to the part reporting its mode
 struct RfSwitching {
     uint32_t hop_us{0};
     uint32_t to_o_band_us{0};
@@ -194,12 +175,6 @@ class Rf {
 
     virtual RfDio1 dio1() const { return RfDio1{}; }
 
-    // Put the transceiver in its lowest-power state until the next begin().
-    // Called on the way to SYSTEM OFF: the receiver is armed through most of
-    // every second by design, so a radio left in RX is what flattens the pack.
-    // Virtual-with-default, so an executor that has nothing to sleep stays
-    // valid; both SX1262 executors override it with SetSleep (0x84).
-    //
     // INFO: fc 08nov26 terminal: once parked, the executor arms, recovers and reinitialises nothing
     virtual void sleep() {}
 
@@ -207,8 +182,7 @@ class Rf {
     // over
     virtual bool parked() const { return true; }
 
-    // Takes the bus from an executor that has not parked by the product's
-    // ceiling, so SYSTEM OFF can drive the radio anyway.
+    // INFO: fc 20nov26 takes the bus from an executor not parked in time, so SYSTEM OFF goes on
     virtual void abandon() {}
 };
 

@@ -1,4 +1,3 @@
-// core/util/fifo.h: bounded single-producer/single-consumer ring buffer.
 #ifndef SKYBLIP_CORE_UTIL_FIFO_H
 #define SKYBLIP_CORE_UTIL_FIFO_H
 

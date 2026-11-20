@@ -31,7 +31,6 @@ bool range_to(const model::Ownship& own, const model::AircraftObservation& obser
 // INFO: fc 15nov26 an alarm first, then the advisory's height window, then the nearest
 bool outranks(const RangeRow& row, const RangeRow& other);
 
-// Most relevant first, at most capacity rows. Returns how many were filled.
 int rank_by_relevance(const TrafficTable& table, const CallsignTable& callsigns,
                       const model::Ownship& own, RangeRow* out, int capacity);
 

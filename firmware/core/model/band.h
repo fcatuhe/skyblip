@@ -4,11 +4,7 @@
 #include <cstdint>
 
 namespace skyblip::model {
-// The two halves of the second the single radio is shared between: ADS-L 4
-// SRD-860 issue 2 §C.2 puts two 200 kHz channels on the M band and §C.4 one HDR
-// channel on the O band. It lives here rather than in core/timing because it
-// travels with a received burst: the dwell that heard one knows which band it
-// was tuned to, and everything downstream would otherwise have to guess.
+// INFO: fc 20nov26 here, not in core/timing, because a received burst carries its dwell's band
 enum class Band : uint8_t { M = 0, O = 1 };
 
 }  // namespace skyblip::model
