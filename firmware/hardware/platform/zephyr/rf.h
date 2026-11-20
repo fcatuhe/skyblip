@@ -23,21 +23,14 @@
 
 namespace skyblip::platform::zephyr {
 
-// The radio executor on silicon: its own thread, above every other application
-// thread, waking on an armed absolute deadline or on the radio's DIO1 edge, and
-// reading the radio's status only once DIO1 is up or a burst's air time has run
-// out. Nothing on this thread writes flash or touches the BLE stack: a deferred
-// internal-flash write blocks for milliseconds, which is more than the whole
-// guard budget.
+// INFO: fc 20nov26 only this thread drives the radio, and it writes no flash, which blocks too long
 class Rf : public ports::Rf {
    public:
     static constexpr int kStackBytes = 2048;
     static constexpr int kSpinUs = 200;
     // INFO: fc 03oct26 under a burst's 4.64 ms of air: a dead DIO1 still reads each frame in turn
     static constexpr uint64_t kSafetyPollUs = 4000;
-    // How long the thread waits for the next dwell before it looks at the
-    // radio's health instead. Short against the 30 s no-RX rope, long enough
-    // that an idle device is not woken for nothing.
+    // INFO: fc 20nov26 short against the 30 s no-RX rope, long enough to let an idle device sleep
     static constexpr int kHealthTickMs = 250;
     // INFO: fc 28sep26 read inside the dwell, where nine reads after its end ate into every guard
     static constexpr uint64_t kCarrierLeadUs = 2000;
@@ -69,8 +62,6 @@ class Rf : public ports::Rf {
         if (plan.end_us <= plan.start_us) return Status::OutOfRange;
         if (plan.tx != nullptr && (plan.tx_at_us < plan.start_us || plan.tx_at_us >= plan.end_us))
             return Status::OutOfRange;
-        // A dwell that cannot start before its own end is refused here rather
-        // than truncated on air.
         if (clock_.microseconds() >= plan.end_us) return Status::WouldBlock;
         return mailbox_.arm(plan, clock_.microseconds());
     }
@@ -83,10 +74,7 @@ class Rf : public ports::Rf {
 
     Status withdraw(uint64_t tx_at_us) override { return mailbox_.withdraw(tx_at_us); }
 
-    // The shutdown path runs on the service thread and the radio belongs to this
-    // one, so what crosses the boundary is a request: abort the dwell, wake the
-    // thread, and let it issue SetSleep itself. Nothing else may touch the SPI
-    // until parked() says the thread has let go of it for good.
+    // INFO: fc 20nov26 the radio thread sends SetSleep, and no other uses the SPI before parked()
     void sleep() override {
         mailbox_.drop_queued();
         sleep_requested_ = true;
@@ -98,8 +86,7 @@ class Rf : public ports::Rf {
     // INFO: fc 08nov26 no thread means nothing ever owned the bus, so there is nothing to wait for
     bool parked() const override { return thread_id_ == nullptr || parked_; }
 
-    // INFO: fc 08nov26 an abort inside a transfer keeps the SPI driver's lock, so SYSTEM OFF reads
-    // abandoned() and sends no SPI after it
+    // INFO: fc 08nov26 an abort mid-transfer keeps the SPI lock, so SYSTEM OFF checks abandoned()
     void abandon() override {
         if (parked()) return;
         k_thread_abort(thread_id_);
@@ -125,11 +112,7 @@ class Rf : public ports::Rf {
         return switching;
     }
 
-    // The board calls this from the service pass, and there is deliberately
-    // nothing here: the radio belongs to the thread below, and reinitialising it
-    // from the service list would put a second writer on the SPI bus while a
-    // dwell is using it. The health watchdog runs in run(), where the chip is
-    // owned.
+    // INFO: fc 20nov26 empty: run() checks the radio's health, so the SPI keeps one writer
     void service(uint32_t) {}
 
    private:
@@ -187,18 +170,14 @@ class Rf : public ports::Rf {
         }
     }
 
-    // INFO: fc 08nov26 the thread ends here, so no dwell, recovery or reinitialisation follows the
-    // SetSleep
+    // INFO: fc 08nov26 the thread ends here, so no dwell, recovery or reinitialisation follows
     void park() {
         (void)gpio_pin_interrupt_configure_dt(&dio1_, GPIO_INT_DISABLE);
         radio_.sleep();
         parked_ = true;
     }
 
-    // A receiver that has heard nothing for 30 s is deaf, not lucky, and the
-    // only cure is a reinitialisation. It is accumulated here, between dwells,
-    // because this thread owns the bus: the elapsed time comes off the same
-    // clock the deadlines do, so a dwell that overran is counted, not lost.
+    // INFO: fc 20nov26 silence counts on the deadline clock, so a dwell that overran still counts
     void health(bool may_reinitialise) {
         const uint64_t now_us = clock_.microseconds();
         if (now_us <= health_checked_us_) return;
@@ -245,9 +224,6 @@ class Rf : public ports::Rf {
         return true;
     }
 
-    // The whole modem, not just the synthesiser: the two bands are two
-    // modulations (ADS-L 4 SRD-860 issue 2 §C.2 against §C.4) and the plan
-    // carries both halves.
     static parts::RadioConfig dwell_config(const ports::RfPlan& plan) {
         parts::RadioConfig config{};
         config.frequency_hz = plan.frequency_hz;
@@ -301,8 +277,7 @@ class Rf : public ports::Rf {
         return false;
     }
 
-    // INFO: fc 28sep26 staged ahead, so the instant costs one SetTx | 14nov26 none past the dead
-    // time
+    // INFO: fc 28sep26 staged, so the instant costs one SetTx | 14nov26 none past the dead time
     bool key(const ports::RfBurst& burst, const Assessment& assessment) {
         tx_at_us_ = burst.at_us;
         (void)radio_.stage_tx(burst.chips, burst.bytes);
@@ -397,11 +372,7 @@ class Rf : public ports::Rf {
         miss_unfinished(mailbox_.flying_bursts(), done, keyed);
     }
 
-    // The frame is already in the event that will carry it. An O-band uplink
-    // packet is up to 230 bytes, and staging one on this thread's 2 KB stack as well
-    // as on the queue would be the same bytes twice. The band the dwell was
-    // armed for travels with it: the O band carries one system and the M band
-    // two, and only the arming knows which of them this burst is.
+    // INFO: fc 20nov26 read into the event, since a 230-byte uplink would crowd the 2 KB stack
     void push_rx(const parts::RadioEvent& event, uint64_t at_us) {
         rx_.type = events::RfEventType::RxDone;
         rx_.band = band_;

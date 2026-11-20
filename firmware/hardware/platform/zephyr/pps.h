@@ -10,9 +10,7 @@
 
 namespace skyblip::platform::zephyr {
 
-// The UTC-second phase, latched in the GPIO interrupt rather than derived from a
-// kernel tick: the slot map is specified against the PPS edge, and a task-level
-// timestamp carries the tick jitter the 5 ms guard exists to absorb.
+// INFO: fc 20nov26 latched in the interrupt, since a task timestamp carries tick jitter
 class Pps {
    public:
     Status begin() {
@@ -25,8 +23,7 @@ class Pps {
         return Status::Ok;
     }
 
-    // INFO: fc 14sep26 CASIC CFG-TP decides whether the pulse free-runs unfixed, undocumented on
-    // the L76K: an edge is not a fix
+    // INFO: fc 14sep26 the L76K may pulse with no fix (CASIC CFG-TP), so an edge is not a fix
     bool locked() const {
         const uint64_t edge_us = last_edge_us();
         const uint64_t now_us = k_ticks_to_us_floor64(k_uptime_ticks());
