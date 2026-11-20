@@ -260,6 +260,11 @@ inline constexpr Value kProofValues[] = {
 };
 inline constexpr Enumeration kProof{kProofValues, 7};
 
+inline constexpr Value kNoTxValues[] = {
+    {"address", 1}, {"radio", 2}, {"gnss", 3}, {"fix", 4}, {"utc", 5}, {"pps", 6},
+};
+inline constexpr Enumeration kNoTx{kNoTxValues, 6};
+
 inline constexpr Value kCommandValues[] = {
     {"acknowledgement", 0},
     {"get", 1},
@@ -347,6 +352,7 @@ inline constexpr Key kStatusKeys[] = {
     {"own_transponder", 9, Type::Unsigned, nullptr, 0, false},
     {"own_transponder_callsign", 10, Type::Text, nullptr, 0, false},
     {"own_transponder_category", 11, Type::Unsigned, nullptr, 0, false},
+    {"no_tx", 12, Type::Enum, &kNoTx, 0, false},
 };
 
 inline constexpr Key kTimingKeys[] = {
@@ -474,6 +480,7 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"tx_redrawn_for_fix", 91, Type::Unsigned, nullptr, 0, false},
     {"receiver_recoveries", 92, Type::Unsigned, nullptr, 0, false},
     {"link_drop_reason", 94, Type::Unsigned, nullptr, 0, false},
+    {"no_tx", 95, Type::Enum, &kNoTx, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -753,11 +760,11 @@ inline constexpr Frame kFrames[] = {
     {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 14},
     {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 14},
     {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 14},
-    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
+    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 13},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 93},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 93},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 94},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 94},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

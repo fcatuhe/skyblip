@@ -226,23 +226,24 @@ TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 
     config.set_die_temperature(INT16_MIN, true);
     config.set_bravo_state(BravoState::NoUtc);
     config.set_own_transponder(OwnTransponderHeard{0xFFFFFF, "ABCDEFGH", 17});
+    config.set_no_tx(timing::NoTx::Pps);
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
-    // A twelve-entry map; airborne and critical are 2, -3277 is the negative integer 0x0CCC, every
-    // bravo code is one byte, and FFFFFF lies in no nationality block, so its callsign stays as is.
-    const uint8_t golden[] = {0xAC, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64,
-                              0x04, 0xF4, 0x05, 0x02, 0x06, 0xF4, 0x07, 0x39, 0x0C, 0xCC,
-                              0x08, 0x05, 0x09, 0x1A, 0x00, 0xFF, 0xFF, 0xFF, 0x0A, 0x68,
-                              0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x0B, 0x11};
+    // Thirteen entries; airborne and critical are 2, -3277 is the negative integer 0x0CCC, each
+    // bravo and no_tx code is a byte, and FFFFFF is in no nationality block, so its callsign stays.
+    const uint8_t golden[] = {0xAD, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64, 0x04,
+                              0xF4, 0x05, 0x02, 0x06, 0xF4, 0x07, 0x39, 0x0C, 0xCC, 0x08, 0x05,
+                              0x09, 0x1A, 0x00, 0xFF, 0xFF, 0xFF, 0x0A, 0x68, 0x41, 0x42, 0x43,
+                              0x44, 0x45, 0x46, 0x47, 0x48, 0x0B, 0x11, 0x0C, 0x06};
     CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
     CHECK(link_text(frame) ==
           "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,"
           "\"battery_percent\":100,\"charging\":false,\"power_level\":\"critical\","
           "\"went_dark_flat\":false,\"die_temperature_c\":-3277,\"bravo\":\"no_utc\","
           "\"own_transponder\":16777215,\"own_transponder_callsign\":\"ABCDEFGH\","
-          "\"own_transponder_category\":17}");
+          "\"own_transponder_category\":17,\"no_tx\":\"pps\"}");
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);
 }

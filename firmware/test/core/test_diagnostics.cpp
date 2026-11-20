@@ -22,6 +22,7 @@ TEST_CASE("diagnostics: one group per subsystem, each carrying the counters that
     CHECK(has(json, "\"tx_busy_missed\":2"));
     CHECK(has(json, "\"tx_held_for_fix\":4"));
     CHECK(has(json, "\"tx_redrawn_for_fix\":9"));
+    CHECK(has(json, "\"no_tx\":\"pps\""));
     CHECK(has(json, "\"group\":\"traffic\""));
     CHECK(has(json, "\"uplink_targets\":52"));
     CHECK(has(json, "\"group\":\"gnss\""));
@@ -33,6 +34,15 @@ TEST_CASE("diagnostics: one group per subsystem, each carrying the counters that
     CHECK(has(json, "\"rssi_dbm\":[0,120,900,3000,2500,800,90,3]"));
     CHECK(has(json, "\"group\":\"capture\""));
     CHECK(has(json, "\"keeps_power_run_s\":433500"));
+}
+
+// A Go that transmits has nothing to say why it does not, so the key is absent, not none.
+TEST_CASE("diagnostics: no_tx is in the radio group while a requirement is unmet, absent after") {
+    Diagnostics diagnostics = busy_device();
+    diagnostics.no_tx = timing::NoTx::Radio;
+    CHECK(has(frames(diagnostics, 512).joined, "\"no_tx\":\"radio\""));
+    diagnostics.no_tx = timing::NoTx::None;
+    CHECK_FALSE(has(frames(diagnostics, 512).joined, "no_tx"));
 }
 
 // A device on the apron with no fix beside a chatty neighbour reads zero bad frames.

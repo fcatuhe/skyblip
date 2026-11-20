@@ -94,6 +94,9 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.tx_held_for_fix);
         add(Group::Radio, link::diagnostics_key::kTxRedrawnForFix, Kind::Unsigned,
             diagnostics.tx_redrawn_for_fix);
+        if (diagnostics.no_tx != timing::NoTx::None)
+            add(Group::Radio, link::diagnostics_key::kNoTx, Kind::Unsigned,
+                static_cast<int64_t>(diagnostics.no_tx));
     }
 
     if (traffic) {

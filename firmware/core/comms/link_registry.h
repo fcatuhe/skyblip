@@ -157,6 +157,7 @@ enum : uint32_t {
     kOwnTransponder = 9,
     kOwnTransponderCallsign = 10,
     kOwnTransponderCategory = 11,
+    kNoTx = 12,
 };
 }
 
@@ -287,6 +288,7 @@ enum : uint32_t {
     kTxRedrawnForFix = 91,
     kReceiverRecoveries = 92,
     kLinkDropReason = 94,
+    kNoTx = 95,
 };
 }
 

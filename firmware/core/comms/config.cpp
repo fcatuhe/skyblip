@@ -146,6 +146,12 @@ void ConfigService::set_bravo_state(BravoState state) {
     if (changed && link_up()) push_status();
 }
 
+void ConfigService::set_no_tx(timing::NoTx reason) {
+    const bool changed = reason != no_tx_;
+    no_tx_ = reason;
+    if (changed && link_up()) push_status();
+}
+
 void ConfigService::set_own_transponder(const std::optional<OwnTransponderHeard>& heard) {
     const bool changed = heard != own_transponder_;
     own_transponder_ = heard;
