@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "core/flight/atmosphere.h"
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
@@ -9,6 +11,8 @@
 #include "core/units/units.h"
 #include "products/skyblip_go/pages/bravo_log.h"
 #include "products/skyblip_go/pages/installing.h"
+#include "products/skyblip_go/pages/no_tx.h"
+#include "products/skyblip_go/self_test_parts.h"
 #include "products/skyblip_go/services/screen.h"
 #include "protocols/common/geometry.h"
 
@@ -241,6 +245,7 @@ void ScreenService::render(uint32_t now_ms) {
         case Page::SelfTest: {
             // INFO: fc 18oct26 the parts are boot's, the address now's: an unlock needs no reboot
             SelfTestSnapshot now = self_test_;
+            now.parts = self_test_now();
             now.address = context_.state.activation.address();
             now.aircraft_address_warning =
                 bravo_.aircraft_address_warning().stands(settings.aircraft_address);
@@ -309,6 +314,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.fix_valid = own.fix_valid;
             snapshot.utc_valid = own.utc_valid;
             snapshot.transmitting = context_.state.transmit.transmits();
+            snapshot.no_tx = context_.state.transmit.unmet();
             snapshot.satellites = own.satellites;
             snapshot.stage = context_.state.gnss.stage;
             snapshot.stage_s = context_.state.gnss.stage_s;
@@ -347,6 +353,27 @@ void ScreenService::render(uint32_t now_ms) {
             break;
         }
     }
+    draw_no_tx(framebuffer_, context_.state.transmit.shown());
+}
+
+// INFO: fc 19nov26 the parts are boot's, each with how it works now and whether it stops the burst
+const SelfTestPart* ScreenService::self_test_now() {
+    const timing::TransmitGate& gate = context_.state.transmit;
+    const timing::NoTx shown = gate.shown();
+    const int rows = std::min(self_test_.part_count, kSelfTestPartCount);
+    for (int i = 0; i < rows; i++) {
+        SelfTestPart& row = self_test_rows_[i];
+        row = self_test_.parts[i];
+        if (kSelfTestParts[i].capability == ports::Capability::Rf) {
+            row.now = radio_word(gate.met());
+            row.no_tx = shown == timing::NoTx::Radio;
+        } else if (kSelfTestParts[i].capability == ports::Capability::Gnss) {
+            row.now = receiver_word(gate.met(), context_.roles.gnss.health());
+            row.no_tx = shown == timing::NoTx::Gnss || shown == timing::NoTx::Fix ||
+                        shown == timing::NoTx::Utc || shown == timing::NoTx::Pps;
+        }
+    }
+    return self_test_rows_;
 }
 
 NearbyGo ScreenService::nearby_go() const {

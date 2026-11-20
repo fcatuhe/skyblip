@@ -48,10 +48,12 @@ class TransmitGate {
     bool transmits() const { return transmits_; }
     NoTx unmet() const { return unmet_; }
     NoTx shown() const { return shown_; }
+    const Requirements& met() const { return met_; }
 
    private:
     bool judged(uint32_t now_ms) const;
 
+    Requirements met_{};
     std::optional<uint32_t> first_fix_ms_{};
     std::optional<uint32_t> unmet_since_ms_{};
     NoTx unmet_{NoTx::Address};

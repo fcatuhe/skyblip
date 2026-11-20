@@ -13,6 +13,7 @@ NoTx first_unmet(const Requirements& met) {
 }
 
 void TransmitGate::judge(const Requirements& met, uint32_t now_ms) {
+    met_ = met;
     if (met.fix && !first_fix_ms_) first_fix_ms_ = now_ms;
     unmet_ = first_unmet(met);
     transmits_ = unmet_ == NoTx::None && met.settled;
