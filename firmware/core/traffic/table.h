@@ -72,7 +72,6 @@ class TrafficTable {
     int count_of(model::Source source) const;
     const Target* at(int i) const { return (i >= 0 && i < kMaxTargets) ? &slots_[i] : nullptr; }
     Target* at(int i) { return (i >= 0 && i < kMaxTargets) ? &slots_[i] : nullptr; }
-    void clear();
 
     int find(uint8_t address_mapping_table, uint32_t address) const;
 
