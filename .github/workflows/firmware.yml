@@ -27,6 +27,7 @@ jobs:
       firmware: ${{ steps.filter.outputs.firmware }}
       glass: ${{ steps.filter.outputs.glass }}
       release: ${{ steps.filter.outputs.release }}
+      spec: ${{ steps.filter.outputs.spec }}
       products: ${{ steps.products.outputs.products }}
       # main signs with the development key, and so does any branch run by hand: a pull request never.
       signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
@@ -54,6 +55,11 @@ jobs:
               - 'firmware/**'
               - 'scripts/build_image.sh'
               - 'scripts/mkuf2.py'
+            # The specifications check_spec_markdown.py rereads, and its converter.
+            spec:
+              - 'docs/reference/**'
+              - 'scripts/layout_to_md.py'
+              - 'scripts/check_spec_markdown.py'
             # What bin/screenshots compiles and flies, and the pictures it writes.
             glass:
               - 'firmware/core/**'
@@ -81,8 +87,8 @@ jobs:
       CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
-      - name: install ccache, cmake and pdftotext
-        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake poppler-utils
+      - name: install ccache and cmake
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
@@ -106,7 +112,10 @@ jobs:
         run: python3 scripts/check_clauses.py
       # The suites read the markdown, so a word the conversion lost is a requirement nobody reads.
       - name: the ADS-L markdown carries every word of its PDF, in order
-        run: python3 scripts/check_spec_markdown.py
+        if: needs.changes.outputs.spec == 'true'
+        run: |
+          sudo apt-get install -yq --no-install-recommends poppler-utils
+          python3 scripts/check_spec_markdown.py
       - name: tuning constants read as the vocabulary asks
         run: python3 scripts/check_tuning_names.py
       # The generated C++ is compared as clang-format writes it, so the check and its test need the lint job's pinned formatter.
