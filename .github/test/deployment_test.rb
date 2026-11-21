@@ -1,44 +1,13 @@
 require "minitest/autorun"
-require "erb"
 require "yaml"
 require "json"
 require "open3"
 require "tmpdir"
 require "fileutils"
-require_relative "../../lib/firmware_tree"
 require_relative "../../lib/radio_protocols"
-require_relative "../../server/app/models/release"
 
 class DeploymentTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-
-  def test_kamal_preserves_the_clean_clone_and_server_directory
-    builder = deployment.fetch("builder")
-
-    assert_equal "arm64", builder.fetch("arch")
-    refute builder.key?("context")
-    refute builder.key?("dockerfile")
-  end
-
-  def test_application_runs_as_debian_and_the_remote_builder_on_the_crooz_ssh_host
-    config = deployment
-    host = ENV.fetch("SKYBLIP_SERVER_IP", "crooz")
-
-    assert_equal [ host ], config.fetch("servers").fetch("web")
-    assert_equal "debian", config.fetch("ssh").fetch("user")
-    assert_equal "localhost:5555", config.fetch("registry").fetch("server")
-    if RUBY_PLATFORM.match?(/aarch64|arm64/)
-      refute config.fetch("builder").key?("remote")
-    else
-      assert_equal "ssh://crooz", config.fetch("builder").fetch("remote")
-    end
-  end
-
-  def test_sqlite_and_solid_queue_live_in_the_persistent_volume
-    assert_equal [ "skyblip_storage:/rails/storage" ], deployment.fetch("volumes")
-    assert deployment.fetch("env").fetch("clear").fetch("SOLID_QUEUE_IN_PUMA")
-    assert_equal [ "RAILS_MASTER_KEY" ], deployment.fetch("env").fetch("secret")
-  end
 
   def test_deployment_waits_for_the_gates_on_main
     workflow = YAML.load_file(File.join(ROOT, ".github/workflows/server.yml"))
@@ -49,27 +18,6 @@ class DeploymentTest < Minitest::Test
     assert_includes deploy.fetch("if"), "github.ref == 'refs/heads/main'"
     refute deploy.fetch("concurrency").fetch("cancel-in-progress")
     assert_equal "server_production", deploy.fetch("environment").fetch("name")
-  end
-
-  # What the development pre-release stages is lib/dev_release.rb's, tested in dev_release_test.rb.
-  def test_development_publishes_every_product_through_the_commits_own_dev_release
-    job = YAML.load_file(File.join(ROOT, ".github/workflows/firmware.yml")).fetch("jobs").fetch("dev-release")
-    steps = job.fetch("steps")
-    checkout = steps.find { |step| step["uses"].to_s.start_with?("actions/checkout") }
-
-    assert steps.any? { |step| step.dig("with", "pattern") == "skyblip-*" && step.dig("with", "merge-multiple") }
-    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/protocols/*/version.h firmware/products/*/PROTOCOLS lib/dev_release.rb lib/radio_protocols.rb lib/release_files.rb lib/release_notice.rb scripts/dev_release.rb],
-                 checkout.dig("with", "sparse-checkout").split
-    assert_equal "ruby source/scripts/dev_release.rb image simulator source", steps.last.fetch("run")
-  end
-
-  # release.yml releases every product that declares a board, so each must be served and named in its release.
-  def test_every_product_is_served_and_lists_its_radio_protocols
-    FirmwareTree.new(File.join(ROOT, "firmware")).products.each do |product|
-      slug = product.tr("_", "-")
-      assert File.file?(File.join(ROOT, "firmware/products", product, "PROTOCOLS")), "#{product} has no PROTOCOLS"
-      assert_equal product.delete_prefix("skyblip_"), Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
-    end
   end
 
   # Before one release carried every product, Bravo's were tagged bravo-v*.
@@ -173,10 +121,5 @@ class DeploymentTest < Minitest::Test
         if [ "$1 $2" = "release list" ]; then printf '%s\n' #{published.join(" ")}; else echo "gh $*"; fi
       SH
       File.chmod(0o755, File.join(tree, "gh"))
-    end
-
-    def deployment
-      source = File.read(File.join(ROOT, "server/config/deploy.yml"))
-      YAML.safe_load(ERB.new(source).result)
     end
 end

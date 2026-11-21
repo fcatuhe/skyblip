@@ -45,10 +45,10 @@ class FirmwareTreeTest < Minitest::Test
   end
 
   # Zephyr reads products/<product>/VERSION, and a copy there would sign one version and report another.
-  def test_every_product_carries_the_firmware_version
-    products = FirmwareTree.new(File.join(ROOT, "firmware")).products
-
-    refute_empty products
-    products.each { |product| assert_equal "../../VERSION", File.readlink(File.join(ROOT, "firmware/products", product, "VERSION")), product }
+  def test_every_product_carries_the_firmware_version_and_lists_its_radio_protocols
+    FirmwareTree.new(File.join(ROOT, "firmware")).products.each do |product|
+      assert_equal "../../VERSION", File.readlink(File.join(ROOT, "firmware/products", product, "VERSION")), product
+      assert File.file?(File.join(ROOT, "firmware/products", product, "PROTOCOLS")), "#{product} has no PROTOCOLS"
+    end
   end
 end

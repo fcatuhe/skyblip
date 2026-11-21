@@ -1,4 +1,5 @@
 require "test_helper"
+require_relative "../../../lib/firmware_tree"
 
 class ReleaseTest < ActiveSupport::TestCase
   test "a simulator release must have all three runtime files, the scenarios aside" do
@@ -27,6 +28,13 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal keys, Release::KEYS
     assert_equal "212602F2", release("dev-1005").key
     assert_equal "88A4BEF5", release("v0.1.0").key
+  end
+
+  # A release carries every product that declares a board, so the shelf must name each of them.
+  test "every product the firmware declares is offered under its own name" do
+    FirmwareTree.new(Rails.root.join("../firmware").to_s).products.each do |product|
+      assert_equal product.delete_prefix("skyblip_"), Release.product_of("#{product.tr("_", "-")}-0.1.0.signed.bin"), product
+    end
   end
 
   test "a release offers every product's images, each under the product its file names" do
