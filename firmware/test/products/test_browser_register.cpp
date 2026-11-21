@@ -3,8 +3,8 @@
 
 #include "core/comms/config.h"
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 #include "test/support/activation_vectors.h"
 #include "test/support/product_rig.h"
 

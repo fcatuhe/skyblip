@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 
 namespace skyblip {
 

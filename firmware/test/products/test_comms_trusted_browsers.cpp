@@ -6,7 +6,6 @@
 #include "core/comms/identity_link.h"
 #include "core/comms/link_registry.h"
 #include "core/identity/unit.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
@@ -14,6 +13,7 @@
 #include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
 #include "products/skyblip_go/settings_store.h"
+#include "simulator/world/hex.h"
 #include "test/support/config_frame.h"
 
 using namespace skyblip;

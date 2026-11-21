@@ -6,10 +6,10 @@
 
 #include "core/comms/install_trust.h"
 #include "core/fec/crc.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/watchdog.h"
+#include "simulator/world/hex.h"
 #include "simulator/world/json.h"
 
 using namespace skyblip;
