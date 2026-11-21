@@ -49,38 +49,8 @@ jobs:
               - '.github/workflows/firmware.yml'
               - '.github/workflows/release.yml'
 
-  scan_ruby:
-    name: scan Ruby (brakeman, bundler-audit)
-    needs: changes
-    if: needs.changes.outputs.checks == 'true'
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-          working-directory: server
-      - name: Scan for common Rails security vulnerabilities using static analysis
-        run: bin/brakeman --no-pager
-      - name: Scan for known security vulnerabilities in gems used
-        run: bin/bundler-audit
-
-  scan_js:
-    name: scan JS (importmap audit)
-    needs: changes
-    if: needs.changes.outputs.checks == 'true'
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-          working-directory: server
-      - name: Scan for security vulnerabilities in JavaScript dependencies
-        run: bin/importmap audit
-
-  lint_ruby:
-    name: lint Ruby (rubocop)
+  checks:
+    name: scan, lint and boot
     needs: changes
     if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-26.04-arm
@@ -92,6 +62,12 @@ jobs:
         with:
           bundler-cache: true
           working-directory: server
+      - name: Scan for common Rails security vulnerabilities using static analysis
+        run: bin/brakeman --no-pager
+      - name: Scan for known security vulnerabilities in gems used
+        run: bin/bundler-audit
+      - name: Scan for security vulnerabilities in JavaScript dependencies
+        run: bin/importmap audit
       - name: Prepare RuboCop cache
         uses: actions/cache@v6
         env:
@@ -103,31 +79,8 @@ jobs:
             rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-
       - name: Lint code for consistent style
         run: bin/rubocop -f github
-
-  lint_smart_quotes:
-    name: lint smart quotes
-    needs: changes
-    if: needs.changes.outputs.checks == 'true'
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ruby/setup-ruby@v1
-        with:
-          working-directory: server
       - name: Check for smart quotes
         run: bin/smart_quotes find
-
-  boot:
-    name: boot (eager load without the development bundle)
-    needs: changes
-    if: needs.changes.outputs.checks == 'true'
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-          working-directory: server
       # A development gem required at load time passes the suite, which has it, and kills the image.
       - name: Check the app eager loads without the development bundle
         run: bin/eager_load_check
@@ -224,7 +177,7 @@ jobs:
 
   deploy:
     name: deploy with Kamal
-    needs: [changes, scan_ruby, scan_js, lint_ruby, lint_smart_quotes, boot, test, system-test]
+    needs: [changes, checks, test, system-test]
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
