@@ -53,19 +53,19 @@ class SystemPower : public PowerDown {
         arm_supply_monitor();
     }
 
-    void system_off() override { power_off(boards::t_echo_plus::kFactoryDfuButton); }
+    void system_off() { power_off(boards::t_echo_plus::kFactoryDfuButton); }
 
-    power::CellOnGlass cell_on_glass() const override {
+    power::CellOnGlass cell_on_glass() const {
         if (retained(kFlatOnGlassBit)) return power::CellOnGlass::Flat;
         if (retained(kLowOnGlassBit)) return power::CellOnGlass::Low;
         return power::CellOnGlass::None;
     }
-    void set_cell_on_glass(power::CellOnGlass word) override {
+    void set_cell_on_glass(power::CellOnGlass word) {
         retain(kFlatOnGlassBit, word == power::CellOnGlass::Flat);
         retain(kLowOnGlassBit, word == power::CellOnGlass::Low);
     }
-    bool went_dark_flat() const override { return retained(kWentDarkFlatBit); }
-    void set_went_dark_flat(bool flat) override { retain(kWentDarkFlatBit, flat); }
+    bool went_dark_flat() const { return retained(kWentDarkFlatBit); }
+    void set_went_dark_flat(bool flat) { retain(kWentDarkFlatBit, flat); }
 
    private:
     // INFO: fc 21sep26 a power-on clears GPREGRET2, and a magic makes anything else read as no

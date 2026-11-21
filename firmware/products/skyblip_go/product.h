@@ -181,7 +181,7 @@ class Product {
     }
 
     void take_went_dark_flat() {
-        ports::SystemPower& retained = platform_.system_power();
+        auto& retained = platform_.system_power();
         went_dark_flat_ =
             glass_remembered_ == power::CellOnGlass::Flat || retained.went_dark_flat();
         retained.set_went_dark_flat(boot_path() == power::BootPath::SleepAgain && went_dark_flat_);

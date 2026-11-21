@@ -5,6 +5,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "core/power/reset_reason.h"
+#include "core/power/wake.h"
 #include "core/util/result.h"
 #include "core/util/sha256.h"
 #include "core/util/span.h"
@@ -23,8 +25,6 @@
 #include "ports/kvstore.h"
 #include "ports/link.h"
 #include "ports/random.h"
-#include "ports/system_power.h"
-#include "ports/watchdog.h"
 
 namespace skyblip::platform {
 
@@ -81,12 +81,29 @@ constexpr bool fills_the_platform_contract() {
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().die_temperature()),
                                         ports::DieTemperature&>,
                   "platform: die_temperature() -> ports::DieTemperature&");
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().watchdog().arm()), Status>,
+                  "platform: watchdog().arm() -> Status, the one window prj.conf sets");
+    static_assert(std::is_void_v<decltype(std::declval<Self>().watchdog().feed())>,
+                  "platform: watchdog().feed()");
     static_assert(
-        std::is_convertible_v<decltype(std::declval<Self>().watchdog()), ports::Watchdog&>,
-        "platform: watchdog() -> ports::Watchdog&");
+        std::is_convertible_v<decltype(std::declval<Self>().system_power().reset_causes()),
+                              power::ResetCause>,
+        "platform: system_power().reset_causes() -> power::ResetCause, read once at boot");
+    static_assert(std::is_void_v<decltype(std::declval<Self>().system_power().system_off())>,
+                  "platform: system_power().system_off()");
     static_assert(
-        std::is_convertible_v<decltype(std::declval<Self>().system_power()), ports::SystemPower&>,
-        "platform: system_power() -> ports::SystemPower&");
+        std::is_convertible_v<decltype(std::declval<Self>().system_power().take_supply_warning()),
+                              bool>,
+        "platform: system_power().take_supply_warning() -> bool, false with no comparator");
+    static_assert(
+        std::is_convertible_v<decltype(std::declval<Self>().system_power().cell_on_glass()),
+                              power::CellOnGlass>,
+        "platform: system_power().cell_on_glass() -> power::CellOnGlass, kept across "
+        "SYSTEM OFF with set_cell_on_glass()");
+    static_assert(
+        std::is_convertible_v<decltype(std::declval<Self>().system_power().went_dark_flat()), bool>,
+        "platform: system_power().went_dark_flat() -> bool, kept across SYSTEM OFF with "
+        "set_went_dark_flat()");
 
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().begin()), Status>,
                   "platform: begin() -> Status");

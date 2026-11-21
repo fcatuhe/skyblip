@@ -21,7 +21,7 @@ class BravoSimulator {
 
     Status setup() {
         const Status started = product_.setup();
-        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
+        const Status armed = platform_.watchdog().arm();
         return started == Status::Ok ? armed : started;
     }
 

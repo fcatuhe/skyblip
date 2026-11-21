@@ -20,7 +20,7 @@ class Simulator {
     Status setup() {
         platform_.retune_gnss_port(true);
         const Status started = product_.setup();
-        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
+        const Status armed = platform_.watchdog().arm();
         return started == Status::Ok ? armed : started;
     }
 

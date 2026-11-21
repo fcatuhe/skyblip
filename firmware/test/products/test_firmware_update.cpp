@@ -160,7 +160,7 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
 TEST_CASE("product: under a running watchdog a recovery asks for the press, then drops the rails") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    REQUIRE(rig.platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) == Status::Ok);
+    REQUIRE(rig.platform.watchdog().arm() == Status::Ok);
     uint32_t now_ms = 0;
     on_ground(rig, now_ms);
 

@@ -7,26 +7,21 @@
 #include <zephyr/kernel.h>
 #include <zephyr/task_wdt/task_wdt.h>
 
-#include "ports/watchdog.h"
-#include "runtime/tasks.h"
+#include "core/util/result.h"
 
 namespace skyblip::platform::zephyr {
 
 // INFO: fc 20nov26 prj.conf sets the hardware fallback above this channel's period, so the channel
 // always expires first
-class Watchdog : public ports::Watchdog {
+class Watchdog {
    public:
-    static constexpr uint32_t kWindowMs =
-        CONFIG_TASK_WDT_MIN_TIMEOUT + CONFIG_TASK_WDT_HW_FALLBACK_DELAY;
     // INFO: fc 26sep26 under MIN_TIMEOUT, so task_wdt's background feed never renews the rope
     static_assert(CONFIG_TASK_WDT_MIN_TIMEOUT > 1000, "kChannelPeriodMs would wrap below zero");
     static constexpr uint32_t kChannelPeriodMs = CONFIG_TASK_WDT_MIN_TIMEOUT - 1000;
-    static_assert(kWindowMs == runtime::kHardwareWatchdogCeilingMs,
-                  "prj.conf's task_wdt window must be the rope the loop is supervised by");
 
-    Status arm(uint32_t timeout_ms) override {
+    // INFO: hk 02aug26 no stop(): a running nRF52 watchdog cannot stop (nRF52840 PS v1.8 §6.34)
+    Status arm() {
         if (armed_) return Status::Ok;
-        if (timeout_ms != kWindowMs) return Status::Invalid;
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(wdt0))
         const struct device* hardware = DEVICE_DT_GET(DT_NODELABEL(wdt0));
         if (!device_is_ready(hardware)) return Status::Down;
@@ -40,11 +35,11 @@ class Watchdog : public ports::Watchdog {
         return Status::Ok;
     }
 
-    void feed() override {
+    void feed() {
         if (armed_) task_wdt_feed(channel_);
     }
 
-    bool armed() const override { return armed_; }
+    bool armed() const { return armed_; }
 
    private:
     // INFO: hk 02aug26 it spins rather than call sys_reboot(), so the reset is a real WDT bite the

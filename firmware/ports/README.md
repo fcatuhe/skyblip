@@ -39,8 +39,6 @@ Every field of `Roles` is a reference, because a port that does nothing is simpl
 
 `Random` is its own role because a unit with no key still draws: the browser challenge nonce and the peer link's boot epoch (`core/comms/README.md`).
 
-The power-failure comparator sits on `SystemPower`, because RESETREAS, SYSTEMOFF and POFCON are three registers of the nRF52840's POWER peripheral, and a board cannot probe a comparator that has no pin.
-
 These capabilities carry a decision:
 
 - `AdsbReceiver` and `Rf` are two bits because Bravo's LR2021 listens full time and the Go's SX1262 is armed per dwell.

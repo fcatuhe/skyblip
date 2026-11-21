@@ -151,7 +151,7 @@ void switch_off() {
 
 // The bench's first image: outputs at boot and per connection, then the inputs, until a long press.
 int main(void) {
-    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) != Status::Ok) return -1;
+    if (g_platform.watchdog().arm() != Status::Ok) return -1;
     if (g_platform.begin() != Status::Ok) return -1;
     g_haptic.power_up();
     g_haptic_ready = g_haptic.begin() == Status::Ok;

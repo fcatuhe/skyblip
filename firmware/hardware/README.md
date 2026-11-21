@@ -18,11 +18,12 @@ On silicon each board has its own composition, which brings up the parts that bo
 
 `platform/host/meshtracker_x1.h` is the same platform on the host, every part a model. The X1 has no panel, no IMU image, no pad, and a second I2C bus, `io::BusId::Rtc`, so it does not assert `platform/contract.h`, which is the T-Echo's.
 
-A platform has three kinds of member, each listed in `platform/contract.h`:
+A platform has four kinds of member, each listed in `platform/contract.h`:
 
 - The buses and lines a part is constructed over: `spi()`, `i2c()`, `uart()`, `uart_rate()`, `gpio()`, `wire()` and `delay()`.
 - The ports it fills directly, which the board hands to `ports::Roles`, such as `clock()`, `link()` and `key_value()`. `link()` has a wire format outside apps depend on ([`platform/zephyr/README.md`](platform/zephyr/README.md)).
 - The producers the board polls, such as `read_barometer()`, `read_divider_mv()`, `button_down()` and `pps()`. They are not ports, because nothing calls them on the core's behalf: a service receives the `events::` value the board pushes.
+- What the product drives itself, `watchdog()` and `system_power()`. They are not ports either, because only the product and `products/common/main_loop.h` call them, on the platform's own types.
 
 `capabilities()` asks no part, because the board's constructor calls it before `main()` arms the watchdog. `barometer_answers()` reads the BME280's chip id over I2C, so the board calls it from `probe()`.
 
@@ -55,7 +56,7 @@ Meshtastic's LittleFS sits at 0xED000..0xF4000 (`meshtastic/Adafruit_nRF52_Ardui
 
 The threshold is 2.8 V, the highest POFCON offers for VDD (nRF52840 PS v1.8 section 5.1.3, POFCON.THRESHOLD). The earlier the warning, the more time it gives, and a threshold under 2.8 V would warn after the write it was meant to prevent. Everything above it is the divider's business, since our cutoff is a 3.2 V cell. It is below any healthy cell and above the SoC's 1.7 V brownout floor. The bench must confirm that a 14 dBm burst on a 3.4 V cell leaves VDD above 2.8 V. If it does not, fix the decoupling, not the threshold. The repository holds no T-Echo Plus schematic, so whether VDD is the cell or a regulated 3.3 V rail is unknown, and the choice is the same either way.
 
-The header compiles without the Kconfig, because the platform header reaches suites with no reason to carry nrfx_power. Without it no warning arrives, and `core/power` keeps its voltage rule.
+The comparator sits on the platform's `system_power()`, because RESETREAS, SYSTEMOFF and POFCON are three registers of the nRF52840's POWER peripheral, and a board cannot probe a comparator that has no pin. The header compiles without the Kconfig, because the platform header reaches suites with no reason to carry nrfx_power. Without it no warning arrives, and `core/power` keeps its voltage rule.
 
 ## The two questions a pin and a register answer
 

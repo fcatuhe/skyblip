@@ -16,9 +16,6 @@ constexpr uint32_t kServiceRestCeilingMs = 1000;
 constexpr uint32_t kServicePassFloorMs = 2;
 // INFO: fc 20nov26 five hundred passes without progress: nothing healthy is that slow
 constexpr uint32_t kServiceSilenceCeilingMs = 5000;
-// INFO: fc 20nov26 SoftRF's nRF52 figure (src/platform/nRF52.cpp:4558), above
-// kServiceSilenceCeilingMs so the loop refuses to feed first
-constexpr uint32_t kHardwareWatchdogCeilingMs = 12000;
 static_assert(kServiceRestCeilingMs < kServiceSilenceCeilingMs,
               "a loop with nothing due still ticks every service inside its silence ceiling");
 constexpr uint32_t kRadioRxSilenceCeilingMs = 30000;

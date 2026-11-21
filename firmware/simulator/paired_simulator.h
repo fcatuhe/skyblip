@@ -31,7 +31,7 @@ class PairedSimulator {
         const Status pinned = pin();
         const Status go = go_.setup();
         const Status bravo = bravo_.setup();
-        const Status armed = bravo_platform_.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
+        const Status armed = bravo_platform_.watchdog().arm();
         for (const Status status : {pinned, go, bravo})
             if (status != Status::Ok) return status;
         return armed;

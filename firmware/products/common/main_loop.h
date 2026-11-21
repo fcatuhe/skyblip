@@ -3,6 +3,8 @@
 
 #include <zephyr/kernel.h>
 
+#include <type_traits>
+
 #include "core/power/wake.h"
 #include "hardware/platform/zephyr/loop_wake.h"
 #include "runtime/tasks.h"
@@ -11,8 +13,11 @@ namespace skyblip::common {
 
 template <class Platform, class Product, class Collector>
 [[noreturn]] void run(Platform& platform, Product& product, Collector& collector) {
+    static_assert(std::remove_reference_t<decltype(platform.watchdog())>::kChannelPeriodMs >
+                      runtime::kServiceSilenceCeilingMs,
+                  "the loop refuses to feed before the watchdog bites, so a reset names the stall");
     // INFO: fc 05oct26 before setup, so a refused boot cannot hang awake; SYSTEM OFF stops it
-    (void)platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
+    (void)platform.watchdog().arm();
 
     // INFO: fc 14nov26 a failed setup runs on with the parts that answered
     (void)product.setup();

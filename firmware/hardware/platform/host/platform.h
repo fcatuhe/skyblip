@@ -35,7 +35,7 @@ namespace skyblip::platform::host {
 
 class Dfu : public ports::Dfu {
    public:
-    explicit Dfu(const ports::Watchdog& watchdog) : watchdog_(watchdog) {}
+    explicit Dfu(const host::Watchdog& watchdog) : watchdog_(watchdog) {}
 
     ports::SwapRequest request_swap() override {
         swap_requests++;
@@ -148,7 +148,7 @@ class Dfu : public ports::Dfu {
     ports::ImageHash staged_image_hash{};
 
    private:
-    const ports::Watchdog& watchdog_;
+    const host::Watchdog& watchdog_;
 };
 
 class Barometer : public io::I2c {

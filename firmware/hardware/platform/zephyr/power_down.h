@@ -11,11 +11,12 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/poweroff.h>
 
+#include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
+#include "core/power/wake.h"
 #include "hardware/platform/zephyr/dfu.h"
 #include "hardware/platform/zephyr/reset_causes.h"
 #include "hardware/platform/zephyr/supply_monitor.h"
-#include "ports/system_power.h"
 
 namespace skyblip::platform::zephyr {
 
@@ -30,7 +31,7 @@ constexpr uint32_t kUarteStopTimeoutUs = 21000;
 constexpr uint32_t kUarteStopPollUs = 10;
 
 // INFO: fc 19nov26 every board's way into SYSTEM OFF, whose perform() walks core/power's order
-class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
+class PowerDown : protected power::PowerDownSink {
    public:
     // INFO: fc 12nov26 read once and cleared: a second read of RESETREAS reads as a power-on
     void read_causes() {
@@ -42,8 +43,8 @@ class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
 
     void arm_supply_monitor() { supply_monitor_.arm(); }
 
-    power::ResetCause reset_causes() const override { return causes_; }
-    bool take_supply_warning() override { return supply_monitor_.take_warning(); }
+    power::ResetCause reset_causes() const { return causes_; }
+    bool take_supply_warning() { return supply_monitor_.take_warning(); }
 
    protected:
     void power_off(power::DfuButton factory_dfu_button) {

@@ -31,7 +31,7 @@ constexpr uint32_t kX1GnssUartPins[] = {SKYBLIP_X1_PIN(DT_ALIAS(gnss_uart), grou
 // boards/seeed/meshtracker_x1/README.md
 class MeshtrackerX1Power : public PowerDown {
    public:
-    void system_off() override { power_off(boards::meshtracker_x1::kFactoryDfuButton); }
+    void system_off() { power_off(boards::meshtracker_x1::kFactoryDfuButton); }
 
    private:
     void perform(power::PowerDownStep step) override {
