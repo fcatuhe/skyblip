@@ -389,3 +389,14 @@ TEST_CASE("adsb assembly: a message heard a millisecond out of order keeps the a
     CHECK(bravo.heard.at_ms == 1500);
     CHECK(bravo.heard.identified);
 }
+
+// A timed field keeps its value in 24 bits, so the widest altitude and climb codes must survive.
+TEST_CASE("adsb assembly: the highest Q-coded altitude and the fastest climb fold intact") {
+    Bravo bravo;
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, -32576, 0), 0));
+    bravo.fly(kLatitude, kLongitude, 500, false, 50175);
+    REQUIRE(bravo.heard.pressure_altitude_valid);
+    CHECK(bravo.heard.pressure_altitude_ft == 50175);
+    REQUIRE(bravo.heard.climb_valid);
+    CHECK(bravo.heard.climb_fpm == -32576);
+}
