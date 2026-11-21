@@ -28,12 +28,12 @@ class Transponders {
 
    private:
     struct Transponder {
-        bool used{false};
         uint32_t address{0};
         uint32_t heard_ms{0};
-        bool extended_squitter{false};
         uint32_t altitude_ms{0};
+        bool extended_squitter{false};
         bool altitude_heard{false};
+        bool used{false};
     };
 
     Transponder* find(uint32_t address);
