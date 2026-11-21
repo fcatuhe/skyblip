@@ -2,6 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PRODUCT_H
 
 #include "boards/lilygo/t_echo_plus/board.h"
+#include "boards/lilygo/t_echo_plus/log_flash.h"
 #include "core/util/format.h"
 #include "products/common/services/alarm.h"
 #include "products/common/services/capture.h"
@@ -279,7 +280,8 @@ class Product {
     Board board_;
     ports::Roles roles_{board_.roles()};
     runtime::Context context_{roles_, bus_, state_, diagnostics_};
-    common::RecordPool pool_{context_, book_flash_in_dwell};
+    store::SectorSlots<boards::t_echo_plus::kLogSectors> log_sectors_{};
+    common::RecordPool pool_{context_, book_flash_in_dwell, log_sectors_.table()};
     common::RecordStore flights_store_{pool_, store::SectorOwner::Flights};
     common::RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};
     CaptureSettings capture_settings_{settings_};

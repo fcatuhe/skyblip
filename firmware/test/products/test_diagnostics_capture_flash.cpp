@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 
+#include "boards/lilygo/t_echo_plus/log_flash.h"
 #include "core/diagnostics/payload.h"
 #include "core/events/link.h"
 #include "core/store/sector.h"
@@ -114,7 +115,8 @@ struct SmallPoolRig {
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation, state.own_transponder};
     common::ConfigService config{link, store};
-    common::RecordPool pool{context, go::book_flash_in_dwell};
+    store::SectorSlots<boards::t_echo_plus::kLogSectors> log_sectors{};
+    common::RecordPool pool{context, go::book_flash_in_dwell, log_sectors.table()};
     common::RecordStore flights{pool, store::SectorOwner::Flights};
     common::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
     go::CaptureSettings capture_settings{settings};

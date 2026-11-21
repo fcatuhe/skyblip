@@ -2,6 +2,7 @@
 #ifndef SKYBLIP_TEST_SUPPORT_SCREEN_RIG_H
 #define SKYBLIP_TEST_SUPPORT_SCREEN_RIG_H
 
+#include "boards/lilygo/t_echo_plus/log_flash.h"
 #include "core/events/input.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/ssd1681/model.h"
@@ -44,7 +45,8 @@ struct ScreenRig {
     common::ConfigService config{null.link, store};
     go::SelfTestSnapshot self_test{};
     common::AlarmService alarm_service{context, common::AlarmSettings{settings.alarm}};
-    common::RecordPool pool{context, go::book_flash_in_dwell};
+    store::SectorSlots<boards::t_echo_plus::kLogSectors> log_sectors{};
+    common::RecordPool pool{context, go::book_flash_in_dwell, log_sectors.table()};
     common::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
     common::RecordStore flights_store{pool, store::SectorOwner::Flights};
     go::CaptureSettings capture_settings{settings};

@@ -17,6 +17,12 @@ constexpr uint32_t kSomeSession = 1;
 
 using store::SectorOwner;
 
+constexpr uint32_t kPoolSectors = 512;
+
+struct Pool : store::SectorSlots<kPoolSectors>, store::SectorAllocator {
+    Pool() : store::SectorAllocator(table()) {}
+};
+
 uint32_t claimed_sector(store::SectorAllocator& pool, SectorOwner owner,
                         uint32_t session = kSomeSession) {
     const store::Claim claim = pool.claim(owner, session);
@@ -111,7 +117,7 @@ TEST_CASE("sector label: the sector a session opened in says so, and the rest do
 }
 
 TEST_CASE("sector pool: only the first sector of a session is labelled as its start") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(4, 0));
 
     const store::Claim first = pool.claim(SectorOwner::Flights, kBaseUtcS);
@@ -121,11 +127,18 @@ TEST_CASE("sector pool: only the first sector of a session is labelled as its st
     CHECK_FALSE(second.session_start);
     CHECK_FALSE(pool.session_start(second.sector));
     CHECK(pool.claim(SectorOwner::Flights, kBaseUtcS + 900).session_start);
+
+    // The start mark shares the owner's byte, so it must not change whose sector it is.
+    CHECK(pool.owner_of(first.sector) == SectorOwner::Flights);
+    CHECK(pool.owned(SectorOwner::Flights) == 3);
+    pool.quarantine(first.sector);
+    CHECK_FALSE(pool.session_start(first.sector));
+    CHECK(pool.quarantined(first.sector));
 }
 
 // Rotation is the design; a rotation nobody counted is the defect.
 TEST_CASE("sector pool: a ring recycling under its own frontier counts what the session lost") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(3, 0));
     fill(pool, SectorOwner::Diagnostics, 3);
     CHECK(pool.lost_sectors(SectorOwner::Diagnostics) == 0);
@@ -137,7 +150,7 @@ TEST_CASE("sector pool: a ring recycling under its own frontier counts what the 
     CHECK(pool.lost_sectors(SectorOwner::Flights) == 0);
 
     // A sector of an older session is not a hole in the session being written.
-    store::SectorAllocator other;
+    Pool other;
     REQUIRE(other.configure(2, 0));
     claimed_sector(other, SectorOwner::Diagnostics, 1);
     claimed_sector(other, SectorOwner::Diagnostics, 2);
@@ -147,7 +160,7 @@ TEST_CASE("sector pool: a ring recycling under its own frontier counts what the 
 
 // A read turns a record index into a sector, so it needs what left the front of the session.
 TEST_CASE("sector pool: the sectors recycled from a session's front are counted for it") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(3, 0));
     fill(pool, SectorOwner::Diagnostics, 2);
     claimed_sector(pool, SectorOwner::Diagnostics, 2);
@@ -167,7 +180,7 @@ TEST_CASE("sector pool: the sectors recycled from a session's front are counted 
 }
 
 TEST_CASE("sector pool: flights eating a live capture sector is the capture's loss to report") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(3, 0));
     claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
     fill(pool, SectorOwner::Diagnostics, 2);
@@ -177,7 +190,7 @@ TEST_CASE("sector pool: flights eating a live capture sector is the capture's lo
 }
 
 TEST_CASE("sector pool: a quarantined sector is never handed out and never given back") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(3, 2));
     pool.quarantine(0);
     CHECK(pool.quarantined() == 1);
@@ -200,7 +213,7 @@ TEST_CASE("sector pool: six flight hours is 128 sectors of the partition") {
 }
 
 TEST_CASE("sector pool: the first sector of a virgin partition is sector zero") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(4, 0));
 
     const store::Claim first = pool.claim(SectorOwner::Flights, kBaseUtcS);
@@ -213,7 +226,7 @@ TEST_CASE("sector pool: the first sector of a virgin partition is sector zero") 
 }
 
 TEST_CASE("sector pool: a free sector goes to whoever asks for it") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(4, 0));
     CHECK(claimed_sector(pool, SectorOwner::Flights) == 0);
     CHECK(claimed_sector(pool, SectorOwner::Diagnostics) == 1);
@@ -222,7 +235,7 @@ TEST_CASE("sector pool: a free sector goes to whoever asks for it") {
 }
 
 TEST_CASE("sector pool: the partition wraps and the sequence does not") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(3, 0));
     fill(pool, SectorOwner::Flights, 3);
 
@@ -240,7 +253,7 @@ TEST_CASE("sector pool: the partition wraps and the sequence does not") {
 }
 
 TEST_CASE("sector pool: flights eats the oldest diagnostics sector before its own") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(6, 0));
     fill(pool, SectorOwner::Flights, 4);
     const uint32_t first_capture = claimed_sector(pool, SectorOwner::Diagnostics);
@@ -253,7 +266,7 @@ TEST_CASE("sector pool: flights eats the oldest diagnostics sector before its ow
 
 // The one sector a ring owns is the one it is writing into, and nobody gets it.
 TEST_CASE("sector pool: a ring's frontier is never handed out") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(6, 0));
     fill(pool, SectorOwner::Flights, 5);
     const uint32_t capture = claimed_sector(pool, SectorOwner::Diagnostics);
@@ -264,7 +277,7 @@ TEST_CASE("sector pool: a ring's frontier is never handed out") {
 }
 
 TEST_CASE("sector pool: diagnostics takes a flight sector before it recycles its own") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(6, 2));
     fill(pool, SectorOwner::Flights, 3);
     const uint32_t oldest_flight = oldest_sector(pool, SectorOwner::Flights);
@@ -276,7 +289,7 @@ TEST_CASE("sector pool: diagnostics takes a flight sector before it recycles its
 }
 
 TEST_CASE("sector pool: diagnostics is refused rather than eating the protected flight hours") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(8, 7));
     fill(pool, SectorOwner::Flights, 8);
 
@@ -290,7 +303,7 @@ TEST_CASE("sector pool: diagnostics is refused rather than eating the protected 
 }
 
 TEST_CASE("sector pool: diagnostics grows to the pool above the floor and then recycles its own") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(10, 4));
     fill(pool, SectorOwner::Flights, 10);
 
@@ -309,7 +322,7 @@ TEST_CASE("sector pool: diagnostics grows to the pool above the floor and then r
 }
 
 TEST_CASE("sector pool: diagnostics owning nothing at the floor is told there is no sector") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(4, 4));
     fill(pool, SectorOwner::Flights, 4);
 
@@ -320,7 +333,7 @@ TEST_CASE("sector pool: diagnostics owning nothing at the floor is told there is
 }
 
 TEST_CASE("sector pool: a prepared spare is claimed instantly and never handed out twice") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(4, 0));
     claimed_sector(pool, SectorOwner::Flights);
 
@@ -340,7 +353,7 @@ TEST_CASE("sector pool: a prepared spare is claimed instantly and never handed o
 }
 
 TEST_CASE("sector pool: a spare belongs to the ring it was prepared for") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(4, 0));
     claimed_sector(pool, SectorOwner::Flights);
     const store::Claim spare = pool.prepare(SectorOwner::Flights);
@@ -352,7 +365,7 @@ TEST_CASE("sector pool: a spare belongs to the ring it was prepared for") {
 }
 
 TEST_CASE("sector pool: an erase-all takes the spare with it") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(4, 0));
     fill(pool, SectorOwner::Flights, 2);
     REQUIRE(pool.prepare(SectorOwner::Flights).granted);
@@ -367,7 +380,7 @@ TEST_CASE("sector pool: an erase-all takes the spare with it") {
 }
 
 TEST_CASE("sector pool: a header scan in any physical order finds both frontiers") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(330, 64));
     note_label(pool, 300, SectorOwner::Flights, 5);
     note_label(pool, 7, SectorOwner::Diagnostics, 9);
@@ -390,7 +403,7 @@ TEST_CASE("sector pool: a header scan in any physical order finds both frontiers
 }
 
 TEST_CASE("sector pool: a session's sectors come back in the order they were written") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(6, 0));
     const uint32_t first = claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
     const uint32_t capture = claimed_sector(pool, SectorOwner::Diagnostics, 99);
@@ -416,7 +429,7 @@ TEST_CASE("sector pool: a session's sectors come back in the order they were wri
 
 // The index of sessions is rebuilt from these runs, so a session written twice lists twice.
 TEST_CASE("sector pool: a ring is walked a session run at a time, the other ring between") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(12, 0));
     fill(pool, SectorOwner::Diagnostics, 1);
     claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
@@ -441,7 +454,7 @@ TEST_CASE("sector pool: a ring is walked a session run at a time, the other ring
 
 // A fetch reads every sector of a long capture by index, one chunk at a time.
 TEST_CASE("sector pool: every sector of a long session is found by its index, gaps and all") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(330, 0));
     fill(pool, SectorOwner::Diagnostics, 17);
     std::vector<uint32_t> written;
@@ -458,7 +471,7 @@ TEST_CASE("sector pool: every sector of a long session is found by its index, ga
 }
 
 TEST_CASE("sector pool: a session that wrapped is still walked in sequence order") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(330, 64));
     note_label(pool, 328, SectorOwner::Flights, 11, kBaseUtcS);
     note_label(pool, 329, SectorOwner::Diagnostics, 12, 99);
@@ -470,14 +483,14 @@ TEST_CASE("sector pool: a session that wrapped is still walked in sequence order
 }
 
 TEST_CASE("sector pool: a partition larger than the pool can track is refused, not truncated") {
-    store::SectorAllocator pool;
-    CHECK_FALSE(pool.configure(store::kMaxPoolSectors + 1, 0));
+    Pool pool;
+    CHECK_FALSE(pool.configure(kPoolSectors + 1, 0));
     CHECK_FALSE(pool.configured());
     CHECK_FALSE(pool.claim(SectorOwner::Flights, kSomeSession).granted);
 }
 
 TEST_CASE("sector pool: one ring erased gives its sectors back and leaves the other standing") {
-    store::SectorAllocator pool;
+    Pool pool;
     REQUIRE(pool.configure(8, 2));
     const uint32_t flight = claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
     const uint32_t capture = claimed_sector(pool, SectorOwner::Diagnostics, 99);
