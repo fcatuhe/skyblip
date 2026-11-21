@@ -9,7 +9,7 @@ This directory holds the host tooling. The Python scripts run on the standard li
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
 | [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the press's verdict |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec, with the names `schemas/link.v1.json` gives its numbers |
-| [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
+| [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`. The C++ opens with `// clang-format off`, so the generator alone decides its layout |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build a board's drag-and-drop install image, refusing to write outside its factory bootloader window |

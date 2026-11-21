@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef SKYBLIP_CORE_COMMS_LINK_REGISTRY_H
 #define SKYBLIP_CORE_COMMS_LINK_REGISTRY_H
 
@@ -677,22 +678,29 @@ constexpr uint64_t host_keys(Command command) {
         case Command::InstallReport:
         case Command::Protocols:
         case Command::Attestation:
-        case Command::Identity: return 0x1;
-        case Command::Set: return 0xFF9F;
+        case Command::Identity:
+            return 0x1;
+        case Command::Set:
+            return 0xFF9F;
         case Command::Dfu:
         case Command::Erase:
         case Command::Capture:
         case Command::Browsers:
         case Command::ForgetBrowser:
         case Command::Attest:
-        case Command::Pair: return 0x3;
+        case Command::Pair:
+            return 0x3;
         case Command::Register:
         case Command::Unlock:
-        case Command::List: return 0x7;
+        case Command::List:
+            return 0x7;
         case Command::Read:
-        case Command::Ownship: return 0x1F;
-        case Command::PeerClaim: return 0x7C0FFF;
-        case Command::TrustBrowser: return 0xF;
+        case Command::Ownship:
+            return 0x1F;
+        case Command::PeerClaim:
+            return 0x7C0FFF;
+        case Command::TrustBrowser:
+            return 0xF;
     }
     return 0;
 }
