@@ -17,24 +17,28 @@ namespace skyblip::bus {
 // INFO: fc 04sep26 one producer, one consumer, two threads on silicon: release/acquire is the lock
 template <class Item, int Capacity>
 class Queue {
+    static_assert(Capacity > 0 && (Capacity & (Capacity - 1)) == 0,
+                  "the index is a counter masked by a power of two");
+    static_assert(Capacity <= 0x8000, "a full queue's fill must fit the 16-bit counters");
+    static_assert(std::atomic<uint16_t>::is_always_lock_free);
+
    public:
     bool push(const Item& item) {
-        const int head = head_.load(std::memory_order_relaxed);
-        const int next = (head + 1) % (Capacity + 1);
-        if (next == tail_.load(std::memory_order_acquire)) {
+        const uint16_t head = head_.load(std::memory_order_relaxed);
+        if (static_cast<uint16_t>(head - tail_.load(std::memory_order_acquire)) == Capacity) {
             dropped_.fetch_add(1, std::memory_order_relaxed);
             return false;
         }
-        slots_[head] = item;
-        head_.store(next, std::memory_order_release);
+        slots_[head & (Capacity - 1)] = item;
+        head_.store(static_cast<uint16_t>(head + 1), std::memory_order_release);
         return true;
     }
 
     bool pop(Item& out) {
-        const int tail = tail_.load(std::memory_order_relaxed);
+        const uint16_t tail = tail_.load(std::memory_order_relaxed);
         if (tail == head_.load(std::memory_order_acquire)) return false;
-        out = slots_[tail];
-        tail_.store((tail + 1) % (Capacity + 1), std::memory_order_release);
+        out = slots_[tail & (Capacity - 1)];
+        tail_.store(static_cast<uint16_t>(tail + 1), std::memory_order_release);
         return true;
     }
 
@@ -44,9 +48,9 @@ class Queue {
     uint32_t dropped() const { return dropped_.load(std::memory_order_relaxed); }
 
    private:
-    Item slots_[Capacity + 1]{};
-    std::atomic<int> head_{0};
-    std::atomic<int> tail_{0};
+    Item slots_[Capacity]{};
+    std::atomic<uint16_t> head_{0};
+    std::atomic<uint16_t> tail_{0};
     std::atomic<uint32_t> dropped_{0};
 };
 

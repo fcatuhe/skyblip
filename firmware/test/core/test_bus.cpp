@@ -34,15 +34,20 @@ TEST_CASE("bus: pushing past capacity drops the new item and counts it") {
     CHECK(queue.push(4));
 }
 
-TEST_CASE("bus: indices wrap without losing a slot") {
-    bus::Queue<int, 3> queue;
+// Each round moves the 16-bit counters by four, so 20000 rounds cross their wrap past 65535 with
+// the queue full.
+TEST_CASE("bus: the counters wrap past their range without losing a slot or an item") {
+    bus::Queue<int, 4> queue;
     int out = 0;
-    for (int round = 0; round < 10; round++) {
-        CHECK(queue.push(round));
-        REQUIRE(queue.pop(out));
-        CHECK(out == round);
+    bool ordered = true;
+    for (int round = 0; round < 20000; round++) {
+        for (int i = 0; i < 4; i++) ordered = queue.push(round * 4 + i) && ordered;
+        ordered = !queue.push(-1) && ordered;
+        for (int i = 0; i < 4; i++) ordered = queue.pop(out) && out == round * 4 + i && ordered;
+        ordered = queue.empty() && ordered;
     }
-    CHECK(queue.dropped() == 0);
+    CHECK(ordered);
+    CHECK(queue.dropped() == 20000);
 }
 
 TEST_CASE("bus: the traffic clock falls back to uptime before the first UTC") {
