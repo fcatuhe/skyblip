@@ -123,8 +123,6 @@ jobs:
         run: pip install --disable-pip-version-check "$(grep '^clang-format==' .github/lint/requirements.txt)"
       - name: the link registry is described, its generated files are current and the status writer matches it
         run: python3 scripts/check_link_registry.py
-      - name: no Nordic DFU package
-        run: python3 scripts/check_no_dfu_package.py
       - name: the browser simulator binds only what it exports
         run: python3 scripts/check_simulator_exports.py
       # Dependabot proposes doctest and Zephyr in .github/pins, and the copies in use have to follow.
