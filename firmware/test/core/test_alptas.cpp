@@ -10,9 +10,11 @@
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/alptas/frame.h"
+#include "simulator/world/alptas_out.h"
 
 using namespace skyblip;
 using namespace skyblip::protocol;
+using skyblip::simulator::alptas_encode;
 
 namespace {
 constexpr uint32_t kUtcS = 1700000000;  // 1700000000 % 16 == 0, so timebits == 0

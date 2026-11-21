@@ -8,11 +8,11 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
-#include "core/protocol/alptas.h"
 #include "core/protocol/callsign.h"
 #include "core/radio/log.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
+#include "simulator/world/alptas_out.h"
 #include "test/support/m_band_rig.h"
 #include "test/support/product_rig.h"
 
@@ -72,7 +72,7 @@ TEST_CASE("radio verdicts: a burst heard before own-ship has a fix is a wait, no
     observation.latitude_1e7 = 481234567;
     observation.longitude_1e7 = 87654321;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, observation, Rig::kBaseUtcS) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, observation, Rig::kBaseUtcS) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);
@@ -89,7 +89,7 @@ TEST_CASE("radio verdicts: a message type this firmware does not implement says 
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
     // The message type is the low nibble of byte 3, in clear, before any decrypt stage.
     frame[3] = static_cast<uint8_t>(frame[3] & 0xF0);
     alptas::set_crc(frame);
@@ -108,7 +108,7 @@ TEST_CASE("radio verdicts: a frame the plausibility gate refuses is still a deco
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, target(own), own.utc_s + 100) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s + 100) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);
@@ -160,7 +160,7 @@ TEST_CASE("radio verdicts: the frame we can read is read, and names its aircraft
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);
@@ -205,7 +205,7 @@ TEST_CASE("radio counters: a burst nothing was attempted on leaves rx_bad where 
     observation.latitude_1e7 = 481234567;
     observation.longitude_1e7 = 87654321;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, observation, Rig::kBaseUtcS) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, observation, Rig::kBaseUtcS) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);
@@ -224,7 +224,7 @@ TEST_CASE("radio counters: a dialect we do not read is counted apart from a fram
 
     const model::Ownship& own = rig.state().own;
     uint8_t version6_frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(version6_frame, target(own), own.utc_s) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(version6_frame, target(own), own.utc_s) == Status::Ok);
     version6_frame[3] = static_cast<uint8_t>(version6_frame[3] & 0xF0);
     alptas::set_crc(version6_frame);
 
@@ -236,7 +236,7 @@ TEST_CASE("radio counters: a dialect we do not read is counted apart from a fram
     CHECK(rig.state().air.rx_bad == bad_before);
 
     uint8_t stale[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(stale, target(own), own.utc_s + 100) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(stale, target(own), own.utc_s + 100) == Status::Ok);
 
     hear_alptas(rig, stale);
     settle(rig, now_ms);
@@ -274,7 +274,7 @@ TEST_CASE("radio verdicts: a frame keyed on another second says whose second it 
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, target(own), own.utc_s + 18) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s + 18) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);
@@ -297,7 +297,7 @@ TEST_CASE("radio verdicts: a frame we refuse past its CRC still names the aircra
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, target(own), own.utc_s + 18) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s + 18) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);
@@ -319,7 +319,7 @@ TEST_CASE("radio verdicts: a burst that names neither system is not a decode fai
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
     // Shares the chips the detector matched on and nothing after them.
     hear_m_band(rig, 0xF5F3656Cu, frame, alptas::kFrameBytes);
     settle(rig, now_ms);
@@ -342,7 +342,7 @@ TEST_CASE("radio verdicts: a burst the air damaged is corrected, not counted as 
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
 
     hear_alptas(rig, frame, 18);
     settle(rig, now_ms);
@@ -363,7 +363,7 @@ TEST_CASE("radio verdicts: a no-track sender is drawn but its address stays off 
     model::AircraftObservation observation = target(own);
     observation.no_track = true;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, observation, own.utc_s) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, observation, own.utc_s) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);

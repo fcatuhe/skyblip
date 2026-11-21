@@ -18,7 +18,6 @@ uint8_t alptas_urgency_to_emergency(uint8_t alptas_urgency);
 constexpr int32_t kAlptasFixAgeCeilingMs = 2500;
 int32_t alptas_fix_age_ms(uint8_t fix_quarters, const events::Stamp& heard);
 uint8_t alptas_address_type_to_address_mapping_table(uint8_t alptas_address_type);
-uint8_t address_mapping_table_to_alptas_address_type(uint8_t address_mapping_table);
 
 // INFO: fc 13nov26 out is left as it was unless the frame decodes, so a caller may try a second key
 Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitude_1e7,
@@ -47,8 +46,6 @@ class AlptasReceiver {
 
     uint32_t shown_address(uint32_t address, uint8_t random, uint32_t heard_s);
 };
-
-Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observation, uint32_t utc_s);
 
 }
 

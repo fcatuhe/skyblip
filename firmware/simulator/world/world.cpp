@@ -8,11 +8,11 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
-#include "core/protocol/alptas.h"
 #include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
+#include "simulator/world/alptas_out.h"
 #include "simulator/world/link_text.h"
 
 namespace skyblip::simulator {
@@ -350,7 +350,7 @@ size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t alt
     observation.position_valid = true;
 
     uint8_t frame[alptas::kFrameBytes] = {0};
-    if (protocol::alptas_encode(frame, observation, utc_s) != Status::Ok) return 0;
+    if (alptas_encode(frame, observation, utc_s) != Status::Ok) return 0;
     return wire::manchester_frame(alptas::kSyncWord, frame, alptas::kFrameBytes, chips);
 }
 

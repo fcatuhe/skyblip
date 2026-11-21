@@ -19,6 +19,7 @@
 #include "protocols/adsb/assembly.h"
 #include "protocols/adsb/message.h"
 #include "protocols/alptas/frame.h"
+#include "simulator/world/alptas_out.h"
 #include "test/support/adsb_frames.h"
 
 using namespace skyblip;
@@ -111,7 +112,7 @@ model::AircraftObservation over_uplink(const model::AircraftObservation& sent) {
 
 model::AircraftObservation over_alptas(const model::AircraftObservation& sent) {
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, sent, kUtcS) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, sent, kUtcS) == Status::Ok);
     model::AircraftObservation heard{};
     REQUIRE(protocol::alptas_decode(frame, kUtcS, kOwnLatitude1e7, kOwnLongitude1e7, heard) ==
             Status::Ok);
