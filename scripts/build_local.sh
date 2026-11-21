@@ -30,12 +30,12 @@ sdk_base=$HOME/.local/opt
 
 require_host_tools() {
   local missing=()
-  for tool in cmake ninja dtc gperf git python3; do
+  for tool in cmake ninja dtc gperf git python3 ruby; do
     command -v "$tool" >/dev/null || missing+=("$tool")
   done
   if [ ${#missing[@]} -gt 0 ]; then
     echo "FAIL: missing build tools: ${missing[*]}"
-    echo "on Arch: sudo pacman -S --needed cmake ninja dtc gperf git python"
+    echo "on Arch: sudo pacman -S --needed cmake ninja dtc gperf git python ruby"
     exit 1
   fi
 }

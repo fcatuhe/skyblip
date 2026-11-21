@@ -53,7 +53,7 @@ scripts/build_local.sh skyblip_go skyblip_bravo
 SKYBLIP_REF=HEAD scripts/build_local.sh skyblip_bravo
 ```
 
-The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`.
+The first run needs `cmake ninja dtc gperf ruby`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`.
 
 CI builds it too, and which key signs it decides which units it can update over Bluetooth ([`firmware/keys/`](firmware/keys)):
 

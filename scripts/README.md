@@ -18,6 +18,7 @@ This directory holds the host tooling. The Python scripts run on the standard li
 | `make_wordmark.py` | rasterise the wordmark into `firmware/ui/widgets/wordmark.cpp` |
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones |
+| `firmware_tree.rb` | print the firmware version `firmware/VERSION` holds (`version firmware`) or every product that declares a board, as JSON (`products firmware`), for the workflows and `build_image.sh` |
 | `release_files.rb` | stage a production release from its images, as `dev_release.rb` stages a pre-release: each product's images named after the version, the simulator, one `NOTICE.md` with every license text, `PROTOCOLS.md` and `SHA256SUMS` |
 | `upstream_pins.rb` | print a version `.github/pins/action.yml` pins for Dependabot (`version emscripten-core/emsdk`), or fail while the vendored doctest or the Zephyr in `firmware/west.yml` differs from its pin (`check`) |
 | `emsdk.rb` | print the pinned Emscripten version and its `emcc`, for `make browser`, installing them under `$EMSDK` or `~/.local/opt/emsdk` as needed |

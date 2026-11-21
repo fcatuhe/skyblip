@@ -27,10 +27,15 @@ jobs:
       firmware: ${{ steps.filter.outputs.firmware }}
       glass: ${{ steps.filter.outputs.glass }}
       release: ${{ steps.filter.outputs.release }}
+      products: ${{ steps.products.outputs.products }}
       # main signs with the development key, and so does any branch run by hand: a pull request never.
       signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
     steps:
       - uses: actions/checkout@v7
+      # A product is a directory whose CMakeLists declares its board (lib/firmware_tree.rb).
+      - name: every product in the tree
+        id: products
+        run: echo "products=$(ruby scripts/firmware_tree.rb products firmware)" >> "$GITHUB_OUTPUT"
       - uses: dorny/paths-filter@v4
         id: filter
         with:
@@ -256,15 +261,8 @@ jobs:
   product-image:
     strategy:
       fail-fast: false
-      # `slug` is spelled out because expressions have no replace().
       matrix:
-        include:
-          - product: skyblip_go
-            slug: skyblip-go
-            retention: 1
-          - product: skyblip_bravo
-            slug: skyblip-bravo
-            retention: 7
+        product: ${{ fromJSON(needs.changes.outputs.products) }}
     name: product image (${{ matrix.product }})
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -315,18 +313,19 @@ jobs:
       - name: build, sign and check the image
         run: scripts/build_image.sh ${{ matrix.product }} "$RUNNER_TEMP/signing.pem" "${PUBLIC_KEY:-}"
 
-      - name: name the artifact after its version
+      # The version record reads "<slug> <version> <commit> <channel>".
+      - name: name the artifact after the product and its version
         if: env.PUBLIC_KEY != ''
-        run: echo "IMAGE_VERSION=$(cut -d' ' -f2 firmware/build/out/${{ matrix.slug }}.version)" >> "$GITHUB_ENV"
+        run: echo "IMAGE_NAME=$(cut -d' ' -f1,2 --output-delimiter=- firmware/build/out/*.version)" >> "$GITHUB_ENV"
 
       - name: upload the development image
         if: env.PUBLIC_KEY != ''
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.slug }}-${{ env.IMAGE_VERSION }}
+          name: ${{ env.IMAGE_NAME }}
           path: firmware/build/out/*
           if-no-files-found: error
-          retention-days: ${{ matrix.retention }}
+          retention-days: 1
 
   simulator:
     name: browser simulator

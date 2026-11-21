@@ -5,6 +5,7 @@ require "json"
 require "open3"
 require "tmpdir"
 require "fileutils"
+require_relative "../../lib/firmware_tree"
 require_relative "../../lib/radio_protocols"
 require_relative "../../server/app/models/release"
 
@@ -62,59 +63,12 @@ class DeploymentTest < Minitest::Test
     assert_equal "ruby source/scripts/dev_release.rb image simulator source", steps.last.fetch("run")
   end
 
-  def test_the_tag_must_equal_the_firmware_version
-    Dir.mktmpdir do |tree|
-      FileUtils.mkdir_p(File.join(tree, "firmware"))
-      File.write(File.join(tree, "firmware/VERSION"), "# a comment\nVERSION_MAJOR = 0\nVERSION_MINOR = 2\nPATCHLEVEL = 0\nVERSION_TWEAK = 0\n")
-      step = release_step("tag", "the tag is firmware/VERSION")
-
-      assert_equal({ "version" => "0.2.0" }, step_outputs(tree, step, "GITHUB_REF_NAME" => "v0.2.0"))
-      output, status = run_step(tree, step, "GITHUB_REF_NAME" => "v0.2.1", "GITHUB_OUTPUT" => File::NULL)
-      refute status.success?
-      assert_includes output, "FAIL: tag v0.2.1, but firmware/VERSION says 0.2.0"
-      assert_equal %w[v*], workflow("release").fetch(true).fetch("push").fetch("tags")
-    end
-  end
-
-  def test_every_product_that_declares_a_board_is_built_and_released
-    Dir.mktmpdir do |tree|
-      { "skyblip_go" => "skyblip_product_board(t_echo_plus)\n", "skyblip_bravo" => "skyblip_product_board(meshtracker_x1)\n", "common" => "" }.each do |product, board|
-        FileUtils.mkdir_p(File.join(tree, "firmware/products", product))
-        File.write(File.join(tree, "firmware/products", product, "CMakeLists.txt"), "project(#{product})\n#{board}")
-      end
-
-      assert_equal({ "products" => '["skyblip_bravo","skyblip_go"]' }, step_outputs(tree, release_step("tag", "every product in the tree")))
-      assert_equal "${{ fromJSON(needs.tag.outputs.products) }}", workflow("release").dig("jobs", "image", "strategy", "matrix", "product")
-    end
-  end
-
-  def test_a_tree_with_no_product_is_refused_before_the_approval
-    Dir.mktmpdir do |tree|
-      FileUtils.mkdir_p(File.join(tree, "firmware/products/common"))
-      File.write(File.join(tree, "firmware/products/common/CMakeLists.txt"), "project(common)\n")
-      output, status = run_step(tree, release_step("tag", "every product in the tree"), "GITHUB_OUTPUT" => File::NULL)
-
-      refute status.success?
-      assert_includes output, "FAIL: no directory in firmware/products/ declares a board"
-      assert_includes workflow("release").fetch("jobs").fetch("image").fetch("needs"), "tag"
-    end
-  end
-
-  # Zephyr reads products/<product>/VERSION, and a copy there would sign one version and report another.
-  def test_every_product_carries_the_firmware_version
-    assert_equal %w[skyblip_bravo skyblip_go], declared_products
-    declared_products.each { |product| assert_equal "../../VERSION", File.readlink(File.join(ROOT, "firmware/products", product, "VERSION")), product }
-  end
-
-  # release.yml builds every product that declares a board, so each must also be built on main, served by the server and named in its release.
-  def test_every_product_is_built_on_main_served_and_lists_its_radio_protocols
-    matrix = workflow("firmware").dig("jobs", "product-image", "strategy", "matrix", "include")
-
-    declared_products.each do |product|
+  # release.yml releases every product that declares a board, so each must be served and named in its release.
+  def test_every_product_is_served_and_lists_its_radio_protocols
+    FirmwareTree.new(File.join(ROOT, "firmware")).products.each do |product|
       slug = product.tr("_", "-")
       assert File.file?(File.join(ROOT, "firmware/products", product, "PROTOCOLS")), "#{product} has no PROTOCOLS"
       assert_equal product.delete_prefix("skyblip_"), Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
-      assert_includes matrix.map { |leg| [ leg.fetch("product"), leg.fetch("slug") ] }, [ product, slug ]
     end
   end
 
@@ -230,19 +184,6 @@ class DeploymentTest < Minitest::Test
         if [ "$1 $2" = "release list" ]; then printf '%s\n' #{published.join(" ")}; else echo "gh $*"; fi
       SH
       File.chmod(0o755, File.join(tree, "gh"))
-    end
-
-    def step_outputs(tree, step, env = {})
-      outputs = File.join(tree, "outputs")
-      File.write(outputs, "")
-      output, status = run_step(tree, step, env.merge("GITHUB_OUTPUT" => outputs))
-      assert status.success?, output
-      File.readlines(outputs, chomp: true).to_h { |line| line.split("=", 2) }
-    end
-
-    def declared_products
-      Dir.glob(File.join(ROOT, "firmware/products/*/CMakeLists.txt")).select { |cmake| File.read(cmake).match?(/^skyblip_product_board\(/) }
-        .map { |cmake| File.basename(File.dirname(cmake)) }.sort
     end
 
     def deployment

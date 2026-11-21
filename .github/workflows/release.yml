@@ -26,24 +26,15 @@ jobs:
       - name: the tag is firmware/VERSION
         id: version
         run: |
-          file=firmware/VERSION
-          triple=$(sed -n \
-            -e 's/^VERSION_MAJOR *= *\([0-9]*\).*/\1/p' \
-            -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
-            -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
-          test "$GITHUB_REF_NAME" = "v$triple" \
-            || { echo "FAIL: tag $GITHUB_REF_NAME, but $file says $triple"; exit 1; }
-          echo "version=$triple" >> "$GITHUB_OUTPUT"
+          version=$(ruby scripts/firmware_tree.rb version firmware)
+          test "$GITHUB_REF_NAME" = "v$version" \
+            || { echo "FAIL: tag $GITHUB_REF_NAME, but firmware/VERSION says $version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      # A product is a directory whose CMakeLists declares its board, so products/common is none.
+      # A product is a directory whose CMakeLists declares its board (lib/firmware_tree.rb).
       - name: every product in the tree
         id: products
-        run: |
-          products=$(for cmake in firmware/products/*/CMakeLists.txt; do
-                       if grep -q '^skyblip_product_board(' "$cmake"; then basename "$(dirname "$cmake")"; fi
-                     done | jq -Rnc '[inputs]')
-          test "$products" != "[]" || { echo "FAIL: no directory in firmware/products/ declares a board"; exit 1; }
-          echo "products=$products" >> "$GITHUB_OUTPUT"
+        run: echo "products=$(ruby scripts/firmware_tree.rb products firmware)" >> "$GITHUB_OUTPUT"
 
       - name: the tag is on main
         run: |
