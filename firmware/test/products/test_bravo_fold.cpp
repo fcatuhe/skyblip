@@ -11,6 +11,7 @@
 #include "doctest/doctest.h"
 #include "test/support/bravo_flight.h"
 #include "test/support/diagnostics_corpus.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/registry_frames.h"
 
 using namespace skyblip;

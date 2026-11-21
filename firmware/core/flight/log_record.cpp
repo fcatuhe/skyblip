@@ -45,17 +45,6 @@ Status checked(const uint8_t* raw) {
 
 bool event_slot(const uint8_t* raw) { return (raw[kLogKindOffset] & kLogEventMark) != 0; }
 
-bool known_event(uint8_t code) {
-    switch (static_cast<LogKind>(code)) {
-        case LogKind::Status:
-        case LogKind::Alarm:
-        case LogKind::Encounter:
-        case LogKind::Bravo: return true;
-        case LogKind::Fix: break;
-    }
-    return false;
-}
-
 void encode_status(const LogStatus& status, uint8_t* out) {
     wire::put_uint16(out + 2, status.cell_mv);
     out[4] = status.percent;
@@ -68,18 +57,6 @@ void encode_status(const LogStatus& status, uint8_t* out) {
     if (status.charging) flags |= kStatusFlagCharging;
     if (status.external_power) flags |= kStatusFlagExternalPower;
     out[9] = flags;
-}
-
-void decode_status(const uint8_t* raw, LogStatus& out) {
-    out.cell_mv = wire::get_uint16(raw + 2);
-    out.percent = raw[4];
-    out.power_level = raw[5];
-    out.charge = raw[6];
-    out.tracked = raw[7];
-    out.tracked_peak = raw[8];
-    out.battery_valid = (raw[9] & kStatusFlagBatteryValid) != 0;
-    out.charging = (raw[9] & kStatusFlagCharging) != 0;
-    out.external_power = (raw[9] & kStatusFlagExternalPower) != 0;
 }
 
 void encode_target(const LogTarget& target, uint8_t* out) {
@@ -103,24 +80,6 @@ void encode_target(const LogTarget& target, uint8_t* out) {
     if (target.relative_altitude_valid) flags |= kTargetFlagRelativeAltitudeValid;
     out[19] = flags;
     wire::put_uint16(out + 20, target.heard_s);
-}
-
-void decode_target(const uint8_t* raw, LogTarget& out) {
-    out.address = static_cast<uint32_t>(raw[2]) | (static_cast<uint32_t>(raw[3]) << 8) |
-                  (static_cast<uint32_t>(raw[4]) << 16);
-    out.address_mapping_table = raw[5];
-    out.distance_m = wire::get_uint16(raw + 6);
-    out.relative_altitude_m = static_cast<int16_t>(wire::get_uint16(raw + 8));
-    out.relative_bearing_deg = wire::get_uint16(raw + 10);
-    out.closing_mps = static_cast<int16_t>(wire::get_uint16(raw + 12));
-    out.alarm = raw[14];
-    out.aircraft_category = raw[15];
-    out.source = raw[17];
-    out.rssi_dbm = static_cast<int8_t>(raw[18]);
-    out.dismissed = (raw[19] & kTargetFlagDismissed) != 0;
-    out.in_formation = (raw[19] & kTargetFlagInFormation) != 0;
-    out.relative_altitude_valid = (raw[19] & kTargetFlagRelativeAltitudeValid) != 0;
-    out.heard_s = wire::get_uint16(raw + 20);
 }
 
 }  // namespace
@@ -215,24 +174,6 @@ void encode_log_event(const LogEvent& event, uint32_t base_utc_s, uint8_t* out) 
         encode_target(event.target, out);
     out[kLogKindOffset] = static_cast<uint8_t>(kLogEventMark | static_cast<uint8_t>(event.kind));
     seal(out);
-}
-
-Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out) {
-    const Status slot = checked(raw);
-    if (!is_ok(slot)) return slot;
-    const uint8_t code = static_cast<uint8_t>(raw[kLogKindOffset] & ~kLogEventMark);
-    if (!event_slot(raw) || !known_event(code)) return Status::Unsupported;
-
-    out = LogEvent{};
-    out.kind = static_cast<LogKind>(code);
-    out.utc_s = base_utc_s + wire::get_uint16(raw + 0);
-    if (out.kind == LogKind::Status)
-        decode_status(raw, out.status);
-    else if (out.kind == LogKind::Bravo)
-        out.bravo = raw[2];
-    else
-        decode_target(raw, out.target);
-    return Status::Ok;
 }
 
 }  // namespace skyblip::flight

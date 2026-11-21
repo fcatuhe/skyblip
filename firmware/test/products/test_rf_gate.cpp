@@ -7,6 +7,7 @@
 #include "doctest/doctest.h"
 #include "simulator/simulator.h"
 #include "test/support/armings_rig.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;

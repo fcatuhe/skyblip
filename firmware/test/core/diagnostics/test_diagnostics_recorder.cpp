@@ -1,6 +1,7 @@
 // The RAM ring a capture fills: disarmed at boot, drained by the writer, honest about every drop.
 #include "core/diagnostics/recorder.h"
 #include "doctest/doctest.h"
+#include "test/support/diagnostics_read.h"
 
 using namespace skyblip;
 

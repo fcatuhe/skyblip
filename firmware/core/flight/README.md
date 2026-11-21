@@ -164,7 +164,7 @@ The bus carries `state`'s answer as the ADS-L G.1.2 code in `own.flight_state`. 
 
 A record is 24 bytes and a sector holds 170 of them behind a 16-byte label. The label, and which sector a ring gets next, belong to [`core/store`](../store/README.md). Every field is written one at a time, little-endian, so the host reader sees no hidden padding. The device never writes IGC: the host converts the records.
 
-Byte 16 tells a fix from an event. A fix carries its track's high bit there, so the byte is 0 or 1. An event sets the top bit and names its kind in the other seven. Bytes 0-1 and 22-23 are the same in both, so recovery, the torn-tail check and the offload never ask which a slot holds. `decode_log_record` answers `Unsupported` for an event and `decode_log_event` for a fix, and a kind a later build adds is refused. A kind is retired, never renumbered, because a flight outlives the firmware that wrote it.
+Byte 16 tells a fix from an event. A fix carries its track's high bit there, so the byte is 0 or 1. An event sets the top bit and names its kind in the other seven. Bytes 0-1 and 22-23 are the same in both, so recovery, the torn-tail check and the offload never ask which a slot holds. `decode_log_record` answers `Unsupported` for an event, and the host suite's `decode_log_event` (`test/support/log_event_read.h`) answers it for a fix. A kind a later build adds is refused. A kind is retired, never renumbered, because a flight outlives the firmware that wrote it.
 
 | Byte | Fix | Status | Alarm, encounter |
 |---|---|---|---|

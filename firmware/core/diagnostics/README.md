@@ -48,6 +48,8 @@ A payload that carries a C++ enum stores one byte of it, so every such enum writ
 - `scripts/test_blip.py` holds every decoder tuple in `scripts/blip_records.py` to the schema enum of the same name. So a new member is an edit to the decoder and to `schemas/diagnostics_log.v1.schema.json` in the same commit.
 - `Contact::gesture` is the product's `go::Gesture`, and `Screen`'s page, mode and prompt are `go::Page`, `go::Mode` and `comms::Pending`. Each stores that enum's own number, and the schema lists it.
 
+The device never reads a record back. The C++ decoders the host suite reads records with are in `test/support/diagnostics_read.h`.
+
 ## What each type answers
 
 `payload.h` lists each type's fields, every one read off `bus::State` or an `events::` value. Nothing here is a sensor this device does not have.

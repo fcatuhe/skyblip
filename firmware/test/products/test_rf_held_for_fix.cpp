@@ -4,6 +4,7 @@
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "test/support/armings_rig.h"
+#include "test/support/diagnostics_read.h"
 
 using namespace skyblip;
 

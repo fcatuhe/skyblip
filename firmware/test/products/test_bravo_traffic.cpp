@@ -16,6 +16,7 @@
 #include "products/skyblip_go/pages/self_test.h"
 #include "test/support/bravo_flight.h"
 #include "test/support/glass_text.h"
+#include "test/support/log_event_read.h"
 #include "test/support/nmea_stream.h"
 #include "test/support/radar_rig.h"
 #include "test/support/tango.h"

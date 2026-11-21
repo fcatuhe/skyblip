@@ -3,6 +3,7 @@
 
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/diagnostics_round_trip.h"
 
 using namespace skyblip;
