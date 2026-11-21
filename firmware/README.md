@@ -26,7 +26,7 @@ Put a service that more than one product runs in `products/common/`, in namespac
 | `make test-protocols` | builds and runs each stack alone, from a copy holding nothing else |
 | `make test-sanitize` | runs the suite under ASan and UBSan, in `build/sanitize/` |
 | `make fuzz` | runs the libFuzzer harnesses in `test/fuzz/` with clang |
-| `make fuzz-<name>` | runs one harness: `nmea`, `air`, `adsb`, `adsb_assembly` or `link` |
+| `make fuzz-<name>` | runs one harness: `nmea`, `air`, `adsb`, `adsb_assembly`, `link`, `peer_bravo` or `peer_go` |
 | `make tidy` | runs clang-tidy over what the host build compiles, as CI does |
 | `make browser` | compiles the WASM that the Rails app's `/briefing/simulator` loads from a release, and bundles `scenarios/*.json` into the `scenarios.json` beside it |
 | `make watch` | rebuilds and reruns the host tests on every save, or the WASM with `WATCH=browser`, through `watchexec` |

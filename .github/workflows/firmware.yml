@@ -187,7 +187,7 @@ jobs:
         working-directory: firmware
         run: make test-sanitize ABI=${{ matrix.abi }} CXX="ccache ${{ matrix.cxx }}"
 
-  # The radio, the GNSS UART and the companion link, a minute each (firmware/test/fuzz/README.md).
+  # The radio, the GNSS UART, the companion link and the peer link, a minute each (firmware/test/fuzz/README.md).
   fuzz:
     strategy:
       fail-fast: false

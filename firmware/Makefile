@@ -37,6 +37,8 @@ FUZZ_SECONDS_air ?= 60
 FUZZ_SECONDS_adsb ?= 30
 FUZZ_SECONDS_adsb_assembly ?= 30
 FUZZ_SECONDS_link ?= 90
+FUZZ_SECONDS_peer_bravo ?= 60
+FUZZ_SECONDS_peer_go ?= 60
 FUZZ_BUILD := build/fuzz$(ABI_SUFFIX)
 ifdef FUZZ
 BUILD := $(FUZZ_BUILD)
