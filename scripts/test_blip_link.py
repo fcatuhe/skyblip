@@ -17,9 +17,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import blip  # noqa: E402
 import blip_capture  # noqa: E402
+import blip_fetch  # noqa: E402
 import blip_frames as frames  # noqa: E402
+import blip_ndjson as ndjson  # noqa: E402
 import blip_protocols  # noqa: E402
-import blip_records as records  # noqa: E402
 
 
 class Nmea(unittest.TestCase):
@@ -81,49 +82,49 @@ class Resume(unittest.TestCase):
             path.write_text("".join(
                 json.dumps({"log": "flights", "session": 200, "index": index}) + "\n"
                 for index in range(3)), encoding="utf-8")
-            self.assertEqual(records.last_kept(str(path)), {"log": "flights", "session": 200, "index": 2})
+            self.assertEqual(ndjson.last_kept(str(path)), {"log": "flights", "session": 200, "index": 2})
 
     def test_a_file_truncated_mid_line_resumes_from_the_last_whole_record(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "capture.ndjson"
             path.write_text('{"session": 200, "index": 0}\n{"session": 200, "ind',
                             encoding="utf-8")
-            self.assertEqual(records.last_kept(str(path)), {"session": 200, "index": 0})
+            self.assertEqual(ndjson.last_kept(str(path)), {"session": 200, "index": 0})
 
     def test_no_file_yet_means_no_resume_point(self):
         with tempfile.TemporaryDirectory() as directory:
-            self.assertIsNone(records.last_kept(str(pathlib.Path(directory) / "absent")))
+            self.assertIsNone(ndjson.last_kept(str(pathlib.Path(directory) / "absent")))
 
     def test_without_a_resume_point_every_chosen_session_starts_at_zero(self):
-        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(all=True), None)
+        plan = blip_fetch.sessions_to_fetch(SESSIONS, fetch_args(all=True), None)
         self.assertEqual([(entry["session"], start) for entry, start in plan],
                          [(100, 0), (200, 0), (300, 0)])
 
     def test_a_fetch_that_died_mid_session_restarts_after_the_last_index_it_kept(self):
-        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(all=True), (200, 17))
+        plan = blip_fetch.sessions_to_fetch(SESSIONS, fetch_args(all=True), (200, 17))
         self.assertEqual([(entry["session"], start) for entry, start in plan],
                          [(200, 18), (300, 0)])
 
     def test_a_session_already_complete_is_not_fetched_again(self):
-        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(all=True), (200, 29))
+        plan = blip_fetch.sessions_to_fetch(SESSIONS, fetch_args(all=True), (200, 29))
         self.assertEqual([(entry["session"], start) for entry, start in plan], [(300, 0)])
 
     def test_a_resume_point_naming_a_session_the_device_no_longer_lists_starts_over(self):
-        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(all=True), (999, 4))
+        plan = blip_fetch.sessions_to_fetch(SESSIONS, fetch_args(all=True), (999, 4))
         self.assertEqual([(entry["session"], start) for entry, start in plan],
                          [(100, 0), (200, 0), (300, 0)])
 
     def test_a_session_left_unfinished_before_a_new_one_opened_is_finished_first(self):
-        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(), (200, 17))
+        plan = blip_fetch.sessions_to_fetch(SESSIONS, fetch_args(), (200, 17))
         self.assertEqual([(entry["session"], start) for entry, start in plan],
                          [(200, 18), (300, 0)])
 
     def test_the_default_is_the_last_session_on_the_device(self):
-        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(), None)
+        plan = blip_fetch.sessions_to_fetch(SESSIONS, fetch_args(), None)
         self.assertEqual([entry["session"] for entry, _ in plan], [300])
 
     def test_one_session_asked_for_by_id_is_the_only_one_fetched(self):
-        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(session=100), None)
+        plan = blip_fetch.sessions_to_fetch(SESSIONS, fetch_args(session=100), None)
         self.assertEqual([entry["session"] for entry, _ in plan], [100])
 
 
@@ -168,19 +169,19 @@ class ReplyFraming(unittest.TestCase):
 
     def test_a_refused_command_raises_with_the_reason_the_device_gave(self):
         with self.assertRaises(SystemExit) as caught:
-            blip.refuse_if_nacked({"command": "log", "acknowledge": False, "reason": "in_flight"})
+            frames.refuse_if_nacked({"command": "log", "acknowledge": False, "reason": "in_flight"})
         self.assertIn("in_flight", str(caught.exception))
 
     # A refusal for width names what the pilot can do, not only the reason's code.
     def test_a_reply_refused_as_too_wide_says_the_link_kept_its_smallest_packet(self):
         for command in ("log", "acknowledgement"):
             with self.subTest(command=command), self.assertRaises(SystemExit) as caught:
-                blip.refuse_if_nacked({"command": command, "acknowledge": False, "reason": "small_mtu"})
+                frames.refuse_if_nacked({"command": command, "acknowledge": False, "reason": "small_mtu"})
             self.assertIn("smallest packet size, 20 bytes", str(caught.exception))
 
     def test_an_acknowledged_reply_passes_through_untouched(self):
         frame = {"command": "log", "acknowledge": True, "sessions": 2}
-        self.assertIs(blip.refuse_if_nacked(frame), frame)
+        self.assertIs(frames.refuse_if_nacked(frame), frame)
 
 
 class FakeBravo:
@@ -308,7 +309,7 @@ GO_PROTOCOLS = {"command": "protocols", "adsl_version": "0.1.0", "alptas_version
 def protocol_lines(*answers):
     unit = FakeBravo(*answers)
     frame = asyncio.run(blip_protocols.answer(unit, 1.0))
-    return unit.sent, blip_protocols.lines(frame, blip.refuse_if_nacked)
+    return unit.sent, blip_protocols.lines(frame, frames.refuse_if_nacked)
 
 
 class Protocols(unittest.TestCase):
@@ -328,7 +329,7 @@ class Protocols(unittest.TestCase):
         unit = FakeBravo()
         unit.replies.put_nowait((0.0, frames.encode({0: 36, 2: 1, 3: "0.2.0"})))
         frame = asyncio.run(blip_protocols.answer(unit, 1.0))
-        self.assertEqual(blip_protocols.lines(frame, blip.refuse_if_nacked), ["ALP-TAS 0.2.0"])
+        self.assertEqual(blip_protocols.lines(frame, frames.refuse_if_nacked), ["ALP-TAS 0.2.0"])
 
     def test_no_answer_in_time_says_so(self):
         with self.assertRaises(SystemExit) as caught:

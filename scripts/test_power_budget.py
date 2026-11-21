@@ -19,6 +19,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import blip_ndjson as ndjson  # noqa: E402
 import blip_records as records  # noqa: E402
 import power_budget  # noqa: E402
 
@@ -119,7 +120,7 @@ def session_lines(raw_records, session=1, closed=True, truncated=False, missing=
     raw = b"".join(raw_records)
     decoded = records.decode_chunk("diagnostics", raw, 0, 0)
     lines = []
-    sink = records.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
+    sink = ndjson.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
                                                "closed": closed, "truncated": truncated},
                                lines.append)
     for record in decoded:

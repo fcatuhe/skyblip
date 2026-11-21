@@ -1,62 +1,39 @@
-require "digest"
-require "fileutils"
 require "open3"
 require "tmpdir"
 require_relative "radio_protocols"
-require_relative "release_notice"
+require_relative "release_files"
 
 class DevRelease
   KEEP_MAIN = 3
-  PRODUCT_ORDER = %w[skyblip-go skyblip-bravo].freeze
-  IMAGE_ENDINGS = %w[.uf2 .signed.bin].freeze
-  HUB_IMAGE_ENDING = ".full.signed.bin".freeze
-  SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json].freeze
-  BUILD_ENDINGS = %w[.version .signed.confirmed.bin].freeze
   FIRMWARE_PATHS = %w[firmware/ scripts/build_image.sh scripts/mkuf2.py].freeze
   CHANGES_HEADING = "## What's Changed".freeze
 
   def self.publish_all(images:, simulator:, source:, ref:, sha:, repository:)
-    release = new(**built(images), ref:)
-    release.publish(images:, simulator:, source:, sha:, repository:)
+    release = new(files: ReleaseFiles.new(images), ref:)
+    release.publish(simulator:, source:, sha:, repository:)
     release.prune
   end
 
-  def self.built(images)
-    records = Dir.glob(File.join(images, "*.version")).sort.to_h { |record| File.read(record).split.first(2) }
-    raise ArgumentError, "No product image in #{images}" if records.empty?
-
-    if records.values.uniq.size > 1
-      raise ArgumentError, "The products disagree on the version: #{records.map { |slug, version| "#{slug} #{version}" }.join(", ")}"
-    end
-    expected = records.keys.product(IMAGE_ENDINGS + [ HUB_IMAGE_ENDING ] + BUILD_ENDINGS).map(&:join)
-    unexpected = Dir.children(images) - expected
-    raise ArgumentError, "Unexpected files in #{images}: #{unexpected.sort.join(", ")}" if unexpected.any?
-
-    { slugs: records.keys.sort_by { |slug| [ PRODUCT_ORDER.index(slug) || PRODUCT_ORDER.size, slug ] }, version: records.values.first }
-  end
-  private_class_method :built
-
   def self.branch_label(ref) = ref.b.gsub(/[^A-Za-z0-9.]/n, "-").force_encoding(Encoding::UTF_8)
 
-  attr_reader :slugs, :version, :ref
+  attr_reader :files, :ref
 
-  def initialize(slugs:, version:, ref:)
-    @slugs = slugs
-    @version = version
+  def initialize(files:, ref:)
+    @files = files
     @ref = ref
   end
 
-  def publish(images:, simulator:, source:, sha:, repository:)
+  def publish(simulator:, source:, sha:, repository:)
     if released?
       puts "#{tag} is already released, nothing to do"
     else
       Dir.mktmpdir do |release|
-        stage(images:, simulator:, source:, into: release)
+        files.stage(into: release, name: tag, simulator:, source:)
         previous = previous_main_tag(release_tags) if main?
         changes = changes_since(previous, sha:, repository:) if previous
         puts gh("release", "create", tag, *Dir.children(release).sort.map { |file| File.join(release, file) },
                 "--target", sha, "--prerelease", "--latest=false", "--title", title,
-                "--notes", notes(images:, sha:, repository:, source:, changes:))
+                "--notes", notes(sha:, repository:, source:, changes:))
       end
     end
   end
@@ -72,22 +49,22 @@ class DevRelease
     def tag = main? ? "dev-#{build}" : "dev-#{build}-#{self.class.branch_label(ref)}"
     def title = main? ? "skyBlip dev #{version}" : "skyBlip dev #{version} (#{ref})"
 
-    def notes(images:, sha:, repository:, source:, changes:)
+    def notes(sha:, repository:, source:, changes:)
       [
         "skyBlip #{version} from #{ref}, built from #{sha} and signed with the development key.",
         changes,
-        *slugs.map { |slug| product_notes(slug, images:, repository:, source:) }
+        *files.slugs.map { |slug| product_notes(slug, repository:, source:) }
       ].compact.join("\n\n")
     end
 
-    def product_notes(slug, images:, repository:, source:)
+    def product_notes(slug, repository:, source:)
       [
         "## #{product_name(slug)}",
         "",
         "Radio protocols: #{RadioProtocols.new(File.join(source, "firmware")).of(slug.tr("-", "_"))}.",
         "",
         "- `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/#{repository}/tree/main/firmware/keys)), older builds included.",
-        ("- `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for." if File.exist?(hub_image(images, slug))),
+        ("- `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for." if files.hub_image?(slug)),
         "- `.uf2` installs on any unit by drag-and-drop, and moves it to the development key."
       ].compact.join("\n")
     end
@@ -114,17 +91,6 @@ class DevRelease
       files.any? { |file| file.start_with?(*FIRMWARE_PATHS) }
     end
 
-    def stage(images:, simulator:, source:, into:)
-      FileUtils.mkdir_p(into)
-      slugs.each do |slug|
-        endings = IMAGE_ENDINGS + (File.exist?(hub_image(images, slug)) ? [ HUB_IMAGE_ENDING ] : [])
-        endings.each { |ending| FileUtils.cp(File.join(images, "#{slug}#{ending}"), File.join(into, "#{slug}-#{tag}#{ending}")) }
-      end
-      FileUtils.cp(SIMULATOR_FILES.map { |file| File.join(simulator, file) }, into)
-      File.write(File.join(into, "NOTICE.md"), ReleaseNotice.new(source).to_s)
-      File.write(File.join(into, "SHA256SUMS"), checksums(into))
-    end
-
     def previous_main_tag(tags) = own_tags(tags).grep(/\Adev-\d+\z/).max_by { |main| main.delete_prefix("dev-").to_i }
 
     def stale_tags(tags, open_branches)
@@ -134,8 +100,8 @@ class DevRelease
     end
 
     def main? = ref == "main"
+    def version = files.version
     def build = version.split("+", 2).fetch(1)
-    def hub_image(images, slug) = File.join(images, "#{slug}#{HUB_IMAGE_ENDING}")
     def product_name(slug) = "skyBlip #{slug.delete_prefix("skyblip-").capitalize}"
 
     def own_tags(tags) = tags.grep(/\Adev-/)
@@ -153,10 +119,6 @@ class DevRelease
             match[0]
           end
         end
-    end
-
-    def checksums(directory)
-      Dir.children(directory).sort.map { |file| "#{Digest::SHA256.file(File.join(directory, file)).hexdigest}  #{file}\n" }.join
     end
 
     def released? = system("gh", "release", "view", tag, out: File::NULL, err: File::NULL)

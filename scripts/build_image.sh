@@ -87,11 +87,7 @@ image_version() {
     echo "FAIL: shallow clone, the commit count would be wrong (checkout with fetch-depth: 0)" >&2
     exit 1
   fi
-  triple=$(sed -n \
-    -e 's/^VERSION_MAJOR *= *\([0-9]*\).*/\1/p' \
-    -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
-    -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
-  test -n "${triple//./}" || { echo "FAIL: no version triple in $file" >&2; exit 1; }
+  triple=$(ruby "$(dirname "$0")/firmware_tree.rb" version "$firmware") || exit 1
   build=$(git -C "$tree" rev-list --count HEAD)
   # INFO: fc 20nov26 the update frame fits one notification on the narrowest phone only up to dfu::kWidestVersion
   IFS=. read -r major minor patch <<< "$triple"

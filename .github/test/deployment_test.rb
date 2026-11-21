@@ -1,44 +1,13 @@
 require "minitest/autorun"
-require "erb"
 require "yaml"
 require "json"
 require "open3"
 require "tmpdir"
 require "fileutils"
 require_relative "../../lib/radio_protocols"
-require_relative "../../server/app/models/release"
 
 class DeploymentTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  RELEASE_ENV = { "PRODUCTS" => '["skyblip_bravo","skyblip_go"]', "RELEASE_VERSION" => "0.2.0" }.freeze
-
-  def test_kamal_preserves_the_clean_clone_and_server_directory
-    builder = deployment.fetch("builder")
-
-    assert_equal "arm64", builder.fetch("arch")
-    refute builder.key?("context")
-    refute builder.key?("dockerfile")
-  end
-
-  def test_application_runs_as_debian_and_the_remote_builder_on_the_crooz_ssh_host
-    config = deployment
-    host = ENV.fetch("SKYBLIP_SERVER_IP", "crooz")
-
-    assert_equal [ host ], config.fetch("servers").fetch("web")
-    assert_equal "debian", config.fetch("ssh").fetch("user")
-    assert_equal "localhost:5555", config.fetch("registry").fetch("server")
-    if RUBY_PLATFORM.match?(/aarch64|arm64/)
-      refute config.fetch("builder").key?("remote")
-    else
-      assert_equal "ssh://crooz", config.fetch("builder").fetch("remote")
-    end
-  end
-
-  def test_sqlite_and_solid_queue_live_in_the_persistent_volume
-    assert_equal [ "skyblip_storage:/rails/storage" ], deployment.fetch("volumes")
-    assert deployment.fetch("env").fetch("clear").fetch("SOLID_QUEUE_IN_PUMA")
-    assert_equal [ "RAILS_MASTER_KEY" ], deployment.fetch("env").fetch("secret")
-  end
 
   def test_deployment_waits_for_the_gates_on_main
     workflow = YAML.load_file(File.join(ROOT, ".github/workflows/server.yml"))
@@ -49,98 +18,6 @@ class DeploymentTest < Minitest::Test
     assert_includes deploy.fetch("if"), "github.ref == 'refs/heads/main'"
     refute deploy.fetch("concurrency").fetch("cancel-in-progress")
     assert_equal "server_production", deploy.fetch("environment").fetch("name")
-  end
-
-  def test_production_checksums_the_simulator_before_publishing
-    workflow = File.read(File.join(ROOT, ".github/workflows/release.yml"))
-    copy = workflow.index(%r{^ +cp simulator/skyblip_simulator\.js})
-    checksums = workflow.index("sha256sum -- * > SHA256SUMS")
-
-    assert copy, "release copies simulator release assets"
-    assert checksums, "release generates checksums"
-    assert_operator copy, :<, checksums
-    assert_includes workflow, "/embed.js release/"
-    scenarios = workflow.index("cp simulator/scenarios.json release/")
-    assert scenarios, "release includes the scenario bundle"
-    assert_operator scenarios, :<, checksums
-    assert_includes workflow, "subject-checksums: release/SHA256SUMS"
-  end
-
-  def test_every_production_image_ships_its_third_party_notices
-    workflow = File.read(File.join(ROOT, ".github/workflows/release.yml"))
-    notices = workflow.index(%r{^ +ruby scripts/release_notice\.rb \. > release/NOTICE\.md$})
-    checksums = workflow.index("sha256sum -- * > SHA256SUMS")
-
-    assert notices, "release writes NOTICE.md with LICENSE and the license texts into the release"
-    assert_operator notices, :<, checksums
-  end
-
-  # What the development pre-release stages is lib/dev_release.rb's, tested in dev_release_test.rb.
-  def test_development_publishes_every_product_through_the_commits_own_dev_release
-    job = YAML.load_file(File.join(ROOT, ".github/workflows/firmware.yml")).fetch("jobs").fetch("dev-release")
-    steps = job.fetch("steps")
-    checkout = steps.find { |step| step["uses"].to_s.start_with?("actions/checkout") }
-
-    assert steps.any? { |step| step.dig("with", "pattern") == "skyblip-*" && step.dig("with", "merge-multiple") }
-    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/protocols/*/version.h firmware/products/*/PROTOCOLS lib/dev_release.rb lib/radio_protocols.rb lib/release_notice.rb scripts/dev_release.rb],
-                 checkout.dig("with", "sparse-checkout").split
-    assert_equal "ruby source/scripts/dev_release.rb image simulator source", steps.last.fetch("run")
-  end
-
-  def test_the_tag_must_equal_the_firmware_version
-    Dir.mktmpdir do |tree|
-      FileUtils.mkdir_p(File.join(tree, "firmware"))
-      File.write(File.join(tree, "firmware/VERSION"), "# a comment\nVERSION_MAJOR = 0\nVERSION_MINOR = 2\nPATCHLEVEL = 0\nVERSION_TWEAK = 0\n")
-      step = release_step("tag", "the tag is firmware/VERSION")
-
-      assert_equal({ "version" => "0.2.0" }, step_outputs(tree, step, "GITHUB_REF_NAME" => "v0.2.0"))
-      output, status = run_step(tree, step, "GITHUB_REF_NAME" => "v0.2.1", "GITHUB_OUTPUT" => File::NULL)
-      refute status.success?
-      assert_includes output, "FAIL: tag v0.2.1, but firmware/VERSION says 0.2.0"
-      assert_equal %w[v*], workflow("release").fetch(true).fetch("push").fetch("tags")
-    end
-  end
-
-  def test_every_product_that_declares_a_board_is_built_and_released
-    Dir.mktmpdir do |tree|
-      { "skyblip_go" => "skyblip_product_board(t_echo_plus)\n", "skyblip_bravo" => "skyblip_product_board(meshtracker_x1)\n", "common" => "" }.each do |product, board|
-        FileUtils.mkdir_p(File.join(tree, "firmware/products", product))
-        File.write(File.join(tree, "firmware/products", product, "CMakeLists.txt"), "project(#{product})\n#{board}")
-      end
-
-      assert_equal({ "products" => '["skyblip_bravo","skyblip_go"]' }, step_outputs(tree, release_step("tag", "every product in the tree")))
-      assert_equal "${{ fromJSON(needs.tag.outputs.products) }}", workflow("release").dig("jobs", "image", "strategy", "matrix", "product")
-    end
-  end
-
-  def test_a_tree_with_no_product_is_refused_before_the_approval
-    Dir.mktmpdir do |tree|
-      FileUtils.mkdir_p(File.join(tree, "firmware/products/common"))
-      File.write(File.join(tree, "firmware/products/common/CMakeLists.txt"), "project(common)\n")
-      output, status = run_step(tree, release_step("tag", "every product in the tree"), "GITHUB_OUTPUT" => File::NULL)
-
-      refute status.success?
-      assert_includes output, "FAIL: no directory in firmware/products/ declares a board"
-      assert_includes workflow("release").fetch("jobs").fetch("image").fetch("needs"), "tag"
-    end
-  end
-
-  # Zephyr reads products/<product>/VERSION, and a copy there would sign one version and report another.
-  def test_every_product_carries_the_firmware_version
-    assert_equal %w[skyblip_bravo skyblip_go], declared_products
-    declared_products.each { |product| assert_equal "../../VERSION", File.readlink(File.join(ROOT, "firmware/products", product, "VERSION")), product }
-  end
-
-  # release.yml builds every product that declares a board, so each must also be built on main, served by the server and named in its release.
-  def test_every_product_is_built_on_main_served_and_lists_its_radio_protocols
-    matrix = workflow("firmware").dig("jobs", "product-image", "strategy", "matrix", "include")
-
-    declared_products.each do |product|
-      slug = product.tr("_", "-")
-      assert File.file?(File.join(ROOT, "firmware/products", product, "PROTOCOLS")), "#{product} has no PROTOCOLS"
-      assert_equal product.delete_prefix("skyblip_"), Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
-      assert_includes matrix.map { |leg| [ leg.fetch("product"), leg.fetch("slug") ] }, [ product, slug ]
-    end
   end
 
   # Before one release carried every product, Bravo's were tagged bravo-v*.
@@ -159,97 +36,6 @@ class DeploymentTest < Minitest::Test
     end
   end
 
-  def test_a_release_names_each_products_files_after_the_product_and_the_version
-    Dir.mktmpdir do |tree|
-      release_tree(tree, slug: "skyblip-go", hub_image: true)
-      assert run_step(tree, release_step("image", "name the files after the release"), "PRODUCT" => "skyblip_go", "RELEASE_VERSION" => "0.1.0").last.success?
-      assert_equal %w[skyblip-go-0.1.0.full.signed.bin skyblip-go-0.1.0.signed.bin skyblip-go-0.1.0.uf2], Dir.children(File.join(tree, "release")).sort
-    end
-
-    Dir.mktmpdir do |tree|
-      release_tree(tree, slug: "skyblip-bravo", hub_image: false)
-      assert run_step(tree, release_step("image", "name the files after the release"), "PRODUCT" => "skyblip_bravo", "RELEASE_VERSION" => "0.2.0").last.success?
-      assert_equal %w[skyblip-bravo-0.2.0.signed.bin skyblip-bravo-0.2.0.uf2], Dir.children(File.join(tree, "release")).sort
-    end
-  end
-
-  def test_the_release_takes_each_products_images_from_its_own_artifact
-    Dir.mktmpdir do |tree|
-      image_artifacts(tree)
-      output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
-
-      assert status.success?, output
-      assert_equal %w[skyblip-bravo-0.2.0.signed.bin skyblip-bravo-0.2.0.uf2 skyblip-go-0.2.0.full.signed.bin skyblip-go-0.2.0.signed.bin skyblip-go-0.2.0.uf2],
-                   Dir.children(File.join(tree, "release")).sort
-      refute workflow("release").dig("jobs", "files", "steps").any? { |step| step.dig("with", "merge-multiple") }
-    end
-  end
-
-  def test_the_release_refuses_an_artifact_no_product_asks_for
-    Dir.mktmpdir do |tree|
-      image_artifacts(tree)
-      FileUtils.mkdir_p(File.join(tree, "images/image-skyblip_tango"))
-      File.write(File.join(tree, "images/image-skyblip_tango/skyblip-tango-0.2.0.signed.bin"), "planted")
-      output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
-
-      refute status.success?
-      assert_includes output, "FAIL: the artifacts are image-skyblip_bravo image-skyblip_go image-skyblip_tango, where the products ask for image-skyblip_bravo image-skyblip_go"
-      refute File.exist?(File.join(tree, "release"))
-    end
-  end
-
-  def test_the_release_refuses_a_file_a_product_does_not_build
-    { "embed.js" => "FAIL: image-skyblip_go holds embed.js", "skyblip-go-0.1.0.uf2" => "FAIL: image-skyblip_go holds skyblip-go-0.1.0.uf2" }.each do |planted, failure|
-      Dir.mktmpdir do |tree|
-        image_artifacts(tree)
-        File.write(File.join(tree, "images/image-skyblip_go", planted), "planted")
-        output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
-
-        refute status.success?, planted
-        assert_includes output, failure
-      end
-    end
-  end
-
-  def test_the_release_refuses_a_product_missing_an_image
-    Dir.mktmpdir do |tree|
-      image_artifacts(tree)
-      File.delete(File.join(tree, "images/image-skyblip_bravo/skyblip-bravo-0.2.0.uf2"))
-      output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
-
-      refute status.success?
-      assert_includes output, "FAIL: image-skyblip_bravo has no skyblip-bravo-0.2.0.uf2"
-    end
-  end
-
-  def test_the_release_files_hold_every_products_images_beside_the_simulator_the_notices_and_the_radio_protocols
-    Dir.mktmpdir do |tree|
-      release_tree(tree, slug: "skyblip-go", hub_image: true)
-      %w[lib/radio_protocols.rb scripts/radio_protocols.rb lib/release_notice.rb scripts/release_notice.rb firmware/products/skyblip_go/PROTOCOLS firmware/products/skyblip_bravo/PROTOCOLS
-         firmware/protocols/adsl/version.h firmware/protocols/adsb/version.h firmware/protocols/alptas/version.h].each do |file|
-        FileUtils.mkdir_p(File.join(tree, File.dirname(file)))
-        FileUtils.cp(File.join(ROOT, file), File.join(tree, file))
-      end
-      FileUtils.mkdir_p(File.join(tree, "release"))
-      %w[skyblip-go-0.2.0.signed.bin skyblip-bravo-0.2.0.signed.bin].each { |file| File.write(File.join(tree, "release", file), file) }
-      output, status = run_step(tree, release_step("files", "add the simulator, the notices, the radio protocols and the checksums"), RELEASE_ENV)
-      assert status.success?, output
-
-      listed = File.readlines(File.join(tree, "release/SHA256SUMS"), chomp: true).map { |line| line.split("  ", 2).last }
-      assert_equal Dir.children(File.join(tree, "release")).sort - %w[SHA256SUMS], listed.sort
-      assert_includes listed, "skyblip-bravo-0.2.0.signed.bin"
-      assert_includes listed, "scenarios.json"
-      assert_equal %w[NOTICE.md], listed.grep(/LICENSE|NOTICE|\.txt\z/)
-      assert_includes File.read(File.join(tree, "release/NOTICE.md")), "### LICENSES/Apache-2.0.txt\n\n```\nLICENSES/Apache-2.0.txt\n```"
-      versions = %w[adsl adsb alptas].to_h { |stem| [ stem, File.read(File.join(ROOT, "firmware/protocols/#{stem}/version.h"))[RadioProtocols::DECLARATION, 1] ] }
-      notes = File.read(File.join(tree, "release/PROTOCOLS.md"))
-      assert_includes notes, "- `skyblip-bravo`: ADS-B #{versions["adsb"]} (1090 MHz extended squitter DF17, read only, after RTCA DO-260B (draft 4.2, 1090-WP30-18))\n"
-      assert_includes notes, "- `skyblip-go`: ADS-L #{versions["adsl"]} (ADS-L 4 SRD-860 Issue 2), " \
-                             "ALP-TAS #{versions["alptas"]} (ALP-TAS 2024 frame, version 3, skyBlip's reading of public sources)\n"
-      assert_includes workflow("release").dig("jobs", "files", "needs"), "image"
-    end
-  end
-
   def test_the_radio_protocols_notes_refuse_a_header_without_one_specification
     Dir.mktmpdir do |firmware|
       FileUtils.mkdir_p(File.join(firmware, "products/skyblip_bravo"))
@@ -258,17 +44,6 @@ class DeploymentTest < Minitest::Test
       File.write(File.join(firmware, "protocols/adsb/version.h"), "inline constexpr char kVersion[] = \"0.1.0\";\n")
       error = assert_raises(ArgumentError) { RadioProtocols.new(firmware).notes(version: "0.2.0", products: %w[skyblip_bravo]) }
       assert_equal "No single kSpecification in protocols/adsb/version.h", error.message
-    end
-  end
-
-  def test_both_simulator_artifacts_contain_the_scenario_bundle
-    %w[firmware release].each do |name|
-      workflow = YAML.load_file(File.join(ROOT, ".github/workflows/#{name}.yml"))
-      steps = workflow.fetch("jobs").fetch("simulator").fetch("steps")
-      artifact = steps.find { |step| step.dig("with", "name") == "browser-simulator" }
-
-      assert_includes artifact.fetch("with").fetch("path").lines.map(&:strip), "firmware/build/browser/scenarios.json", name
-      assert steps.any? { |step| step["run"]&.include?("ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json") }, name
     end
   end
 
@@ -346,38 +121,5 @@ class DeploymentTest < Minitest::Test
         if [ "$1 $2" = "release list" ]; then printf '%s\n' #{published.join(" ")}; else echo "gh $*"; fi
       SH
       File.chmod(0o755, File.join(tree, "gh"))
-    end
-
-    def step_outputs(tree, step, env = {})
-      outputs = File.join(tree, "outputs")
-      File.write(outputs, "")
-      output, status = run_step(tree, step, env.merge("GITHUB_OUTPUT" => outputs))
-      assert status.success?, output
-      File.readlines(outputs, chomp: true).to_h { |line| line.split("=", 2) }
-    end
-
-    def declared_products
-      Dir.glob(File.join(ROOT, "firmware/products/*/CMakeLists.txt")).select { |cmake| File.read(cmake).match?(/^skyblip_product_board\(/) }
-        .map { |cmake| File.basename(File.dirname(cmake)) }.sort
-    end
-
-    def image_artifacts(tree)
-      { "skyblip_go" => %w[uf2 signed.bin full.signed.bin], "skyblip_bravo" => %w[uf2 signed.bin] }.each do |product, endings|
-        FileUtils.mkdir_p(File.join(tree, "images/image-#{product}"))
-        endings.each { |ending| File.write(File.join(tree, "images/image-#{product}/#{product.tr("_", "-")}-0.2.0.#{ending}"), ending) }
-      end
-    end
-
-    def release_tree(tree, slug:, hub_image:)
-      %w[builds simulator LICENSES].each { |dir| FileUtils.mkdir_p(File.join(tree, dir)) }
-      endings = %w[.uf2 .signed.bin .signed.confirmed.bin .version] + (hub_image ? %w[.full.signed.bin] : [])
-      endings.each { |ending| File.write(File.join(tree, "builds", "#{slug}#{ending}"), ending) }
-      %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json].each { |file| File.write(File.join(tree, "simulator", file), file) }
-      %w[LICENSE NOTICE.md LICENSES/Apache-2.0.txt].each { |file| File.write(File.join(tree, file), file) }
-    end
-
-    def deployment
-      source = File.read(File.join(ROOT, "server/config/deploy.yml"))
-      YAML.safe_load(ERB.new(source).result)
     end
 end

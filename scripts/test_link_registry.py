@@ -3,8 +3,7 @@
 
     python3 scripts/test_link_registry.py
 
-Stdlib, clang-format (CLANG_FORMAT names it), as check_link_registry.py needs, and a C++
-compiler (CXX names it) for the mirrors.
+Stdlib, and a C++ compiler (CXX names it) for the mirrors.
 """
 import os
 import pathlib
@@ -17,7 +16,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import check_link_registry  # noqa: E402
 import link_registry  # noqa: E402
 
-EXPECTED = link_registry.written(link_registry.load(), link_registry.formatter())
+EXPECTED = link_registry.generated(link_registry.load())
 
 
 def committed_with(relative, before, after):
@@ -41,7 +40,7 @@ class Check(unittest.TestCase):
         read = committed_with(link_registry.NAMES_HEADER, '"unknown_command"', '"unknown_ command"')
         self.assertEqual(link_registry.stale(EXPECTED, read), [link_registry.NAMES_HEADER])
 
-    def test_a_cpp_header_laid_out_other_than_clang_format_lays_it_is_stale(self):
+    def test_a_cpp_header_laid_out_other_than_the_generator_lays_it_is_stale(self):
         read = committed_with(link_registry.FIRMWARE_HEADER, "enum class Command : uint8_t {\n",
                               "enum class Command : uint8_t\n{\n")
         self.assertEqual(link_registry.stale(EXPECTED, read), [link_registry.FIRMWARE_HEADER])

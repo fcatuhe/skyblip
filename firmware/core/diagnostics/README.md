@@ -143,7 +143,7 @@ A run to cutoff closes on `Power` with `power_level` `flat`, then `Duty`, then `
 
 ### The end marker, and the tail a reader must drop
 
-A 24-byte slot has no CRC, so a power cut in the middle of a program leaves a slot that decodes. The session says it instead. A capture that stops cleanly, by a disarm, a power off or a full partition, writes an `End` as its last record, and the store reports `closed: true` only for a session whose last record is one. **The last record of an unclosed session may be torn, and a reader drops it** (`scripts/blip_records.py` does).
+A 24-byte slot has no CRC, so a power cut in the middle of a program leaves a slot that decodes. The session says it instead. A capture that stops cleanly, by a disarm, a power off or a full partition, writes an `End` as its last record, and the store reports `closed: true` only for a session whose last record is one. **The last record of an unclosed session may be torn, and a reader drops it** (`scripts/blip_ndjson.py` does).
 
 The session the unit is still writing has no `End` yet, so its entry says `recording` beside `closed: false` (`../comms/README.md`, The log dialect). Its last record is whole, because a record is written whole inside one loop pass, so a reader keeps it.
 

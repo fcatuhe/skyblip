@@ -20,6 +20,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import blip_ndjson as ndjson  # noqa: E402
 import blip_records as records  # noqa: E402
 import link_budget  # noqa: E402
 
@@ -107,7 +108,7 @@ def session_lines(raw_records, session=1):
     """What blip.py fetch writes for one session: the chunk decoder, then the session sink."""
     raw = b"".join(raw_records)
     lines = []
-    sink = records.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
+    sink = ndjson.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
                                                "closed": True, "truncated": False}, lines.append)
     for record in records.decode_chunk("diagnostics", raw, 0, 0):
         sink.write(record)

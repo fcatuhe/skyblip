@@ -5,7 +5,9 @@
 
 It merges MCUboot and the signed, confirmed application. Sysbuild's own merge
 takes the unconfirmed image, which a bootloader-written slot0 would revert on
-the second boot. The .uf2 stays the only install artifact (check_no_dfu_package.py).
+the second boot. The .uf2 stays the only install artifact: a Nordic DFU package
+stores a real bank_0_crc, which the first MCUboot swap breaks, leaving the unit
+in the factory bootloader's DFU mode.
 
 The factory bootloader writes any address from 0x001000 to 0x0EA000 without
 complaint (Adafruit_nRF52_Bootloader src/usb/uf2/uf2cfg.h), so the image is

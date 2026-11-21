@@ -1,3 +1,4 @@
+// clang-format off
 #include <cstdint>
 
 #include "core/comms/diagnostics.h"
@@ -35,7 +36,8 @@ constexpr bool on_the_wire(go::Alarm value) {
         case go::Alarm::Off:
         case go::Alarm::Visual:
         case go::Alarm::Soft:
-        case go::Alarm::Loud: return true;
+        case go::Alarm::Loud:
+            return true;
     }
     return false;
 }
@@ -43,7 +45,8 @@ constexpr bool on_the_wire(go::Alarm value) {
 constexpr bool on_the_wire(traffic::Level value) {
     switch (value) {
         case traffic::Level::None:
-        case traffic::Level::Advisory: return true;
+        case traffic::Level::Advisory:
+            return true;
     }
     return false;
 }
@@ -51,7 +54,8 @@ constexpr bool on_the_wire(traffic::Level value) {
 constexpr bool on_the_wire(go::Units value) {
     switch (value) {
         case go::Units::Nautical:
-        case go::Units::Metric: return true;
+        case go::Units::Metric:
+            return true;
     }
     return false;
 }
@@ -60,7 +64,8 @@ constexpr bool on_the_wire(flight::FlightState value) {
     switch (value) {
         case flight::FlightState::Unknown:
         case flight::FlightState::Ground:
-        case flight::FlightState::Airborne: return true;
+        case flight::FlightState::Airborne:
+            return true;
     }
     return false;
 }
@@ -71,7 +76,8 @@ constexpr bool on_the_wire(power::PowerLevel value) {
         case power::PowerLevel::Normal:
         case power::PowerLevel::Critical:
         case power::PowerLevel::Flat:
-        case power::PowerLevel::Low: return true;
+        case power::PowerLevel::Low:
+            return true;
     }
     return false;
 }
@@ -84,7 +90,8 @@ constexpr bool on_the_wire(comms::DiagnosticsReport::Group value) {
         case comms::DiagnosticsReport::Group::Gnss:
         case comms::DiagnosticsReport::Group::Power:
         case comms::DiagnosticsReport::Group::Adsb:
-        case comms::DiagnosticsReport::Group::Capture: return true;
+        case comms::DiagnosticsReport::Group::Capture:
+            return true;
     }
     return false;
 }
@@ -100,7 +107,8 @@ constexpr bool on_the_wire(power::ResetReason value) {
         case power::ResetReason::Lockup:
         case power::ResetReason::ChargerWake:
         case power::ResetReason::LowPowerWake:
-        case power::ResetReason::Debug: return true;
+        case power::ResetReason::Debug:
+            return true;
     }
     return false;
 }
@@ -117,7 +125,8 @@ constexpr bool on_the_wire(ports::GnssConfigStage value) {
         case ports::GnssConfigStage::Ready:
         case ports::GnssConfigStage::Degraded:
         case ports::GnssConfigStage::Probing:
-        case ports::GnssConfigStage::Resetting: return true;
+        case ports::GnssConfigStage::Resetting:
+            return true;
     }
     return false;
 }
@@ -130,7 +139,8 @@ constexpr bool on_the_wire(gnss::FixReject value) {
         case gnss::FixReject::MissingGga:
         case gnss::FixReject::Stale:
         case gnss::FixReject::NoDate:
-        case gnss::FixReject::Jump: return true;
+        case gnss::FixReject::Jump:
+            return true;
     }
     return false;
 }
@@ -140,7 +150,8 @@ constexpr bool on_the_wire(power::ChargeCondition value) {
         case power::ChargeCondition::Unknown:
         case power::ChargeCondition::Ok:
         case power::ChargeCondition::TooCold:
-        case power::ChargeCondition::TooHot: return true;
+        case power::ChargeCondition::TooHot:
+            return true;
     }
     return false;
 }
@@ -150,7 +161,8 @@ constexpr bool on_the_wire(dfu::ImageState value) {
         case dfu::ImageState::Confirmed:
         case dfu::ImageState::Probation:
         case dfu::ImageState::Reverted:
-        case dfu::ImageState::Refused: return true;
+        case dfu::ImageState::Refused:
+            return true;
     }
     return false;
 }
@@ -159,7 +171,8 @@ constexpr bool on_the_wire(settings::Fallback value) {
     switch (value) {
         case settings::Fallback::None:
         case settings::Fallback::Prior:
-        case settings::Fallback::Defaults: return true;
+        case settings::Fallback::Defaults:
+            return true;
     }
     return false;
 }
@@ -171,7 +184,8 @@ constexpr bool on_the_wire(dfu::HubImage value) {
         case dfu::HubImage::Corrupt:
         case dfu::HubImage::Unreadable:
         case dfu::HubImage::Writing:
-        case dfu::HubImage::Held: return true;
+        case dfu::HubImage::Held:
+            return true;
     }
     return false;
 }
@@ -180,7 +194,8 @@ constexpr bool on_the_wire(comms::ExportReference value) {
     switch (value) {
         case comms::ExportReference::None:
         case comms::ExportReference::Go:
-        case comms::ExportReference::Own: return true;
+        case comms::ExportReference::Own:
+            return true;
     }
     return false;
 }
@@ -191,8 +206,10 @@ constexpr bool on_the_wire(comms::BravoState value) {
         case comms::BravoState::Live:
         case comms::BravoState::LinkDown:
         case comms::BravoState::ReceiverDown:
-        case comms::BravoState::NoUtc: return true;
-        case comms::BravoState::Unpaired: return false;
+        case comms::BravoState::NoUtc:
+            return true;
+        case comms::BravoState::Unpaired:
+            return false;
     }
     return false;
 }
@@ -202,7 +219,8 @@ constexpr bool on_the_wire(gnss::Stage value) {
         case gnss::Stage::Silent:
         case gnss::Stage::Blind:
         case gnss::Stage::Solving:
-        case gnss::Stage::Fixed: return true;
+        case gnss::Stage::Fixed:
+            return true;
     }
     return false;
 }
@@ -211,7 +229,8 @@ constexpr bool on_the_wire(model::ClimbSource value) {
     switch (value) {
         case model::ClimbSource::Unknown:
         case model::ClimbSource::Gnss:
-        case model::ClimbSource::Barometric: return true;
+        case model::ClimbSource::Barometric:
+            return true;
     }
     return false;
 }
@@ -219,7 +238,8 @@ constexpr bool on_the_wire(model::ClimbSource value) {
 constexpr bool on_the_wire(dfu::Product value) {
     switch (value) {
         case dfu::Product::Go:
-        case dfu::Product::Bravo: return true;
+        case dfu::Product::Bravo:
+            return true;
     }
     return false;
 }
@@ -227,7 +247,8 @@ constexpr bool on_the_wire(dfu::Product value) {
 constexpr bool on_the_wire(identity::Variant value) {
     switch (value) {
         case identity::Variant::Standard:
-        case identity::Variant::Plus: return true;
+        case identity::Variant::Plus:
+            return true;
     }
     return false;
 }
@@ -235,8 +256,10 @@ constexpr bool on_the_wire(identity::Variant value) {
 constexpr bool on_the_wire(store::SectorOwner value) {
     switch (value) {
         case store::SectorOwner::Flights:
-        case store::SectorOwner::Diagnostics: return true;
-        case store::SectorOwner::None: return false;
+        case store::SectorOwner::Diagnostics:
+            return true;
+        case store::SectorOwner::None:
+            return false;
     }
     return false;
 }
@@ -246,7 +269,8 @@ constexpr bool on_the_wire(comms::CaptureProfile value) {
         case comms::CaptureProfile::Full:
         case comms::CaptureProfile::PowerRun:
         case comms::CaptureProfile::FlightRun:
-        case comms::CaptureProfile::Stop: return true;
+        case comms::CaptureProfile::Stop:
+            return true;
     }
     return false;
 }
@@ -257,7 +281,8 @@ constexpr bool on_the_wire(ports::StagedCheck value) {
         case ports::StagedCheck::Matched:
         case ports::StagedCheck::Damaged:
         case ports::StagedCheck::Unreadable:
-        case ports::StagedCheck::Undigested: return true;
+        case ports::StagedCheck::Undigested:
+            return true;
     }
     return false;
 }
@@ -270,7 +295,8 @@ constexpr bool on_the_wire(ports::SwapType value) {
         case ports::SwapType::Permanent:
         case ports::SwapType::Revert:
         case ports::SwapType::Fail:
-        case ports::SwapType::Panic: return true;
+        case ports::SwapType::Panic:
+            return true;
     }
     return false;
 }
@@ -283,7 +309,8 @@ constexpr bool on_the_wire(dfu::Proof value) {
         case dfu::Proof::GnssHeard:
         case dfu::Proof::HubBootable:
         case dfu::Proof::Proven:
-        case dfu::Proof::ConfirmFailed: return true;
+        case dfu::Proof::ConfirmFailed:
+            return true;
     }
     return false;
 }
@@ -295,8 +322,10 @@ constexpr bool on_the_wire(timing::NoTx value) {
         case timing::NoTx::Gnss:
         case timing::NoTx::Fix:
         case timing::NoTx::Utc:
-        case timing::NoTx::Pps: return true;
-        case timing::NoTx::None: return false;
+        case timing::NoTx::Pps:
+            return true;
+        case timing::NoTx::None:
+            return false;
     }
     return false;
 }

@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef SKYBLIP_SIMULATOR_WORLD_LINK_NAMES_H
 #define SKYBLIP_SIMULATOR_WORLD_LINK_NAMES_H
 
@@ -133,32 +134,62 @@ inline constexpr Value kFlightValues[] = {
 inline constexpr Enumeration kFlight{kFlightValues, 3};
 
 inline constexpr Value kPowerLevelValues[] = {
-    {"unknown", 0}, {"normal", 1}, {"critical", 2}, {"flat", 3}, {"low", 4},
+    {"unknown", 0},
+    {"normal", 1},
+    {"critical", 2},
+    {"flat", 3},
+    {"low", 4},
 };
 inline constexpr Enumeration kPowerLevel{kPowerLevelValues, 5};
 
 inline constexpr Value kGroupValues[] = {
-    {"system", 0}, {"radio", 1}, {"traffic", 2}, {"gnss", 3},
-    {"power", 4},  {"adsb", 5},  {"capture", 6},
+    {"system", 0},
+    {"radio", 1},
+    {"traffic", 2},
+    {"gnss", 3},
+    {"power", 4},
+    {"adsb", 5},
+    {"capture", 6},
 };
 inline constexpr Enumeration kGroup{kGroupValues, 7};
 
 inline constexpr Value kResetValues[] = {
-    {"unknown", 0},  {"power_on", 1}, {"pin", 2},          {"brownout", 3},       {"software", 4},
-    {"watchdog", 5}, {"lockup", 6},   {"charger_wake", 7}, {"low_power_wake", 8}, {"debug", 9},
+    {"unknown", 0},
+    {"power_on", 1},
+    {"pin", 2},
+    {"brownout", 3},
+    {"software", 4},
+    {"watchdog", 5},
+    {"lockup", 6},
+    {"charger_wake", 7},
+    {"low_power_wake", 8},
+    {"debug", 9},
 };
 inline constexpr Enumeration kReset{kResetValues, 10};
 
 inline constexpr Value kGnssConfigValues[] = {
-    {"idle", 0},     {"restarting", 1}, {"waking", 2},     {"identifying", 3},
-    {"sending", 4},  {"verifying", 5},  {"confirming", 6}, {"ready", 7},
-    {"degraded", 8}, {"probing", 9},    {"resetting", 10},
+    {"idle", 0},
+    {"restarting", 1},
+    {"waking", 2},
+    {"identifying", 3},
+    {"sending", 4},
+    {"verifying", 5},
+    {"confirming", 6},
+    {"ready", 7},
+    {"degraded", 8},
+    {"probing", 9},
+    {"resetting", 10},
 };
 inline constexpr Enumeration kGnssConfig{kGnssConfigValues, 11};
 
 inline constexpr Value kRejectValues[] = {
-    {"none", 0},  {"no_solution", 1}, {"missing_rmc", 2}, {"missing_gga", 3},
-    {"stale", 4}, {"no_date", 5},     {"jump", 6},
+    {"none", 0},
+    {"no_solution", 1},
+    {"missing_rmc", 2},
+    {"missing_gga", 3},
+    {"stale", 4},
+    {"no_date", 5},
+    {"jump", 6},
 };
 inline constexpr Enumeration kReject{kRejectValues, 7};
 
@@ -186,7 +217,12 @@ inline constexpr Value kSettingsFallbackValues[] = {
 inline constexpr Enumeration kSettingsFallback{kSettingsFallbackValues, 3};
 
 inline constexpr Value kHubImageValues[] = {
-    {"none", 0}, {"missing", 1}, {"corrupt", 2}, {"unreadable", 3}, {"writing", 4}, {"held", 5},
+    {"none", 0},
+    {"missing", 1},
+    {"corrupt", 2},
+    {"unreadable", 3},
+    {"writing", 4},
+    {"held", 5},
 };
 inline constexpr Enumeration kHubImage{kHubImageValues, 6};
 
@@ -198,7 +234,11 @@ inline constexpr Value kExportReferenceValues[] = {
 inline constexpr Enumeration kExportReference{kExportReferenceValues, 3};
 
 inline constexpr Value kBravoValues[] = {
-    {"waiting", 1}, {"live", 2}, {"link_down", 3}, {"receiver_down", 4}, {"no_utc", 5},
+    {"waiting", 1},
+    {"live", 2},
+    {"link_down", 3},
+    {"receiver_down", 4},
+    {"no_utc", 5},
 };
 inline constexpr Enumeration kBravo{kBravoValues, 5};
 
@@ -244,24 +284,43 @@ inline constexpr Value kCaptureProfileValues[] = {
 inline constexpr Enumeration kCaptureProfile{kCaptureProfileValues, 4};
 
 inline constexpr Value kStagedCheckValues[] = {
-    {"unchecked", 0}, {"matched", 1}, {"damaged", 2}, {"unreadable", 3}, {"undigested", 4},
+    {"unchecked", 0},
+    {"matched", 1},
+    {"damaged", 2},
+    {"unreadable", 3},
+    {"undigested", 4},
 };
 inline constexpr Enumeration kStagedCheck{kStagedCheckValues, 5};
 
 inline constexpr Value kSwapTypeValues[] = {
-    {"unknown", 0}, {"none", 1}, {"test", 2},  {"permanent", 3},
-    {"revert", 4},  {"fail", 5}, {"panic", 6},
+    {"unknown", 0},
+    {"none", 1},
+    {"test", 2},
+    {"permanent", 3},
+    {"revert", 4},
+    {"fail", 5},
+    {"panic", 6},
 };
 inline constexpr Enumeration kSwapType{kSwapTypeValues, 7};
 
 inline constexpr Value kProofValues[] = {
-    {"none", 0},         {"booted", 1}, {"started", 2},        {"gnss_heard", 3},
-    {"hub_bootable", 4}, {"proven", 5}, {"confirm_failed", 6},
+    {"none", 0},
+    {"booted", 1},
+    {"started", 2},
+    {"gnss_heard", 3},
+    {"hub_bootable", 4},
+    {"proven", 5},
+    {"confirm_failed", 6},
 };
 inline constexpr Enumeration kProof{kProofValues, 7};
 
 inline constexpr Value kNoTxValues[] = {
-    {"address", 1}, {"radio", 2}, {"gnss", 3}, {"fix", 4}, {"utc", 5}, {"pps", 6},
+    {"address", 1},
+    {"radio", 2},
+    {"gnss", 3},
+    {"fix", 4},
+    {"utc", 5},
+    {"pps", 6},
 };
 inline constexpr Enumeration kNoTx{kNoTxValues, 6};
 
@@ -693,8 +752,10 @@ inline constexpr Key kBrowsersKeys[] = {
 };
 
 inline constexpr Key kBrowserKeys[] = {
-    {"command", 0, Type::Enum, &kCommand, 0, false}, {"index", 1, Type::Unsigned, nullptr, 0, true},
-    {"count", 2, Type::Unsigned, nullptr, 0, true},  {"id", 3, Type::Bytes, nullptr, 8, false},
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"index", 1, Type::Unsigned, nullptr, 0, true},
+    {"count", 2, Type::Unsigned, nullptr, 0, true},
+    {"id", 3, Type::Bytes, nullptr, 8, false},
     {"label", 4, Type::Text, nullptr, 0, false},
 };
 

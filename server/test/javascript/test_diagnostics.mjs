@@ -84,10 +84,11 @@ function blipWrites(session, records) {
   return execFileSync('python3', ['-c', `
 import json, sys
 sys.path.insert(0, sys.argv[1])
+import blip_ndjson as ndjson
 import blip_records as records
 session = json.loads(sys.argv[2])
 raw = bytes.fromhex(sys.argv[3])
-sink = records.SessionSink("diagnostics", session, lambda line: sys.stdout.write(json.dumps(line) + "\\n"))
+sink = ndjson.SessionSink("diagnostics", session, lambda line: sys.stdout.write(json.dumps(line) + "\\n"))
 for record in records.decode_chunk("diagnostics", raw, session["session"], 0):
     sink.write(record)
 sink.finish(complete=True)

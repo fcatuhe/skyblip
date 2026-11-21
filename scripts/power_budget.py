@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-import blip_records as records  # noqa: E402
+import blip_ndjson as ndjson  # noqa: E402
 
 WRAP = 1 << 16
 
@@ -111,7 +111,7 @@ class Run:
 def read(path):
     runs = {}
     order = []
-    for line in records.read_ndjson(path):
+    for line in ndjson.read_ndjson(path):
         if line.get("log") not in (None, "diagnostics"):
             continue
         if line.get("store") not in (None, "diagnostics"):
@@ -122,7 +122,7 @@ def read(path):
         if number not in runs:
             runs[number] = Run(number)
             order.append(number)
-        if records.is_note(line):
+        if ndjson.is_note(line):
             runs[number].notes.append(line)
         elif "index" in line:
             runs[number].records.append(line)
@@ -291,9 +291,9 @@ def clock(seconds):
 
 def caveats(run, skipped, out):
     out("caveats")
-    for line in records.caveat_lines(run.notes, run.records):
+    for line in ndjson.caveat_lines(run.notes, run.records):
         out("  " + line)
-    for line in records.missing_index_lines(run.records):
+    for line in ndjson.missing_index_lines(run.records):
         out("  " + line)
     for bad in run.unreadable:
         out("  unreadable at index %d: %s" % (bad["index"], bad["error"]))

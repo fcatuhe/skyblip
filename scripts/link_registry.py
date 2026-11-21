@@ -4,10 +4,7 @@
     python3 scripts/link_registry.py
 """
 import json
-import os
 import pathlib
-import shutil
-import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -21,6 +18,7 @@ COMMAND_KEY = {"name": "command", "number": 0, "type": "enum", "enum": "command"
 TYPES = ("unsigned", "integer", "boolean", "text", "bytes", "unsigned_array", "enum")
 ENDPOINTS = ("config", "log", "peer")
 SENDERS = ("host", "unit", "both")
+CLANG_FORMAT_OFF = "// clang-format off"
 CPP_TYPES = {"unsigned": "Unsigned", "integer": "Integer", "boolean": "Boolean", "text": "Text",
              "bytes": "Bytes", "unsigned_array": "UnsignedArray", "enum": "Enum"}
 
@@ -102,7 +100,7 @@ def generated(registry):
 
 
 def firmware_header(registry):
-    lines = ["#ifndef SKYBLIP_CORE_COMMS_LINK_REGISTRY_H",
+    lines = [CLANG_FORMAT_OFF, "#ifndef SKYBLIP_CORE_COMMS_LINK_REGISTRY_H",
              "#define SKYBLIP_CORE_COMMS_LINK_REGISTRY_H", "", "#include <cstddef>",
              "#include <cstdint>", "",
              "namespace skyblip::link {", "",
@@ -159,7 +157,7 @@ def enum_class(name, values):
 
 
 def names_header(registry):
-    lines = ["#ifndef SKYBLIP_SIMULATOR_WORLD_LINK_NAMES_H",
+    lines = [CLANG_FORMAT_OFF, "#ifndef SKYBLIP_SIMULATOR_WORLD_LINK_NAMES_H",
              "#define SKYBLIP_SIMULATOR_WORLD_LINK_NAMES_H", "", "#include <cstdint>", "",
              "#include \"core/events/link.h\"", "", "namespace skyblip::simulator::link_names {", "",
              "enum class Type : uint8_t { %s };" % ", ".join(CPP_TYPES[kind] for kind in TYPES), "",
@@ -201,7 +199,7 @@ def names_header(registry):
 def mirrors_test(registry):
     mirrored = {name: enum for name, enum in registry["enums"].items() if "mirrors" in enum}
     headers = sorted({enum["mirrors"]["header"] for enum in mirrored.values()})
-    lines = ["#include <cstdint>", ""] + ["#include \"%s\"" % header for header in headers]
+    lines = [CLANG_FORMAT_OFF, "#include <cstdint>", ""] + ["#include \"%s\"" % header for header in headers]
     lines += ["", "#pragma GCC diagnostic error \"-Wswitch\"", "", "namespace skyblip {", "",
               "template <class Enumeration>", "constexpr uint32_t code(Enumeration value) {",
               "    return static_cast<uint32_t>(value);", "}", "", "namespace {", ""]
@@ -245,21 +243,6 @@ def undocumented(node):
     return node
 
 
-def written(registry, clang_format):
-    return {relative: formatted(relative, text, clang_format) if is_cpp(relative) else text
-            for relative, text in generated(registry).items()}
-
-
-def is_cpp(relative):
-    return pathlib.PurePath(relative).suffix in (".h", ".cpp")
-
-
-def formatted(relative, text, clang_format):
-    result = subprocess.run([clang_format, "--style=file", "--assume-filename=%s" % (ROOT / relative)],
-                            input=text, capture_output=True, text=True, check=True)
-    return result.stdout
-
-
 def stale(expected, read):
     return [relative for relative, text in expected.items() if read(relative) != text]
 
@@ -269,15 +252,8 @@ def committed(relative):
     return path.read_text(encoding="utf-8") if path.exists() else None
 
 
-def formatter():
-    found = os.environ.get("CLANG_FORMAT") or shutil.which("clang-format")
-    if found is None:
-        raise SystemExit("no clang-format: set CLANG_FORMAT, the C++ files are compared formatted")
-    return found
-
-
 def main():
-    for relative, text in written(load(), formatter()).items():
+    for relative, text in generated(load()).items():
         path = ROOT / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")

@@ -3,8 +3,8 @@
 
     python3 scripts/check_link_registry.py
 
-Every generated file must be byte for byte what scripts/link_registry.py writes, the C++
-after clang-format (CLANG_FORMAT names it). Every frame and key must carry a description.
+Every generated file must be byte for byte what scripts/link_registry.py writes. Every frame
+and key must carry a description.
 ConfigService::format_status in firmware/core/comms/config_reports.cpp must write the
 status frame as the registry gives it:
 
@@ -31,7 +31,7 @@ WRITER_TYPE = {"code": "enum", "boolean": "boolean", "unsigned": "unsigned",
 
 def main():
     registry = link_registry.load()
-    expected = link_registry.written(registry, link_registry.formatter())
+    expected = link_registry.generated(registry)
     broken = ["%s: differs from schemas/link.v1.json, run scripts/link_registry.py" % relative
               for relative in link_registry.stale(expected, link_registry.committed)]
     broken += ["schemas/link.v1.json: %s has no description" % name

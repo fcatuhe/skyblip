@@ -6,10 +6,12 @@ This directory holds the host tooling. The Python scripts run on the standard li
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| [`blip_ndjson.py`](blip_ndjson.py) | the NDJSON a fetch writes and `decode` reads: the session notes, the torn tail and the summary |
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
 | [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the press's verdict |
+| [`blip_fetch.py`](blip_fetch.py) | `blip.py fetch`: offload a store to NDJSON, resuming where a dead fetch stopped |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec, with the names `schemas/link.v1.json` gives its numbers |
-| [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
+| [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`. The C++ opens with `// clang-format off`, so the generator alone decides its layout |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build a board's drag-and-drop install image, refusing to write outside its factory bootloader window |
@@ -18,8 +20,8 @@ This directory holds the host tooling. The Python scripts run on the standard li
 | `make_wordmark.py` | rasterise the wordmark into `firmware/ui/widgets/wordmark.cpp` |
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones |
-| `radio_protocols.rb` | write the `PROTOCOLS.md` a production release carries: each product's protocol versions beside the specification each implements |
-| `release_notice.rb` | write the one `NOTICE.md` every release carries: the repository's `NOTICE.md` with `LICENSE` and the texts in `LICENSES/` appended |
+| `firmware_tree.rb` | print the firmware version `firmware/VERSION` holds (`version firmware`) or every product that declares a board, as JSON (`products firmware`), for the workflows and `build_image.sh` |
+| `release_files.rb` | stage a production release from its images, as `dev_release.rb` stages a pre-release: each product's images named after the version, the simulator, one `NOTICE.md` with every license text, `PROTOCOLS.md` and `SHA256SUMS` |
 | `upstream_pins.rb` | print a version `.github/pins/action.yml` pins for Dependabot (`version emscripten-core/emsdk`), or fail while the vendored doctest or the Zephyr in `firmware/west.yml` differs from its pin (`check`) |
 | `emsdk.rb` | print the pinned Emscripten version and its `emcc`, for `make browser`, installing them under `$EMSDK` or `~/.local/opt/emsdk` as needed |
 | `deploy_order.rb` | tell the server deploy whether production already runs a newer commit |
@@ -73,7 +75,7 @@ The device refuses a command while flying and a command from a second app while 
 
 ### Reading what came back
 
-`decode` prints one line per record, and `--type gnss` narrows it to one type. `--summary` prints the caveats first, then the counts per type, the span, every missing index and every `gap` record, where the ring refused records. The session and `torn` lines survive `--type`, so a filter cannot hide a hole.
+`decode` prints one line per record, and `--type gnss` narrows it to one type. It reads a gzipped capture, `.ndjson.gz`, as the file it holds, and so do `power_budget.py` and `link_budget.py`: the captures under `docs/bench/data/` are kept that way. `--summary` prints the caveats first, then the counts per type, the span, every missing index and every `gap` record, where the ring refused records. The session and `torn` lines survive `--type`, so a filter cannot hide a hole.
 
 ## power_budget.py
 
@@ -149,7 +151,7 @@ A third unit at the top of TXACC would sit 2 dB higher, and whether the assertio
 `blip_records.py` holds one table per record type, a tuple of `(name, codec)` pairs where a codec is a closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Add a record type as one entry in `DIAGNOSTICS_TYPES`, and a field as one pair. The tables match `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp` byte for byte, and take their names from `schemas/diagnostics_log.v1.schema.json`. `test_blip.py` holds them to the schema.
 
 ```python
-import blip_records as records
-for record in records.read_ndjson("capture.ndjson"):
+import blip_ndjson as ndjson
+for record in ndjson.read_ndjson("capture.ndjson"):
     ...
 ```

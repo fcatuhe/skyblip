@@ -26,24 +26,15 @@ jobs:
       - name: the tag is firmware/VERSION
         id: version
         run: |
-          file=firmware/VERSION
-          triple=$(sed -n \
-            -e 's/^VERSION_MAJOR *= *\([0-9]*\).*/\1/p' \
-            -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
-            -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
-          test "$GITHUB_REF_NAME" = "v$triple" \
-            || { echo "FAIL: tag $GITHUB_REF_NAME, but $file says $triple"; exit 1; }
-          echo "version=$triple" >> "$GITHUB_OUTPUT"
+          version=$(ruby scripts/firmware_tree.rb version firmware)
+          test "$GITHUB_REF_NAME" = "v$version" \
+            || { echo "FAIL: tag $GITHUB_REF_NAME, but firmware/VERSION says $version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      # A product is a directory whose CMakeLists declares its board, so products/common is none.
+      # A product is a directory whose CMakeLists declares its board (lib/firmware_tree.rb).
       - name: every product in the tree
         id: products
-        run: |
-          products=$(for cmake in firmware/products/*/CMakeLists.txt; do
-                       if grep -q '^skyblip_product_board(' "$cmake"; then basename "$(dirname "$cmake")"; fi
-                     done | jq -Rnc '[inputs]')
-          test "$products" != "[]" || { echo "FAIL: no directory in firmware/products/ declares a board"; exit 1; }
-          echo "products=$products" >> "$GITHUB_OUTPUT"
+        run: echo "products=$(ruby scripts/firmware_tree.rb products firmware)" >> "$GITHUB_OUTPUT"
 
       - name: the tag is on main
         run: |
@@ -79,9 +70,7 @@ jobs:
           no-cache: true
 
       - name: build the WASM and bundle the scenarios
-        run: |
-          make -C firmware browser
-          ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
+        run: make -C firmware browser
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -105,7 +94,6 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       PRODUCT: ${{ matrix.product }}
-      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
     steps:
       # The build number is the commit count, which a shallow clone gets wrong.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -135,22 +123,10 @@ jobs:
           SKYBLIP_CHANNEL: production
         run: scripts/build_local.sh "$PRODUCT"
 
-      # .signed.confirmed.bin stays behind, because the .uf2 carries it.
-      - name: name the files after the release
-        run: |
-          slug=${PRODUCT//_/-}
-          mkdir release
-          cp "builds/$slug.uf2" "release/$slug-$RELEASE_VERSION.uf2"
-          cp "builds/$slug.signed.bin" "release/$slug-$RELEASE_VERSION.signed.bin"
-          if [ -f "builds/$slug.full.signed.bin" ]; then
-            cp "builds/$slug.full.signed.bin" "release/$slug-$RELEASE_VERSION.full.signed.bin"
-          fi
-          cat "builds/$slug.version"
-
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image-${{ matrix.product }}
-          path: release/*
+          path: builds/*
           if-no-files-found: error
           retention-days: 1
 
@@ -177,50 +153,26 @@ jobs:
             firmware/protocols/*/version.h
             firmware/products/*/PROTOCOLS
             lib/radio_protocols.rb
+            lib/release_files.rb
             lib/release_notice.rb
-            scripts/radio_protocols.rb
-            scripts/release_notice.rb
+            scripts/release_files.rb
           sparse-checkout-cone-mode: false
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: image-*
           path: images
+          merge-multiple: true
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: browser-simulator
           path: simulator
 
-      # Only what this run's image jobs named goes into the release.
-      - name: every product's images, and nothing else
+      # Only the images of the products the tag job found go into the release (lib/release_files.rb).
+      - name: name the images after the release, and add the simulator, the notices, the radio protocols and the checksums
         run: |
-          expected=$(jq -r '.[] | "image-" + .' <<< "$PRODUCTS" | sort)
-          found=$(find images -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
-          test "$found" = "$expected" \
-            || { echo "FAIL: the artifacts are ${found//$'\n'/ }, where the products ask for ${expected//$'\n'/ }"; exit 1; }
-          mkdir -p release
-          for product in $(jq -r '.[]' <<< "$PRODUCTS"); do
-            slug=${product//_/-} artifact=images/image-$product
-            while IFS= read -r file; do
-              case "$file" in
-                "$slug-$RELEASE_VERSION.uf2"|"$slug-$RELEASE_VERSION.signed.bin"|"$slug-$RELEASE_VERSION.full.signed.bin") ;;
-                *) echo "FAIL: image-$product holds $file"; exit 1 ;;
-              esac
-            done < <(find "$artifact" -mindepth 1 -printf '%P\n')
-            for file in "$slug-$RELEASE_VERSION.uf2" "$slug-$RELEASE_VERSION.signed.bin"; do
-              test -f "$artifact/$file" || { echo "FAIL: image-$product has no $file"; exit 1; }
-            done
-            cp "$artifact"/* release/
-          done
-
-      - name: add the simulator, the notices, the radio protocols and the checksums
-        run: |
-          cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
-          cp simulator/scenarios.json release/
-          ruby scripts/release_notice.rb . > release/NOTICE.md
-          ruby scripts/radio_protocols.rb firmware "$RELEASE_VERSION" "$PRODUCTS" > release/PROTOCOLS.md
-          (cd release && sha256sum -- * > SHA256SUMS)
+          ruby scripts/release_files.rb images simulator . release "$RELEASE_VERSION" "$PRODUCTS"
           cat release/PROTOCOLS.md release/SHA256SUMS
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2

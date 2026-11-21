@@ -27,10 +27,16 @@ jobs:
       firmware: ${{ steps.filter.outputs.firmware }}
       glass: ${{ steps.filter.outputs.glass }}
       release: ${{ steps.filter.outputs.release }}
+      spec: ${{ steps.filter.outputs.spec }}
+      products: ${{ steps.products.outputs.products }}
       # main signs with the development key, and so does any branch run by hand: a pull request never.
       signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
     steps:
       - uses: actions/checkout@v7
+      # A product is a directory whose CMakeLists declares its board (lib/firmware_tree.rb).
+      - name: every product in the tree
+        id: products
+        run: echo "products=$(ruby scripts/firmware_tree.rb products firmware)" >> "$GITHUB_OUTPUT"
       - uses: dorny/paths-filter@v4
         id: filter
         with:
@@ -49,6 +55,11 @@ jobs:
               - 'firmware/**'
               - 'scripts/build_image.sh'
               - 'scripts/mkuf2.py'
+            # The specifications check_spec_markdown.py rereads, and its converter.
+            spec:
+              - 'docs/reference/**'
+              - 'scripts/layout_to_md.py'
+              - 'scripts/check_spec_markdown.py'
             # What bin/screenshots compiles and flies, and the pictures it writes.
             glass:
               - 'firmware/core/**'
@@ -76,8 +87,8 @@ jobs:
       CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
-      - name: install ccache, cmake and pdftotext
-        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake poppler-utils
+      - name: install ccache and cmake
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
@@ -91,7 +102,7 @@ jobs:
       - name: each radio protocol stack builds and passes alone
         working-directory: firmware
         run: make test-protocols CXX="ccache g++"
-      - name: the protocol stacks include nothing from skyBlip
+      - name: the protocol stacks include no host header
         run: python3 scripts/check_protocol_boundary.py
       - name: every frozen protocol stack matches its version.lock
         run: python3 scripts/check_protocol_freeze.py
@@ -101,16 +112,14 @@ jobs:
         run: python3 scripts/check_clauses.py
       # The suites read the markdown, so a word the conversion lost is a requirement nobody reads.
       - name: the ADS-L markdown carries every word of its PDF, in order
-        run: python3 scripts/check_spec_markdown.py
+        if: needs.changes.outputs.spec == 'true'
+        run: |
+          sudo apt-get install -yq --no-install-recommends poppler-utils
+          python3 scripts/check_spec_markdown.py
       - name: tuning constants read as the vocabulary asks
         run: python3 scripts/check_tuning_names.py
-      # The generated C++ is compared as clang-format writes it, so the check and its test need the lint job's pinned formatter.
-      - name: install the pinned clang-format
-        run: pip install --disable-pip-version-check "$(grep '^clang-format==' .github/lint/requirements.txt)"
       - name: the link registry is described, its generated files are current and the status writer matches it
         run: python3 scripts/check_link_registry.py
-      - name: no Nordic DFU package
-        run: python3 scripts/check_no_dfu_package.py
       - name: the browser simulator binds only what it exports
         run: python3 scripts/check_simulator_exports.py
       # Dependabot proposes doctest and Zephyr in .github/pins, and the copies in use have to follow.
@@ -256,15 +265,8 @@ jobs:
   product-image:
     strategy:
       fail-fast: false
-      # `slug` is spelled out because expressions have no replace().
       matrix:
-        include:
-          - product: skyblip_go
-            slug: skyblip-go
-            retention: 1
-          - product: skyblip_bravo
-            slug: skyblip-bravo
-            retention: 7
+        product: ${{ fromJSON(needs.changes.outputs.products) }}
     name: product image (${{ matrix.product }})
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -315,18 +317,19 @@ jobs:
       - name: build, sign and check the image
         run: scripts/build_image.sh ${{ matrix.product }} "$RUNNER_TEMP/signing.pem" "${PUBLIC_KEY:-}"
 
-      - name: name the artifact after its version
+      # The version record reads "<slug> <version> <commit> <channel>".
+      - name: name the artifact after the product and its version
         if: env.PUBLIC_KEY != ''
-        run: echo "IMAGE_VERSION=$(cut -d' ' -f2 firmware/build/out/${{ matrix.slug }}.version)" >> "$GITHUB_ENV"
+        run: echo "IMAGE_NAME=$(cut -d' ' -f1,2 --output-delimiter=- firmware/build/out/*.version)" >> "$GITHUB_ENV"
 
       - name: upload the development image
         if: env.PUBLIC_KEY != ''
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.slug }}-${{ env.IMAGE_VERSION }}
+          name: ${{ env.IMAGE_NAME }}
           path: firmware/build/out/*
           if-no-files-found: error
-          retention-days: ${{ matrix.retention }}
+          retention-days: 1
 
   simulator:
     name: browser simulator
@@ -344,7 +347,7 @@ jobs:
         with:
           version: ${{ steps.emsdk.outputs.version }}
           actions-cache-folder: emsdk-cache
-      - name: Build WASM
+      - name: Build the WASM and bundle the scenarios
         run: make -C firmware browser
       # The site shows the glass as the firmware draws it, so a change to the glass carries its pictures.
       - name: The device screenshots are the firmware's own
@@ -352,8 +355,6 @@ jobs:
         run: |
           server/bin/screenshots
           git diff --exit-code server/content_images
-      - name: Bundle simulator scenarios
-        run: ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
       - uses: actions/upload-artifact@v7
         with:
           name: browser-simulator
@@ -402,6 +403,7 @@ jobs:
             firmware/products/*/PROTOCOLS
             lib/dev_release.rb
             lib/radio_protocols.rb
+            lib/release_files.rb
             lib/release_notice.rb
             scripts/dev_release.rb
           sparse-checkout-cone-mode: false
