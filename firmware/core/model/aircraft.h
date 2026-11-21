@@ -34,18 +34,10 @@ constexpr char source_letter(Source source) {
 
 struct AircraftObservation {
     uint32_t address;
-    uint8_t address_mapping_table;
-    uint8_t aircraft_category;
-    uint8_t flight_state;
-    uint8_t emergency;
     int32_t latitude_1e7;
     int32_t longitude_1e7;
     int32_t altitude_m;
     int32_t pressure_altitude_ft;
-    int16_t climb_e8;
-    uint16_t speed_q;
-    uint16_t track_c9;
-    int16_t height_difference_ft;
     events::Stamp received;
     // INFO: fc 13sep26 the instant this position was true, on ports::Clock, for the geometry to
     // align
@@ -58,6 +50,16 @@ struct AircraftObservation {
     int32_t pressure_altitude_age_ms;
     int32_t height_difference_age_ms;
     int32_t flight_state_age_ms;
+    int32_t fix_age_ms{0};
+    int16_t climb_e8;
+    uint16_t speed_q;
+    uint16_t track_c9;
+    int16_t height_difference_ft;
+    int16_t turn_cdps{0};
+    uint8_t address_mapping_table;
+    uint8_t aircraft_category;
+    uint8_t flight_state;
+    uint8_t emergency;
     int8_t rssi_dbm;
     // INFO: fc 12nov26 the LR2021 levels only a FIFO read's newest frame, so ADS-B may carry none
     bool rssi_valid{true};
@@ -76,8 +78,6 @@ struct AircraftObservation {
     uint8_t gva;
     bool gva_valid;
     bool height_difference_valid;
-    int32_t fix_age_ms{0};
-    int16_t turn_cdps{0};
     bool turn_valid{false};
     bool stealth{false};
     bool no_track{false};
