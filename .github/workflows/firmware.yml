@@ -343,7 +343,7 @@ jobs:
         with:
           version: ${{ steps.emsdk.outputs.version }}
           actions-cache-folder: emsdk-cache
-      - name: Build WASM
+      - name: Build the WASM and bundle the scenarios
         run: make -C firmware browser
       # The site shows the glass as the firmware draws it, so a change to the glass carries its pictures.
       - name: The device screenshots are the firmware's own
@@ -351,8 +351,6 @@ jobs:
         run: |
           server/bin/screenshots
           git diff --exit-code server/content_images
-      - name: Bundle simulator scenarios
-        run: ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
       - uses: actions/upload-artifact@v7
         with:
           name: browser-simulator

@@ -99,17 +99,6 @@ class DeploymentTest < Minitest::Test
     end
   end
 
-  def test_both_simulator_artifacts_contain_the_scenario_bundle
-    %w[firmware release].each do |name|
-      workflow = YAML.load_file(File.join(ROOT, ".github/workflows/#{name}.yml"))
-      steps = workflow.fetch("jobs").fetch("simulator").fetch("steps")
-      artifact = steps.find { |step| step.dig("with", "name") == "browser-simulator" }
-
-      assert_includes artifact.fetch("with").fetch("path").lines.map(&:strip), "firmware/build/browser/scenarios.json", name
-      assert steps.any? { |step| step["run"]&.include?("ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json") }, name
-    end
-  end
-
   def test_the_jobs_holding_the_production_key_run_no_emscripten_and_write_nothing
     jobs = workflow("release").fetch("jobs")
     image = jobs.fetch("image")

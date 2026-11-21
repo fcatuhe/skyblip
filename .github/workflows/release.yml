@@ -70,9 +70,7 @@ jobs:
           no-cache: true
 
       - name: build the WASM and bundle the scenarios
-        run: |
-          make -C firmware browser
-          ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
+        run: make -C firmware browser
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
