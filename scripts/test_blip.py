@@ -21,7 +21,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-import blip  # noqa: E402
+import blip_ndjson as ndjson  # noqa: E402
 import blip_records as records  # noqa: E402
 
 SCHEMA = pathlib.Path(__file__).resolve().parents[1] / "schemas" / "diagnostics_log.v1.schema.json"
@@ -444,32 +444,32 @@ class Summaries(unittest.TestCase):
         ]
 
     def test_the_summary_counts_types_and_names_the_span(self):
-        lines = records.summarise(self.corpus())
+        lines = ndjson.summarise(self.corpus())
         self.assertIn("3 records", lines[0])
         self.assertTrue(any("gnss         2" in line for line in lines))
         self.assertTrue(any(line.startswith("span ") and line.endswith(", 60 s")
                             for line in lines))
 
     def test_a_gap_record_is_printed_in_full_because_a_hole_must_be_visible(self):
-        lines = records.summarise(self.corpus())
+        lines = ndjson.summarise(self.corpus())
         self.assertTrue(any("9 records dropped over 300 ms" in line for line in lines))
 
     def test_indices_missing_from_the_file_are_reported_as_missing(self):
-        self.assertIn("missing indices 2..3", records.summarise(self.corpus()))
+        self.assertIn("missing indices 2..3", ndjson.summarise(self.corpus()))
 
     def test_a_corpus_with_no_hole_says_so_rather_than_staying_quiet(self):
         whole = [{"index": 0, "type": "pps", "at_s": 10, "utc_dated": False}]
-        self.assertIn("no gap records and no unreadable slots", records.summarise(whole))
+        self.assertIn("no gap records and no unreadable slots", ndjson.summarise(whole))
 
     def test_a_boot_relative_record_is_not_rendered_as_a_1970_date(self):
-        text = records.stamp_of({"at_s": 42, "into_ms": 7, "utc_dated": False})
+        text = ndjson.stamp_of({"at_s": 42, "into_ms": 7, "utc_dated": False})
         self.assertEqual(text, "+42s 7ms")
 
     def test_the_summary_names_the_end_markers_own_account_of_the_session(self):
         corpus = self.corpus() + [
             {"index": 5, "type": "end", "at_s": 161, "utc_dated": True,
              "records": 4, "dropped": 9}]
-        lines = records.summarise(corpus)
+        lines = ndjson.summarise(corpus)
         self.assertTrue(any("4 records written, 9 dropped" in line for line in lines), lines)
 
 

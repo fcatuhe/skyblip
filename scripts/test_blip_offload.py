@@ -20,7 +20,9 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import blip  # noqa: E402
+import blip_fetch  # noqa: E402
 import blip_frames as frames  # noqa: E402
+import blip_ndjson as ndjson  # noqa: E402
 import blip_records as records  # noqa: E402
 
 RECORDS_PER_CHUNK = 19
@@ -154,7 +156,7 @@ def fetch(endpoint, out=None, **overrides):
     settings.update(overrides)
     args = argparse.Namespace(**settings)
     with contextlib.redirect_stdout(io.StringIO()) as printed:
-        asyncio.run(blip.fetch_session(endpoint, args, endpoint.session, 0, out))
+        asyncio.run(blip_fetch.fetch_session(endpoint, args, endpoint.session, 0, out))
     return printed.getvalue()
 
 
@@ -195,7 +197,7 @@ class WindowedRead(unittest.TestCase):
         self.assertEqual(endpoint.counts_asked, [8])
 
     def test_the_host_clamps_a_count_the_way_log_link_clamps_it(self):
-        self.assertEqual([blip.chunks_per_read(n) for n in (-3, 0, 1, 3, 8, 9, 4000)],
+        self.assertEqual([blip_fetch.chunks_per_read(n) for n in (-3, 0, 1, 3, 8, 9, 4000)],
                          [1, 1, 1, 3, 8, 8, 8])
 
     def test_every_record_arrives_once_and_in_the_order_it_was_written(self):
@@ -238,7 +240,7 @@ class TornTail(unittest.TestCase):
 
     def test_a_fetch_that_stopped_short_of_the_end_keeps_the_last_record_it_got(self):
         written = []
-        sink = records.SessionSink("diagnostics", session_reply(5, closed=False), written.append)
+        sink = ndjson.SessionSink("diagnostics", session_reply(5, closed=False), written.append)
         sink.write({"index": 0, "type": "pps"})
         sink.finish(complete=False)
         self.assertEqual([line["type"] for line in written], ["session", "pps"])
@@ -250,11 +252,11 @@ class TornTail(unittest.TestCase):
         self.assertIn("index 4 dropped", printed)
 
     def test_the_summary_names_the_dropped_tail(self):
-        summary = records.summarise(fetched_lines(LogEndpoint(5, closed=False)))
+        summary = ndjson.summarise(fetched_lines(LogEndpoint(5, closed=False)))
         self.assertTrue(any("index 4 dropped" in line for line in summary), summary)
 
     def test_the_summary_counts_only_the_records_and_not_the_notes(self):
-        summary = records.summarise(fetched_lines(LogEndpoint(5, closed=False)))
+        summary = ndjson.summarise(fetched_lines(LogEndpoint(5, closed=False)))
         self.assertIn("4 records", summary)
 
     def test_a_closed_session_ends_with_the_end_marker_and_keeps_it(self):
@@ -269,7 +271,7 @@ class TornTail(unittest.TestCase):
 
     def test_the_summary_names_the_devices_own_account_from_the_end_marker(self):
         endpoint = LogEndpoint(5, slots=slots_closed_with_end(5, dropped=2))
-        summary = records.summarise(fetched_lines(endpoint))
+        summary = ndjson.summarise(fetched_lines(endpoint))
         self.assertTrue(any("5 records written, 2 dropped" in line for line in summary), summary)
 
     def test_a_dropped_tail_is_not_where_the_next_fetch_resumes(self):
@@ -278,7 +280,7 @@ class TornTail(unittest.TestCase):
             out = io.StringIO()
             fetch(LogEndpoint(5, closed=False), out)
             path.write_text(out.getvalue(), encoding="utf-8")
-            self.assertEqual(records.last_kept(str(path))["index"], 3)
+            self.assertEqual(ndjson.last_kept(str(path))["index"], 3)
 
 
 LINK_TYPE = 12
@@ -295,12 +297,12 @@ def fetch_into(endpoint, path):
     args = argparse.Namespace(log=endpoint.log, session=None, all=True, list=False, out=str(path),
                               restart=False, window=DEVICE_CHUNKS_MAX, timeout=1.0)
     with contextlib.redirect_stdout(io.StringIO()) as printed:
-        asyncio.run(blip.fetch_log(endpoint, args))
+        asyncio.run(blip_fetch.fetch_log(endpoint, args))
     return printed.getvalue()
 
 
 def kept_indices(path):
-    return [line["index"] for line in records.read_ndjson(str(path)) if not records.is_note(line)]
+    return [line["index"] for line in ndjson.read_ndjson(str(path)) if not ndjson.is_note(line)]
 
 
 class ResumedFetch(unittest.TestCase):
@@ -317,7 +319,7 @@ class ResumedFetch(unittest.TestCase):
             path = pathlib.Path(directory) / "capture.ndjson"
             fetch_into(LogEndpoint(5, closed=False), path)
             fetch_into(LogEndpoint(9, closed=False), path)
-            summary = records.summarise(list(records.read_ndjson(str(path))))
+            summary = ndjson.summarise(list(ndjson.read_ndjson(str(path))))
         self.assertFalse(any("index 4 dropped" in line for line in summary), summary)
         self.assertTrue(any("index 8 dropped" in line for line in summary), summary)
 
@@ -384,13 +386,13 @@ class RecordingSession(unittest.TestCase):
         self.assertEqual(of_type(lines, "torn"), [])
 
     def test_the_listing_says_recording_rather_than_power_cut(self):
-        text = records.session_text(session_reply(24, closed=False, recording=True))
+        text = ndjson.session_text(session_reply(24, closed=False, recording=True))
         self.assertEqual(text, "session 1700000000  24 records  recording")
 
     def test_the_header_line_and_the_summary_say_the_session_was_still_recording(self):
         lines = fetched_lines(LogEndpoint(5, closed=False, recording=True))
         self.assertTrue(of_type(lines, "session")[0]["recording"])
-        summary = records.summarise(lines)
+        summary = ndjson.summarise(lines)
         self.assertIn("session 1700000000: still recording when fetched", summary)
         self.assertFalse(any("stopped without ending it" in line for line in summary), summary)
 
@@ -425,7 +427,7 @@ class RotatedSession(unittest.TestCase):
         self.assertIn("indices 152..169 recycled before they were read", printed)
 
     def test_the_listing_says_where_a_truncated_session_starts(self):
-        text = records.session_text(session_reply(300, truncated=True, first=SLOTS_PER_SECTOR))
+        text = ndjson.session_text(session_reply(300, truncated=True, first=SLOTS_PER_SECTOR))
         self.assertEqual(text, "session 1700000000  300 records from index 170  closed, truncated")
 
 
@@ -453,13 +455,13 @@ class TruncatedSession(unittest.TestCase):
         self.assertFalse(self.header_of()["truncated"])
 
     def test_the_summary_says_a_truncated_session_has_no_boot_and_no_config_record(self):
-        summary = records.summarise([records.session_note(
+        summary = ndjson.summarise([ndjson.session_note(
             "diagnostics", session_reply(24, truncated=True))])
         self.assertTrue(any("truncated" in line and "no boot" in line for line in summary),
                         summary)
 
     def test_the_listing_marks_a_truncated_session_that_was_also_cut_short(self):
-        text = records.session_text(session_reply(24, closed=False, truncated=True))
+        text = ndjson.session_text(session_reply(24, closed=False, truncated=True))
         self.assertEqual(text, "session 1700000000  24 records  power cut, truncated")
 
     def test_a_type_filter_does_not_hide_the_caveats_the_corpus_came_with(self):

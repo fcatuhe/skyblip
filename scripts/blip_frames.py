@@ -164,6 +164,23 @@ def more_follows(frame):
     return frame.get("more") is True
 
 
+SMALL_MTU = ("the reply did not fit the link: this computer kept Bluetooth's smallest packet size, "
+             "20 bytes. Connect again, and if it happens again, update the computer's Bluetooth "
+             "or use another computer")
+
+
+def refuse_if_nacked(frame):
+    if refused_as_too_wide(frame):
+        raise SystemExit("device refused: small_mtu, %s" % SMALL_MTU)
+    if frame.get("acknowledge") is False:
+        raise SystemExit("device refused: %s" % frame.get("reason", "no reason given"))
+    return frame
+
+
+def refused_as_too_wide(frame):
+    return frame.get("acknowledge") is False and frame.get("reason") == "small_mtu"
+
+
 def printable(frame):
     return json.dumps({name: value.hex() if isinstance(value, bytes) else value
                        for name, value in frame.items()}, separators=(",", ":"))

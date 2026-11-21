@@ -6,8 +6,10 @@ This directory holds the host tooling. The Python scripts run on the standard li
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| [`blip_ndjson.py`](blip_ndjson.py) | the NDJSON a fetch writes and `decode` reads: the session notes, the torn tail and the summary |
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
 | [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the press's verdict |
+| [`blip_fetch.py`](blip_fetch.py) | `blip.py fetch`: offload a store to NDJSON, resuming where a dead fetch stopped |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec, with the names `schemas/link.v1.json` gives its numbers |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`. The C++ opens with `// clang-format off`, so the generator alone decides its layout |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
@@ -149,7 +151,7 @@ A third unit at the top of TXACC would sit 2 dB higher, and whether the assertio
 `blip_records.py` holds one table per record type, a tuple of `(name, codec)` pairs where a codec is a closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Add a record type as one entry in `DIAGNOSTICS_TYPES`, and a field as one pair. The tables match `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp` byte for byte, and take their names from `schemas/diagnostics_log.v1.schema.json`. `test_blip.py` holds them to the schema.
 
 ```python
-import blip_records as records
-for record in records.read_ndjson("capture.ndjson"):
+import blip_ndjson as ndjson
+for record in ndjson.read_ndjson("capture.ndjson"):
     ...
 ```

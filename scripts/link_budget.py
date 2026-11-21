@@ -21,7 +21,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-import blip_records as records  # noqa: E402
+import blip_ndjson as ndjson  # noqa: E402
 import power_budget  # noqa: E402
 
 LIMIT_ERP_DBM = 14.0
@@ -187,7 +187,7 @@ def caveats(sides, out):
     out("caveats")
     for side in sides:
         for run in side.runs:
-            lines = records.caveat_lines(run.notes, run.records) + records.missing_index_lines(run.records)
+            lines = ndjson.caveat_lines(run.notes, run.records) + ndjson.missing_index_lines(run.records)
             lines += ["unreadable at index %d: %s" % (record["index"], record["error"])
                       for record in run.unreadable]
             lines += ["a gap record: %d records the ring had to refuse, over %.1f s"
