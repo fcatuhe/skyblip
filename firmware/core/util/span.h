@@ -1,4 +1,4 @@
-// INFO: fc 20nov26 std::span is C++20 and the tree builds as C++17
+// INFO: fc 21nov26 kept over std::span, which measured 96 B more flash on the Go image
 #ifndef SKYBLIP_CORE_UTIL_SPAN_H
 #define SKYBLIP_CORE_UTIL_SPAN_H
 

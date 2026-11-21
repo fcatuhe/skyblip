@@ -48,7 +48,7 @@ class Check(unittest.TestCase):
 
 def compiled(source):
     firmware = link_registry.ROOT / "firmware"
-    return subprocess.run([os.environ.get("CXX", "c++"), "-std=c++17", "-fsyntax-only",
+    return subprocess.run([os.environ.get("CXX", "c++"), "-std=c++20", "-fsyntax-only",
                            "-I%s" % firmware, "-I%s" % (firmware / "vendor"), "-x", "c++", "-"],
                           input=source, capture_output=True, text=True)
 
