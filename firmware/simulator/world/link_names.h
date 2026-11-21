@@ -539,6 +539,7 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"receiver_recoveries", 92, Type::Unsigned, nullptr, 0, false},
     {"link_drop_reason", 94, Type::Unsigned, nullptr, 0, false},
     {"no_tx", 95, Type::Enum, &kNoTx, 0, false},
+    {"irq_armed", 96, Type::Boolean, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -823,8 +824,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 94},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 94},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 95},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 95},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

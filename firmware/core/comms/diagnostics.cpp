@@ -194,6 +194,8 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.adsb_mode_s_altitude);
         add(Group::Adsb, link::diagnostics_key::kUnmatched, Kind::Unsigned,
             diagnostics.adsb_unmatched);
+        add(Group::Adsb, link::diagnostics_key::kIrqArmed, Kind::Boolean,
+            receiver.irq_armed ? 1 : 0);
     }
 
     if (capture && diagnostics.capture_available) add_capture(diagnostics);

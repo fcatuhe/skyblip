@@ -76,6 +76,8 @@ When the sleep fails, the Zephyr adapter leaves `parked()` false, and the shutdo
 
 The Zephyr adapter's thread is cooperative, so nothing preempts it between an IRQ and the FIFO read that empties nine frames' worth of FIFO in a millisecond. So it must never spin long on BUSY. The driver polls BUSY every 10 us for the first millisecond, since a command frees it in microseconds, and then every 1 ms. A 32768 Hz tick is 31 us, so the 1 ms steps sleep the thread and let the Bluetooth host and the service loop run.
 
+The thread sleeps on the IRQ's rising edge. If the GPIO driver refuses the trigger, at start or when a reset re-arms it, the thread polls the part every 200 us instead (`kFallbackPollUs`), up to 5000 wakes a second, and the diagnostics' `irq_armed` reads false.
+
 The driver leaves out RadioLib's DC-DC workaround, `setDCDCworkaround()` (`67d7121`, #1864), as SoftRF does: neither selects the DC-DC converter, and SetRegMode's default is SIMO_OFF, the LDOs (DS 6.3.18).
 
 ## Errors
