@@ -317,7 +317,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kClimbFigureStepFpm` | 10 | feet per minute | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
 | `kUptimeClockWrapS` | 10000 | seconds | - | four digits of seconds, so a clock with no UTC behind it still fits its column |
 | `kLevelM` | 60 | metres | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
-| `kLeaderStepMs` | 5000 (5 s) | milliseconds | - | - |
+| `kLeaderStepS` | 5 | seconds | - | - |
 | `kVsiFullScaleFpm` | 2000 | feet per minute | - | - |
 | `kVsiKneeFpm` | 1000 | feet per minute | - | - |
 | `kVsiMarkFpm` | 500 | feet per minute | - | - |
