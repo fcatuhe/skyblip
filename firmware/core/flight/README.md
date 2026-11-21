@@ -35,7 +35,7 @@ The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpol
 | what `parts::Spa06` compensates to (DS 4.6.1, Q16) | 1/65536 Pa | 0.001 mm |
 | `pressure_to_altitude_mm` | 1 mPa | 0.008 mm |
 | table interpolation against the closed form | | under 25 cm, a bias, not jitter |
-| `climb_e8_from_mm_s`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
+| `to_climb_e8`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
 
 A whole pascal would add 17 ft/min of invented rate over a one-second window. The rate is measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`).
 

@@ -22,6 +22,16 @@
 
 namespace skyblip::simulator {
 
+constexpr int64_t kIsaLapseDeciCelsiusPerKilometre = 65;
+constexpr int64_t kMillimetresPerKilometre = 1000000;
+
+inline int16_t isa_temperature_dc(int32_t altitude_mm) {
+    const int64_t drop = wire::divide_rounded<int64_t>(
+        static_cast<int64_t>(altitude_mm) * kIsaLapseDeciCelsiusPerKilometre,
+        kMillimetresPerKilometre);
+    return static_cast<int16_t>(flight::kIsaSeaLevelDeciCelsius - drop);
+}
+
 struct VirtualAircraft {
     bool used{false};
     // INFO: fc 20nov26 AdslUplink is no fit: this device hears such an aircraft only through a
@@ -190,7 +200,7 @@ class World : public Sky {
         const int32_t altitude_msl_mm = gnss().altitude_mm() - gnss().geoid_separation_m * 1000;
         barometer.set_pressure_mpa(flight::altitude_mm_to_pressure_mpa(
             altitude_msl_mm + flight::pressure_to_altitude_mm(airmass_qnh_pa_ * 1000)));
-        barometer.set_temperature_dc(flight::isa_temperature_dc(altitude_msl_mm));
+        barometer.set_temperature_dc(isa_temperature_dc(altitude_msl_mm));
     }
     // INFO: fc 14nov26 a Bravo aboard hears this sky's 1090 MHz, and a sky has one such receiver
     void squitter_to(models::Lr2021& radio) {

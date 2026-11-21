@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/flight/atmosphere.h"
+#include "core/units/units.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip;
@@ -14,6 +15,8 @@ namespace {
 double isa_altitude_cm(double pressure_pa) {
     return 44330.77 * (1.0 - std::pow(pressure_pa / 101325.0, 0.190263)) * 100.0;
 }
+
+int16_t climb_e8(int32_t climb_mm_s) { return to_climb_e8(MillimetresPerSecond(climb_mm_s)).value; }
 
 }  // namespace
 
@@ -45,10 +48,10 @@ TEST_CASE("atmosphere: out-of-range pressure clamps instead of wrapping") {
 }
 
 TEST_CASE("atmosphere: the inverse round-trips through the forward curve") {
-    for (int32_t altitude_cm = -50000; altitude_cm <= 900000; altitude_cm += 4321) {
-        const uint32_t pressure_pa = flight::altitude_cm_to_pressure_pa(altitude_cm);
-        // Bisection lands within one pascal, which is well under a metre.
-        CHECK(std::abs(flight::pressure_to_altitude_cm(pressure_pa) - altitude_cm) < 100);
+    for (int32_t altitude_mm = -500000; altitude_mm <= 9000000; altitude_mm += 43210) {
+        const uint32_t pressure_mpa = flight::altitude_mm_to_pressure_mpa(altitude_mm);
+        // Bisection lands within one millipascal, which is well under a millimetre.
+        CHECK(std::abs(flight::pressure_to_altitude_mm(pressure_mpa) - altitude_mm) <= 1);
     }
 }
 
@@ -70,10 +73,10 @@ TEST_CASE("atmosphere: a rate finer than the ADS-L unit survives the measurement
     int32_t climb_mm_s = 0;
     REQUIRE(flight::climb_mm_s_from_altitude(1000120, 1000000, 1000, climb_mm_s));
     CHECK(climb_mm_s == 120);
-    CHECK(flight::climb_e8_from_mm_s(climb_mm_s) == 1);
-    CHECK(flight::climb_e8_from_mm_s(-climb_mm_s) == -1);
-    CHECK(flight::climb_e8_from_mm_s(5000) == 40);
-    CHECK(flight::climb_e8_from_mm_s(0) == 0);
+    CHECK(climb_e8(climb_mm_s) == 1);
+    CHECK(climb_e8(-climb_mm_s) == -1);
+    CHECK(climb_e8(5000) == 40);
+    CHECK(climb_e8(0) == 0);
 }
 
 TEST_CASE("atmosphere: an unusable window is refused, not guessed at") {
@@ -87,9 +90,9 @@ TEST_CASE("atmosphere: an unusable window is refused, not guessed at") {
 TEST_CASE("atmosphere: an absurd rate saturates instead of overflowing int16") {
     int32_t climb_mm_s = 0;
     REQUIRE(flight::climb_mm_s_from_altitude(9000000, -500000, 500, climb_mm_s));
-    CHECK(flight::climb_e8_from_mm_s(climb_mm_s) == 32767);
+    CHECK(climb_e8(climb_mm_s) == 32767);
     REQUIRE(flight::climb_mm_s_from_altitude(-500000, 9000000, 500, climb_mm_s));
-    CHECK(flight::climb_e8_from_mm_s(climb_mm_s) == -32768);
+    CHECK(climb_e8(climb_mm_s) == -32768);
 }
 
 TEST_CASE("atmosphere: a real climb through the table reads back as its rate") {
@@ -108,12 +111,4 @@ TEST_CASE("atmosphere: a pascal is centimetres of altitude, so the curve is walk
     // 8.31 cm a pascal at sea level, and the interpolation rounds to the millimetre.
     CHECK(flight::pressure_to_altitude_mm((flight::kIsaSeaLevelPa - 1) * 1000) - sea == 84);
     CHECK(sea - flight::pressure_to_altitude_mm(flight::kIsaSeaLevelPa * 1000 + 1000) == 83);
-}
-
-TEST_CASE("atmosphere: the ISA temperature falls 6.5 C every kilometre from 15 C at the sea") {
-    CHECK(flight::isa_temperature_dc(0) == flight::kIsaSeaLevelDeciCelsius);
-    CHECK(flight::isa_temperature_dc(1000000) == 85);
-    CHECK(flight::isa_temperature_dc(3000000) == -45);
-    // Below the sea the air is warmer, and a 500 m mine shaft is 3.25 C of it.
-    CHECK(flight::isa_temperature_dc(-500000) == 183);
 }
