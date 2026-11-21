@@ -12,6 +12,7 @@ class KeyValueStore : public ports::KeyValueStore {
     bool ready() const override { return !refuse_mount; }
 
     Status read(const char* key, uint8_t* out, size_t capacity, size_t& out_bytes) override {
+        if (broken) return Status::Down;
         for (auto& entry : entries_)
             if (entry.used && entry.key == key) {
                 if (entry.bytes > capacity) return Status::OutOfRange;
@@ -23,6 +24,7 @@ class KeyValueStore : public ports::KeyValueStore {
     }
 
     Status write(const char* key, const uint8_t* data, size_t bytes) override {
+        if (broken) return Status::Down;
         if (refuse_writes) return Status::Full;
         Entry* slot = nullptr;
         for (auto& entry : entries_)
@@ -47,8 +49,11 @@ class KeyValueStore : public ports::KeyValueStore {
     uint32_t writes() const { return writes_; }
     bool refuse_writes{false};
     bool refuse_mount{false};
+    // INFO: fc 21nov26 mounted, then every read, write and erase fails, as NVS answers -EIO
+    bool broken{false};
 
     Status erase(const char* key) override {
+        if (broken) return Status::Down;
         for (auto& entry : entries_)
             if (entry.used && entry.key == key) entry.used = false;
         return Status::Ok;
