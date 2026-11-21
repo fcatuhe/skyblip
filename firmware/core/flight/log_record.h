@@ -106,7 +106,10 @@ struct LogEvent {
 
 LogRecord log_record_from(const model::Ownship& own);
 
-void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* out);
+// INFO: fc 21nov26 a fix's bytes 2-21 carry no time, so the pre-takeoff ring holds them unbased
+constexpr uint32_t kLogFixBodyBytes = 20;
+void encode_log_fix_body(const LogRecord& record, uint8_t* body);
+void seal_log_fix(const uint8_t* body, uint32_t utc_s, uint32_t base_utc_s, uint8_t* out);
 
 // INFO: fc 20nov26 Empty when erased and Crc when torn, so a torn record never becomes a position
 Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out);

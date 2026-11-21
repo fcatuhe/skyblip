@@ -102,9 +102,7 @@ flight::LogStatus FlightLogService::status_now() const {
 // INFO: fc 20sep26 the record leaves the ring once flash has it, so a refused write loses nothing
 void FlightLogService::drain(uint32_t now_ms) {
     if (!drain_events(now_ms)) return;
-    flight::LogRecord record{};
-    while (session_.peek(record)) {
-        flight::encode_log_record(record, flights_.base_session(), scratch_);
+    while (session_.peek(flights_.base_session(), scratch_)) {
         if (flights_.append(scratch_, now_ms) != Append::Ok) break;
         session_.commit();
     }

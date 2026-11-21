@@ -7,6 +7,7 @@
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
 #include "test/support/half_second_feed.h"
+#include "test/support/log_record_write.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;

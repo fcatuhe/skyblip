@@ -8,6 +8,7 @@
 #include "core/model/ownship.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
+#include "test/support/log_record_write.h"
 
 using namespace skyblip;
 
@@ -58,6 +59,13 @@ model::Ownship parked(uint32_t utc_s) {
     model::Ownship own = flying(utc_s, 0);
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     return own;
+}
+
+bool peek_record(flight::LogSession& session, flight::LogRecord& out) {
+    uint8_t raw[flight::kLogRecordBytes];
+    if (!session.peek(kBaseUtcS, raw)) return false;
+    REQUIRE(flight::decode_log_record(raw, kBaseUtcS, out) == Status::Ok);
+    return true;
 }
 
 }  // namespace
@@ -189,7 +197,7 @@ TEST_CASE("log session: on the ground the ring is a holding pen and not a queue"
     // Nothing may be written out: this is the whole difference between a device
     // that keeps the last minute against a takeoff and a device that
     // fills its partition sitting in a trailer.
-    CHECK_FALSE(session.peek(out));
+    CHECK_FALSE(peek_record(session, out));
 }
 
 TEST_CASE("log session: a record a second, the rate ADS-L reports an aircraft in flight at" *
@@ -197,7 +205,7 @@ TEST_CASE("log session: a record a second, the rate ADS-L reports an aircraft in
     flight::LogSession session;
     session.update(flying(kBaseUtcS, 50000), false, 0);
     flight::LogRecord drained{};
-    while (session.peek(drained)) session.commit();
+    while (peek_record(session, drained)) session.commit();
 
     CHECK(session.update(flying(kBaseUtcS, 50000), false, 500) == flight::LogAction::Idle);
     CHECK(session.update(flying(kBaseUtcS, 50000), false, 999) == flight::LogAction::Idle);
@@ -216,7 +224,7 @@ TEST_CASE("log session: the record cadence spans the 49.7-day wrap") {
     const uint32_t before = 0xFFFFFF00u;  // 256 ms short of the wrap
     session.update(flying(kBaseUtcS, 50000), false, before);
     flight::LogRecord drained{};
-    while (session.peek(drained)) session.commit();
+    while (peek_record(session, drained)) session.commit();
 
     CHECK(session.update(flying(kBaseUtcS, 50000), false, before + 500u) ==
           flight::LogAction::Idle);
@@ -252,7 +260,7 @@ TEST_CASE("log session: the file opens before the criterion agreed, so the roll 
     CHECK(session.queued() == flight::kLogPreTakeoffRecords);
 
     flight::LogRecord first{};
-    REQUIRE(session.peek(first));
+    REQUIRE(peek_record(session, first));
     session.commit();
     CHECK(first.utc_s == kBaseUtcS + 1);
     CHECK(first.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
@@ -265,12 +273,12 @@ TEST_CASE("log session: a landing closes the session with a record that says so"
     REQUIRE(session.update(flying(kBaseUtcS, 50000), false, now_ms) ==
             flight::LogAction::OpenSession);
     flight::LogRecord drained{};
-    while (session.peek(drained)) session.commit();
+    while (peek_record(session, drained)) session.commit();
 
     now_ms += 4000;
     CHECK(session.update(parked(kBaseUtcS + 4), false, now_ms) == flight::LogAction::CloseSession);
     CHECK_FALSE(session.recording());
-    REQUIRE(session.peek(drained));
+    REQUIRE(peek_record(session, drained));
     session.commit();
     CHECK(drained.session_end);
     CHECK(drained.utc_s == kBaseUtcS + 4);
@@ -285,7 +293,7 @@ TEST_CASE("log session: the landing record stays the last one while the writer i
     REQUIRE(session.update(flying(kBaseUtcS, 50000), false, now_ms) ==
             flight::LogAction::OpenSession);
     flight::LogRecord drained{};
-    while (session.peek(drained)) session.commit();
+    while (peek_record(session, drained)) session.commit();
 
     now_ms += 4000;
     REQUIRE(session.update(parked(kBaseUtcS + 4), false, now_ms) ==
@@ -297,10 +305,10 @@ TEST_CASE("log session: the landing record stays the last one while the writer i
               flight::LogAction::Idle);
     CHECK(session.queued() == 1);
 
-    REQUIRE(session.peek(drained));
+    REQUIRE(peek_record(session, drained));
     session.commit();
     CHECK(drained.session_end);
-    CHECK_FALSE(session.peek(drained));
+    CHECK_FALSE(peek_record(session, drained));
     CHECK_FALSE(session.closing());
 }
 
@@ -332,14 +340,40 @@ TEST_CASE("log session: a record peeked and not committed is still in the ring")
     flight::LogSession session;
     REQUIRE(session.update(flying(kBaseUtcS, 50000), false, 0) == flight::LogAction::OpenSession);
     flight::LogRecord out{};
-    REQUIRE(session.peek(out));
+    REQUIRE(peek_record(session, out));
     CHECK(session.queued() == 1);
-    REQUIRE(session.peek(out));
+    REQUIRE(peek_record(session, out));
     CHECK(out.utc_s == kBaseUtcS);
 
     session.commit();
     CHECK(session.queued() == 0);
-    CHECK_FALSE(session.peek(out));
+    CHECK_FALSE(peek_record(session, out));
+}
+
+// The ring holds a fix before its session's base second exists, and must still hand the writer
+// the bytes the codec writes once that base is known.
+TEST_CASE("log session: a held fix leaves the ring as the bytes the codec writes") {
+    flight::LogSession session;
+    uint32_t now_ms = 0;
+    for (uint32_t i = 0; i < 3; i++, now_ms += 1000)
+        session.update(parked(kBaseUtcS + i), false, now_ms);
+    model::Ownship own = flying(kBaseUtcS + 3, 50000);
+    own.climb_valid = true;
+    own.climb_mm_s = -1500;
+    own.pps_locked = true;
+    own.geoid_measured = true;
+    REQUIRE(session.update(own, false, now_ms) == flight::LogAction::OpenSession);
+
+    for (uint32_t i = 0; i < 4; i++) {
+        const model::Ownship expected_own = i < 3 ? parked(kBaseUtcS + i) : own;
+        uint8_t expected[flight::kLogRecordBytes];
+        flight::encode_log_record(flight::log_record_from(expected_own), session.session_id(),
+                                  expected);
+        uint8_t held[flight::kLogRecordBytes];
+        REQUIRE(session.peek(session.session_id(), held));
+        CHECK(std::memcmp(held, expected, sizeof(held)) == 0);
+        session.commit();
+    }
 }
 
 // A landing closes the file: what the aircraft did afterwards belongs to no flight.

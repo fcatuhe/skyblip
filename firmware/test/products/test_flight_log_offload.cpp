@@ -9,6 +9,7 @@
 #include "doctest/doctest.h"
 #include "ports/link.h"
 #include "test/support/log_event_read.h"
+#include "test/support/log_record_write.h"
 #include "test/support/log_transfer.h"
 #include "test/support/product_rig.h"
 #include "test/support/rig_moves.h"
