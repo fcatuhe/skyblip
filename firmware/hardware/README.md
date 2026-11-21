@@ -55,7 +55,7 @@ Meshtastic's LittleFS sits at 0xED000..0xF4000 (`meshtastic/Adafruit_nRF52_Ardui
 
 The threshold is 2.8 V, the highest POFCON offers for VDD (nRF52840 PS v1.8 section 5.1.3, POFCON.THRESHOLD). The earlier the warning, the more time it gives, and a threshold under 2.8 V would warn after the write it was meant to prevent. Everything above it is the divider's business, since our cutoff is a 3.2 V cell. It is below any healthy cell and above the SoC's 1.7 V brownout floor. The bench must confirm that a 14 dBm burst on a 3.4 V cell leaves VDD above 2.8 V. If it does not, fix the decoupling, not the threshold. The repository holds no T-Echo Plus schematic, so whether VDD is the cell or a regulated 3.3 V rail is unknown, and the choice is the same either way.
 
-The header compiles without the Kconfig, because the platform header reaches suites with no reason to carry nrfx_power. Without it the comparator is an absent capability: `armed()` says false, the product logs it, and `core/power` falls back to the voltage rule. `armed()` reads the register back, so a comparator that failed to arm is never reported armed.
+The header compiles without the Kconfig, because the platform header reaches suites with no reason to carry nrfx_power. Without it no warning arrives, and `core/power` keeps its voltage rule.
 
 ## The two questions a pin and a register answer
 

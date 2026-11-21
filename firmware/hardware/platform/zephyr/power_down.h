@@ -43,7 +43,6 @@ class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
     void arm_supply_monitor() { supply_monitor_.arm(); }
 
     power::ResetCause reset_causes() const override { return causes_; }
-    bool supply_monitor_armed() const override { return supply_monitor_.armed(); }
     bool take_supply_warning() override { return supply_monitor_.take_warning(); }
 
    protected:

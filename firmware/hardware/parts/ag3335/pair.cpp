@@ -13,7 +13,6 @@ constexpr int kTalkerBytes = 5;
 constexpr int kIdDigits = 3;
 constexpr uint16_t kAckId = 1;
 constexpr uint16_t kSettingId = 21;
-constexpr char kDualBand = 'D';
 
 bool digits(const char* text, int count) {
     for (int i = 0; i < count; i++)
@@ -83,7 +82,6 @@ PairReader::Heard PairReader::parse_setting(const char* fields) {
     const int kept = length < kVersionBytes - 1 ? length : kVersionBytes - 1;
     std::memcpy(firmware_version_, fields, static_cast<size_t>(kept));
     firmware_version_[kept] = 0;
-    dual_band_ = comma[1] == kDualBand;
     return Heard::Setting;
 }
 

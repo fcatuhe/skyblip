@@ -24,7 +24,7 @@ The AG3335 acknowledges every command with `$PAIR001,<command>,<result>`: 0 is s
 - A result of 1 states no time to wait, so the driver waits `kProcessingWindowMs`, three acknowledgement windows, before resending.
 - An acknowledgement names the command and not its arguments, so a late answer to a resent `$PAIR062` can be credited to the next `$PAIR062`.
 
-The driver asks `$PAIR021` first. The reply carries the project version, such as `AG3335M_V3.3.0`, and a frequency field, `S` for single band or `D` for L1 and L5 (§2.3.11, §2.3.12), which `dual_band()` reads. The reply is 153 bytes in the guide's example, longer than an NMEA sentence, so `PairReader` keeps a line of its own beside `core/gnss`'s parser.
+The driver asks `$PAIR021` first. The reply carries the project version, such as `AG3335M_V3.3.0`, and a frequency field, `S` for single band or `D` for L1 and L5 (§2.3.11, §2.3.12), which the bench reads off the wire. The reply is 153 bytes in the guide's example, longer than an NMEA sentence, so `PairReader` keeps a line of its own beside `core/gnss`'s parser.
 
 The sequence, in order:
 

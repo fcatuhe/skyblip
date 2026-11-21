@@ -16,8 +16,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         system_offs++;
     }
 
-    bool supply_monitor_armed() const override { return supply_monitor_fitted; }
-
     bool take_supply_warning() override {
         if (!supply_warning) return false;
         supply_warning = false;
@@ -36,9 +34,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     }
 
     power::ResetCause causes{power::ResetCause::PowerOn};
-    // INFO: fc 20nov26 carried so the policy above it is testable, and settable so its absence is
-    // too
-    bool supply_monitor_fitted{true};
     bool supply_warning{false};
     // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
     power::CellOnGlass retained_cell_on_glass{power::CellOnGlass::None};

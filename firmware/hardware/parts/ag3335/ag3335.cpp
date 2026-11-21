@@ -104,7 +104,6 @@ void Ag3335::retry_command(uint32_t now_ms) {
         send_command(now_ms);
         return;
     }
-    refused_commands_++;
     sequence_refused_ = true;
     next_command(now_ms);
 }

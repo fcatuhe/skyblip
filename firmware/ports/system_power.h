@@ -15,9 +15,6 @@ class SystemPower {
 
     virtual void system_off() {}
 
-    // INFO: fc 20nov26 false with no comparator, so core/power's may_write keeps its voltage half
-    virtual bool supply_monitor_armed() const { return false; }
-
     virtual bool take_supply_warning() { return false; }
 
     // INFO: fc 20nov26 these bits outlive the rails, and a platform without storage answers None

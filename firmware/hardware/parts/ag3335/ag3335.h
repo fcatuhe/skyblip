@@ -120,9 +120,6 @@ class Ag3335 : public ports::Gnss {
 
     bool identified() const { return reader_.identified(); }
     const char* firmware_version() const { return reader_.firmware_version(); }
-    bool dual_band() const { return reader_.dual_band(); }
-
-    uint32_t refused_commands() const { return refused_commands_; }
 
     void request_restart(ports::Restart kind) override;
 
@@ -154,7 +151,6 @@ class Ag3335 : public ports::Gnss {
     ConfigStage stage_{ConfigStage::Idle};
     uint32_t serviced_ms_{0};
     uint32_t last_command_ms_{0};
-    uint32_t refused_commands_{0};
     int next_command_{0};
     uint16_t awaited_id_{0};
     uint8_t attempts_{0};

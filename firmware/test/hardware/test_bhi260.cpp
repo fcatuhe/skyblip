@@ -64,8 +64,6 @@ TEST_CASE("bhi260: bring-up resets the part, uploads the image and boots it from
     CHECK(chip.resets == 1);
     CHECK(chip.booted);
     CHECK(chip.uploaded_bytes() == sizeof(kImage));
-    CHECK(imu.uploaded_bytes() == sizeof(kImage));
-    CHECK(imu.kernel_version() == models::Bhi260::kKernelVersion);
 }
 
 TEST_CASE("bhi260: the accelerometer is configured for the range and rate the ball is read at") {

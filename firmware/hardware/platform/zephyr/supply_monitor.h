@@ -25,27 +25,18 @@ class SupplyMonitor {
 
     void arm() {
 #if defined(CONFIG_NRFX_POWER)
-        if (!armed_) {
-            nrfx_power_pofwarn_config_t config = {};
-            config.handler = on_warning;
-            config.thr = kThreshold;
+        nrfx_power_pofwarn_config_t config = {};
+        config.handler = on_warning;
+        config.thr = kThreshold;
 #if NRFX_POWER_SUPPORTS_POFCON_VDDH
-            // INFO: fc 20nov26 unused in normal-voltage mode, so it gets the register's reset
-            // value, not a brace-initialised zero
-            config.thrvddh = NRF_POWER_POFTHRVDDH_V27;
+        // INFO: fc 20nov26 unused in normal-voltage mode, so it gets the register's reset value,
+        // not a brace-initialised zero
+        config.thrvddh = NRF_POWER_POFTHRVDDH_V27;
 #endif
-            nrfx_power_pof_init(&config);
-            nrfx_power_pof_enable(&config);
-        }
-        // INFO: fc 20nov26 armed_ is what POFCON holds, read back, so a failed arm is never
-        // reported armed
-        bool enabled = false;
-        (void)nrf_power_pofcon_get(NRF_POWER, &enabled);
-        armed_ = enabled;
+        nrfx_power_pof_init(&config);
+        nrfx_power_pof_enable(&config);
 #endif
     }
-
-    bool armed() const { return armed_; }
 
     // INFO: fc 20nov26 the interrupt writes the counter and a service pass clears it, so both sides
     // stay atomic
@@ -60,7 +51,6 @@ class SupplyMonitor {
     }
 
     static inline atomic_t warnings_ = 0;
-    bool armed_{false};
 };
 
 }  // namespace skyblip::platform::zephyr

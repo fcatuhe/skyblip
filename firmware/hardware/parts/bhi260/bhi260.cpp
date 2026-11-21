@@ -226,8 +226,7 @@ void Bhi260::read_kernel_version(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    kernel_version_ = wire::get_uint16(version);
-    if (kernel_version_ == 0) {
+    if (wire::get_uint16(version) == 0) {
         fail(Status::Down);
         return;
     }
