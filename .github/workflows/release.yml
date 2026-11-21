@@ -105,7 +105,6 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       PRODUCT: ${{ matrix.product }}
-      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
     steps:
       # The build number is the commit count, which a shallow clone gets wrong.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -135,22 +134,10 @@ jobs:
           SKYBLIP_CHANNEL: production
         run: scripts/build_local.sh "$PRODUCT"
 
-      # .signed.confirmed.bin stays behind, because the .uf2 carries it.
-      - name: name the files after the release
-        run: |
-          slug=${PRODUCT//_/-}
-          mkdir release
-          cp "builds/$slug.uf2" "release/$slug-$RELEASE_VERSION.uf2"
-          cp "builds/$slug.signed.bin" "release/$slug-$RELEASE_VERSION.signed.bin"
-          if [ -f "builds/$slug.full.signed.bin" ]; then
-            cp "builds/$slug.full.signed.bin" "release/$slug-$RELEASE_VERSION.full.signed.bin"
-          fi
-          cat "builds/$slug.version"
-
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image-${{ matrix.product }}
-          path: release/*
+          path: builds/*
           if-no-files-found: error
           retention-days: 1
 
@@ -177,50 +164,26 @@ jobs:
             firmware/protocols/*/version.h
             firmware/products/*/PROTOCOLS
             lib/radio_protocols.rb
+            lib/release_files.rb
             lib/release_notice.rb
-            scripts/radio_protocols.rb
-            scripts/release_notice.rb
+            scripts/release_files.rb
           sparse-checkout-cone-mode: false
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: image-*
           path: images
+          merge-multiple: true
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: browser-simulator
           path: simulator
 
-      # Only what this run's image jobs named goes into the release.
-      - name: every product's images, and nothing else
+      # Only the images of the products the tag job found go into the release (lib/release_files.rb).
+      - name: name the images after the release, and add the simulator, the notices, the radio protocols and the checksums
         run: |
-          expected=$(jq -r '.[] | "image-" + .' <<< "$PRODUCTS" | sort)
-          found=$(find images -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
-          test "$found" = "$expected" \
-            || { echo "FAIL: the artifacts are ${found//$'\n'/ }, where the products ask for ${expected//$'\n'/ }"; exit 1; }
-          mkdir -p release
-          for product in $(jq -r '.[]' <<< "$PRODUCTS"); do
-            slug=${product//_/-} artifact=images/image-$product
-            while IFS= read -r file; do
-              case "$file" in
-                "$slug-$RELEASE_VERSION.uf2"|"$slug-$RELEASE_VERSION.signed.bin"|"$slug-$RELEASE_VERSION.full.signed.bin") ;;
-                *) echo "FAIL: image-$product holds $file"; exit 1 ;;
-              esac
-            done < <(find "$artifact" -mindepth 1 -printf '%P\n')
-            for file in "$slug-$RELEASE_VERSION.uf2" "$slug-$RELEASE_VERSION.signed.bin"; do
-              test -f "$artifact/$file" || { echo "FAIL: image-$product has no $file"; exit 1; }
-            done
-            cp "$artifact"/* release/
-          done
-
-      - name: add the simulator, the notices, the radio protocols and the checksums
-        run: |
-          cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
-          cp simulator/scenarios.json release/
-          ruby scripts/release_notice.rb . > release/NOTICE.md
-          ruby scripts/radio_protocols.rb firmware "$RELEASE_VERSION" "$PRODUCTS" > release/PROTOCOLS.md
-          (cd release && sha256sum -- * > SHA256SUMS)
+          ruby scripts/release_files.rb images simulator . release "$RELEASE_VERSION" "$PRODUCTS"
           cat release/PROTOCOLS.md release/SHA256SUMS
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2

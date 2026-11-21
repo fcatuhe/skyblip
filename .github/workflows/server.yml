@@ -151,6 +151,8 @@ jobs:
         run: bundle exec ruby ../.github/test/deployment_test.rb
       - name: Run development pre-release tests
         run: bundle exec ruby ../.github/test/dev_release_test.rb
+      - name: Run release files tests
+        run: bundle exec ruby ../.github/test/release_files_test.rb
       - name: Run deploy order tests
         run: bundle exec ruby ../.github/test/deploy_order_test.rb
       - name: Run upstream pin tests

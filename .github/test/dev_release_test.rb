@@ -81,7 +81,7 @@ class DevReleaseTest < Minitest::Test
       assert run.success, run.output
       files = (SHARED_FILES + (GO_FILES + BRAVO_FILES).map { |file| file % "dev-1010" }).sort
       assert_equal [ [ "release", "create", "dev-1010", *files, "--target", "deadbeef", "--prerelease", "--latest=false",
-                       "--title", "skyBlip dev 0.1.0+1010", "--notes", "#{NOTES_START}\n\n#{CHANGES}\n\n#{GO_NOTES}\n\n#{BRAVO_NOTES}" ] ],
+                       "--title", "skyBlip dev 0.1.0+1010", "--notes", "#{NOTES_START}\n\n#{CHANGES}\n\n#{BRAVO_NOTES}\n\n#{GO_NOTES}" ] ],
                    run.creates
       assert_equal [ "api", "repos/fcatuhe/skyblip/releases/generate-notes", "-f", "tag_name=dev-1010", "-f", "target_commitish=deadbeef",
                      "-f", "previous_tag_name=dev-1005", "--jq", ".body" ], run.notes.first
@@ -115,37 +115,6 @@ class DevReleaseTest < Minitest::Test
       create = run.creates.first
       assert_equal (SHARED_FILES + GO_FILES.map { |file| file % "dev-1010" }).sort, create[3...create.index("--target")]
       assert_equal "#{NOTES_START}\n\n#{GO_NOTES}", create[create.index("--notes") + 1]
-    end
-  end
-
-  def test_the_notices_and_every_license_text_ship_as_one_file
-    Dir.mktmpdir do |root|
-      run = publish(root, ref: "main", products: %w[skyblip-go], tags: [])
-
-      assert run.success, run.output
-      assert_equal <<~NOTICE, File.read(File.join(root, "gh/uploads/dev-1010/NOTICE.md"))
-        NOTICE.md
-
-        ## License texts
-
-        ### LICENSE
-
-        ```
-        LICENSE
-        ```
-
-        ### LICENSES/Apache-2.0.txt
-
-        ```
-        LICENSES/Apache-2.0.txt
-        ```
-
-        ### LICENSES/TinyCrypt.txt
-
-        ```
-        LICENSES/TinyCrypt.txt
-        ```
-      NOTICE
     end
   end
 
@@ -189,30 +158,6 @@ class DevReleaseTest < Minitest::Test
     end
   end
 
-  def test_products_that_disagree_on_the_version_publish_nothing
-    Dir.mktmpdir do |root|
-      run = publish(root, ref: "main", products: %w[skyblip-go skyblip-bravo], tags: []) do |images, _source|
-        File.write(File.join(images, "skyblip-bravo.version"), "skyblip-bravo 0.2.0+1010 abc1234 development\n")
-      end
-
-      refute run.success
-      assert_empty run.creates
-      assert_includes run.output, "The products disagree on the version: skyblip-bravo 0.2.0+1010, skyblip-go 0.1.0+1010"
-    end
-  end
-
-  def test_a_product_missing_a_file_publishes_nothing
-    Dir.mktmpdir do |root|
-      run = publish(root, ref: "main", products: %w[skyblip-go skyblip-bravo], tags: []) do |images, _source|
-        File.delete(File.join(images, "skyblip-bravo.uf2"))
-      end
-
-      refute run.success
-      assert_empty run.creates
-      assert_includes run.output, "skyblip-bravo.uf2"
-    end
-  end
-
   def test_a_product_with_no_protocols_file_publishes_nothing
     Dir.mktmpdir do |root|
       run = publish(root, ref: "main", products: %w[skyblip-go skyblip-tango], tags: [])
@@ -232,32 +177,6 @@ class DevReleaseTest < Minitest::Test
       refute run.success
       assert_empty run.creates
       assert_includes run.output, "Unknown radio protocol flarm in"
-    end
-  end
-
-  # Every artifact named skyblip-* lands in one directory, so a file no product build writes is refused rather than ignored.
-  def test_a_file_no_product_build_writes_publishes_nothing
-    Dir.mktmpdir do |root|
-      run = publish(root, ref: "main", products: %w[skyblip-go], tags: []) do |images, _source|
-        File.write(File.join(images, "skyblip-go.signed.bin.orig"), "planted\n")
-      end
-
-      refute run.success
-      assert_empty run.creates
-      assert_includes run.output, "Unexpected files in"
-      assert_includes run.output, "skyblip-go.signed.bin.orig"
-    end
-  end
-
-  def test_a_missing_license_text_fails_the_run
-    Dir.mktmpdir do |root|
-      run = publish(root, ref: "main", products: %w[skyblip-go], tags: []) do |_images, source|
-        Dir.glob(File.join(source, "LICENSES", "*")).each { |file| File.delete(file) }
-      end
-
-      refute run.success
-      assert_empty run.creates
-      assert_includes run.output, "No license texts"
     end
   end
 
@@ -285,15 +204,6 @@ class DevReleaseTest < Minitest::Test
     end
   end
 
-  def test_a_run_with_no_product_image_fails
-    Dir.mktmpdir do |root|
-      run = publish(root, ref: "main", products: [], tags: [])
-
-      refute run.success
-      assert_includes run.output, "No product image"
-    end
-  end
-
   private
     Run = Struct.new(:success, :output, :calls) do
       def creates = calls.select { |call| call.first(2) == %w[release create] }
@@ -304,7 +214,7 @@ class DevReleaseTest < Minitest::Test
     def publish(root, ref:, products:, tags:, branches: [], generated: GENERATED)
       images, simulator, source, state = %w[image simulator source gh].map { |name| File.join(root, name).tap { |dir| FileUtils.mkdir_p(dir) } }
       products.each { |slug| product_image(images, slug, hub_image: slug == "skyblip-go") }
-      DevRelease::SIMULATOR_FILES.each { |file| File.write(File.join(simulator, file), file) }
+      ReleaseFiles::SIMULATOR_FILES.each { |file| File.write(File.join(simulator, file), file) }
       FileUtils.mkdir_p(File.join(source, "LICENSES"))
       %w[LICENSE NOTICE.md LICENSES/Apache-2.0.txt LICENSES/TinyCrypt.txt].each { |file| File.write(File.join(source, file), file) }
       %w[adsl adsb alptas].each do |protocol|
