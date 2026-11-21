@@ -4,6 +4,7 @@ The session lines are the ones server/app/javascript/skyblip/diagnostics.js writ
 same capture, and its test holds the two to the same NDJSON, so change both together.
 """
 import datetime
+import gzip
 import json
 
 
@@ -76,7 +77,8 @@ class SessionSink:
 
 
 def read_ndjson(path):
-    with open(path, encoding="utf-8") as handle:
+    opened = gzip.open if str(path).endswith(".gz") else open
+    with opened(path, "rt", encoding="utf-8") as handle:
         for line in handle:
             if line.strip():
                 yield json.loads(line)

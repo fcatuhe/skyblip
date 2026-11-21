@@ -75,7 +75,7 @@ The device refuses a command while flying and a command from a second app while 
 
 ### Reading what came back
 
-`decode` prints one line per record, and `--type gnss` narrows it to one type. `--summary` prints the caveats first, then the counts per type, the span, every missing index and every `gap` record, where the ring refused records. The session and `torn` lines survive `--type`, so a filter cannot hide a hole.
+`decode` prints one line per record, and `--type gnss` narrows it to one type. It reads a gzipped capture, `.ndjson.gz`, as the file it holds, and so do `power_budget.py` and `link_budget.py`: the captures under `docs/bench/data/` are kept that way. `--summary` prints the caveats first, then the counts per type, the span, every missing index and every `gap` record, where the ring refused records. The session and `torn` lines survive `--type`, so a filter cannot hide a hole.
 
 ## power_budget.py
 

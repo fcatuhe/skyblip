@@ -10,6 +10,7 @@ sends a command while a reply of the last one is still queued.
 import argparse
 import asyncio
 import contextlib
+import gzip
 import io
 import json
 import pathlib
@@ -322,6 +323,15 @@ class ResumedFetch(unittest.TestCase):
             summary = ndjson.summarise(list(ndjson.read_ndjson(str(path))))
         self.assertFalse(any("index 4 dropped" in line for line in summary), summary)
         self.assertTrue(any("index 8 dropped" in line for line in summary), summary)
+
+    # The bench captures under docs/bench/data/ are kept gzipped.
+    def test_a_gzipped_capture_reads_as_the_capture_it_holds(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5), path)
+            zipped = pathlib.Path(directory) / "capture.ndjson.gz"
+            zipped.write_bytes(gzip.compress(path.read_bytes()))
+            self.assertEqual(list(ndjson.read_ndjson(str(zipped))), list(ndjson.read_ndjson(str(path))))
 
     def test_a_resume_once_the_session_closed_keeps_the_record_it_dropped_as_torn(self):
         with tempfile.TemporaryDirectory() as directory:
