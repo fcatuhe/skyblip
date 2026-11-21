@@ -102,7 +102,7 @@ jobs:
       - name: each radio protocol stack builds and passes alone
         working-directory: firmware
         run: make test-protocols CXX="ccache g++"
-      - name: the protocol stacks include nothing from skyBlip
+      - name: the protocol stacks include no host header
         run: python3 scripts/check_protocol_boundary.py
       - name: every frozen protocol stack matches its version.lock
         run: python3 scripts/check_protocol_freeze.py

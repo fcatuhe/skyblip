@@ -6,7 +6,7 @@ A figure or formula the specification prints goes in the stack. What skyBlip mea
 
 ## The boundary
 
-A file under `protocols/` includes only the C++ standard library, its own directory and `protocols/common/`. One stack never includes another, with one exception: `adsl_edge/` builds on ADS-L's frame, so it may include `adsl/`, and no stack may include `adsl_edge/`. `core/` and `products/` may include `protocols/`. `scripts/check_protocol_boundary.py` holds every include to this rule in CI.
+A file under `protocols/` includes only the C++ standard library, its own directory and `protocols/common/`. One stack never includes another, with one exception: `adsl_edge/` builds on ADS-L's frame, so it may include `adsl/`, and no stack may include `adsl_edge/`. `core/` and `products/` may include `protocols/`. `make test-protocols` holds each stack to this rule by building it from a copy that holds nothing else, and `scripts/check_protocol_boundary.py` refuses an angle header outside the C++ standard library, which that copy still finds on the host.
 
 A stack speaks in its own plain types, such as `adsl::Traffic` or `adsb::Message`, never a `model::`, `events::` or `settings::` type. It reads a frame through one `receive()`, which runs the CRC and answers `wire::Status`. Each stack carries a `README.md`, a `version.h`, its code and a `test/` folder that uses only doctest and `common/test/channel.h`.
 

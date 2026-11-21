@@ -1,27 +1,19 @@
 #!/usr/bin/env python3
-"""Fail if a file under firmware/protocols/ includes anything but its own stack, protocols/common and the standard library.
+"""Fail if a file under firmware/protocols/ includes an angle header outside the C++ standard library.
 
     python3 scripts/check_protocol_boundary.py
 
-A stack must build with nothing from skyBlip (firmware/protocols/README.md). A quoted include
-names a path from firmware/ with no `..`: a file in protocols/<stack>/ may include its stack,
-protocols/common/ and the stack EXTENDS names, a file directly under protocols/ only
-protocols/common/, and a test file also the vendored doctest. An angle include must be a C++
-standard library header. An include that names no header, such as one built from a macro, is
-refused.
+make test-protocols builds each stack from a copy holding nothing of skyBlip's, so a quoted
+include from outside the stack fails there. A host header such as <unistd.h> still compiles
+in that copy, and would not build in another project's firmware.
 """
 import os
-import posixpath
 import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROTOCOLS = os.path.join(ROOT, "firmware", "protocols")
-DIRECTIVE = re.compile(r"^\s*#\s*include\b(.*)$", re.M)
-HEADER = re.compile(r'^\s*([<"])([^>"]+)[>"]')
-TEST_ONLY = {"doctest/doctest.h"}
-# INFO: fc 18nov26 adsl_edge carries what ADS-L Issue 2 leaves outside its scope, on ADS-L's frame
-EXTENDS = {"adsl_edge": ("protocols/adsl/",)}
+ANGLE = re.compile(r"^\s*#\s*include\s*<([^>]+)>", re.M)
 
 STANDARD = {
     "algorithm", "any", "array", "atomic", "bit", "bitset", "cassert", "cctype", "cerrno",
@@ -40,37 +32,14 @@ def violations(protocols=PROTOCOLS):
         for name in sorted(names):
             path = os.path.join(folder, name)
             relative = os.path.relpath(path, os.path.dirname(protocols)).replace(os.sep, "/")
-            parts = relative.split("/")
-            stack = parts[1] if len(parts) > 2 else None
-            allowed = ("protocols/common/",) if stack is None else (f"protocols/{stack}/", "protocols/common/") + EXTENDS.get(stack, ())
-            is_test = "test" in parts[2:-1]
             try:
                 with open(path, encoding="utf-8") as source:
                     text = source.read()
             except UnicodeDecodeError:
                 continue
-            for directive in DIRECTIVE.findall(text):
-                found += judge(relative, directive, allowed, is_test)
+            found += [f"{relative} includes <{header}>, which is not the C++ standard library"
+                      for header in ANGLE.findall(text) if header not in STANDARD]
     return found
-
-
-def judge(relative, directive, allowed, is_test):
-    match = HEADER.match(directive)
-    if not match:
-        return [f"{relative} includes{directive}, which names no header in <> or \"\""]
-    kind, header = match.groups()
-    if kind == "<":
-        if header in STANDARD:
-            return []
-        return [f"{relative} includes <{header}>, which is not the C++ standard library"]
-    if is_test and header in TEST_ONLY:
-        return []
-    normal = posixpath.normpath(header)
-    if ".." in header.split("/") or normal != header:
-        return [f'{relative} includes "{header}", a path that is not written plainly from firmware/']
-    if not header.startswith(allowed):
-        return [f'{relative} includes "{header}", outside {" and ".join(allowed)}']
-    return []
 
 
 def main():
@@ -78,10 +47,10 @@ def main():
     for violation in found:
         print(violation, file=sys.stderr)
     if found:
-        print(f"FAIL: {len(found)} includes cross the protocols/ boundary (firmware/protocols/README.md)",
+        print(f"FAIL: {len(found)} includes reach past the C++ standard library (firmware/protocols/README.md)",
               file=sys.stderr)
         return 1
-    print("OK: every file under firmware/protocols/ includes only its stack, protocols/common and the standard library.")
+    print("OK: every angle include under firmware/protocols/ is the C++ standard library.")
     return 0
 
 
