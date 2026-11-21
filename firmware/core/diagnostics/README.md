@@ -46,6 +46,7 @@ A payload that carries a C++ enum stores one byte of it, so every such enum writ
 - The numbers fill 0 up to one less than the count, with no holes, because the host decoder reads a byte through a tuple it indexes by.
 - `test/core/diagnostics/test_diagnostics_ordinals.cpp` pins the enums this layer writes, and `test/products/test_diagnostics_product_codes.cpp` the codes the product owns. Each maps its members through a `switch` with no default, so a new member fails the build.
 - `scripts/test_blip.py` holds every decoder tuple in `scripts/blip_records.py` to the schema enum of the same name. So a new member is an edit to the decoder and to `schemas/diagnostics_log.v1.schema.json` in the same commit.
+- `schemas/diagnostics_log.v1.vectors.json` holds one record of each type as the firmware writes it. `test/core/diagnostics/test_diagnostics_vectors.cpp` pins the encoder to its bytes and `scripts/test_blip.py` pins the decoder to its fields, so a layout that moves on one side fails a test. A new type or field is an edit to the vectors too.
 - `Contact::gesture` is the product's `go::Gesture`, and `Screen`'s page, mode and prompt are `go::Page`, `go::Mode` and `comms::Pending`. Each stores that enum's own number, and the schema lists it.
 
 The device never reads a record back. The C++ decoders the host suite reads records with are in `test/support/diagnostics_read.h`.
