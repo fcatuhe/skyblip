@@ -9,7 +9,7 @@
 
 #include "core/comms/install_trust.h"
 #include "core/crypto/ed25519.h"
-#include "core/fec/crc.h"
+#include "core/util/crc32.h"
 
 namespace skyblip {
 
@@ -28,7 +28,7 @@ class InstalledSlot {
         std::memcpy(out.data() + 16, key.data(), key.size());
         out[48] = static_cast<uint8_t>(label.size());
         std::memcpy(out.data() + 49, label.data(), label.size());
-        put_uint32(out, 73, fec::crc32(out.data(), 73));
+        put_uint32(out, 73, crc32(out.data(), 73));
         return out;
     }
 
