@@ -1,16 +1,16 @@
 ---
 title: "Open questions on ADS-L"
 nav_title: ADS-L questions
-description: "skyBlip's open questions to EASA on ADS-L Issue 2, grouped by theme, with the source clauses, current firmware behaviour and answer status."
+description: "skyBlip's open questions to EASA on ADS-L Issue 2 and Issue 1 compatibility, with source clauses, firmware behaviour and answer status."
 published_on: "2026-11-14"
 parent: ads-l
-updated_on: "2026-11-19"
+updated_on: "2026-11-22"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
   <h1>Our open questions on ADS-L Issue 2.</h1>
-  <p class="lede">These are the questions skyBlip puts to EASA on ADS-L 4 SRD-860 Issue 2, where the text leaves a reading open. Each theme quotes the clause, records what our firmware does today and says whether the question has been sent and answered. Until EASA answers, Go flies the reading described here.</p>
+  <p class="lede">These are the questions skyBlip puts to EASA on ADS-L 4 SRD-860 Issue 2 and its Issue 1 compatibility rules, where the text leaves a reading open. Each theme quotes the clause, records what our firmware does today and says whether the question has been sent and answered. Until EASA answers, Go flies the reading described here.</p>
   <p>skyBlip is open-source electronic conspicuity equipment for general aviation. skyBlip Go transmits and receives ADS-L. skyBlip Bravo receives ADS-B on 1090&nbsp;MHz and transmits nothing. Paired with a Go, on the ground, Bravo can name the transponder it takes for the aircraft&rsquo;s own.</p>
 </section>
 
@@ -110,6 +110,18 @@ updated_on: "2026-11-19"
   <p>Go&rsquo;s receiver reports its horizontal and vertical dilution of precision, but no velocity error. Go&rsquo;s horizontal and vertical accuracy change with each fix, while its velocity accuracy is sent as 0, &ldquo;Unknown&rdquo;, which the table of G.1.16, &ldquo;Velocity Accuracy&rdquo;, allows.</p>
   <ol>
     <li><p><strong>Does that meet G.1.17?</strong> Not every quality value is 0, but the velocity accuracy always is.</p></li>
+  </ol>
+  <p class="note">Not sent yet.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The absent vertical rate</h2>
+  <h3>Does 0x100 mean an absent vertical rate in Issue 1 Traffic?</h3>
+  <p>Issue 2&rsquo;s <strong>ADS-L.4.SRD860.G.2.1, &ldquo;Max. Protocol Version&rdquo;</strong>, requires a sender to receive and parse every protocol version up to the one it declares. Go must therefore read Issue 1 Traffic.</p>
+  <p>Issue 1&rsquo;s <strong>G.1</strong> payload table lists a &ldquo;special value for &lsquo;absent&rsquo;&rdquo; for vertical rate, but <strong>G.1.9</strong> does not name the code. <strong>G.1.6, &ldquo;Exponential Encoding&rdquo;</strong>, requires zero to be encoded with the sign bit cleared. Every nonzero magnitude has a positive and a negative encoding, leaving negative zero, <code>0x100</code>, as the only spare signed code.</p>
+  <p>OGN&rsquo;s Issue 1 implementation uses <code>0x100</code> for absent climb. Go reads it that way in direct version 0 Traffic, rather than as level flight. Go does not transmit this marker.</p>
+  <ol>
+    <li><p><strong>Did Issue 1 intend <code>0x100</code> as the special value for an absent vertical rate?</strong></p></li>
   </ol>
   <p class="note">Not sent yet.</p>
 </section>
