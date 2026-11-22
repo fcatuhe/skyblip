@@ -12,6 +12,7 @@
 #include "protocols/adsl/media_access.h"
 #include "protocols/adsl/physical.h"
 #include "simulator/simulator.h"
+#include "test/support/armings_rig.h"
 #include "test/support/m_band_rig.h"
 #include "test/support/product_rig.h"
 #include "test/support/simulator_run.h"
@@ -57,7 +58,65 @@ std::vector<simulator::AirRecord> held_from_cycle_start(int speed_kt, uint32_t h
     return sent;
 }
 
+uint64_t last_armed_burst(const Armings& armings) {
+    for (uint32_t i = armings.rf.handed; i > 0; --i)
+        if (armings.rf.plans[i - 1].tx != nullptr) return armings.rf.plans[i - 1].tx_at_us;
+    return 0;
+}
+
 }  // namespace
+
+TEST_CASE(
+    "ADS-L.4.SRD860.D.3: an early busy report with no backoff left closes the dwell's burst") {
+    Armings armings;
+    armings.state.activation.serial = 3;
+    armings.ready_to_transmit(1000);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_at(420);
+    REQUIRE(armings.rf.with_tx == 1);
+    const uint64_t drawn_us = last_armed_burst(armings);
+    const int phase_ms = static_cast<int>((drawn_us - Armings::kEdgeUs) / 1000);
+    REQUIRE(phase_ms > 810 - 15);
+    REQUIRE(phase_ms <= 810);
+
+    armings.state.rf.note_busy({drawn_us, -50, true});
+    armings.tick_at(phase_ms - 1);
+    armings.tick_at(phase_ms);
+    armings.tick_at(821);
+
+    CHECK(armings.state.air.tx_busy_missed == 1);
+    CHECK(armings.rf.with_tx == 1);
+}
+
+TEST_CASE("ADS-L.4.SRD860.D.3: a late fix cannot cut short a selected backoff") {
+    Armings armings;
+    armings.state.activation.serial = 22;
+    armings.ready_to_transmit(1000);
+    armings.solving = false;
+    const uint32_t edge_ms = Armings::kEdgeUs / 1000;
+    armings.state.own.fix_at_ms = edge_ms;
+    armings.state.own.fix_in_hand_ms = edge_ms + 70;
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_at(420);
+    REQUIRE(armings.rf.with_tx == 1);
+    const uint64_t drawn_us = last_armed_burst(armings);
+    REQUIRE(drawn_us == Armings::kEdgeUs + 476000);
+    // This serial draws 40 units of 5 ms at .476, so the backoff ends at .676.
+    const uint64_t not_before_us = drawn_us + 200000;
+    armings.state.rf.note_busy({drawn_us, -50, true});
+    armings.tick_at(475);
+    CHECK(armings.state.air.tx_deferred == 1);
+    CHECK(armings.rf.with_tx == 1);
+
+    armings.state.own.utc_ms = 500;
+    armings.state.own.fix_at_ms = edge_ms + 500;
+    armings.state.own.fix_in_hand_ms = edge_ms + 590;
+    armings.tick_at(590);
+
+    CHECK(armings.rf.with_tx == 2);
+    CHECK(last_armed_burst(armings) >= not_before_us);
+    CHECK(last_armed_burst(armings) <= Armings::kEdgeUs + 810000);
+}
 
 // Forced on the ground only: airborne the Status and the name are still busy at +8, past 3000 ms.
 TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms" *

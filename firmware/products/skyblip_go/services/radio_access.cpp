@@ -57,8 +57,11 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
     bus::State::AirCounts& air = context_.state.air;
     const bool forced = verdict.access == adsl::Access::Force;
     const bool deferred = forced || verdict.access == adsl::Access::Defer;
-    // INFO: fc 19nov26 a deferral its fix is too old for waits for the next fix, then is redrawn
+    contention.second_s = dwell.utc_s;
+    contention.not_before_us.reset();
+    // INFO: fc 22nov26 only a deferral waiting for a fix can return to the normal scheduler
     if (deferred && payload == Payload::Position && fix_too_old_at(verdict.at_us)) {
+        contention.not_before_us = verdict.at_us;
         await_fix(dwell.utc_s);
         air.tx_deferred++;
         log_access(radio::Verdict::Deferred, dwell, payload, busy, now_ms);
