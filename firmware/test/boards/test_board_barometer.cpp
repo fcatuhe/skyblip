@@ -100,7 +100,7 @@ TEST_CASE("board: triggers stay on the PPS phases") {
 
     REQUIRE(at.size() == 12);
     for (size_t i = 0; i < at.size(); i++)
-        CHECK(at[i] == 1000 + i * runtime::kBarometerConversionPeriodMs);
+        CHECK(at[i] == 1000 + i * boards::kBarometerConversionPeriodMs);
 }
 
 TEST_CASE("board: a barometer sample is dated at its conversion, not at its read") {
@@ -133,8 +133,8 @@ TEST_CASE("board: the barometer is published once a second, on the PPS edge") {
     REQUIRE(at.size() == 9);
     CHECK(at.front() == 1000 + kMidpointMs);
     for (size_t i = 0; i < at.size(); i++) {
-        CHECK((at[i] - kMidpointMs) % 1000 < runtime::kBarometerPpsWindowMs);
-        if (i > 0) CHECK(at[i] - at[i - 1] == runtime::kBarometerPublishPeriodMs);
+        CHECK((at[i] - kMidpointMs) % 1000 < boards::kBarometerPpsWindowMs);
+        if (i > 0) CHECK(at[i] - at[i - 1] == boards::kBarometerPublishPeriodMs);
     }
 }
 
@@ -147,10 +147,10 @@ TEST_CASE("board: with no PPS the barometer keeps its own second and its own qua
 
     REQUIRE(at.size() >= 9);
     for (size_t i = 1; i < at.size(); i++)
-        CHECK(at[i] - at[i - 1] == runtime::kBarometerPublishPeriodMs);
+        CHECK(at[i] - at[i - 1] == boards::kBarometerPublishPeriodMs);
     REQUIRE(triggers.size() == 8);
     for (size_t i = 1; i < triggers.size(); i++)
-        CHECK(triggers[i] - triggers[i - 1] == runtime::kBarometerConversionPeriodMs);
+        CHECK(triggers[i] - triggers[i - 1] == boards::kBarometerConversionPeriodMs);
 }
 
 TEST_CASE("board: a conversion that never ends is given up at its ceiling and counted") {
@@ -158,9 +158,9 @@ TEST_CASE("board: a conversion that never ends is given up at its ceiling and co
     unit.sample_instants(0, 1000);
     unit.chip().extra_measurement_us = 10000000;
 
-    CHECK(unit.sample_instants(1000, 1000 + runtime::kBarometerConversionCeilingMs).empty());
+    CHECK(unit.sample_instants(1000, 1000 + boards::kBarometerConversionCeilingMs).empty());
     CHECK(unit.board.barometer_faults() == 0);
-    CHECK(unit.sample_instants(1000 + runtime::kBarometerConversionCeilingMs, 1500).empty());
+    CHECK(unit.sample_instants(1000 + boards::kBarometerConversionCeilingMs, 1500).empty());
     CHECK(unit.board.barometer_faults() == 1);
 
     unit.chip().extra_measurement_us = 0;

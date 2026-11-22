@@ -33,6 +33,9 @@ constexpr uint32_t kUarteStopPollUs = 10;
 // INFO: fc 19nov26 every board's way into SYSTEM OFF, whose perform() walks core/power's order
 class PowerDown : protected power::PowerDownSink {
    public:
+    explicit PowerDown(power::DfuButton factory_dfu_button)
+        : factory_dfu_button_(factory_dfu_button) {}
+
     // INFO: fc 12nov26 read once and cleared: a second read of RESETREAS reads as a power-on
     void read_causes() {
         if (causes_read_) return;
@@ -46,17 +49,17 @@ class PowerDown : protected power::PowerDownSink {
     power::ResetCause reset_causes() const { return causes_; }
     bool take_supply_warning() { return supply_monitor_.take_warning(); }
 
-   protected:
-    void power_off(power::DfuButton factory_dfu_button) {
+    void system_off() {
         // INFO: fc 05oct26 first, as it outlives the rails, and without a retention area there is
         // no recovery either
-        (void)write_boot_magic(Dfu::boot_magic_for_system_off(factory_dfu_button));
+        (void)write_boot_magic(Dfu::boot_magic_for_system_off(factory_dfu_button_));
         power::power_down(*this);
         // INFO: fc 05aug26 after the walk, which arms a level wake: a stale DETECT wakes us at once
         clear_stale_latches();
         sys_poweroff();
     }
 
+   protected:
     static void lower(const struct gpio_dt_spec& pin) {
         (void)gpio_pin_configure_dt(&pin, GPIO_OUTPUT_INACTIVE);
     }
@@ -101,6 +104,7 @@ class PowerDown : protected power::PowerDownSink {
 
    private:
     SupplyMonitor supply_monitor_{};
+    power::DfuButton factory_dfu_button_;
     power::ResetCause causes_{power::ResetCause::None};
     bool causes_read_{false};
 };

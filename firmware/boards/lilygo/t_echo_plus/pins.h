@@ -39,7 +39,7 @@ constexpr power::DfuButton kFactoryDfuButton = power::DfuButton::PressEntersDfu;
 
 constexpr io::PinRole kPinRoles[] = {
     {io::PinFunction::RadioBusy, kRadioBusy},       {io::PinFunction::RadioReset, kRadioReset},
-    {io::PinFunction::RadioDio1, kRadioDio1},       {io::PinFunction::EpdDc, kEpdDc},
+    {io::PinFunction::RadioIrq, kRadioDio1},        {io::PinFunction::EpdDc, kEpdDc},
     {io::PinFunction::EpdReset, kEpdReset},         {io::PinFunction::EpdBusy, kEpdBusy},
     {io::PinFunction::EpdBacklight, kEpdBacklight}, {io::PinFunction::HapticEnable, kHapticEnable},
     {io::PinFunction::GnssReset, kGnssReset},

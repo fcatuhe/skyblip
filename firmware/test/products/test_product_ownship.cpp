@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <string>
 
+#include "boards/common/producer.h"
 #include "core/annunciation/annunciator.h"
 #include "core/events/link.h"
 #include "core/flight/atmosphere.h"
@@ -10,7 +11,6 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "doctest/doctest.h"
-#include "runtime/tasks.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -441,12 +441,12 @@ TEST_CASE("product: the BME280 publishes own pressure altitude, dated, and a sil
     CHECK(own.pressure_altitude_mm ==
           flight::pressure_to_altitude_mm(rig.state().barometer.pressure_mpa));
     CHECK(own.pressure_altitude_at_ms <= 3000);
-    CHECK(own.pressure_altitude_at_ms + runtime::kBarometerPublishPeriodMs + 50 > 3000);
+    CHECK(own.pressure_altitude_at_ms + boards::kBarometerPublishPeriodMs + 50 > 3000);
 
     rig.platform.barometer().fitted = false;
-    rig.run(3050, 3000 + 2 * runtime::kBarometerPublishPeriodMs);
+    rig.run(3050, 3000 + 2 * boards::kBarometerPublishPeriodMs);
     CHECK(own.pressure_altitude_valid);
-    rig.run(5050, 3000 + 4 * runtime::kBarometerPublishPeriodMs + 100);
+    rig.run(5050, 3000 + 4 * boards::kBarometerPublishPeriodMs + 100);
     CHECK_FALSE(rig.product.ownship().barometer_active());
     CHECK_FALSE(own.pressure_altitude_valid);
 }

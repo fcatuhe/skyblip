@@ -11,7 +11,7 @@ enum class BusId : uint8_t { Radio, Epd, Gnss, Sensor };
 enum class PinFunction : uint8_t {
     RadioBusy,
     RadioReset,
-    RadioDio1,
+    RadioIrq,
     EpdDc,
     EpdReset,
     EpdBusy,

@@ -7,7 +7,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
-#include "boards/seeed/meshtracker_x1/pins.h"
 #include "hardware/platform/zephyr/power_down.h"
 
 namespace skyblip::platform::zephyr {
@@ -31,7 +30,7 @@ constexpr uint32_t kX1GnssUartPins[] = {SKYBLIP_X1_PIN(DT_ALIAS(gnss_uart), grou
 // boards/seeed/meshtracker_x1/README.md
 class MeshtrackerX1Power : public PowerDown {
    public:
-    void system_off() { power_off(boards::meshtracker_x1::kFactoryDfuButton); }
+    using PowerDown::PowerDown;
 
    private:
     void perform(power::PowerDownStep step) override {

@@ -32,6 +32,9 @@ class MeshtrackerX1 {
    public:
     using AdsbReceiver = zephyr::AdsbReceiver;
 
+    explicit MeshtrackerX1(power::DfuButton factory_dfu_button)
+        : system_power_{factory_dfu_button} {}
+
     // INFO: fc 12nov26 what the boot path is decided on: why the SoC woke, the button and the cell
     void begin_wake() {
         system_power_.read_causes();
@@ -50,6 +53,8 @@ class MeshtrackerX1 {
         (void)link_.begin();
         return Status::Ok;
     }
+
+    void wire(const io::PinMap&) {}
 
     io::Spi& spi(io::BusId) { return radio_spi_; }
     io::Uart& uart(io::BusId) { return gnss_.uart(); }
@@ -94,7 +99,7 @@ class MeshtrackerX1 {
         .cs = {},
     };
 
-    MeshtrackerX1Power system_power_{};
+    MeshtrackerX1Power system_power_;
     MeshtrackerX1Lines lines_{};
     const struct device* radio_spi_device_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
     const struct device* gnss_uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};

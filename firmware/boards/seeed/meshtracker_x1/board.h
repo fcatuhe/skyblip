@@ -23,7 +23,7 @@
 
 namespace skyblip::boards {
 
-static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerPublishPeriodMs,
+static_assert(kBarometerConversionCeilingMs < kBarometerPublishPeriodMs,
               "a SPA06 conversion is read or given up before the next one is triggered");
 
 template <class Platform>
@@ -45,6 +45,7 @@ class MeshtrackerX1 {
                   meshtracker_x1::kHapticEnable, meshtracker_x1::kHapticActuator),
           producer_(platform, bus),
           capabilities_(platform.capabilities()) {
+        platform_.wire(meshtracker_x1::kPinMap);
         platform_.link().deliver_to(bus);
     }
 
@@ -180,7 +181,7 @@ class MeshtrackerX1 {
                 reading.temperature_dc, true});
             return;
         }
-        if (now_ms - barometer_triggered_ms_ < runtime::kBarometerConversionCeilingMs) return;
+        if (now_ms - barometer_triggered_ms_ < kBarometerConversionCeilingMs) return;
         barometer_converting_ = false;
         barometer_faults_++;
     }

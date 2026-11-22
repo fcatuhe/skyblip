@@ -26,7 +26,7 @@ The compensation uses the datasheet's names in full words:
 
 ## The setting
 
-Forced mode, four conversions a second (`runtime::kBarometerConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter advances on every forced conversion, so the three unread conversions of each second feed the published one.
+Forced mode, four conversions a second (`boards::kBarometerConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter advances on every forced conversion, so the three unread conversions of each second feed the published one.
 
 | Figure | Value | Source |
 |---|---|---|
@@ -62,7 +62,7 @@ Each trigger is one write of `ctrl_meas`, and the pass returns.
 - A trigger waits for the previous conversion to be read or given up.
 - Only the edge conversion is read. Each later pass reads three bytes from 0xF3 (status, `ctrl_meas`, config) and bursts 0xF7..0xFC once `measuring` and `im_update` are clear, about 40 ms in, well before the next trigger overwrites the result registers.
 - The sample is dated `kConversionMidpointMs`, 21 ms, after the edge trigger, the same offset from PPS every second.
-- A published conversion not read within `runtime::kBarometerConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `barometer_faults()`, as is any trigger the part refused. An unpublished one is deemed done at the same ceiling, unread.
+- A published conversion not read within `boards::kBarometerConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `barometer_faults()`, as is any trigger the part refused. An unpublished one is deemed done at the same ceiling, unread.
 
 ## Recovery
 

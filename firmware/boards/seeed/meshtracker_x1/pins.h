@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/power/shutdown.h"
+#include "hardware/io/io.h"
 #include "hardware/parts/drv2605/drv2605.h"
 
 #ifdef CONFIG_BOARD_MESHTRACKER_X1
@@ -29,6 +30,15 @@ constexpr uint32_t kButtonHoldMs = 30;
 
 // INFO: fc 12nov26 the factory bootloader enters UF2 only after a 3 s hold: factory/README.md
 constexpr power::DfuButton kFactoryDfuButton = power::DfuButton::HoldEntersDfu;
+
+constexpr io::PinRole kPinRoles[] = {
+    {io::PinFunction::RadioBusy, kRadioBusy},
+    {io::PinFunction::RadioReset, kRadioReset},
+    {io::PinFunction::RadioIrq, kRadioIrq},
+    {io::PinFunction::HapticEnable, kHapticEnable},
+};
+
+constexpr io::PinMap kPinMap{kPinRoles, static_cast<int>(sizeof(kPinRoles) / sizeof(kPinRoles[0]))};
 
 #ifdef CONFIG_BOARD_MESHTRACKER_X1
 #define SKYBLIP_DEVICETREE_PIN(node_id) \

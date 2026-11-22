@@ -55,6 +55,9 @@ class TEchoPlus {
     using Rf = zephyr::Rf;
     using Link = zephyr::Link;
 
+    explicit TEchoPlus(power::DfuButton factory_dfu_button)
+        : system_power_{button_, factory_dfu_button} {}
+
     Status begin() {
         system_power_.begin();
         if (!device_is_ready(gpio0_) || !device_is_ready(gpio1_)) return Status::Down;
@@ -222,7 +225,7 @@ class TEchoPlus {
     zephyr::DieTemperature die_temperature_{};
     zephyr::Pps pps_{};
     zephyr::Watchdog watchdog_{};
-    zephyr::SystemPower system_power_{button_};
+    zephyr::SystemPower system_power_;
 };
 
 static_assert(fills_the_platform_contract<TEchoPlus>());

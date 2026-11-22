@@ -44,7 +44,7 @@ Zephyr 4.5.0 has no SPA06 driver, and a sensor-API fetch would sleep through the
 
 64 times is the datasheet's high-precision mode and its sports use case (DS table 5, PRS_CFG 0x26). 128 times takes twice as long for the same 0.3 Pa (DS table 8), and 32 times takes half as long for 0.4 Pa. The part has no IIR filter, so a conversion that is not read buys nothing: trigger once a second, on the PPS edge.
 
-A conversion takes the pressure time, one pass, the temperature time and one more pass: about 104 + 10 + 3.6 + 10 ms with `runtime::kServicePassCeilingMs`, and about 140 ms if the pressure takes 115 ms. That fits `runtime::kBarometerConversionCeilingMs`, 150 ms, with little margin. A conversion that misses it is counted in the board's `barometer_faults()`, and the next second triggers again.
+A conversion takes the pressure time, one pass, the temperature time and one more pass: about 104 + 10 + 3.6 + 10 ms with `runtime::kServicePassCeilingMs`, and about 140 ms if the pressure takes 115 ms. That fits `boards::kBarometerConversionCeilingMs`, 150 ms, with little margin. A conversion that misses it is counted in the board's `barometer_faults()`, and the next second triggers again.
 
 ## Compensation
 

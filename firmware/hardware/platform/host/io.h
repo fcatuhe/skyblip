@@ -103,7 +103,7 @@ class Gpio : public io::Gpio {
             switch (role.function) {
                 case io::PinFunction::RadioBusy: chips_.radio.busy_pin = role.pin; break;
                 case io::PinFunction::RadioReset: chips_.radio.reset_pin = role.pin; break;
-                case io::PinFunction::RadioDio1: chips_.radio.dio1_pin = role.pin; break;
+                case io::PinFunction::RadioIrq: chips_.radio.dio1_pin = role.pin; break;
                 case io::PinFunction::EpdDc: chips_.epd.dc_pin = role.pin; break;
                 case io::PinFunction::EpdReset: chips_.epd.reset_pin = role.pin; break;
                 case io::PinFunction::EpdBusy: chips_.epd.busy_pin = role.pin; break;
@@ -145,7 +145,7 @@ class Gpio : public io::Gpio {
             switch (owner_[i].function) {
                 case io::PinFunction::RadioBusy:
                 case io::PinFunction::RadioReset:
-                case io::PinFunction::RadioDio1: return &chips_.radio;
+                case io::PinFunction::RadioIrq: return &chips_.radio;
                 case io::PinFunction::EpdDc:
                 case io::PinFunction::EpdReset:
                 case io::PinFunction::EpdBusy:

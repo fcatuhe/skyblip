@@ -8,6 +8,7 @@
 #include "core/events/input.h"
 #include "core/events/sensor.h"
 #include "core/input/contact.h"
+#include "core/power/battery.h"
 #include "core/timing/slot.h"
 #include "ports/capabilities.h"
 #include "runtime/service.h"
@@ -15,19 +16,24 @@
 
 namespace skyblip::boards {
 
+constexpr uint32_t kBarometerPublishPeriodMs = 1000;
+constexpr uint32_t kBarometerPpsWindowMs = 2 * runtime::kServicePassCeilingMs;
+// INFO: fc 03oct26 Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case
+constexpr uint32_t kBarometerConversionCeilingMs = 150;
+
 // INFO: fc 19nov26 published on the PPS window when locked, a second after the last otherwise
 inline bool barometer_due(const timing::ClockState& clock, uint32_t since_published_ms) {
-    if (since_published_ms < runtime::kBarometerPublishPeriodMs / 2) return false;
-    if (!clock.pps_locked) return since_published_ms >= runtime::kBarometerPublishPeriodMs;
-    return clock.since_edge_ms < runtime::kBarometerPpsWindowMs ||
-           since_published_ms >= 2 * runtime::kBarometerPublishPeriodMs;
+    if (since_published_ms < kBarometerPublishPeriodMs / 2) return false;
+    if (!clock.pps_locked) return since_published_ms >= kBarometerPublishPeriodMs;
+    return clock.since_edge_ms < kBarometerPpsWindowMs ||
+           since_published_ms >= 2 * kBarometerPublishPeriodMs;
 }
 
 // INFO: fc 19nov26 a locked PPS edge wakes the loop itself, so only the fallback needs a pass
 inline uint32_t barometer_due_in_ms(const timing::ClockState& clock, uint32_t since_published_ms) {
     return runtime::remaining_ms(since_published_ms, clock.pps_locked
-                                                         ? 2 * runtime::kBarometerPublishPeriodMs
-                                                         : runtime::kBarometerPublishPeriodMs);
+                                                         ? 2 * kBarometerPublishPeriodMs
+                                                         : kBarometerPublishPeriodMs);
 }
 
 // INFO: fc 19nov26 what both boards read the same way: the cell, the contacts and the PPS edge
@@ -38,7 +44,7 @@ class Producer {
 
     void poll_battery(ports::Capabilities capabilities, uint32_t now_ms) {
         if (!ports::has(capabilities, ports::Capability::Battery)) return;
-        if (now_ms - last_battery_ms_ < runtime::kBatteryPeriodMs) return;
+        if (now_ms - last_battery_ms_ < power::kBatteryPeriodMs) return;
         last_battery_ms_ = now_ms;
         uint16_t divider_mv = 0;
         // INFO: fc 05oct26 refused or not, the reading and VBUS go out: core/power judges it
@@ -49,7 +55,7 @@ class Producer {
     uint32_t battery_due_in_ms(ports::Capabilities capabilities, uint32_t now_ms) const {
         if (!ports::has(capabilities, ports::Capability::Battery))
             return runtime::kServiceRestCeilingMs;
-        return runtime::remaining_ms(now_ms - last_battery_ms_, runtime::kBatteryPeriodMs);
+        return runtime::remaining_ms(now_ms - last_battery_ms_, power::kBatteryPeriodMs);
     }
 
     // INFO: fc 19nov26 true while the contact is down or settling, which only passes can time
