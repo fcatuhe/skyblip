@@ -385,25 +385,6 @@ TEST_CASE("comms: no reading is no key, never a zero") {
     CHECK(dump_of(link, config).find("die_temperature_c") == std::string::npos);
 }
 
-TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
-    ConfigService config(link, store);
-
-    // A cold morning must not read one degree warmer than it is, and a hot
-    // afternoon must not read one cooler: -20.6 C is -21, +20.6 C is +21.
-    config.set_die_temperature(-206, true);
-    CHECK(dump_of(link, config).find("\"die_temperature_c\":-21") != std::string::npos);
-
-    config.set_die_temperature(206, true);
-    CHECK(dump_of(link, config).find("\"die_temperature_c\":21") != std::string::npos);
-
-    config.set_die_temperature(-4, true);
-    CHECK(dump_of(link, config).find("\"die_temperature_c\":0") != std::string::npos);
-}
-
 // J and L. A counter a bench reads is not state a pilot's screen reacts to, so it
 // reads out with the rest of the radio's counters, not on the pushed status.
 TEST_CASE("comms: the range gate's refusals read out with the radio's own counters") {

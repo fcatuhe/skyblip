@@ -192,7 +192,7 @@ TEST_CASE("formation: a split that turns back into a closure is alarmed again") 
     CHECK_FALSE(flight.target()->in_formation);
 }
 
-TEST_CASE("formation: a target nobody has heard from is forgotten, membership and all") {
+TEST_CASE("formation: the alarm forgets a member the traffic table aged out") {
     Flight flight;
     const uint32_t after = flight.hold_station(1000);
     REQUIRE(flight.rig.alarm_service.formation_members() == 1);

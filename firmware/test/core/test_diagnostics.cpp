@@ -96,6 +96,7 @@ TEST_CASE("diagnostics: no reading is no key") {
 }
 
 // The status reply shares this rounding, so both replies read a support case alike.
+// A cold morning must not read one degree warmer than it is, nor a hot afternoon one cooler.
 TEST_CASE("diagnostics: tenths of a degree round away from zero on both sides of freezing") {
     CHECK(whole_celsius(-206) == -21);
     CHECK(whole_celsius(206) == 21);
