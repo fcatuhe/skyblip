@@ -1,6 +1,6 @@
 # ADS-L questions for EASA
 
-The readings of ADS-L 4 SRD-860 and its Issue 1 compatibility rules that skyBlip's ADS-L stack and its coming 1.0.0 rest on. The conformance suite pins these readings. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions), but for question 3, which concerns payload 66 outside the ADS-L stack.
+These are readings of ADS-L 4 SRD-860 and its Issue 1 compatibility rules that the text does not settle. The Go uses them pending EASA's answers. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions), but for question 3, which concerns payload 66 outside the ADS-L stack.
 
 | # | Clause | Status |
 |---|---|---|

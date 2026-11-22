@@ -91,7 +91,7 @@ Each verdict that is not a fault has its own counter, so a device with no fix be
 | `tx_named` | how many of the bursts in `tx_ok` carried own-ship's registration rather than a position |
 | `uplink_stale` | records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or ahead of the second they were heard in (G.3) |
 | `tx_given_up` | turns of own-ship's schedule that never went out, neither in their second nor on a retry 2 s on, before their type's next turn (`core/timing/README.md`) |
-| `tx_held_for_b5` | seconds own-ship held a position because a close neighbour reads only Issue 1 and the position carried an unknown field Issue 1 has no code for (B.5) |
+| `tx_held_for_b5` | seconds own-ship held a position because a close neighbour reads only Issue 1 and the transmitter could not encode a motion field as unavailable in Issue 1 (B.5) |
 | `tx_deferred` | `Deferred` bursts (C.2 and D.3, `core/timing/README.md`) |
 | `tx_forced` | `Forced` bursts (D.3) |
 | `tx_busy_missed` | `Busy` bursts (D.3) |

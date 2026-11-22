@@ -325,7 +325,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: the ground track is 512 steps of 0.703125 degr
 
 // The Issue 1 tables name the lower magnitude of each eight-unit bucket.
 TEST_CASE(
-    "ADS-L.4.SRD860.E.1.1: Traffic endpoint codes in Issue 1 are unavailable only in Issue 2" *
+    "ADS-L.4.SRD860.E.1.1: top motion codes are values in version 0 and unavailable in version 1" *
     doctest::test_suite("main")) {
     const uint8_t erasures[24] = {};
     adsl::Packet packet{};
@@ -357,8 +357,8 @@ TEST_CASE(
     CHECK_FALSE(traffic.climb_valid);
 }
 
-TEST_CASE("ADS-L.4.SRD860.G.1.9: Issue 1 negative zero means absent climb, not level flight") {
-    // G.1 offset 86 holds the sign bit alone, with E.2 scrambling and E.3.1 CRC.
+// INFO: fc 22nov26 the Issue 1 G.1 and G.1.6 reading is open in docs/ADSL_EASA_QUESTIONS.md
+TEST_CASE("ADS-L.4.SRD860.G.1.9: the Go reads Issue 1 negative zero as absent climb") {
     const uint8_t frame[24] = {
         0x00, 0xEF, 0x80, 0x3C, 0x81, 0xA4, 0x92, 0x6E, 0xFB, 0xCE, 0x65, 0xE8,
         0x52, 0xED, 0xE0, 0xF6, 0xEC, 0xA1, 0x94, 0xB1, 0x37, 0x5D, 0x91, 0x0D,

@@ -114,6 +114,8 @@ The length byte rides outside the CRC, and 16 and 24 differ in one bit, so `rece
 
 A code marked 0 still reads as true to an Issue 1 receiver, so it stays at version 0 for the widest reach. SIL, SDA, NIC, HFOM and the velocity accuracy keep their thresholds and codes. NIC's 13 to 15 are reserved in Issue 2, undefined in Issue 1, and never sent.
 
+The low-level `set_*_invalid()` motion setters write Issue 2 markers but do not set the header. Use `encode_traffic()` to choose the version, or set it explicitly when building a packet by hand.
+
 For direct Traffic, `decode_traffic()` uses the received version for the motion validity checks. It reads the three top motion codes as values in version 0, with the same exponential decoding as other values, and as unavailable in version 1. It reads 0x100 as absent climb in version 0 only ([question for EASA](../../../docs/ADSL_EASA_QUESTIONS.md)). For position, 0x800000 never gives a valid position, and 0xFFFFFF gives no fix in version 0 only. Category and accuracy codes are returned as received, without inferring a narrower category or an accuracy in metres.
 
 ## Soft versioning
@@ -139,7 +141,7 @@ For direct Traffic, `decode_traffic()` uses the received version for the motion 
 
 `Uplink::encode()` builds G.3's payload type 4 for a ground station: its own address in the F.2 header, then for each target the 30-bit address of the sender and its 120-bit Traffic payload copied byte for byte, then the F.2.5 padding. The header says version 1, since Issue 1 has no uplink, and sets the error control bit, since the parity is E.3.2's. `Uplink::decode()` counts the records from the D.1.1 length byte, as G.3 asks, and drops a record with no address or no position. `uplink_record_current()` is G.3's age rule: current up to 10 s after the instant its G.1.1 timestamp names, never before it, and never for a timestamp of 60 to 63, which "shall not be used". Ten records make the longest packet, 229 bytes behind its length byte and 9.4 ms on air at C.4's 200 kbps (`kUplinkBurstUs`).
 
-An embedded Traffic record has no version field. The decoder uses `lowest_version()` to choose how to read it, so the three top motion codes select Issue 2 and read as unavailable. It cannot recover an original Issue 1 version from those codes.
+An embedded Traffic record has no version field. The decoder uses `lowest_version()` to choose how to read it, so the three top motion codes select Issue 2 and read as unavailable. It cannot recover an original Issue 1 version from those codes. If no code selects Issue 2, a vertical rate of 0x100 reads as absent climb.
 
 E.3.2 computes the parity over the network header and the scrambled data, prefixed with zeros to 223 bytes, and sends no padding. `ReedSolomon255` uses the field 1+x2+x3+x4+x8 (`kFieldPolynomial`, 0x11D), the primitive element alpha^11 in index form, as CCSDS 131.0 and Karn's fec library count it (`kPrimitiveElement`), and 32 roots from the 121st (`kFirstRoot`). Its names map to the textbook's:
 

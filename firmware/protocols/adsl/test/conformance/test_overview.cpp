@@ -179,7 +179,7 @@ TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a 12 m VFOM is GVA 3, as Is
     CHECK(unclaimed.vertical_accuracy == 0);
 }
 
-// Issue 1 has no unknown code for these, so its 0x3FFF, 0xFF and 0x1FF would read as values.
+// INFO: fc 22nov26 the transmit conversion does not use the inferred Issue 1 climb marker
 TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a Traffic with an unknown field is held" *
           doctest::test_suite("main")) {
     for (int unknown = 0; unknown < 3; unknown++) {

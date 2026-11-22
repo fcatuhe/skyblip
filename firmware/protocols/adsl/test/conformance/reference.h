@@ -13,7 +13,7 @@ namespace skyblip::adsl::conformance {
 
 constexpr size_t kTxChipBytes = 2u * (wire::kSyncWordBytes + kFrameBytes);
 
-// INFO: fc 22nov26 G.1 offsets 64/72/86 hold FF/3FFF/1FF, protected independently by E.2 and E.3.1
+// INFO: fc 22nov26 G.1 offsets 64/72/86 hold FF/3FFF/1FF, packed with Python from E.2 and E.3.1
 inline constexpr uint8_t kIssue1EndpointFrame[24] = {
     0x00, 0x58, 0x03, 0x5D, 0xDD, 0x45, 0xA0, 0xAE, 0x9C, 0x66, 0x97, 0x94,
     0xFD, 0xDF, 0xF4, 0x5C, 0x22, 0x35, 0x15, 0x8E, 0x37, 0x50, 0xC3, 0xC2,
