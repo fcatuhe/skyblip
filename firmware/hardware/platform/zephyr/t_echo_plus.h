@@ -118,7 +118,6 @@ class TEchoPlus {
 
     bool button_down() { return gpio_pin_get_dt(&button_) == 1; }
 
-    // TODO: fc 12sep26 read P0.11 on a bench, the polarity is SoftRF's alone (fcatuhe/skyblip#60)
     bool pad_down() { return gpio_pin_get_dt(&pad_) == 1; }
 
     // INFO: fc 12sep26 the Plus mounts the glass a quarter turn off the scan (SoftRF EPD.cpp:84)
