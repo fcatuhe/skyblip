@@ -33,7 +33,10 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/random.h"
 #include "ports/null.h"
+#include "protocols/adsl/test/conformance/reference.h"
+#include "protocols/common/crc.h"
 #include "protocols/common/test/channel.h"
+#include "test/support/m_band_rig.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -66,24 +69,14 @@ model::AircraftObservation relayed_aircraft(Rig& rig, uint32_t address, int32_t 
     return observation;
 }
 
-// One skyPost transmission: the frame the ground station composes, put on air in
+// One ground station transmission: the packet it composed, put on air in
 // the uplink slot (§C.5, 200..450 ms) at §C.4's 200 kbps. The rig is left at the
 // top of the next second, the way rig.second() leaves it.
 //
 // Returns what the radio model made of the burst: false is a deaf dwell, and it
 // is a result worth asserting on rather than a test that quietly passes.
-bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraft, int count,
-           int corrupt_bytes = 0) {
+bool on_air(Rig& rig, uint32_t& now_ms, const uint8_t* packet) {
     rig.push_timed_fix(25000, 900);
-
-    protocol::AdslUplink codec;
-    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
-    REQUIRE(codec.encode(aircraft, count, rig.state().own.utc_s + 1, timing::kGroundEmitStartMs,
-                         kStation, adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
-    if (corrupt_bytes > 0) {
-        wire::RfChannel channel(0x5150);
-        channel.apply_symbol_errors(packet + 1, packet[0], corrupt_bytes);
-    }
 
     uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0};
     const size_t burst_bytes = adsl::encode_o_band(packet, burst);
@@ -103,6 +96,20 @@ bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraf
     now_ms += 1000;
     rig.utc_offset_s++;
     return heard;
+}
+
+// The aircraft as the ground station composes them, under the FEC as skyPost sends them.
+bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraft, int count,
+           int corrupt_bytes = 0) {
+    protocol::AdslUplink codec;
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(codec.encode(aircraft, count, rig.state().own.utc_s + 1, timing::kGroundEmitStartMs,
+                         kStation, adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
+    if (corrupt_bytes > 0) {
+        wire::RfChannel channel(0x5150);
+        channel.apply_symbol_errors(packet + 1, packet[0], corrupt_bytes);
+    }
+    return on_air(rig, now_ms, packet);
 }
 
 // A neighbour we hear for ourselves, on the M band, in the direct slot. Same
@@ -157,8 +164,6 @@ int sourced(Rig& rig, model::Source source) {
     }
     return count;
 }
-
-void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 25000, 900); }
 
 }  // namespace
 
@@ -220,6 +225,41 @@ TEST_CASE("uplink: a frame Reed-Solomon cannot repair is counted apart and dropp
     CHECK(rig.state().traffic.count() == 0);
     CHECK(rig.state().air.rx_bad == rx_bad_before);
     CHECK(rig.state().air.rx_ok == 0);
+}
+
+// A packet whose parity holds was heard well, so only a failed parity is answered by the antenna.
+TEST_CASE("uplink: a refused frame is a bad CRC only when its parity failed") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+    const uint32_t rx_type_before = rig.state().air.rx_type;
+    const adsl::Packet traffic[1] = {adsl::conformance::traffic_packet(0x4B0003)};
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    constexpr uint8_t kPayloadTypeFisB = 5;
+
+    adsl::conformance::spec_uplink(traffic, 1, 0x61, false, packet);
+    packet[2] = kPayloadTypeFisB;
+    const size_t covered = packet[0] - 3u;
+    const uint32_t crc = wire::crc24_compute(packet + 1, covered);
+    packet[1 + covered] = static_cast<uint8_t>(crc >> 16);
+    packet[2 + covered] = static_cast<uint8_t>(crc >> 8);
+    packet[3 + covered] = static_cast<uint8_t>(crc);
+    REQUIRE(on_air(rig, rig.now_ms, packet));
+    CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
+
+    adsl::conformance::spec_uplink(traffic, 1, 0x81, false, packet);
+    REQUIRE(on_air(rig, rig.now_ms, packet));
+    CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
+    CHECK(rig.state().air.rx_type == rx_type_before + 2);
+    CHECK(rig.state().air.uplink_bad == 0);
+
+    adsl::conformance::spec_uplink(traffic, 1, 0x01, false, packet);
+    packet[10] ^= 0x10;
+    REQUIRE(on_air(rig, rig.now_ms, packet));
+    CHECK(heard_verdict(rig) == radio::Verdict::BadCrc);
+    CHECK(rig.state().air.uplink_bad == 1);
+    CHECK(rig.state().air.uplink_frames == 3);
+    CHECK(rig.state().traffic.count() == 0);
 }
 
 // A relay is a rebroadcast of something we may already be hearing for ourselves.
