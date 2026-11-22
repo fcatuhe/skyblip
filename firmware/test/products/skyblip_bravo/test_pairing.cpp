@@ -128,6 +128,7 @@ TEST_CASE("bravo pairing: no press, no health: the Go gives up and neither side 
     CHECK(tango.service().step() == go::BravoStep::Refused);
     CHECK(tango.service().refusal() == go::BravoRefusal::NoAnswer);
     CHECK_FALSE(tango.go_pinned());
+    CHECK_FALSE(tango.go.platform.central().up());
     CHECK_FALSE(tango.peer().paired());
     CHECK_FALSE(tango.peer().requested());
     events::BluetoothAddress stored{};

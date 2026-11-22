@@ -18,6 +18,7 @@
 #include "test/support/glass_text.h"
 #include "test/support/log_event_read.h"
 #include "test/support/nmea_stream.h"
+#include "test/support/paired_products.h"
 #include "test/support/radar_rig.h"
 #include "test/support/tango.h"
 
@@ -393,12 +394,11 @@ TEST_CASE("bravo traffic: a pressure-only target has a height while the baromete
 }
 
 TEST_CASE("bravo traffic: a paired Go waits for its Bravo after boot, and loses it once it taxis") {
-    Tango tango;
-    tango.pair_and_store();
+    PairedProducts pair;
+    pair.pair_and_store();
     uint8_t blob[64] = {};
     size_t bytes = 0;
-    REQUIRE(tango.go.platform.key_value().read("settings", blob, sizeof(blob), bytes) ==
-            Status::Ok);
+    REQUIRE(pair.go.platform.key_value().read("settings", blob, sizeof(blob), bytes) == Status::Ok);
 
     Rig rebooted;
     REQUIRE(rebooted.platform.key_value().write("settings", blob, bytes) == Status::Ok);
@@ -419,12 +419,11 @@ TEST_CASE("bravo traffic: a paired Go waits for its Bravo after boot, and loses 
 
 // A Go switched on in a rolling aircraft gives its Bravo the connection ceiling first.
 TEST_CASE("bravo traffic: rolling counts only from the boot settle on") {
-    Tango tango;
-    tango.pair_and_store();
+    PairedProducts pair;
+    pair.pair_and_store();
     uint8_t blob[64] = {};
     size_t bytes = 0;
-    REQUIRE(tango.go.platform.key_value().read("settings", blob, sizeof(blob), bytes) ==
-            Status::Ok);
+    REQUIRE(pair.go.platform.key_value().read("settings", blob, sizeof(blob), bytes) == Status::Ok);
 
     Rig rebooted;
     REQUIRE(rebooted.platform.key_value().write("settings", blob, bytes) == Status::Ok);

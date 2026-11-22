@@ -70,10 +70,15 @@ struct PairedProducts {
         now_ms += span_ms + 50;
     }
 
-    // The pilot opens the BRAVO page on the Go, picks the one listed and confirms it.
-    void ask() {
+    // The pilot opens the BRAVO page on the Go, where it scans.
+    void open_page() {
         go.show(now_ms, go::Page::Bravo);
         run_for(300);
+    }
+
+    // The pilot picks the one listed and confirms it, and Bravo waits for its button.
+    void ask() {
+        open_page();
         REQUIRE(service().found_count() == 1);
         go.press(now_ms);
         go.press(now_ms);
@@ -85,6 +90,13 @@ struct PairedProducts {
         run_for(150);
         bravo.platform.set_button_down(false);
         run_for(150);
+    }
+
+    // Both presses, the Go's and Bravo's, and the health that tells the Go it is paired.
+    void pair() {
+        ask();
+        press_bravo();
+        run_for(2000);
     }
 
     // INFO: fc 11nov26 each side's settings write waits for a write window, forced after 3 s
