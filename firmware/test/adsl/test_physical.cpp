@@ -12,6 +12,7 @@
 #include "protocols/common/manchester.h"
 #include "simulator/simulator.h"
 #include "test/support/fresh_fix.h"
+#include "test/support/rf_pass_rig.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -186,6 +187,27 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship's Traffic and Status go out inside the D
                 }
             }
         }
+    }
+}
+
+TEST_CASE("ADS-L.4.SRD860.C.5: a stalled executor misses a burst past the slot's key deadline") {
+    for (const uint64_t resumed_us : {3991000u, 4001000u}) {
+        CAPTURE(resumed_us);
+        Pass pass;
+        REQUIRE(pass.begin() == Status::Ok);
+        pass.state.activation.serial = 243;
+        pass.state.own.utc_ms = 500;
+        pass.whole_pass(3820000);
+        pass.whole_pass(3830000);
+        pass.whole_pass(3989000);
+        REQUIRE(pass.state.rf.dwell.burst_armed);
+        REQUIRE_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+
+        pass.whole_pass(resumed_us);
+
+        CHECK_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+        CHECK(pass.state.air.tx_lost == 1);
+        CHECK(pass.radio.mode() == parts::RadioMode::Rx);
     }
 }
 

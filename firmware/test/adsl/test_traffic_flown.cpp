@@ -8,6 +8,7 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "simulator/simulator.h"
+#include "test/support/rf_pass_rig.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -134,6 +135,26 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: a receiver solving off the quarters never names
 
     CHECK_FALSE(simulator.product().board().gnss().solving_half_seconds());
     check_every_position(simulator);
+}
+
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a key delay cannot age the encoded fix past its deadline") {
+    Pass pass;
+    REQUIRE(pass.begin() == Status::Ok);
+    pass.state.activation.serial = 1199;
+    pass.state.own.utc_s = 2;
+    pass.state.own.fix_at_ms = 2000;
+    pass.state.own.fix_in_hand_ms = 2070;
+    pass.poll_clock(2420000);
+    pass.rf.service(2420);
+    pass.radio_service.tick(2420);
+    pass.whole_pass(2450000);
+    pass.whole_pass(2489000);
+    REQUIRE(pass.state.rf.dwell.burst_armed);
+
+    pass.whole_pass(2491000);
+
+    CHECK_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+    CHECK(pass.state.air.tx_lost == 1);
 }
 
 // Flown with the channel busy one burst in three seconds, and a receiver 200 ms late on the wire.

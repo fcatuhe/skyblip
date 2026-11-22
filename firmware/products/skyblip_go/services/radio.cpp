@@ -362,6 +362,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         with_burst.tx = chips;
         with_burst.tx_bytes = tx_bytes;
         with_burst.tx_at_us = tx_at_us;
+        with_burst.tx_last_key_us = last_key_us(armed, payload);
         if (context_.roles.rf.arm(with_burst) != Status::Ok) {
             if (!dwell_armed) {
                 refuse_dwell(slot, first, phase, role, true, now_ms);

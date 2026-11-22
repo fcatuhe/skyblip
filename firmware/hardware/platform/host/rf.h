@@ -35,11 +35,12 @@ class Rf : public ports::Rf {
         if (plan.tx != nullptr && (plan.tx_at_us < plan.start_us || plan.tx_at_us >= plan.end_us))
             return Status::OutOfRange;
         if (armed_ && joins_flying_dwell(plan))
-            return flying_bursts_.add(burst_of(plan)) ? Status::Ok : Status::WouldBlock;
+            return flying_bursts_.add(ports::RfBurst::of(plan)) ? Status::Ok : Status::WouldBlock;
         if (armed_ && plan.end_us <= flying_plan_.end_us) return Status::WouldBlock;
         if (armed_ && queued_ && same_dwell(plan, queued_plan_))
-            return plan.tx == nullptr || queued_bursts_.add(burst_of(plan)) ? Status::Ok
-                                                                            : Status::WouldBlock;
+            return plan.tx == nullptr || queued_bursts_.add(ports::RfBurst::of(plan))
+                       ? Status::Ok
+                       : Status::WouldBlock;
         if (armed_) {
             queued_plan_ = plan;
             queued_bursts_ = ports::RfBursts::of(plan);
@@ -121,10 +122,6 @@ class Rf : public ports::Rf {
     uint32_t armed_count() const { return armed_count_; }
 
    private:
-    static ports::RfBurst burst_of(const ports::RfPlan& plan) {
-        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced};
-    }
-
     static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
         return one.mode == other.mode && one.frequency_hz == other.frequency_hz &&
                one.end_us == other.end_us;
@@ -154,15 +151,19 @@ class Rf : public ports::Rf {
         }
         while (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count) {
             const ports::RfBurst burst = flying_bursts_.burst[keyed_];
+            if (burst.key_expired(now_us)) {
+                miss(burst);
+                continue;
+            }
             if (!burst.forced && !assessed_) {
                 if (now_us + kCcaLeadUs < burst.at_us) return;
                 if (!listen(burst)) continue;
             }
             if (now_us < burst.at_us) return;
-            // INFO: fc 14nov26 a pass stalled past the dead time listens again rather than key late
+            // INFO: fc 14nov26 a stale reading needs a new assessment if the burst can still key
             if (!burst.forced && !within_dead_time(assessment_, now_us) && !listen(burst)) continue;
-            transmit(burst);
-            return;
+            if (transmit(burst)) return;
+            miss(burst);
         }
     }
 
@@ -257,13 +258,27 @@ class Rf : public ports::Rf {
         return config;
     }
 
-    void transmit(const ports::RfBurst& burst) {
+    bool transmit(const ports::RfBurst& burst) {
+        if (radio_.stage_tx(burst.chips, burst.bytes) != Status::Ok ||
+            radio_.wait_ready() != Status::Ok)
+            return false;
+        staged_at_us_ = clock_.microseconds();
+        if (burst.key_expired(staged_at_us_) || radio_.key_tx() != Status::Ok) return false;
         keyed_++;
         assessed_ = false;
         tx_at_us_ = burst.at_us;
-        staged_at_us_ = clock_.microseconds();
-        (void)radio_.transmit(burst.chips, burst.bytes);
         keyed_at_us_ = clock_.microseconds();
+        return true;
+    }
+
+    void miss(const ports::RfBurst& burst) {
+        if (radio_.mode() != parts::RadioMode::Rx) (void)radio_.start_receive();
+        flying_bursts_.remove(keyed_);
+        assessed_ = false;
+        tx_at_us_ = burst.at_us;
+        keyed_at_us_ = 0;
+        staged_at_us_ = 0;
+        emit(events::RfEventType::Missed, clock_.microseconds());
     }
 
     // INFO: fc 15sep26 virtual time stands still in a pass, so the run of reads is the window

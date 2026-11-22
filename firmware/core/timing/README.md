@@ -27,7 +27,7 @@ The radio is judged by what its executor reports. A dwell the part would not ent
 
 ### A burst is timed only from a fresh edge
 
-On a lock every burst keys at most `kPpsEdgeMaxAgeMs`, 1202 ms, after the edge of the second it was planned in, where window B's dwell closes. `pps_fresh()` holds the gate to that age, so C.5 holds through a lost pulse. `Pps` (`../../hardware/platform/zephyr/pps.h`) reads the pulse locked for `kPpsLockTailMs`, 3 s, past its last edge, and that tail carries the dwells and `bus::State::traffic_now_s()`, never a burst. A lost pulse stops the bursts 1.2 s after its last edge and shows `NO TX PPS` 10 s later.
+On a lock no burst keys beyond its own window's deadline. `kPpsEdgeMaxAgeMs`, 1202 ms, also limits planning from the edge of the second, through the close of window B's dwell. `pps_fresh()` holds the gate to that age, so C.5 holds through a lost pulse. `Pps` (`../../hardware/platform/zephyr/pps.h`) reads the pulse locked for `kPpsLockTailMs`, 3 s, past its last edge, and that tail carries the dwells and `bus::State::traffic_now_s()`, never a burst. A lost pulse stops the bursts 1.2 s after its last edge and shows `NO TX PPS` 10 s later.
 
 ### The PPS holdover keeps the dwells, receive only
 
@@ -71,7 +71,7 @@ Carrier sense is a requirement met, not a protection counted on. Two aircraft co
 
 G.1.1 names the PVT fix's time in the Timestamp to +/-10 ms, and G.1.16 sends no Traffic "containing navigation data older than 500 ms". The L76K solves on `.000` and `.500`, two of the Timestamp's quarters (`../../hardware/parts/l76k/README.md`). A position burst carries the newest solution unextrapolated, stamped with its own quarter, and a solution more than 10 ms off a quarter builds no Traffic (`core/protocol/adsl.cpp`). `own.fix_at_ms` is the solution's instant on the PPS edge (`../gnss/README.md`, PPS, and what it is worth).
 
-The age runs to the instant on air. `Transmitter::attempt()` refuses a position whose solution would then be older than `kFixMaxAgeMs` less `kFixAgeAllowanceMs`: the frame's 5 ms and `kCompletionAllowanceMs`, so the last chip leaves inside 500 ms. A burst keys at its instant or not at all, so it flies at most 490 ms after its solution.
+The age runs to the instant on air. `Transmitter::attempt()` refuses a position whose solution would then be older than `kFixMaxAgeMs` less `kFixAgeAllowanceMs`: the frame's 5 ms and `kCompletionAllowanceMs`, so the last chip leaves inside 500 ms. The Go hands the executor the earlier of the window's last instant and the instant 490 ms after the encoded fix. Traffic and Status use windows cut to the direct slot. Payload 66 keeps its own window, which ends before the next uplink dwell. The executor reports a burst missed if it cannot key by its deadline or is at least 5 ms late, even when it is forced. The 5 ms limit allows for the host simulator's step. The hardware executor checks the deadline again after staging the burst.
 
 A position whose fix arrives, `own.fix_in_hand_ms`, after its drawn instant less `kRedrawLeadMs` is drawn again: `Transmitter::redrawn_in()` draws over the rest of the window, from the fix plus that lead, keyed on the address and the second so units fed by one receiver model do not bunch. A fix after the window's last instant loses the position. `air.tx_redrawn_for_fix` counts redrawn positions and `air.tx_held_for_fix` lost ones.
 
