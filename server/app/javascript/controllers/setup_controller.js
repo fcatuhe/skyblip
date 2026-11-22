@@ -143,7 +143,7 @@ export default class extends Controller {
       const check = () => {
         const activator = this.#activator(unit)
         const state = activator.state
-        if (state.address) {
+        if (state.serial) {
           stop()
           return resolve(true)
         }

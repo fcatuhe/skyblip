@@ -41,7 +41,7 @@ const settled = (fleet, predicate) => new Promise(resolve => {
   });
 });
 
-test('a device is named by its product and its address, and a Go+ is the same unit as a Go', () => {
+test('a device is named by its product and its serial, and a Go+ is the same unit as a Go', () => {
   assert.equal(slugOf('skyBlip Go 00012A'), 'go-00012a');
   assert.equal(slugOf('skyBlip Go+ 00012A'), 'go-00012a');
   assert.equal(slugOf('skyBlip Bravo 3F2A'), 'bravo-3f2a');
@@ -73,7 +73,7 @@ test('a connected device is remembered by this browser, and listed again after a
 
 test('a Go and a Bravo stay connected side by side', async () => {
   const go = new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 });
-  const bravo = new FakeSkyblip({ name: 'skyBlip Bravo 3F2A', bufSize: 300, product: 'bravo', address: null });
+  const bravo = new FakeSkyblip({ name: 'skyBlip Bravo 3F2A', bufSize: 300, product: 'bravo', serial: null });
   const radio = airwaves(go, bravo);
   const fleet = new Fleet({ storage: storage() });
   radio.picks.push(go);
@@ -92,7 +92,7 @@ test('a Go and a Bravo stay connected side by side', async () => {
 // The list nests a Bravo under its Go from what this browser last read, with neither switched on.
 test('the unit a device is paired with is remembered after a reload', async () => {
   const shelf = storage();
-  airwaves(new FakeSkyblip({ name: 'skyBlip Bravo 3F2A', bufSize: 300, product: 'bravo', address: null, bluetoothTag: 0x3f2a, pairedTag: 0x1b2c }));
+  airwaves(new FakeSkyblip({ name: 'skyBlip Bravo 3F2A', bufSize: 300, product: 'bravo', serial: null, bluetoothTag: 0x3f2a, pairedTag: 0x1b2c }));
   const fleet = new Fleet({ storage: shelf });
   const unit = await fleet.connectNew();
   await settled(fleet, () => unit.state.settings);
@@ -178,7 +178,7 @@ test('a chooser closed without a pick leaves nothing new behind', async () => {
 // Activation renames the unit live, so the record must follow it rather than leave a second row.
 test('a unit activated while connected is remembered under its new name, once', async () => {
   const shelf = storage();
-  const fake = new FakeSkyblip({ name: 'activate 3F2A skyBlip', bufSize: 300, address: null });
+  const fake = new FakeSkyblip({ name: 'activate 3F2A skyBlip', bufSize: 300, serial: null });
   airwaves(fake);
   const fleet = new Fleet({ storage: shelf });
   const unit = await fleet.connectNew({ activation: true });
@@ -186,7 +186,7 @@ test('a unit activated while connected is remembered under its new name, once', 
   assert.equal(unit.needsActivation, true);
   assert.deepEqual(fleet.remembered, []);
 
-  fake.address = 0x00012a;
+  fake.serial = 0x00012a;
   fake.answer({ command: 'get' });
   await settled(fleet, () => unit.slug === 'go-00012a');
   assert.equal(unit.needsActivation, false);

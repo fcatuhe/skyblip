@@ -120,19 +120,19 @@ TEST_CASE("ADS-L.4.SRD860.F.2.4: privacy mode selects table 0, the random one" *
     FAIL("optional: no privacy mode, so the table is the one configured and nothing switches it");
 }
 
-// A host cannot name the address or the table: aircraft_address is how an ICAO address gets on air.
+// A host cannot name the serial or the table: aircraft_address is how an ICAO address gets on air.
 TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong to is refused") {
     go::Settings settings = go::defaults();
     // 0x3C0A11 under ICAO
     const events::RxFrame icao =
-        config_frame("{\"command\":\"set\",\"address\":3934737,\"address_mapping_table\":5}");
+        config_frame("{\"command\":\"set\",\"serial\":3934737,\"address_mapping_table\":5}");
     CHECK(go::apply_settings(settings, cbor::Reader(ConstByteSpan(icao.data.data(), icao.bytes))) ==
           Status::Ok);
 
     uint8_t frame[64];
     cbor::Writer writer(frame, sizeof(frame));
-    go::write_config_fields(writer, settings, 0x123456);
+    go::write_config_fields(writer, settings, 0x1234);
     const cbor::Reader reader(ConstByteSpan(frame, static_cast<size_t>(writer.finish())));
-    CHECK(reader.read_unsigned(link::config_key::kAddress).value() == 0x123456u);
+    CHECK(reader.read_unsigned(link::config_key::kSerial).value() == 0x1234u);
     CHECK(reader.read_unsigned(link::config_key::kAddressMappingTable).value() == 58u);
 }

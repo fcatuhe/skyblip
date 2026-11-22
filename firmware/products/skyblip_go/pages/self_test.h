@@ -2,9 +2,9 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_SELF_TEST_H
 
 #include <cstdint>
+#include <optional>
 
 #include "core/comms/peer.h"
-#include "core/settings/address.h"
 #include "core/timing/transmit_gate.h"
 #include "ports/gnss.h"
 #include "products/skyblip_go/glass.h"
@@ -26,7 +26,7 @@ struct SelfTestPart {
 };
 
 struct SelfTestSnapshot {
-    settings::AirAddress address{};
+    std::optional<uint16_t> serial{};
     const char* reset_reason{"UNKNOWN"};
     bool went_dark_flat{false};
     const SelfTestPart* parts{nullptr};

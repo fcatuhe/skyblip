@@ -19,7 +19,7 @@ class Unit < ApplicationRecord
   scope :newest_seen_first, -> { order(updated_at: :desc, id: :desc) }
 
   def self.with_slug(slug)
-    if (serial = slug.to_s[/\Ago-#{format("%02x", MANUFACTURER_PREFIX)}(\h{4})\z/, 1])
+    if (serial = slug.to_s[/\Ago-00(\h{4})\z/, 1])
       where(serial: serial.hex)
     elsif (tag = slug.to_s[/\Aactivate-(\h{4})\z/, 1])
       go.where(serial: nil, bluetooth_tag: tag.hex)
@@ -77,11 +77,13 @@ class Unit < ApplicationRecord
     end
   end
 
+  def hex_serial = (format("%06X", serial) if activated?)
+
   def address = (format("%02X%04X", MANUFACTURER_PREFIX, serial) if activated?)
 
   def slug
     if activated?
-      "go-#{address.downcase}"
+      "go-#{hex_serial.downcase}"
     elsif bluetooth_tag
       "#{bravo? ? "bravo" : "activate"}-#{format("%04x", bluetooth_tag)}"
     end

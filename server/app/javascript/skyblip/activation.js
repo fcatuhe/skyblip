@@ -1,4 +1,4 @@
-import { addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
+import { connect, hasWebBluetooth, serialOf } from '#skyblip/ble';
 import { hex } from '#skyblip/link';
 
 export { hasWebBluetooth };
@@ -50,7 +50,7 @@ export class Activator {
   #bluetoothDevice;
   #leaving = false;
   #serverNonce = null;
-  #state = { phase: 'offline', device: null, address: null, read: false, notice: null };
+  #state = { phase: 'offline', device: null, serial: null, read: false, notice: null };
 
   constructor({ onChange, server, device = null }) {
     this.#onChange = onChange;
@@ -107,7 +107,7 @@ export class Activator {
 
   #receive(reply) {
     if (!reply) return;
-    if (reply.command === 'config') this.#set({ address: addressOf(reply), read: true });
+    if (reply.command === 'config') this.#set({ serial: serialOf(reply), read: true });
     else if (reply.command === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
     else if (reply.command === 'registration' && ['asking', 'confirming'].includes(this.#state.phase)) return this.#register(reply);
     else if (reply.command === 'acknowledgement') this.#acked(reply);
@@ -162,7 +162,7 @@ export class Activator {
     const notice = BUSY.has(this.#state.phase) && !this.#leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#device = null;
     this.#serverNonce = null;
-    this.#set({ phase: 'offline', device: null, address: null, read: false, notice });
+    this.#set({ phase: 'offline', device: null, serial: null, read: false, notice });
   }
 
   #set(patch) {

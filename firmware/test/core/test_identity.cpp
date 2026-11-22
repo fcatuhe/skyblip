@@ -184,7 +184,7 @@ TEST_CASE(
     CHECK_FALSE(identity::code_on(erased));
 }
 
-TEST_CASE("identity: the name says activate and the tag until a serial, then product and address" *
+TEST_CASE("identity: the name says activate and the tag until a serial, then product and serial" *
           doctest::test_suite("main")) {
     char name[identity::kBluetoothNameBytes + 1];
     identity::Activation blank{};

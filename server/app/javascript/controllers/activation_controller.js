@@ -68,7 +68,7 @@ export default class extends Controller {
 
   #render() {
     const unit = this.candidate
-    if (unit?.state?.address) return this.#activated(unit)
+    if (unit?.state?.serial) return this.#activated(unit)
     const linked = unit?.linked ?? false
     const activator = linked ? this.#activator : null
     if (activator && activator.state.phase === "offline") activator.connect()
@@ -78,7 +78,7 @@ export default class extends Controller {
     this.hintTarget.hidden = linked
     this.findTarget.hidden = linked || !hasWebBluetooth()
     this.findTarget.disabled = unit?.busy ?? false
-    const ready = state?.phase === "ready" && state.read && !state.address
+    const ready = state?.phase === "ready" && state.read && !state.serial
     const notice = state?.notice ?? this.failure ?? unit?.state?.notice
     this.activateTarget.hidden = !ready || RECONNECT.has(notice?.key)
     this.keptTarget.hidden = !ready

@@ -6,15 +6,15 @@ import { ATT_HEADER_BYTES, signedImage } from './fake_skyblip.mjs';
 import { NEWER, asking, session } from './update_session.mjs';
 
 const CHROME_MTU = 498;
-const ADDRESS = 0x00012a;
+const SERIAL = 0x00012a;
 
 function knowing(server) {
-  server.units.set(VECTORS.device_id, { serial: ADDRESS, publicKey: VECTORS.unit_public_key });
+  server.units.set(VECTORS.device_id, { serial: SERIAL, publicKey: VECTORS.unit_public_key });
   return server;
 }
 
 async function connected({ server = knowing(new FakeServer()), ...options } = {}) {
-  const unit = new FakeUnit({ mtu: CHROME_MTU, address: ADDRESS, ...options }).install();
+  const unit = new FakeUnit({ mtu: CHROME_MTU, serial: SERIAL, ...options }).install();
   const { updater, until } = session({ attestations: server.attestations });
   await updater.connect();
   await until(state => state.status && state.running);
@@ -50,7 +50,7 @@ test('an activated unit states its firmware to the server on every connection, w
 });
 
 test('a unit not yet activated states nothing, and asks the server for nothing', async () => {
-  const { unit, server } = await connected({ address: null });
+  const { unit, server } = await connected({ serial: null });
   await turns();
   assert.ok(!unit.commands.includes('attest'));
   assert.deepEqual(server.requests, []);
@@ -93,7 +93,7 @@ test('a pilot who starts something before the server answers keeps the unit to t
 
 test('a statement the active key did not sign is refused by the server and recorded nowhere', async () => {
   const server = new FakeServer();
-  server.units.set(VECTORS.device_id, { serial: ADDRESS, publicKey: keyPair('11'.repeat(32)).publicKey });
+  server.units.set(VECTORS.device_id, { serial: SERIAL, publicKey: keyPair('11'.repeat(32)).publicKey });
   const { unit } = await connected({ server });
   await turns();
   assert.equal(unit.commands.at(-1), 'attest');

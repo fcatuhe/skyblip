@@ -68,7 +68,7 @@ TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships
 TEST_CASE(
     "settings: the range and the plot are the glass's, and the link neither shows nor sets them") {
     Settings settings = defaults();
-    const std::string json = config_fields(settings, settings::address_of(0x3456));
+    const std::string json = config_fields(settings, 0x3456);
     CHECK(json.find("range") == std::string::npos);
     CHECK(json.find("plot") == std::string::npos);
 
@@ -104,8 +104,7 @@ TEST_CASE("settings: a sealed blob of an older layout is Unsupported") {
 
 TEST_CASE("settings: the config fields and a set patch round-trip over the link") {
     Settings settings = defaults();
-    CHECK(config_fields(settings, settings::address_of(0x3456)).find("\"aircraft_type\":1,") !=
-          std::string::npos);
+    CHECK(config_fields(settings, 0x3456).find("\"aircraft_type\":1,") != std::string::npos);
 
     // apply a patch: change type + alarm + units
     const char* patch = "{\"aircraft_type\":4,\"alarm\":0,\"units\":1}";
@@ -139,14 +138,14 @@ TEST_CASE("address: the prefix, then the serial the server signed" * doctest::te
 // Issue 2 F.2.2 numbers manufacturer pages from 9, so page 49 is table entry 58.
 TEST_CASE("address: the table is a constant, not a field anything can hold") {
     CHECK(int(kSkyblipAddressMappingTable) == 58);
-    const std::string json = config_fields(defaults(), address_of(0x0042));
-    CHECK(json.find("\"address\":66,") != std::string::npos);
+    const std::string json = config_fields(defaults(), 0x0042);
+    CHECK(json.find("\"serial\":66,") != std::string::npos);
     CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
 }
 
-TEST_CASE("address: a unit with no serial reports no address, and still its table") {
+TEST_CASE("address: a unit with no serial reports none, and still its table") {
     const std::string json = config_fields(defaults(), std::nullopt);
-    CHECK(json.find("\"address\"") == std::string::npos);
+    CHECK(json.find("\"serial\"") == std::string::npos);
     CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
 }
 
@@ -261,8 +260,7 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 
     // Write-only over the link, as battery_offset_mv is.
-    CHECK(config_fields(settings, settings::address_of(0x3456)).find("frequency_trim") ==
-          std::string::npos);
+    CHECK(config_fields(settings, 0x3456).find("frequency_trim") == std::string::npos);
 }
 
 TEST_CASE("settings: a blob from a version this firmware never wrote is refused") {
@@ -276,7 +274,7 @@ TEST_CASE("settings: a blob from a version this firmware never wrote is refused"
 
 TEST_CASE("settings: the config reply offers nothing the firmware does not read") {
     Settings settings = defaults();
-    const std::string json = config_fields(settings, settings::address_of(0x3456));
+    const std::string json = config_fields(settings, 0x3456);
     // Removed with their fields: no reader outside this module, and a page that
     // accepts a setting nothing reads is worse than one that does not offer it.
     CHECK(json.find("region") == std::string::npos);
@@ -373,13 +371,12 @@ TEST_CASE("settings: a type or an alarm is refused before it is narrowed, never 
 
 TEST_CASE("settings: a patch that names an identity changes nothing and refuses nothing") {
     Settings settings = defaults();
-    const char* icao =
-        "{\"address\":14488116,\"address_mapping_table\":5,\"alarm\":2}";  // 0xDD1234
+    const char* icao = "{\"serial\":4660,\"address_mapping_table\":5,\"alarm\":2}";  // 0x1234
     CHECK(apply_patch(settings, icao) == Status::Ok);
     CHECK(settings.alarm == Alarm::Soft);
 
-    const std::string json = config_fields(settings, 0x5B7E57);
-    CHECK(json.find("\"address\":5996119,") != std::string::npos);
+    const std::string json = config_fields(settings, 0x7E57);
+    CHECK(json.find("\"serial\":32343,") != std::string::npos);
     CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
 }
 

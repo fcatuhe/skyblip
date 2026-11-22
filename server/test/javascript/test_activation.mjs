@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { FakeServer, FakeUnit, REGISTRATION_FRAME_BYTES, VECTORS, keyPair, messages, verifies } from './fake_activation.mjs';
 import { ATT_HEADER_BYTES } from './fake_skyblip.mjs';
 import { Activator, PROMPT_CEILING_MS } from '#skyblip/activation';
-import { addressOf } from '#skyblip/ble';
+import { serialOf } from '#skyblip/ble';
 
 const CHROME_MTU = 498;
 
@@ -60,21 +60,21 @@ test('the page counts down the prompt the firmware stands for as long', () => {
   assert.equal(PROMPT_CEILING_MS, Number(seconds) * 1000);
 });
 
-test('a unit not yet activated reports no address', async () => {
+test('a unit not yet activated reports no serial', async () => {
   const { activator } = await connected();
   assert.equal(activator.state.phase, 'ready');
-  assert.equal(activator.state.address, null);
-  assert.equal(addressOf({ address: 0x00012a }), '00012A');
+  assert.equal(activator.state.serial, null);
+  assert.equal(serialOf({ serial: 0x00012a }), '00012A');
 });
 
-test('activating asks the server, then the glass, then stores the unlock code and reads the address back', async () => {
+test('activating asks the server, then the glass, then stores the unlock code and reads the serial back', async () => {
   const { unit, server, activator, until } = await connected();
   activator.activate();
   await until(confirming);
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register']);
   unit.press();
-  const done = await until(state => state.notice?.key === 'activated' && state.address);
-  assert.equal(done.address, '000001');
+  const done = await until(state => state.notice?.key === 'activated' && state.serial);
+  assert.equal(done.serial, '000001');
   assert.deepEqual(server.requests, ['challenge', 'register']);
   assert.equal(unit.unlockCode.serial, 1);
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);
@@ -85,10 +85,10 @@ test('a unit that trusts this browser signs its registration with no press, and 
   const phases = [];
   const done = until(state => {
     phases.push(state.phase);
-    return state.notice?.key === 'activated' && state.address;
+    return state.notice?.key === 'activated' && state.serial;
   });
   activator.activate();
-  assert.equal((await done).address, '000001');
+  assert.equal((await done).serial, '000001');
   assert.ok(!phases.includes('confirming'));
   assert.deepEqual(server.requests, ['challenge', 'register']);
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);
@@ -101,7 +101,7 @@ test('a unit activated again keeps its serial', async () => {
     activator.activate();
     await until(confirming);
     unit.press();
-    assert.equal((await until(state => state.address)).address, '000001');
+    assert.equal((await until(state => state.serial)).serial, '000001');
   }
 });
 
@@ -138,7 +138,7 @@ test('activating needs no ground: a unit without a serial is silent, and indoors
   activator.activate();
   await until(confirming);
   unit.press();
-  assert.equal((await until(state => state.address)).address, '000001');
+  assert.equal((await until(state => state.serial)).serial, '000001');
 });
 
 test('an answer that lands after the link dropped is sent to no unit, not to the next one', async () => {
@@ -184,12 +184,12 @@ test('an iPhone link carries the registration frame', async () => {
   activator.activate();
   await until(confirming);
   unit.press();
-  assert.equal((await until(state => state.address)).address, '000001');
+  assert.equal((await until(state => state.serial)).serial, '000001');
 });
 
 test('a link whose MTU was never exchanged reads the unit, and is told small_mtu for the challenge reply', async () => {
   const { unit, server, activator, until } = await connected({ mtu: 23 });
-  assert.equal(activator.state.address, null);
+  assert.equal(activator.state.serial, null);
   activator.activate();
   assert.equal((await until(settled)).notice.key, 'small_mtu');
   assert.deepEqual(unit.commands, ['get', 'challenge']);
@@ -215,12 +215,12 @@ test('another app holding the unit is named', async () => {
 });
 
 // The device page asks for the settings once the unit holds its serial, so activation ends at the unlock.
-test('activating ends on the unlock, reading the address back and writing nothing more', async () => {
+test('activating ends on the unlock, reading the serial back and writing nothing more', async () => {
   const { unit, activator, until } = await connected();
   activator.activate();
   await until(confirming);
   unit.press();
-  const done = await until(state => state.address);
+  const done = await until(state => state.serial);
   assert.equal(done.notice.key, 'activated');
   assert.equal(done.phase, 'ready');
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);

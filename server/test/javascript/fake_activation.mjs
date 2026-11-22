@@ -135,7 +135,7 @@ export class FakeServer {
 export class FakeUnit extends FakeSkyblip {
   constructor({ seed = VECTORS.unit_seed, deviceId = VECTORS.device_id, trusted = VECTORS.server_public_key,
     version = VECTORS.version, release = VECTORS.release, keyed = true, trustsBrowser = false, ...options } = {}) {
-    super({ address: null, variant: VECTORS.variant, ...options });
+    super({ serial: null, variant: VECTORS.variant, ...options });
     this.unitKey = keyPair(seed);
     Object.assign(this, { deviceId, trusted, version, release, keyed, trustsBrowser });
     this.trustedId = hex(createHash('sha256').update(bytes(trusted)).digest().subarray(0, 4));
@@ -186,7 +186,7 @@ export class FakeUnit extends FakeSkyblip {
 
   // INFO: fc 14nov26 config_identity.cpp's order: the flight gate, the key, the link's width, the nonce
   attest({ server_nonce }) {
-    if (this.address !== null && this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
+    if (this.serial !== null && this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
     if (!this.keyed) return this.acknowledge(false, 'keyless');
     if (this.mtu - ATT_HEADER_BYTES < ATTESTATION_FRAME_BYTES) return this.acknowledge(false, 'small_mtu');
     if (!server_nonce) return this.acknowledge(false, 'invalid');
@@ -205,7 +205,7 @@ export class FakeUnit extends FakeSkyblip {
     this.nonce = null;
     const message = messages.unlock({ deviceId: this.deviceId, publicKey: this.unitKey.publicKey, serial, unitNonce: nonce });
     if (!verifies(this.trusted, hex(signature), message)) return this.acknowledge(false, 'bad_signature');
-    this.address = serial;
+    this.serial = serial;
     this.unlockCode = { serial, nonce, signature: hex(signature) };
     this.acknowledge(true, 'unlock');
   }

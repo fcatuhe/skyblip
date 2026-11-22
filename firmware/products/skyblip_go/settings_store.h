@@ -27,7 +27,7 @@ class SettingsStore : public common::SettingsStore {
           fitted_(fitted) {}
 
     void write_fields(cbor::Writer& writer) const override {
-        write_config_fields(writer, fitted(settings_), activation_.address());
+        write_config_fields(writer, fitted(settings_), activation_.serial);
         writer.add_boolean(link::config_key::kAnnunciatorFitted, common::can_sound(fitted_));
     }
 

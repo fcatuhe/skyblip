@@ -183,7 +183,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     char text[32];
 
     int written = format_string(text, "ID ");
-    written += format_air_address(text + written, snapshot.address);
+    written += format_id(text + written, snapshot.address);
     text[written] = 0;
     canvas.draw_text(kLeft, 3, text, true, 2);
     if (snapshot.callsign != nullptr && snapshot.callsign[0] != 0)

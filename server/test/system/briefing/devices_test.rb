@@ -450,8 +450,8 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a Go that holds no address yet is sent to its activation from its own page" do
-    in_range a_go(address: nil)
+  test "a Go that holds no serial yet is sent to its activation from its own page" do
+    in_range a_go(serial: nil)
     on_the_shelf do
       visit "/briefing/devices/go-00012a"
       within(".unit") { click_button "Connect" }

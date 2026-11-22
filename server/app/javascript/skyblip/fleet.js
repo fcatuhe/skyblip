@@ -11,7 +11,7 @@ const PRODUCT_NAME = /^skyBlip (Go\+?|Bravo) ([0-9A-F]+)$/;
 const ACTIVATION_NAME = /^activate ([0-9A-F]+) skyBlip$/;
 const SLUG = /^(go|bravo|activate)-([0-9a-f]+)$/;
 
-// INFO: fc 11nov26 a Go and a Go+ of one address are one unit, since a T-Echo is one or the other for life
+// INFO: fc 11nov26 a Go and a Go+ of one serial are one unit, since a T-Echo is one or the other for life
 export function slugOf(name) {
   const product = name?.match(PRODUCT_NAME);
   if (product) return `${product[1].startsWith('Go') ? 'go' : 'bravo'}-${product[2].toLowerCase()}`;
@@ -29,7 +29,7 @@ export function namesOf(slug) {
   return [];
 }
 
-// INFO: fc 17nov26 a Bravo and a Go not yet activated are named by their Bluetooth tag, an activated Go by its address
+// INFO: fc 17nov26 a Bravo and a Go not yet activated are named by their Bluetooth tag, an activated Go by its serial
 function tagOfSlug(slug) {
   const [, kind, tag] = slug.match(SLUG) ?? [];
   return kind === 'bravo' || kind === 'activate' ? Number.parseInt(tag, 16) : null;
@@ -57,13 +57,13 @@ function newestOf({ upgrade, file, running }, before) {
 }
 
 function recordOf(slug, state, before = {}) {
-  const { device, running, image, settings, address } = state;
+  const { device, running, image, settings, serial } = state;
   return {
     slug,
     name: slugOf(device) === slug ? device : before.name ?? nameOf(slug),
     product: productOf(state) ?? before.product ?? null,
     tag: state.identity?.bluetoothTag ?? before.tag ?? null,
-    address: address ?? before.address ?? null,
+    serial: serial ?? before.serial ?? null,
     running: running ?? before.running ?? null,
     newest: newestOf(state, before),
     track: image?.key ? (image.downgrade ? 'development' : 'release') : before.track ?? null,
@@ -134,7 +134,7 @@ export class Unit {
 
   get needsActivation() {
     const state = this.state;
-    return Boolean(state?.settings) && state.address === null && productOf(state) === 'go';
+    return Boolean(state?.settings) && state.serial === null && productOf(state) === 'go';
   }
 
   activator(build) {
@@ -278,7 +278,7 @@ export class Fleet {
   }
 
   #heard(unit, state) {
-    if (unit.slug.startsWith('activate-') && state.address) this.#rename(unit, `go-${state.address.toLowerCase()}`);
+    if (unit.slug.startsWith('activate-') && state.serial) this.#rename(unit, `go-${state.serial.toLowerCase()}`);
     this.#record(unit, unit.witness.witness(state, { attempted: unit.attempted }));
     if (unit.remembered && LINKED_PHASES.has(state.phase)) {
       const record = recordOf(unit.slug, state, unit.record);

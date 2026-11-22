@@ -72,9 +72,9 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
 }
 
 void write_config_fields(cbor::Writer& writer, const Settings& settings,
-                         settings::AirAddress address) {
+                         std::optional<uint16_t> serial) {
     writer.add_unsigned(link::config_key::kVersion, settings.version);
-    if (address) writer.add_unsigned(link::config_key::kAddress, *address);
+    if (serial) writer.add_unsigned(link::config_key::kSerial, *serial);
     writer.add_unsigned(link::config_key::kAddressMappingTable,
                         settings::kSkyblipAddressMappingTable);
     write_settings_fields(writer, settings);

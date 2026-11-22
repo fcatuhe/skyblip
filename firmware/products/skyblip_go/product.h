@@ -222,7 +222,7 @@ class Product {
             self_test_parts_[i].detail = self_test_detail(spec);
         }
 
-        self_test_snapshot_.address = state_.activation.address();
+        self_test_snapshot_.serial = state_.activation.serial;
         self_test_snapshot_.reset_reason = power::to_string(reset_reason());
         self_test_snapshot_.went_dark_flat = went_dark_flat_;
         self_test_snapshot_.parts = self_test_parts_;

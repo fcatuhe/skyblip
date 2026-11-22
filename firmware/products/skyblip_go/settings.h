@@ -87,7 +87,7 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out);
 
 // INFO: fc 04aug26 the fields alone, into the caller's writer, so the config reply is one map
 void write_config_fields(cbor::Writer& writer, const Settings& settings,
-                         settings::AirAddress address);
+                         std::optional<uint16_t> serial);
 
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
 void write_settings_fields(cbor::Writer& writer, const Settings& settings);
