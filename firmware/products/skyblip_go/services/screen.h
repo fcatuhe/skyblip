@@ -3,7 +3,6 @@
 
 #include <optional>
 
-#include "core/comms/config.h"
 #include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
 #include "core/power/duty.h"
@@ -12,6 +11,7 @@
 #include "ports/dfu.h"
 #include "products/common/prompt_answer.h"
 #include "products/common/services/alarm.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/pages/activation.h"
@@ -51,7 +51,7 @@ class ScreenService : public runtime::Service {
     // INFO: cf 02aug26 at this level a menu in front of converging traffic is a bug, so it goes
     static constexpr traffic::Level kAlarmTakesGlass = traffic::Level::Advisory;
 
-    ScreenService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
+    ScreenService(runtime::Context& context, Settings& settings, common::ConfigService& config,
                   common::AlarmService& alarm, const SelfTestSnapshot& self_test,
                   BravoService& bravo)
         : runtime::Service(context),
@@ -89,7 +89,7 @@ class ScreenService : public runtime::Service {
 
     Page page() const { return page_; }
     Mode mode() const { return mode_; }
-    comms::Pending prompt() const { return prompt_; }
+    common::Pending prompt() const { return prompt_; }
     const MenuEditor& editor() const { return editor_; }
     int range_step() const { return settings_.range_step; }
     bool backlight() const { return backlight_; }
@@ -181,7 +181,7 @@ class ScreenService : public runtime::Service {
 
     bool showing_radar() const { return mode_ == Mode::Page && page_ == Page::Radar; }
 
-    bool answering() const { return prompt_ != comms::Pending::None; }
+    bool answering() const { return prompt_ != common::Pending::None; }
     bool panel_ready(uint32_t now_ms);
     bool unit_activated();
 
@@ -216,7 +216,7 @@ class ScreenService : public runtime::Service {
     }
 
     Settings& settings_;
-    comms::ConfigService& config_;
+    common::ConfigService& config_;
     common::AlarmService& alarm_;
     const SelfTestSnapshot& self_test_;
     SelfTestPart self_test_rows_[kSelfTestRows]{};
@@ -230,7 +230,7 @@ class ScreenService : public runtime::Service {
     bool aircraft_noticed_{false};
     bool notice_on_glass_{false};
     uint32_t notice_on_glass_since_ms_{0};
-    comms::Pending prompt_{comms::Pending::None};
+    common::Pending prompt_{common::Pending::None};
     uint32_t prompts_staged_{0};
     Controls controls_{};
     common::PromptAnswer answer_{};

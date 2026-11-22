@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string>
 
-#include "core/comms/config.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "test/support/glass_text.h"
 
@@ -13,7 +13,7 @@ namespace skyblip {
 
 inline uint32_t seconds_left_on(const ui::Canvas& canvas) {
     // Longest first: "8 S." is inside "28 S.".
-    for (uint32_t seconds = comms::kPromptCeilingMs / 1000u; seconds > 0; seconds--) {
+    for (uint32_t seconds = common::kPromptCeilingMs / 1000u; seconds > 0; seconds--) {
         const std::string text = std::to_string(seconds) + " S";
         if (reads_in(canvas, text.c_str(), 0, go::kInterruptRuleY, go::kGlassWidth, go::kKeyTop,
                      go::kFrameScale))

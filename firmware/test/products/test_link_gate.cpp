@@ -28,18 +28,18 @@ TEST_CASE("product: the gate closes on the take-off the fix stream proved, not o
     rig.run(now_ms, 500);
     now_ms = 500;
     CHECK(rig.config().flight_state() == flight::FlightState::Unknown);
-    CHECK(rig.config().pending() == comms::Pending::Dfu);
+    CHECK(rig.config().pending() == common::Pending::Dfu);
 
     rig.on_ground(now_ms);
     CHECK(rig.config().flight_state() == flight::FlightState::Ground);
-    CHECK(rig.config().pending() == comms::Pending::Dfu);
+    CHECK(rig.config().pending() == common::Pending::Dfu);
 
     // And the same stream takes it away again: the transmitter and the update
     // lockout are reading one decision, not two.
     rig.airborne(now_ms);
     CHECK(rig.config().flight_state() == flight::FlightState::Airborne);
-    CHECK(rig.config().pending() == comms::Pending::None);
-    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
+    CHECK(rig.product.screen().prompt() == common::Pending::None);
 }
 
 // The case the whole gesture was chosen for.
@@ -57,12 +57,12 @@ TEST_CASE("product: paging does not authorise a firmware upload" * doctest::test
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.config().pending() == common::Pending::Dfu);
 
     // The prompt owns the glass: the pad does not turn the page, it refuses.
     rig.tap(now_ms);
     CHECK_FALSE(rig.config().upload_allowed());
-    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
     CHECK(rig.product.screen().page() == go::Page::Nearby);
 
@@ -80,15 +80,15 @@ TEST_CASE("product: a press on the ground is what opens the upload window") {
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.config().pending() == common::Pending::Dfu);
     REQUIRE_FALSE(rig.config().upload_allowed());
 
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     CHECK(rig.config().upload_allowed());
-    CHECK(rig.config().pending() == comms::Pending::None);
-    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
+    CHECK(rig.product.screen().prompt() == common::Pending::None);
     // The page it was on is the page it comes back to.
     CHECK(rig.product.screen().page() == go::Page::Radar);
 
@@ -97,7 +97,7 @@ TEST_CASE("product: a press on the ground is what opens the upload window") {
     CHECK(rig.config().upload_allowed());
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
-    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
 }
 
 TEST_CASE("product: the glass names the operation while it waits, and stops cycling pages" *
@@ -110,11 +110,11 @@ TEST_CASE("product: the glass names the operation while it waits, and stops cycl
     rig.send("{\"command\":\"power_off\"}");
     rig.run(now_ms, now_ms + 6000);
     now_ms += 6000;
-    REQUIRE(rig.product.screen().prompt() == comms::Pending::PowerOff);
+    REQUIRE(rig.product.screen().prompt() == common::Pending::PowerOff);
 
     go::ConfirmSnapshot expect;
-    expect.title = comms::pending_title(comms::Pending::PowerOff);
-    expect.detail = comms::pending_detail(comms::Pending::PowerOff);
+    expect.title = common::pending_title(common::Pending::PowerOff);
+    expect.detail = common::pending_detail(common::Pending::PowerOff);
     expect.seconds_left = seconds_left_on(rig.product.screen().framebuffer());
     CHECK(expect.seconds_left > 0);
     go::Glass expected;
@@ -156,12 +156,12 @@ TEST_CASE("product: a prompt nobody answers expires, and the device is not power
     rig.send("{\"command\":\"power_off\"}");
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
-    REQUIRE(rig.product.screen().prompt() == comms::Pending::PowerOff);
+    REQUIRE(rig.product.screen().prompt() == common::Pending::PowerOff);
 
-    rig.run(now_ms, now_ms + comms::kPromptCeilingMs + 1000);
-    now_ms += comms::kPromptCeilingMs + 1000;
-    CHECK(rig.config().pending() == comms::Pending::None);
-    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    rig.run(now_ms, now_ms + common::kPromptCeilingMs + 1000);
+    now_ms += common::kPromptCeilingMs + 1000;
+    CHECK(rig.config().pending() == common::Pending::None);
+    CHECK(rig.product.screen().prompt() == common::Pending::None);
     CHECK_FALSE(rig.product.shutdown().going_down());
 
     // And the panel is back on the page the pilot left it on.
@@ -187,13 +187,13 @@ TEST_CASE(
     now_ms += 3000;
     // Staged and waiting for the device's own gesture: the phone cannot spend a
     // pilot's next fix by itself.
-    REQUIRE(rig.config().pending() == comms::Pending::GnssColdStart);
+    REQUIRE(rig.config().pending() == common::Pending::GnssColdStart);
     CHECK(rig.platform.chips().gnss.restarts == restarts_before);
 
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
     now_ms += 2000;
-    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
     CHECK(rig.platform.chips().gnss.restarts == restarts_before + 1);
     // A cold start, not a hot one: the point is to discard the almanac.
     CHECK(rig.platform.chips().gnss.last_restart_kind >= 2);
@@ -214,7 +214,7 @@ TEST_CASE("product: gnss_cold_start is refused in flight") {
     rig.send("{\"command\":\"gnss_cold_start\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
     CHECK(rig.platform.chips().gnss.restarts == restarts_before);
@@ -230,12 +230,12 @@ TEST_CASE("product: a set with no fix since boot is confirmed by a press and sto
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.config().flight_state() == flight::FlightState::Unknown);
-    REQUIRE(rig.config().pending() == comms::Pending::Set);
-    REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
+    REQUIRE(rig.config().pending() == common::Pending::Set);
+    REQUIRE(rig.product.screen().prompt() == common::Pending::Set);
 
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
-    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
     CHECK(std::strcmp(rig.product.settings().callsign, "F-JXYZ") == 0);
     uint8_t blob[64];
     size_t count = 0;
@@ -259,11 +259,11 @@ TEST_CASE("product: a set sent in flight never puts a prompt over the radar") {
         for (const uint32_t until = now_ms + 1000; now_ms <= until; now_ms += 50) {
             rig.platform.clock().set_milliseconds(now_ms);
             rig.product.run_pass(now_ms);
-            prompted = prompted || rig.product.screen().prompt() != comms::Pending::None;
+            prompted = prompted || rig.product.screen().prompt() != common::Pending::None;
         }
     }
     CHECK_FALSE(prompted);
-    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK(rig.product.settings().alarm == go::Alarm::Loud);
 }
@@ -285,7 +285,7 @@ TEST_CASE("product: no prompt stands on the glass on any pass the latch says air
         rig.send(staged.request);
         rig.run(now_ms, now_ms + 3000);
         now_ms += 3050;
-        REQUIRE(rig.product.screen().prompt() != comms::Pending::None);
+        REQUIRE(rig.product.screen().prompt() != common::Pending::None);
 
         int airborne_passes = 0;
         int prompted_passes = 0;
@@ -298,8 +298,8 @@ TEST_CASE("product: no prompt stands on the glass on any pass the latch says air
                 airborne_passes++;
                 const bool config_heard =
                     rig.config().flight_state() == flight::FlightState::Airborne;
-                if (rig.product.screen().prompt() != comms::Pending::None ||
-                    (config_heard && rig.config().pending() != comms::Pending::None))
+                if (rig.product.screen().prompt() != common::Pending::None ||
+                    (config_heard && rig.config().pending() != common::Pending::None))
                     prompted_passes++;
             }
         }
@@ -316,7 +316,7 @@ TEST_CASE("product: the pass the first fix says airborne takes a staged set off 
     rig.send("{\"command\":\"set\",\"alarm\":2}");
     rig.run(0, 3000);
     REQUIRE(rig.config().flight_state() == flight::FlightState::Unknown);
-    REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
+    REQUIRE(rig.product.screen().prompt() == common::Pending::Set);
 
     const auto pass = [&](uint32_t at_ms) {
         rig.platform.clock().set_milliseconds(at_ms);
@@ -327,7 +327,7 @@ TEST_CASE("product: the pass the first fix says airborne takes a staged set off 
     };
     button(true, 3160);
     pass(3160);
-    REQUIRE(rig.config().pending() == comms::Pending::Set);
+    REQUIRE(rig.config().pending() == common::Pending::Set);
 
     model::AircraftObservation target{};
     target.address = 0x424242;
@@ -345,10 +345,10 @@ TEST_CASE("product: the pass the first fix says airborne takes a staged set off 
 
     REQUIRE(rig.state().flight.confirmed_state == flight::FlightState::Airborne);
     REQUIRE(rig.state().alarm_undismissed == traffic::Level::Advisory);
-    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK(rig.product.screen().prompt() == common::Pending::None);
     CHECK(rig.product.settings().alarm == go::Alarm::Loud);
 
     // The next pass, config hears the take-off and drops what the glass already dropped.
     pass(3310);
-    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.config().pending() == common::Pending::None);
 }

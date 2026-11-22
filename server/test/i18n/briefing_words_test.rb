@@ -1,7 +1,8 @@
 require "test_helper"
 
 class BriefingWordsTest < ActiveSupport::TestCase
-  FIRMWARE = Rails.root.join("../firmware/core/comms")
+  FIRMWARE = Rails.root.join("../firmware")
+  CONFIG = "products/common/services"
   REGISTRY = JSON.parse(Rails.root.join("../schemas/link.v1.json").read)
 
   # INFO: fc 11nov26 what the device answers but the page never asks, so no pilot ever reads it
@@ -31,14 +32,15 @@ class BriefingWordsTest < ActiveSupport::TestCase
   INSTALL_CAUSES = Rails.root.join("app/javascript/skyblip/install_report.js").read[/INSTALL_CAUSES = \[(.*?)\]/, 1].scan(/'(\w+)'/).flatten
 
   test "the firmware still refuses with the reasons this test reads" do
-    assert_includes refusals("config.cpp", "(?:acknowledge\\(false, |refuse_landing\\()"), "not_approved"
-    assert_includes refusals("capture_request.cpp", "refuse\\("), "not_capturing"
-    assert_includes refusals("identity_link.cpp", "refuse\\("), "bad_signature"
+    assert_includes install_refusals, "not_approved"
+    assert_includes install_refusals, "small_mtu"
+    assert_includes refusals("#{CONFIG}/config_capture.cpp", "refuse\\("), "not_capturing"
+    assert_includes refusals("#{CONFIG}/config_identity.cpp", "refuse\\("), "bad_signature"
   end
 
   I18n.available_locales.each do |locale|
     test "every refusal and notice of an install has words in #{locale}" do
-      keys = refusals("config.cpp", "(?:acknowledge\\(false, |refuse_landing\\()") - NEVER_ASKED + UPDATE_NOTICES
+      keys = install_refusals - NEVER_ASKED + UPDATE_NOTICES
       assert_empty keys - words(locale, :notices)
     end
 
@@ -53,12 +55,12 @@ class BriefingWordsTest < ActiveSupport::TestCase
     end
 
     test "every refusal and verdict of a capture has words in #{locale}" do
-      keys = refusals("capture_request.cpp", "refuse\\(") - NEVER_ASKED - NEVER_SENT + CAPTURE_NOTICES
+      keys = refusals("#{CONFIG}/config_capture.cpp", "refuse\\(") - NEVER_ASKED - NEVER_SENT + CAPTURE_NOTICES
       assert_empty keys - words(locale, :capture_notices)
     end
 
     test "every refusal of a forget has words in #{locale}" do
-      keys = refusals("browser_link.cpp", "acknowledge\\(false, ") + BROWSER_NOTICES
+      keys = refusals("#{CONFIG}/config_browser.cpp", "acknowledge\\(false, ") + BROWSER_NOTICES
       assert_empty keys - words(locale, :browsers_notices)
     end
 
@@ -67,13 +69,13 @@ class BriefingWordsTest < ActiveSupport::TestCase
     end
 
     test "every refusal of an activation has words in #{locale}" do
-      keys = refusals("identity_link.cpp", "refuse\\(") + PROMPT_REFUSALS + SERVER_REFUSALS.map { "server_#{it}" } + ACTIVATION_NOTICES
+      keys = refusals("#{CONFIG}/config_identity.cpp", "refuse\\(") + PROMPT_REFUSALS + SERVER_REFUSALS.map { "server_#{it}" } + ACTIVATION_NOTICES
       assert_empty keys - words(locale, :activation_notices)
     end
 
     test "every refusal and verdict of a pairing has words in #{locale}" do
       verdicts = GO_PAIRING.read.scan(/return link::Reason::(\w+);/).flatten.map(&:underscore)
-      keys = refusals("pair_link.cpp", "refuse\\(") - NEVER_ASKED - PAIR_NEVER_ASKED + verdicts + PROMPT_REFUSALS + PAIR_NOTICES
+      keys = refusals("#{CONFIG}/config_pair.cpp", "refuse\\(") - NEVER_ASKED - PAIR_NEVER_ASKED + verdicts + PROMPT_REFUSALS + PAIR_NOTICES
       assert_includes verdicts, "not_found"
       assert_empty keys - words(locale, :pair_notices) - words(locale, :notices)
     end
@@ -111,6 +113,10 @@ class BriefingWordsTest < ActiveSupport::TestCase
     def words(locale, scope) = I18n.t("briefing.#{scope}", locale:).keys.map(&:to_s)
 
     def enum(name) = REGISTRY.dig("enums", name, "values").map { it["name"] }
+
+    def install_refusals
+      %W[#{CONFIG}/config_service.cpp core/comms/config.h].sum([]) { refusals(it, "(?:acknowledge\\(false, |refuse_landing\\()") }.uniq
+    end
 
     def refusals(file, call)
       reasons = enum("reason").index_by { it.camelize }

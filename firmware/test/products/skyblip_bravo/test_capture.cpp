@@ -41,7 +41,7 @@ TEST_CASE("bravo capture: the command blinks the prompt, and one press arms the 
     CHECK(rig.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,"
           "\"reason\":\"confirm_capture\"}");
-    CHECK(rig.product.button().prompt() == comms::Pending::Capture);
+    CHECK(rig.product.button().prompt() == common::Pending::Capture);
     CHECK(rig.lamp() == indication::Condition::Prompt);
     CHECK_FALSE(rig.product.capture().capturing());
 
@@ -77,7 +77,7 @@ TEST_CASE("bravo capture: an unanswered prompt expires, and nothing is armed") {
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
     rig.send(capture("full").c_str());
-    rig.run_for(comms::kPromptCeilingMs + 1000);
+    rig.run_for(common::kPromptCeilingMs + 1000);
     CHECK(rig.last_on(events::Endpoint::Config) == refusal("expired"));
     CHECK_FALSE(rig.product.capture().capturing());
 }
@@ -88,16 +88,16 @@ TEST_CASE("bravo capture: in flight it is refused before it stands, and a take-o
     rig.seconds_with_fix(2);
     rig.send(capture("full").c_str());
     rig.run_for(1000);
-    REQUIRE(rig.product.button().prompt() == comms::Pending::Capture);
+    REQUIRE(rig.product.button().prompt() == common::Pending::Capture);
     rig.seconds_with_fix(20, 25000);
     REQUIRE(rig.state().flight.confirmed_state == flight::FlightState::Airborne);
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
     CHECK_FALSE(rig.product.capture().capturing());
 
     rig.send(capture("full").c_str());
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == refusal("in_flight"));
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
     CHECK_FALSE(rig.product.capture().capturing());
 }
 
@@ -108,14 +108,14 @@ TEST_CASE("bravo capture: an arm while one runs and a stop while none runs are r
     rig.send(capture("stop").c_str());
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == refusal("not_capturing"));
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
 
     allow(rig, "power_run");
     REQUIRE(rig.product.capture().capturing());
     rig.send(capture("full").c_str());
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == refusal("capturing"));
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
     CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
 }
 
@@ -129,7 +129,7 @@ TEST_CASE("bravo capture: a frame with no profile, or one past stop, stages noth
     rig.send("{\"command\":\"capture\",\"profile\":4}");
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == refusal("out_of_range"));
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
 }
 
 TEST_CASE("bravo capture: a unit with no flash refuses it no_storage") {
@@ -140,5 +140,5 @@ TEST_CASE("bravo capture: a unit with no flash refuses it no_storage") {
     rig.send(capture("full").c_str());
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == refusal("no_storage"));
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
 }

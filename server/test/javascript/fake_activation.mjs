@@ -49,7 +49,7 @@ export function verifies(publicKey, signature, message) {
   return verify(null, message, key, bytes(signature));
 }
 
-// INFO: fc 18oct26 a reading of the server's rules, as fake_skyblip.mjs is a reading of config.cpp
+// INFO: fc 18oct26 a reading of the server's rules, as fake_skyblip.mjs is a reading of config_service.cpp
 export class FakeServer {
   constructor({ seed = VECTORS.server_seed } = {}) {
     this.key = keyPair(seed);
@@ -168,7 +168,7 @@ export class FakeUnit extends FakeSkyblip {
     if (this.mtu - ATT_HEADER_BYTES < REGISTRATION_FRAME_BYTES) return this.acknowledge(false, 'small_mtu');
     this.serverNonce = serverNonce;
     this.pending = 'register';
-    // INFO: fc 17nov26 identity_link.cpp signs at once for a trusted browser, as config.cpp's one rule for presses says
+    // INFO: fc 17nov26 config_identity.cpp signs at once for a trusted browser, as config_service.cpp's one rule for presses says
     if (this.trustsBrowser) return this.press();
     this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_register' });
   }
@@ -184,7 +184,7 @@ export class FakeUnit extends FakeSkyblip {
     });
   }
 
-  // INFO: fc 14nov26 identity_link.cpp's order: the flight gate, the key, the link's width, the nonce
+  // INFO: fc 14nov26 config_identity.cpp's order: the flight gate, the key, the link's width, the nonce
   attest({ server_nonce }) {
     if (this.address !== null && this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
     if (!this.keyed) return this.acknowledge(false, 'keyless');

@@ -4,12 +4,12 @@
 #include <algorithm>
 #include <optional>
 
-#include "core/comms/config.h"
 #include "core/power/battery.h"
 #include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
 #include "core/power/wake.h"
 #include "products/common/services/capture.h"
+#include "products/common/services/config_service.h"
 #include "runtime/loop_meter.h"
 
 namespace skyblip::common {
@@ -156,26 +156,21 @@ class Shell {
     }
 
     void take_confirmed(uint32_t now_ms) {
-        const std::optional<comms::Confirmed> confirmed =
-            product_.config_link_.config().take_confirmed();
+        const std::optional<Confirmed> confirmed = product_.config_link_.config().take_confirmed();
         if (!confirmed) return;
         switch (confirmed->action) {
-            case comms::Action::PowerOff:
+            case Action::PowerOff:
                 shutdown_.request(power::ShutdownReason::LinkRequest, now_ms);
                 break;
-            case comms::Action::Install:
-                shutdown_.request(power::ShutdownReason::Install, now_ms);
-                break;
-            case comms::Action::Recovery:
+            case Action::Install: shutdown_.request(power::ShutdownReason::Install, now_ms); break;
+            case Action::Recovery:
                 shutdown_.request(power::ShutdownReason::Recovery, now_ms);
                 break;
-            case comms::Action::EraseLog: product_.flight_log_.erase(confirmed->peer); break;
-            case comms::Action::GnssColdStart:
+            case Action::EraseLog: product_.flight_log_.erase(confirmed->peer); break;
+            case Action::GnssColdStart:
                 product_.roles_.gnss.request_restart(ports::Restart::Cold);
                 break;
-            case comms::Action::Capture:
-                order_capture(product_.diagnostics_, confirmed->capture);
-                break;
+            case Action::Capture: order_capture(product_.diagnostics_, confirmed->capture); break;
         }
     }
 

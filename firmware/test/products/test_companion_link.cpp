@@ -134,10 +134,10 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     // Staged, not applied: the glass has the question and nothing is stored yet.
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Set);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Set);
     CHECK(rig.settings().callsign[0] == 0);
     go::ConfirmSnapshot expect;
-    expect.title = comms::pending_title(comms::Pending::Set);
+    expect.title = common::pending_title(common::Pending::Set);
     expect.detail = "CALLSIGN F-JABC";
     expect.seconds_left = seconds_left_on(rig.product.screen().framebuffer());
     CHECK(expect.seconds_left > 0);
@@ -166,7 +166,7 @@ TEST_CASE("companion link: a Go arms a capture a page asks for once the glass is
     CHECK(last_frame_on(rig, events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,"
           "\"reason\":\"confirm_capture\"}");
-    REQUIRE(rig.product.screen().prompt() == comms::Pending::Capture);
+    REQUIRE(rig.product.screen().prompt() == common::Pending::Capture);
     CHECK(std::string(rig.product.config_link().config().prompt_detail()) == "START A POWER RUN");
     CHECK_FALSE(rig.product.capture().capturing());
 
@@ -193,7 +193,7 @@ TEST_CASE("companion link: a callsign written in flight is refused, not staged")
     rig.send("{\"command\":\"set\",\"callsign\":\"F-JABC\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
@@ -211,16 +211,16 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
-    REQUIRE(rig.product.screen().prompt() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Dfu);
+    REQUIRE(rig.product.screen().prompt() == common::Pending::Dfu);
 
     // The phone that asked is gone. An authorisation left standing on the glass
     // is one a stranger can walk up to and answer with the button.
     rig.drop_link();
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
-    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
+    CHECK(rig.product.screen().prompt() == common::Pending::None);
     CHECK_FALSE(rig.product.config_link().config().upload_allowed());
 }
 
@@ -234,7 +234,7 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Dfu);
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
@@ -266,12 +266,12 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
     rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::EraseLog);
 
     rig.drop_link();
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
     CHECK_FALSE(rig.product.flight_log().erasing());
 
     // A new phone, and the offload answers it: nothing about the dead session
@@ -300,7 +300,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Dfu);
 
     // 182 is an iPhone's usual answer, and it lands after the service is already
     // waiting for a button press. The prompt is the phone's, and it is still the
@@ -310,7 +310,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
     now_ms += 200;
     CHECK(rig.link_up());
     CHECK(rig.product.config_link().config().claim_holder() == 5);
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::Dfu);
 }
 
 // The traffic picture is the same picture on every screen, so a tablet on the
@@ -361,7 +361,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
     const std::string refusal = rig.last_on(events::Endpoint::Config);
     CHECK(refusal.find("\"reason\":\"claimed\"") != std::string::npos);
     CHECK(rig.platform.link().count_to(2, events::Endpoint::Config) == 1);
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
 }
 
 // A central that never exchanged its MTU once capped every reply, and silenced the app that asked.
@@ -394,12 +394,12 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     rig.send_from(1, "{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Dfu);
 
     rig.drop_link(2);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::Dfu);
     CHECK(rig.product.config_link().config().claim_holder() == 1);
 
     // And when the holder leaves, the prompt goes with it and the claim is free
@@ -407,7 +407,7 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     rig.drop_link(1);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
     CHECK_FALSE(rig.product.config_link().config().claim().held());
     CHECK_FALSE(rig.link_up());
 
@@ -425,7 +425,7 @@ TEST_CASE("companion link: a set queued before its connection dropped claims not
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     taxi(rig, now_ms, 20);
-    comms::ConfigService& config = rig.product.config_link().config();
+    common::ConfigService& config = rig.product.config_link().config();
 
     rig.raise_link(1);
     rig.raise_link(2);
@@ -441,14 +441,14 @@ TEST_CASE("companion link: a set queued before its connection dropped claims not
     rig.drop_link(1);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(config.pending() == comms::Pending::None);
-    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK(config.pending() == common::Pending::None);
+    CHECK(rig.product.screen().prompt() == common::Pending::None);
     CHECK_FALSE(config.claim().held());
 
     rig.send_from(2, "{\"command\":\"set\",\"aircraft_type\":4}");
     rig.run(now_ms, now_ms + 200);
     CHECK(config.claim_holder() == 2);
-    CHECK(config.pending() == comms::Pending::Set);
+    CHECK(config.pending() == common::Pending::Set);
 }
 
 // Silicon names a session by its controller slot, so the next phone may come up under the same id.
@@ -458,7 +458,7 @@ TEST_CASE(
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     taxi(rig, now_ms, 20);
-    comms::ConfigService& config = rig.product.config_link().config();
+    common::ConfigService& config = rig.product.config_link().config();
 
     rig.raise_link(1);
     rig.run(now_ms, now_ms + 200);
@@ -470,7 +470,7 @@ TEST_CASE(
     rig.platform.link().clear();
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(config.pending() == comms::Pending::None);
+    CHECK(config.pending() == common::Pending::None);
     CHECK_FALSE(config.claim().held());
     CHECK(rig.platform.link().count_to(1, events::Endpoint::Config) == 0);
 
@@ -486,7 +486,7 @@ TEST_CASE("companion link: a log erase queued before its connection dropped clai
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     taxi(rig, now_ms, 20);
-    comms::ConfigService& config = rig.product.config_link().config();
+    common::ConfigService& config = rig.product.config_link().config();
 
     rig.raise_link(1);
     rig.raise_link(2);
@@ -494,7 +494,7 @@ TEST_CASE("companion link: a log erase queued before its connection dropped clai
     rig.drop_link(1);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(config.pending() == comms::Pending::None);
+    CHECK(config.pending() == common::Pending::None);
     CHECK_FALSE(config.claim().held());
 
     rig.send_from(2, "{\"command\":\"get\"}");
@@ -525,7 +525,7 @@ TEST_CASE("companion link: a second central leaving does not end the holder's re
     rig.run(now_ms, now_ms + 200);
     CHECK(last_frame_on(rig, events::Endpoint::Config).find("refused_on_device") !=
           std::string::npos);
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
 }
 
 TEST_CASE("companion link: a config reply held for a phone that left never reaches the next one") {

@@ -411,7 +411,7 @@ TEST_CASE("flight log: an offload is refused in the air, on the same gate a sett
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     CHECK(link_text(last_log_frame(rig)->bytes).find("in_flight") != std::string::npos);
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
 
     // And it stays refused: the log is still being written to.
     CHECK(rig.product.flight_log().recording());
@@ -448,22 +448,22 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     now_ms += 3000;
     // The same prompt machine a firmware upload knocks on, so a pilot reads one
     // kind of authorisation on the glass and not two.
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
-    CHECK(rig.product.screen().prompt() == comms::Pending::EraseLog);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::EraseLog);
+    CHECK(rig.product.screen().prompt() == common::Pending::EraseLog);
     CHECK(rig.product.flight_log().sessions_on_flash() >= 1);
 
     // A tap of the pad at a prompt refuses.
     rig.tap(now_ms);
     rig.run(now_ms, now_ms + 1200);
     now_ms += 1200;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
     CHECK_FALSE(rig.product.flight_log().erasing());
 
     rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     CHECK(rig.last_on(events::Endpoint::Config).find("refused_on_device") != std::string::npos);
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
 
     rig.drop_link();
     rig.run(now_ms, now_ms + 200);
@@ -471,7 +471,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::EraseLog);
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     now_ms += 100;
@@ -584,7 +584,7 @@ TEST_CASE("flight log: the erase verdict for a phone that left never reaches the
     rig.send_log_from(1, "{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::EraseLog);
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     now_ms += 100;

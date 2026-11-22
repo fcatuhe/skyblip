@@ -1,9 +1,9 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_CAPTURE_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_CAPTURE_H
 
-#include "core/comms/config.h"
 #include "core/diagnostics/payload.h"
 #include "core/diagnostics/profile.h"
+#include "products/common/services/config_service.h"
 #include "products/common/services/record_store.h"
 #include "runtime/service.h"
 
@@ -31,7 +31,7 @@ class CaptureService : public runtime::Service {
     static constexpr uint32_t kTailSlotsReserved = 2;
 
     CaptureService(runtime::Context& context, RecordStore& store, const RecordStore& flights,
-                   const CaptureSettings& settings, const comms::ConfigService& config)
+                   const CaptureSettings& settings, const ConfigService& config)
         : runtime::Service(context),
           store_(store),
           flights_(flights),
@@ -78,7 +78,7 @@ class CaptureService : public runtime::Service {
     RecordStore& store_;
     const RecordStore& flights_;
     const CaptureSettings& settings_;
-    const comms::ConfigService& config_;
+    const ConfigService& config_;
     uint32_t session_id_{0};
     uint32_t opened_ms_{0};
     uint32_t steady_records_{0};

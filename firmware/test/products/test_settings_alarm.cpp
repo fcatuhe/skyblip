@@ -90,7 +90,7 @@ TEST_CASE("settings: a phone's soft on a paired Go that cannot sound is confirme
     store.restore_defaults();
     settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
     const events::RxFrame frame = config_frame("{\"command\":\"set\",\"alarm\":\"soft\"}");
-    char detail[comms::kPromptDetailBytes]{};
+    char detail[common::kPromptDetailBytes]{};
     REQUIRE(store.describe_changes(cbor::Reader(ConstByteSpan(frame.data.data(), frame.bytes)),
                                    detail, sizeof(detail)) == Status::Ok);
     CHECK(std::string(detail) == "ALARM BRAVO SOFT");

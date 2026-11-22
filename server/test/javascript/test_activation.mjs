@@ -55,7 +55,7 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
 });
 
 test('the page counts down the prompt the firmware stands for as long', () => {
-  const config = readFileSync(new URL('../../../firmware/core/comms/config.h', import.meta.url), 'utf8');
+  const config = readFileSync(new URL('../../../firmware/products/common/services/config_service.h', import.meta.url), 'utf8');
   const [, seconds] = config.match(/kPromptCeilingMs = (\d+)u \* 1000u;/);
   assert.equal(PROMPT_CEILING_MS, Number(seconds) * 1000);
 });

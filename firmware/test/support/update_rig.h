@@ -24,7 +24,7 @@ inline void receiver_speaks_without_a_fix(Rig& rig) {
     rig.product.bus().gnss.push(solution);
 }
 
-inline comms::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
+inline common::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
 
 constexpr ports::ImageVersion kRunning{0, 1, 0, 12};
 constexpr ports::ImageVersion kStaged{0, 2, 0, 15};

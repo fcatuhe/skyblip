@@ -304,7 +304,7 @@
       });
     }
 
-    // INFO: fc 12nov26 capture_request.cpp's checks after the prompt guards and the flight
+    // INFO: fc 12nov26 config_capture.cpp's checks after the prompt guards and the flight
     orderCapture(profile) {
       const stop = profile === 'stop';
       if (!this.refused && this.flight !== 'airborne' && Boolean(this.capturing) !== stop) return this.acknowledge(false, stop ? 'not_capturing' : 'capturing');
@@ -312,7 +312,7 @@
       return this.ask('capture', 'confirm_capture');
     }
 
-    // INFO: fc 13nov26 browser_link.cpp's answers
+    // INFO: fc 13nov26 config_browser.cpp's answers
     async answerBrowser(command, fields) {
       if (command === 'browser_challenge') {
         this.proven = null;
@@ -376,7 +376,7 @@
       }
     }
 
-    // INFO: fc 17nov26 config.cpp's pair: a Bravo arms for a trusted page only, a Go asks or starts
+    // INFO: fc 17nov26 config_pair.cpp's pair: a Bravo arms for a trusted page only, a Go asks or starts
     askToPair(tag) {
       if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
       if (this.product === 'go') {

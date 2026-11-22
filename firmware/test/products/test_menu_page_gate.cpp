@@ -60,7 +60,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 300);
     now_ms += 300;
-    REQUIRE(rig.product.screen().prompt() == comms::Pending::Dfu);
+    REQUIRE(rig.product.screen().prompt() == common::Pending::Dfu);
 
     // The thumb has not caught up: it keeps tapping at the rhythm that was
     // stepping the volume, through the moment the question appears. Not one of
@@ -72,7 +72,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     }
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::Dfu);
     CHECK_FALSE(rig.product.config_link().config().upload_allowed());
     CHECK(rig.settings().alarm == volume);
 
@@ -80,7 +80,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     rig.run(now_ms, now_ms + 4000);
     now_ms += 4000;
     go::ConfirmSnapshot expect;
-    expect.title = comms::pending_title(comms::Pending::Dfu);
+    expect.title = common::pending_title(common::Pending::Dfu);
     expect.detail = "INSTALL 0.2.0+15 FROM THE PHONE";
     expect.seconds_left = seconds_left_on(rig.product.screen().framebuffer());
     CHECK(expect.seconds_left > 0);
@@ -136,7 +136,7 @@ TEST_CASE("product: the alarm can be turned up in the air, where a phone is refu
     rig.send("{\"command\":\"set\",\"alarm\":3}");
     rig.run(now_ms, now_ms + 300);
     now_ms += 300;
-    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
     CHECK(rig.settings().alarm == go::Alarm::Soft);
 
     // The pilot, on the glass, can. Presence is the thing the phone lacks, and

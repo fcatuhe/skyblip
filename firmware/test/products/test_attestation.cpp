@@ -2,7 +2,6 @@
 #include <optional>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/comms/identity_link.h"
 #include "core/dfu/update.h"
 #include "core/identity/unit.h"
@@ -14,6 +13,7 @@
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/activation_vectors.h"
 #include "test/support/config_frame.h"
@@ -34,7 +34,7 @@ struct Desk {
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
-    comms::ConfigService config{link, store, &dfu};
+    common::ConfigService config{link, store, &dfu};
     Identity port;
     platform::host::Random random;
     identity::Unit unit{port, random};
@@ -90,7 +90,7 @@ TEST_CASE("attestation: the unit signs the vectors' attestation byte for byte, w
               desk.vectors.text("version") + "\",\"release\":true,\"device_id\":\"" +
               desk.vectors.text("device_id") + "\",\"signature\":\"" +
               desk.vectors.text("attestation_signature") + "\"}");
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
 }
 
 TEST_CASE("attestation: a development build signs release false, and the signature covers it") {
@@ -194,7 +194,7 @@ TEST_CASE(
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
-    comms::ConfigService config{link, store, &dfu};
+    common::ConfigService config{link, store, &dfu};
     link.declare_payload_bytes(kChromePayloadBytes);
     link.raise_link(1);
     config.on_rx(config_frame(
