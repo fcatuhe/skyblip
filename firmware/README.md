@@ -29,7 +29,7 @@ Put a service that more than one product runs in `products/common/`, in namespac
 | `make fuzz-<name>` | runs one harness: `nmea`, `air`, `adsb`, `adsb_assembly` or `link` |
 | `make tidy` | runs clang-tidy over what the host build compiles, as CI does |
 | `make browser` | compiles the WASM that the Rails app's `/briefing/simulator` loads from a release, and bundles `scenarios/*.json` into the `scenarios.json` beside it |
-| `make watch` | rebuilds and reruns the host tests on every save, or the WASM with `WATCH=browser` |
+| `make watch` | rebuilds and reruns the host tests on every save, or the WASM with `WATCH=browser`, through `watchexec` |
 | `make clean` | removes `build/` |
 | `make ... ABI=ilp32` | builds any of the above for i386, where `long` is 32 bits as on the nRF52 |
 | `scripts/build_local.sh`, from the repo root | builds the device images |
