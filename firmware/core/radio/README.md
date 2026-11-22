@@ -14,7 +14,7 @@ Totals such as `rx_ok` cannot tell an empty sky from a receiver that frames noth
 | `Unarmed` | `ports::Rf` refused the plan that carried it, so nothing was armed |
 | `Received` | a burst arrived, framed, and named an aircraft |
 | `Named` | a burst framed and carried an aircraft's registration instead of its position: §F.2.1's payload 66 with OGN's info header, filed under the sender's address (`core/traffic/callsigns.h`) |
-| `BadCrc` | an integrity check refused it: the chip's own CRC, an ADS-L or ALP-TAS CRC no forward correction could rescue, or a Reed-Solomon codeword the uplink could not correct |
+| `BadCrc` | an integrity check refused it: the chip's own CRC, an ADS-L or ALP-TAS CRC no forward correction could rescue, or an uplink whose CRC did not check or whose Reed-Solomon codeword could not be corrected |
 | `Unframed` | clean chips behind the sync window and a sync tail naming neither system, so nothing was attempted |
 | `Miskeyed` | an ALP-TAS frame whose CRC held and whose sender keyed it on a second inside `kKeyWindowS` of ours, but not ours |
 | `Undecoded` | the frame was attempted and refused: the ALP-TAS plausibility gate with no second that would have read it, an ADS-L frame carrying no position, or a registration whose text is not a callsign (`protocol::is_callsign_character`) |
