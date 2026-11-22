@@ -69,8 +69,8 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     int order[8]{0};
     Spy first(context, 1, order, Status::Ok);
     Spy second(context, 2, order, Status::Ok);
-    const runtime::Loop::Entry services[] = {{&first, diagnostics::LoopService::Config},
-                                             {&second, diagnostics::LoopService::Ownship}};
+    const runtime::LoopEntry services[] = {{&first, diagnostics::LoopService::Config},
+                                           {&second, diagnostics::LoopService::Ownship}};
     runtime::Loop loop(services);
 
     CHECK(loop.setup() == Status::Ok);
@@ -121,8 +121,8 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     runtime::Context context{roles, bus, state, recorder};
     Slow quick(context, clock, 300);
     Slow render(context, clock, 2000);
-    const runtime::Loop::Entry services[] = {{&quick, diagnostics::LoopService::Config},
-                                             {&render, diagnostics::LoopService::Screen}};
+    const runtime::LoopEntry services[] = {{&quick, diagnostics::LoopService::Config},
+                                           {&render, diagnostics::LoopService::Screen}};
     runtime::Loop loop(services);
     runtime::LoopMeter meter(clock);
 
@@ -204,8 +204,8 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
     int order[8]{0};
     Spy failing(context, 1, order, Status::Down);
     Spy ok(context, 2, order, Status::Ok);
-    const runtime::Loop::Entry services[] = {{&failing, diagnostics::LoopService::Config},
-                                             {&ok, diagnostics::LoopService::Ownship}};
+    const runtime::LoopEntry services[] = {{&failing, diagnostics::LoopService::Config},
+                                           {&ok, diagnostics::LoopService::Ownship}};
     runtime::Loop loop(services);
 
     CHECK(loop.setup() == Status::Down);
@@ -232,60 +232,43 @@ TEST_CASE("runtime: a null role accepts every call and reports nothing works") {
 // the only way to observe it is to lose the aircraft.
 
 TEST_CASE("watchdog: the dog is fed while every task is inside its deadline") {
-    runtime::FeedDecision feed;
-    const int radio_id = feed.add(1000);
-    const int gnss_id = feed.add(1000);
-    CHECK(radio_id == 0);
-    CHECK(gnss_id == 1);
-    CHECK(feed.count() == 2);
+    runtime::FeedDecision<2> feed;
+    constexpr int radio = 0;
+    constexpr int gnss = 1;
 
     // Before the first pass there is no time base, so nothing is stale yet.
     CHECK(feed.may_feed(50000));
 
     feed.begin(0);
     CHECK(feed.may_feed(0));
-    for (uint32_t now_ms = 0; now_ms < 10000; now_ms += 100) {
-        feed.check_in(radio_id, now_ms);
-        feed.check_in(gnss_id, now_ms);
+    for (uint32_t now_ms = 0; now_ms < 2 * runtime::kServiceSilenceCeilingMs; now_ms += 100) {
+        feed.check_in(radio, now_ms);
+        feed.check_in(gnss, now_ms);
         CHECK(feed.may_feed(now_ms));
     }
 }
 
 TEST_CASE("watchdog: a task that stops checking in stops the feed") {
-    runtime::FeedDecision feed;
-    const int radio = feed.add(1000);
-    const int gnss = feed.add(1000);
+    runtime::FeedDecision<2> feed;
+    constexpr int radio = 0;
+    constexpr int gnss = 1;
     feed.begin(0);
 
     // The radio keeps going; the GNSS task went quiet at t=0.
-    for (uint32_t now_ms = 0; now_ms < 1000; now_ms += 100) {
+    for (uint32_t now_ms = 0; now_ms < runtime::kServiceSilenceCeilingMs; now_ms += 100) {
         feed.check_in(radio, now_ms);
         CHECK(feed.may_feed(now_ms));
     }
-    feed.check_in(radio, 1000);
-    CHECK_FALSE(feed.may_feed(1000));
-    CHECK(feed.stalled_service(1000) == gnss);
-    CHECK(feed.silent_ms(gnss, 1000) == 1000);
+    feed.check_in(radio, runtime::kServiceSilenceCeilingMs);
+    CHECK_FALSE(feed.may_feed(runtime::kServiceSilenceCeilingMs));
+    CHECK(feed.stalled_service(runtime::kServiceSilenceCeilingMs) == gnss);
 
     // It comes back: so does the feed. A stall is a state, not a latch, because
     // the bite is what latches it.
-    feed.check_in(gnss, 1100);
-    CHECK(feed.may_feed(1100));
-    CHECK(feed.stalled_service(1100) == runtime::FeedDecision::kNone);
-}
-
-TEST_CASE("watchdog: each task carries its own rope") {
-    runtime::FeedDecision feed;
-    const int fast = feed.add(100);
-    const int slow = feed.add(5000);
-    feed.begin(0);
-    feed.check_in(slow, 0);
-
-    CHECK_FALSE(feed.may_feed(200));
-    CHECK(feed.stalled_service(200) == fast);
-
-    feed.check_in(fast, 200);
-    CHECK(feed.may_feed(250));
+    feed.check_in(gnss, runtime::kServiceSilenceCeilingMs + 100);
+    CHECK(feed.may_feed(runtime::kServiceSilenceCeilingMs + 100));
+    CHECK(feed.stalled_service(runtime::kServiceSilenceCeilingMs + 100) ==
+          runtime::FeedDecision<2>::kNone);
 }
 
 TEST_CASE("watchdog: the loop refuses to feed for a service that is not progressing") {
@@ -309,8 +292,8 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     int order[8]{0};
     Spy healthy(context, 1, order, Status::Ok);
     Spy wedged(context, 2, order, Status::Ok);
-    const runtime::Loop::Entry services[] = {{&healthy, diagnostics::LoopService::Config},
-                                             {&wedged, diagnostics::LoopService::Ownship}};
+    const runtime::LoopEntry services[] = {{&healthy, diagnostics::LoopService::Config},
+                                           {&wedged, diagnostics::LoopService::Ownship}};
     runtime::Loop loop(services);
 
     // order[0] is the Spy's write cursor: rewound every pass, because this case
@@ -342,9 +325,9 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
 // deadline at once, so the loop would stop feeding and the aircraft would lose its
 // tracker in flight, once every seven weeks, for no reason at all.
 TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
-    runtime::FeedDecision feed;
-    const int radio = feed.add(1000);
-    const int gnss = feed.add(1000);
+    runtime::FeedDecision<2> feed;
+    constexpr int radio = 0;
+    constexpr int gnss = 1;
     const uint32_t before = 0xFFFFFF00u;  // 256 ms short of the wrap
     feed.begin(before);
 
@@ -354,19 +337,18 @@ TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
         feed.check_in(radio, now_ms);
         feed.check_in(gnss, now_ms);
         CHECK(feed.may_feed(now_ms));
-        CHECK(feed.silent_ms(radio, now_ms) == 0);
     }
 
-    // A task that went quiet 256 ms before the wrap is 1000 ms quiet 744 ms after
-    // it, and not one millisecond more.
+    // A task that went quiet 256 ms before the wrap stalls one silence ceiling
+    // later, on the far side of it, and not one millisecond sooner.
+    const uint32_t stalled_ms = before + runtime::kServiceSilenceCeilingMs;
+    REQUIRE(stalled_ms < before);
     feed.check_in(gnss, before);
-    feed.check_in(radio, 743u);
-    CHECK(feed.silent_ms(gnss, 744u) == 1000);
-    CHECK(feed.may_feed(743u));
-    CHECK_FALSE(feed.may_feed(744u));
-    CHECK(feed.stalled_service(744u) == gnss);
+    feed.check_in(radio, stalled_ms - 1);
+    CHECK(feed.may_feed(stalled_ms - 1));
+    CHECK_FALSE(feed.may_feed(stalled_ms));
     // The one that is still checking in is not the one stalled.
-    CHECK(feed.silent_ms(radio, 744u) == 1);
+    CHECK(feed.stalled_service(stalled_ms) == gnss);
 }
 
 namespace {
@@ -401,10 +383,10 @@ TEST_CASE("runtime: the loop is due when its earliest service is, the rest ceili
 
     Due idle(context, 5 * runtime::kServiceRestCeilingMs);
     Due soon(context, 250);
-    const runtime::Loop::Entry both[] = {{&idle, diagnostics::LoopService::Config},
-                                         {&soon, diagnostics::LoopService::Ownship}};
+    const runtime::LoopEntry both[] = {{&idle, diagnostics::LoopService::Config},
+                                       {&soon, diagnostics::LoopService::Ownship}};
     CHECK(runtime::Loop(both).due_in_ms(0) == 250);
-    const runtime::Loop::Entry alone[] = {{&idle, diagnostics::LoopService::Config}};
+    const runtime::LoopEntry alone[] = {{&idle, diagnostics::LoopService::Config}};
     CHECK(runtime::Loop(alone).due_in_ms(0) == runtime::kServiceRestCeilingMs);
 
     int order[8]{0};
