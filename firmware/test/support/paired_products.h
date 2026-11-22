@@ -19,7 +19,7 @@ struct PairedProducts {
     Rig go;
     BravoRig bravo{};
     PairedLink air{bravo.platform.link(), go.platform.central()};
-    uint32_t now_ms{100};
+    uint32_t& now_ms{go.now_ms};
     // Every frame the Go wrote, in order, whatever the air did with it.
     std::vector<std::string> go_wrote{};
 
@@ -65,18 +65,20 @@ struct PairedProducts {
     go::BravoService& service() { return go.product.bravo(); }
     bravo::PeerService& peer() { return bravo.product.peer(); }
 
-    void run_for(uint32_t span_ms) {
-        go.run(now_ms, now_ms + span_ms);
-        now_ms += span_ms + 50;
+    void run_for(uint32_t span_ms) { go.run_for(span_ms); }
+
+    // The pilot opens the BRAVO page on the Go, where it scans.
+    void open_page() {
+        go.show(go::Page::Bravo);
+        run_for(300);
     }
 
-    // The pilot opens the BRAVO page on the Go, picks the one listed and confirms it.
+    // The pilot picks the one listed and confirms it, and Bravo waits for its button.
     void ask() {
-        go.show(now_ms, go::Page::Bravo);
-        run_for(300);
+        open_page();
         REQUIRE(service().found_count() == 1);
-        go.press(now_ms);
-        go.press(now_ms);
+        go.press();
+        go.press();
         run_for(2000);
     }
 
@@ -85,6 +87,13 @@ struct PairedProducts {
         run_for(150);
         bravo.platform.set_button_down(false);
         run_for(150);
+    }
+
+    // Both presses, the Go's and Bravo's, and the health that tells the Go it is paired.
+    void pair() {
+        ask();
+        press_bravo();
+        run_for(2000);
     }
 
     // INFO: fc 11nov26 each side's settings write waits for a write window, forced after 3 s
@@ -98,6 +107,7 @@ struct PairedProducts {
 
    private:
     void start() {
+        go.now_ms = 100;
         REQUIRE(go.setup() == Status::Ok);
         REQUIRE(bravo.setup() == Status::Ok);
         go.world = [this](uint32_t at_ms) {

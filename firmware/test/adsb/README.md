@@ -8,9 +8,9 @@ Bravo only receives, so `clauses.txt` holds the 282 receive-side headings: the f
 
 A case is named `DO-260B <clause>: what holds`, and `scripts/check_clauses.py` holds the cases to the list. `python3 scripts/conformance.py adsb` generates [`docs/ADSB_CONFORMANCE.md`](../../../docs/ADSB_CONFORMANCE.md).
 
-## A gap is a skipped case
+## A gap is a skipped case or a marked clause
 
-A clause the firmware does not meet is written as the clause requires and skipped over a `TODO:`, with the ADS-L suite's kinds and one more, `unmeasured:`, for a radio figure no bench has measured yet, such as class A0's -72 dBm MTL (#172). `optional:` also covers a byte layout bound only to equipment using the sample report structure. `build/skyblip_tests --no-skip --test-case="DO-260B*"` runs them all.
+A clause the firmware does not meet is written as the clause requires and skipped over a `TODO:`, when a case can state it with what the stack decodes today. A clause no case can state yet, such as prose, a byte layout or a field the decoder never reads, is marked in `clauses.txt` under its heading: the claim on a line opening `  - `, then the reason indented four spaces, with any `TODO:` above it. Both take the ADS-L suite's kinds and one more, `unmeasured:`, for a radio figure no bench has measured yet, such as class A0's -72 dBm MTL (#172). `optional:` also covers a byte layout bound only to equipment using the sample report structure. `build/skyblip_tests --no-skip --test-case="DO-260B*"` runs the skipped cases. A mark goes when a case reads its clause.
 
 ## What Bravo does not meet
 

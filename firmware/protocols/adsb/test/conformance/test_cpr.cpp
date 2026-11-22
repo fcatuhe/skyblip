@@ -134,12 +134,6 @@ TEST_CASE("DO-260B A.1.7.9: positions come from a global pair first, then single
           5.1);
 }
 
-// INFO: fc 17nov26 a note on how global and local decoding combine, executed by A.1.7.9.2
-TEST_CASE("DO-260B A.1.7.9.1: global decoding starts a track and local decoding continues it" *
-          doctest::skip()) {
-    FAIL("prose: a note on how A.1.7.4 and A.1.7.7 combine, which A.1.7.9.2 executes");
-}
-
 TEST_CASE("DO-260B A.1.7.9.2: a single frame decodes against the emitter's own last position") {
     receiver::Bravo bravo;
     bravo.reference = receiver::reference_at(48.0, 8.0);
@@ -158,11 +152,6 @@ TEST_CASE("DO-260B A.1.7.10: global and local decodes are each tested for reason
     bravo.fly(receiver::kLatitude, receiver::kLongitude, 500, true);
     bravo.fly(receiver::kLatitude + 7 * kNmDegrees, receiver::kLongitude, 1500, false);
     CHECK(bravo.assembly.implausible() == 1);
-}
-
-// INFO: fc 17nov26 a note on why decodes are tested, executed by A.1.7.10.2 and A.1.7.10.3
-TEST_CASE("DO-260B A.1.7.10.1: a decode can be wrong, so each is tested" * doctest::skip()) {
-    FAIL("prose: the reason for the tests that A.1.7.10.2 and A.1.7.10.3 specify");
 }
 
 TEST_CASE(

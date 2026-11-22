@@ -1,0 +1,434 @@
+// The config endpoint's state machine tested over a link model with scripted JSON
+// messages, NO device. Covers get, set-with-confirmation,
+// the in-flight lockout (fail closed) and backpressure.
+//
+// Two of these guard the wire the shell now provides: the gate is fed from the
+// ADS-L flight code core/flight publishes, and a prompt standing on the glass
+// is an open authorisation, so it has a life of its own that ends in a refusal.
+#include <cstring>
+#include <initializer_list>
+#include <string>
+#include <vector>
+
+#include "core/comms/link_registry.h"
+#include "core/events/link.h"
+#include "core/util/cbor.h"
+#include "doctest/doctest.h"
+#include "hardware/platform/host/link.h"
+#include "ports/dfu.h"
+#include "products/common/services/config_service.h"
+#include "products/skyblip_go/settings.h"
+#include "products/skyblip_go/settings_store.h"
+#include "test/support/config_frame.h"
+
+using namespace skyblip;
+using namespace skyblip::comms;
+using namespace skyblip::common;
+
+TEST_CASE("comms: get returns current config on the Config endpoint" *
+          doctest::test_suite("main")) {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link.last_on(events::Endpoint::Config));
+    CHECK(link_text(link.last().bytes).find("config") != std::string::npos);
+}
+
+TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a set restores it") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    settings.aircraft_type = 7;
+    settings.alarm = go::Alarm::Soft;
+    std::memcpy(settings.callsign, "D-KXYZ", 7);
+    settings.aircraft_address = 0x3C6586;
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    config.on_rx(config_frame("{\"command\":\"defaults\"}"));
+    const std::string body = link_text(link.last().bytes);
+    CHECK(body ==
+          "{\"command\":\"defaults\",\"aircraft_type\":1,\"units\":\"nautical\","
+          "\"callsign\":\"\",\"aircraft_address\":0,\"alarm\":\"loud\"}");
+
+    const std::string set = "{\"command\":\"set\"" + body.substr(body.find(','));
+    config.on_rx(config_frame(set.c_str()));
+    config.confirm();
+    const go::Settings shipped = go::defaults();
+    CHECK(settings.aircraft_type == shipped.aircraft_type);
+    CHECK(settings.alarm == shipped.alarm);
+    CHECK(std::string(settings.callsign).empty());
+    CHECK(settings.aircraft_address == go::kAircraftAddressUnset);
+}
+
+TEST_CASE("comms: set on the ground stages, needs confirmation, then applies" *
+          doctest::test_suite("main")) {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
+    CHECK(config.pending() == Pending::Set);
+    CHECK(link_text(link.last().bytes).find("confirm") != std::string::npos);
+    CHECK(int(settings.aircraft_type) == 1);  // not yet applied
+
+    config.confirm();
+    CHECK(config.pending() == Pending::None);
+    CHECK(int(settings.aircraft_type) == 4);  // applied
+    CHECK(config.settings_dirty());
+    CHECK(link_text(link.last().bytes).find("\"acknowledge\":true") != std::string::npos);
+}
+
+// The press authorises what the glass says, so the glass says what the phone sent.
+TEST_CASE("comms: the settings prompt lists what the set changes, and only that" *
+          doctest::test_suite("main")) {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    config.on_rx(
+        config_frame("{\"command\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm\":2}"));
+    REQUIRE(config.pending() == Pending::Set);
+    CHECK(std::string(config.prompt_detail()) == "CALLSIGN F-JXYZ\nALARM SOFT");
+
+    config.tick(kPromptCeilingMs);
+    config.on_rx(config_frame("{\"command\":\"set\",\"units\":0}"));
+    CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
+}
+
+// A set the store refuses used to stand on the glass and fail only after the press.
+TEST_CASE("comms: a set out of range or invalid is refused at the door, never staged") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":300}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"out_of_range\"}");
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"callsign\":\"F*JXYZ\"}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"invalid\"}");
+    CHECK(int(settings.aircraft_type) == 1);
+}
+
+TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    // 1 + 2 + key 1 (unread by set) with a 2-byte head and 247 bytes + the trim's 3 = 256.
+    events::RxFrame full{};
+    full.session_id = 1;
+    full.endpoint = events::Endpoint::Config;
+    cbor::Writer writer(full.data.data(), static_cast<int>(full.data.size()));
+    writer.add_code(link::kCommandKey, link::Command::Set);
+    const std::vector<uint8_t> filler(247, 0xEE);
+    writer.add_bytes(link::set_key::kVersion, ConstByteSpan(filler.data(), filler.size()));
+    writer.add_integer(link::set_key::kFrequencyTrimE1Ppm, -25);
+    full.bytes = static_cast<uint16_t>(writer.finish());
+    REQUIRE(full.bytes == full.data.size());
+    config.on_rx(full);
+    REQUIRE(config.pending() == Pending::Set);
+    config.confirm();
+    CHECK(int(settings.frequency_trim_e1_ppm) == -25);
+}
+
+TEST_CASE("comms: only the ADS-L airborne code closes the gate, every other value opens it") {
+    for (const uint8_t code : {0, 1, 2, 3, 255}) {
+        CAPTURE(int(code));
+        platform::host::Link link;
+        link.raise_link(1);
+        go::Settings settings = go::defaults();
+        go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+        ConfigService config(link, store);
+        config.set_flight_state(flight::state_from(code));
+        config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+        CHECK((config.pending() == Pending::Dfu) == (code != 2));
+    }
+}
+
+TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants nothing") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.tick(1000);
+
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    REQUIRE(config.pending() == Pending::Dfu);
+    config.tick(1000 + kPromptCeilingMs - 1);
+    CHECK(config.pending() == Pending::Dfu);
+
+    config.tick(1000 + kPromptCeilingMs);
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes).find("expired") != std::string::npos);
+
+    // The button pressed after the prompt came down authorises the operation
+    // that was on it, or it authorises nothing. It is nothing.
+    config.confirm();
+    CHECK_FALSE(config.upload_allowed());
+}
+
+TEST_CASE("comms: taking off takes a standing prompt away with it") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"command\":\"recovery\"}"));
+    REQUIRE(config.pending() == Pending::Recovery);
+
+    config.set_flight_state(flight::FlightState::Airborne);
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
+}
+
+// The prompt is the whole security boundary, so it has to say what it is: a
+// panel that shows an unlabelled question is a panel a pilot answers blind.
+TEST_CASE("comms: every operation that needs authorising names itself and what it will do") {
+    const Pending all[] = {Pending::Set, Pending::Dfu, Pending::Recovery, Pending::PowerOff};
+    for (Pending pending : all) {
+        CHECK(std::strlen(pending_title(pending)) > 0);
+        CHECK(std::strlen(pending_detail(pending)) > 8);
+    }
+    // No two operations wear the same title, or confirming one would look like
+    // confirming another.
+    for (Pending first : all)
+        for (Pending second : all)
+            if (first != second)
+                CHECK(std::strcmp(pending_title(first), pending_title(second)) != 0);
+
+    CHECK(std::strlen(pending_title(Pending::None)) == 0);
+}
+
+TEST_CASE("comms: link down cancels a pending change") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":\"visual\"}"));
+    CHECK(config.pending() == Pending::Set);
+    config.on_link_down(events::LinkDown{1});
+    CHECK(config.pending() == Pending::None);
+}
+
+// G1: the wire, not the gauge or the cutoff rule - core/power decided percent,
+// charging and the level, comms only carries them to the tablet.
+
+// E1. A dying cell must not corrupt the settings. NVS survives an interrupted
+// write by design, but the sector it garbage-collects is the internal flash the
+// running image executes from, and the moment a write lands is the moment a
+// 14 dBm burst sags a 3.3 V cell. So below the low-battery warning the sector is
+// not touched - and a companion app that patches a value per keystroke is told
+// so, rather than being acknowledged for a write that will not happen.
+
+TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    power::BatteryState low{};
+    low.valid = true;
+    low.cell_mv = 3400;
+    config.set_battery_state(low, power::PowerLevel::Critical);
+    CHECK_FALSE(config.settings_writable());
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
+    // Refused at the door: no prompt to walk over and confirm for a write that
+    // was never going to happen.
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"acknowledge\":false") != std::string::npos);
+    CHECK(int(settings.aircraft_type) == 1);
+    CHECK_FALSE(config.settings_dirty());
+
+    // A charger on the cable holds the terminal above the cell, so core/power
+    // reports Normal again and the door opens.
+    power::BatteryState charging{};
+    charging.valid = true;
+    charging.cell_mv = 3400;
+    charging.external_power = true;
+    charging.charging = true;
+    config.set_battery_state(charging, power::PowerLevel::Normal);
+    CHECK(config.settings_writable());
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
+    REQUIRE(config.pending() == Pending::Set);
+    config.confirm();
+    CHECK(int(settings.aircraft_type) == 4);
+}
+
+// The confirmation window is 30 s wide and a cell can cross the warning inside
+// it. The gate is therefore asked twice, exactly as the flight-state gate is.
+TEST_CASE("comms: a cell that falls while the prompt stands cancels the change") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
+    REQUIRE(config.pending() == Pending::Set);
+
+    power::BatteryState low{};
+    low.valid = true;
+    low.cell_mv = 3100;
+    config.set_battery_state(low, power::PowerLevel::Flat);
+    config.confirm();
+    CHECK(config.pending() == Pending::None);
+    CHECK(int(settings.aircraft_type) == 1);
+    CHECK_FALSE(config.settings_dirty());
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
+}
+
+// The power-failure comparator watches the SoC's own rail, which is at or below
+// the cell: once it has fired, a healthy-looking divider reading is not the
+// question any more.
+TEST_CASE("comms: a fired power-failure comparator closes the door on its own") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    power::BatteryState healthy{};
+    healthy.valid = true;
+    healthy.cell_mv = 4000;
+    config.set_battery_state(healthy, power::PowerLevel::Normal);
+    REQUIRE(config.settings_writable());
+
+    config.set_supply_warned(true);
+    CHECK_FALSE(config.settings_writable());
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
+}
+
+// J. Die temperature in the status reply. The question it answers is one no other
+// number on the device can: was this unit cooking. A canopy rail in August is
+// 60 C of air over a black case, and the two failures that follow - a pack that
+// will not charge, an e-paper panel that ghosts - both look like a fault in the
+// part that gave up rather than in the afternoon that did it.
+
+namespace {
+
+// INFO: fc 19nov26 the whole dump as one text, once the collector has run, which the dump waits for
+std::string dump_of(platform::host::Link& link, ConfigService& config) {
+    config.diagnostics().refreshes = 1;
+    link.clear();
+    config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
+    std::string all;
+    for (const platform::host::Link::Frame& frame : link.sent) all += link_text(frame.bytes);
+    return all;
+}
+
+}  // namespace
+
+TEST_CASE("comms: the dump carries the die temperature, in whole degrees, and status does not") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+
+    // Nothing has read the sensor yet: the key is absent, not zero.
+    CHECK(dump_of(link, config).find("die_temperature_c") == std::string::npos);
+
+    config.set_die_temperature(412, /*valid=*/true);
+    CHECK(dump_of(link, config).find("\"die_temperature_c\":41") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link_text(link.last().bytes).find("die_temperature") == std::string::npos);
+}
+
+// A board with no sensor, a driver that refused a measurement and a device at
+// freezing are three different things. 0.0 C is a plausible hangar morning, so a
+// zero must never stand in for the first two.
+TEST_CASE("comms: no reading is no key, never a zero") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+
+    config.set_die_temperature(0, /*valid=*/true);
+    CHECK(dump_of(link, config).find("\"die_temperature_c\":0") != std::string::npos);
+
+    config.set_die_temperature(0, /*valid=*/false);
+    CHECK(dump_of(link, config).find("die_temperature_c") == std::string::npos);
+}
+
+// J and L. A counter a bench reads is not state a pilot's screen reacts to, so it
+// reads out with the rest of the radio's counters, not on the pushed status.
+TEST_CASE("comms: the range gate's refusals read out with the radio's own counters") {
+    platform::host::Link link;
+    link.raise_link(1);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+
+    Diagnostics& dump = config.diagnostics();
+    dump.refreshes = 1;
+    dump.noise_dbm = -101;
+    dump.rx_ok = 7;
+    config.set_range_refused(0);
+    link.sent.clear();
+    config.on_rx(config_frame("{\"command\":\"radio\"}"));
+    REQUIRE_FALSE(link.sent.empty());
+    std::string idle;
+    for (const platform::host::Link::Frame& frame : link.sent) {
+        CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+        const std::string text = link_text(frame.bytes);
+        CHECK(text.find("\"command\":\"radio\"") != std::string::npos);
+        CHECK(text.find("\"group\":\"radio\"") != std::string::npos);
+        idle += text;
+    }
+    CHECK(idle.find("\"range_refused\":0") != std::string::npos);
+    CHECK(idle.find("\"noise_dbm\":-101") != std::string::npos);
+    CHECK(idle.find("\"rx_ok\":7") != std::string::npos);
+
+    // A counter never resets, so the widest is a uint32_t's, five bytes on the link.
+    dump.rx_ok = dump.rx_bad = dump.tx_ok = 0xFFFFFFFFu;
+    dump.rx_wait = dump.rx_type = dump.tx_lost = 0xFFFFFFFFu;
+    config.set_range_refused(0xFFFFFFFFu);
+    link.sent.clear();
+    config.on_rx(config_frame("{\"command\":\"radio\"}"));
+    std::string body;
+    for (const platform::host::Link::Frame& frame : link.sent) {
+        CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+        const std::string text = link_text(frame.bytes);
+        CHECK_FALSE(text.empty());
+        body += text;
+    }
+    CHECK(body.find("\"range_refused\":4294967295") != std::string::npos);
+    CHECK(body.find("\"more\":false") != std::string::npos);
+    CHECK(config.link_drops() == 0);
+}

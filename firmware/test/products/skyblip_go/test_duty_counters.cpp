@@ -1,0 +1,222 @@
+// The seven cumulative duty counters on bus::State, through the service that owns what each counts.
+#include "core/annunciation/annunciator.h"
+#include "core/bus/state.h"
+#include "core/gnss/first_fix.h"
+#include "core/timing/slot.h"
+#include "core/timing/transmit.h"
+#include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
+#include "products/skyblip_go/services/radio.h"
+#include "simulator/simulator.h"
+#include "test/support/product_rig.h"
+
+using namespace skyblip;
+
+namespace {
+
+constexpr uint32_t kPassMs = 10;
+
+// The three dwells: the whole second less its three 5 ms retunes.
+constexpr uint32_t kDwellMsPerSecond =
+    static_cast<uint32_t>(timing::dwell_of(timing::kUplinkWindowMs).width_ms() +
+                          timing::dwell_of(timing::kWindowAMs).width_ms() +
+                          timing::dwell_of(timing::kWindowBMs).width_ms());
+
+// The radio service alone over ports::NullRf, which answers Down to every plan.
+struct RefusingExecutor {
+    platform::host::Clock clock;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
+    ports::NullRoles null;
+    ports::Roles roles{
+        clock,          null.rf,          null.link, null.display,         null.key_value,
+        null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
+        null.gnss,      identity,         random};
+    bus::Bus bus{};
+    bus::State state{};
+    diagnostics::Recorder recorder{};
+    runtime::Context context{roles, bus, state, recorder};
+    go::Settings settings{};
+    go::RadioService radio{context, settings};
+
+    RefusingExecutor() {
+        roles.capabilities = ports::Capability::Rf;
+        state.activation.serial = 0x7E57;
+    }
+
+    void run(uint32_t until_ms) {
+        for (uint32_t now_ms = 0; now_ms <= until_ms; now_ms += kPassMs) {
+            clock.set_milliseconds(now_ms);
+            radio.tick(now_ms);
+        }
+    }
+};
+
+}  // namespace
+
+TEST_CASE("duty: a presented frame counts a partial refresh and a still glass counts none") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(3000, kPassMs);
+    const uint32_t presented = rig.state().duty.panel_partial_refreshes;
+    CHECK(presented > 0);
+
+    rig.run_for(5000, kPassMs);
+    CHECK(rig.state().duty.panel_partial_refreshes == presented);
+
+    rig.tap();
+    rig.run(rig.now_ms, rig.now_ms + 2000, kPassMs);
+    CHECK(rig.state().duty.panel_partial_refreshes > presented);
+}
+
+// A page swap wipes the glass black on the partial waveform: pricing it as a full is five partials.
+TEST_CASE("duty: the parked frame is the only full refresh a page swap or a present pays for") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(2000, kPassMs);
+    rig.tap();
+    rig.run_for(3000, kPassMs);
+    CHECK(rig.state().duty.panel_full_refreshes == 0);
+
+    const uint32_t partials = rig.state().duty.panel_partial_refreshes;
+    rig.product.screen().park_for_off();
+    rig.run(rig.now_ms, rig.now_ms + 3000, kPassMs);
+    CHECK(rig.state().duty.panel_full_refreshes == 1);
+    CHECK(rig.state().duty.panel_partial_refreshes == partials);
+}
+
+// The install and recovery frames are worn for seconds, so they change like a page.
+TEST_CASE("duty: an install or a recovery parks through black, never on a full refresh") {
+    for (int recovery = 0; recovery < 2; recovery++) {
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        rig.run_for(2000, kPassMs);
+        const uint32_t partials = rig.state().duty.panel_partial_refreshes;
+        if (recovery)
+            rig.product.screen().park_for_recovery(ports::RecoveryPath::Rebooted);
+        else
+            rig.product.screen().park_for_install();
+        rig.run(rig.now_ms, rig.now_ms + 3000, kPassMs);
+        CHECK(rig.state().duty.panel_full_refreshes == 0);
+        // the black, then the frame over it
+        CHECK(rig.state().duty.panel_partial_refreshes == partials + 2);
+    }
+}
+
+TEST_CASE("duty: the backlight counter runs while the backlight is lit and stops with it") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(2000, kPassMs);
+    CHECK(rig.state().duty.backlight_ms == 0);
+
+    rig.product.screen().set_backlight(true);
+    rig.run_for(3000, kPassMs);
+    const uint32_t lit_ms = rig.state().duty.backlight_ms;
+    CHECK(lit_ms >= 3000 - kPassMs);
+    CHECK(lit_ms <= 3000 + kPassMs);
+
+    rig.product.screen().set_backlight(false);
+    rig.run(rig.now_ms, rig.now_ms + 2000, kPassMs);
+    CHECK(rig.state().duty.backlight_ms <= lit_ms + kPassMs);
+}
+
+TEST_CASE("duty: the receiver counter advances by what the executor was armed for") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 10000, kPassMs);
+    const uint32_t armed_ms = rig.state().duty.rx_armed_ms;
+    // ten seconds of dwells, less at most one pass at each of the three edges
+    CHECK(armed_ms <= 10 * kDwellMsPerSecond);
+    CHECK(armed_ms >= 10 * (kDwellMsPerSecond - 3 * kPassMs));
+}
+
+// The counter follows the radio, not the map: a refused plan was never armed.
+TEST_CASE("duty: a dwell the executor refuses is not counted, whatever the slot map says") {
+    RefusingExecutor rig;
+    REQUIRE(rig.radio.setup() == Status::Ok);
+    rig.run(5000);
+    CHECK(rig.state.rf.plan.end_ms > rig.state.rf.plan.start_ms);
+    CHECK(rig.state.duty.rx_armed_ms == 0);
+}
+
+// A pass that ran long used to arm each dwell late by however long it ran, a second of receive in
+// ten.
+TEST_CASE("duty: a pass too coarse for the dwell edges still reads the slot map") {
+    Rig fine;
+    REQUIRE(fine.setup() == Status::Ok);
+    fine.run(0, 10000, kPassMs);
+
+    Rig coarse;
+    REQUIRE(coarse.setup() == Status::Ok);
+    coarse.run(0, 10000, 250);
+
+    CHECK(coarse.state().duty.rx_armed_ms == fine.state().duty.rx_armed_ms);
+    CHECK(fine.state().duty.rx_armed_ms == 10 * kDwellMsPerSecond);
+}
+
+TEST_CASE("duty: the transmit counter is the air time the hour's own budget is spent from") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    simulator.run(gnss::kFirstFixSettleMs + 8000);
+
+    const bus::State& state = simulator.product().state();
+    REQUIRE(state.air.tx_ok > 0);
+    CHECK(state.duty.tx_keyed_ms >= timing::Transmitter::kAirTimeMs);
+    CHECK(state.duty.tx_keyed_ms ==
+          simulator.product().radio().transmitter().air_time().total_ms());
+}
+
+// F5 holds every burst until the first solutions settle: nothing on air is nothing counted.
+TEST_CASE("duty: a device that never keyed the transmitter counts no air time") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_pps_locked(false);
+    simulator.run(gnss::kFirstFixSettleMs + 8000);
+
+    REQUIRE(simulator.product().state().air.tx_ok == 0);
+    CHECK(simulator.product().state().duty.tx_keyed_ms == 0);
+}
+
+TEST_CASE("duty: the annunciator counter runs while it sounds and stands still while muted") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    const uint32_t step = simulator::Simulator::kStepMs;
+    for (uint32_t now_ms = 0; now_ms <= 3000; now_ms += step) simulator.step(now_ms);
+    const uint32_t before = simulator.product().state().duty.annunciator_ms;
+
+    simulator.world().add_threat();
+    for (uint32_t now_ms = 3000; now_ms <= 9000; now_ms += step) simulator.step(now_ms);
+    REQUIRE(simulator.announcing_level() != traffic::Level::None);
+    const uint32_t sounded = simulator.product().state().duty.annunciator_ms;
+    // For traffic the motor runs exactly while the tone sounds, so the advisory counts twice.
+    uint32_t advisory_tone_ms = 0;
+    for (const annunciation::Note& note : annunciation::kAdvisoryCall)
+        advisory_tone_ms += note.tone_ms;
+    CHECK(sounded - before == 2 * advisory_tone_ms);
+
+    simulator.product().settings().alarm = go::Alarm::Visual;
+    for (uint32_t now_ms = 9000; now_ms <= 15000; now_ms += step) simulator.step(now_ms);
+    CHECK(simulator.product().state().duty.annunciator_ms == sounded);
+}
+
+TEST_CASE("duty: the BLE counter runs while a central is connected and stops when it goes") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(2000, kPassMs);
+    CHECK(rig.state().duty.ble_connected_ms == 0);
+
+    rig.raise_link();
+    rig.run_for(3000, kPassMs);
+    REQUIRE(rig.link_up());
+    const uint32_t connected_ms = rig.state().duty.ble_connected_ms;
+    CHECK(connected_ms >= 3000 - 2 * kPassMs);
+    CHECK(connected_ms <= 3000 + 2 * kPassMs);
+
+    rig.drop_link();
+    rig.run(rig.now_ms, rig.now_ms + 3000, kPassMs);
+    CHECK(rig.state().duty.ble_connected_ms <= connected_ms + 2 * kPassMs);
+}

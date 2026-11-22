@@ -57,7 +57,7 @@ VENDOR_SRC := $(wildcard vendor/monocypher/*.c)
 VENDOR_OBJ := $(patsubst %.c,$(BUILD)/%.o,$(VENDOR_SRC))
 
 # Tests mirror the tree in test/, never beside the code they test, except each protocol stack's own.
-TEST_SRC := $(filter-out test/fuzz/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp)) \
+TEST_SRC := $(filter-out test/fuzz/% test/twister/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp test/*/*/*/*.cpp)) \
             $(wildcard protocols/*/test/*.cpp protocols/*/test/*/*.cpp)
 
 # One harness per file, each linked against every host source as the suite is.
@@ -92,6 +92,7 @@ test-sanitize:
 	@UBSAN_OPTIONS=print_stacktrace=1 $(MAKE) --no-print-directory test SANITIZE=1
 
 # Each stack is built alone with protocols/common, doctest and any stack it extends, so a stray include fails.
+# version.h is compiled alone too, as no source of the stack includes it and it holds static_asserts.
 PROTOCOLS_BUILD := $(BUILD)/protocols-alone
 PROTOCOL_STACKS := $(filter-out common,$(patsubst protocols/%/,%,$(wildcard protocols/*/)))
 # The stacks promise C++17 to the project that takes one (protocols/README.md), so they are built as it.
@@ -110,6 +111,7 @@ test-protocol-%:
 	printf '#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN\n#include "doctest/doctest.h"\n' > $(PROTOCOLS_BUILD)/$*/main.cpp
 	cd $(PROTOCOLS_BUILD)/$*/tree && $(CXX) $(PROTOCOLS_CXXFLAGS) -I. -Ivendor \
 	  $$(find protocols -name '*.cpp' | sort) ../main.cpp -o ../$*_tests
+	cd $(PROTOCOLS_BUILD)/$*/tree && $(CXX) $(PROTOCOLS_CXXFLAGS) -I. -fsyntax-only -x c++ protocols/$*/version.h
 	$(PROTOCOLS_BUILD)/$*/$*_tests
 
 # Built once, then run one at a time: three fuzzers printing at once is a log nobody can read.

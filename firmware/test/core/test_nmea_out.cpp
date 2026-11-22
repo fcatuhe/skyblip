@@ -20,6 +20,7 @@
 #include "ports/link.h"
 #include "test/support/nmea_checksum.h"
 #include "test/support/nmea_traffic.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 using namespace skyblip::protocol;
@@ -365,14 +366,14 @@ TEST_CASE(
 }
 
 // own.utc_s is a Unix epoch with no calendar fields of its own; the numbers
-// below are 2026-08-02T01:01:01Z, 1785628800 + 3661s (1785628800 is the same
-// 2026-08-02T00:00:00Z base test/support/product_rig.h flies every product
-// case from), chosen so the date and time fields below are hand-checkable
+// below are 2026-08-02T01:01:01Z, kBaseUtcS + 3661s (kBaseUtcS is the
+// 2026-08-02T00:00:00Z base test/support/timed_fix.h dates every rig's fixes
+// from), chosen so the date and time fields below are hand-checkable
 // rather than merely re-deriving the same arithmetic the formatter uses.
 TEST_CASE("nmea: GPRMC/GPGGA carry own-ship's own absolute position" *
           doctest::test_suite("main")) {
     auto own = own_at(481234500, -81234500, 1000);
-    own.utc_s = 1785628800u + 3661u;
+    own.utc_s = kBaseUtcS + 3661u;
     own.altitude_msl_mm = 950000;
     own.satellites = 8;
     own.hdop_e2 = 120;

@@ -1,0 +1,463 @@
+// Own-ship on the running product: vertical speed from the barometer or from GNSS, the PPS edge,
+// the first fix and how far the receiver has got, across the 49.7-day wrap as well.
+#include <cstdlib>
+#include <string>
+
+#include "boards/common/producer.h"
+#include "core/annunciation/annunciator.h"
+#include "core/events/link.h"
+#include "core/flight/atmosphere.h"
+#include "core/model/aircraft.h"
+#include "core/model/ownship.h"
+#include "core/protocol/adsl.h"
+#include "doctest/doctest.h"
+#include "test/support/product_rig.h"
+
+using namespace skyblip;
+
+TEST_CASE("product: barometric pressure drives vertical speed" * doctest::test_suite("main")) {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK_FALSE(rig.product.ownship().barometer_active());
+
+    rig.push_barometer(100000, 1000);
+    rig.run(1000, 1000);
+    CHECK(rig.product.ownship().barometer_active());
+    rig.push_barometer(101000, 3000);
+    rig.run(3000, 3000);
+
+    // +10 m in 2 s
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(5000).epsilon(0.05));
+}
+
+TEST_CASE("product: a baro sample inside the window is ignored, not extrapolated") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_barometer(100000, 1000);
+    rig.run(1000, 1000);
+    rig.push_barometer(199000, 1100);
+    rig.run(1100, 1100);
+    CHECK(rig.state().own.climb_mm_s == 0);
+}
+
+TEST_CASE("product: with no barometer, vertical speed comes from GNSS") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+
+    rig.push_fix(1000, 1);
+    rig.run(1000, 1000);
+    rig.push_fix(1010, 2);
+    rig.run(3000, 3000);
+
+    CHECK_FALSE(rig.product.ownship().barometer_active());
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(5000).epsilon(0.05));
+}
+
+TEST_CASE("product: once the barometer speaks, GNSS stops setting vertical speed") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+
+    rig.push_barometer(100000, 500);
+    rig.run(500, 500);
+    rig.push_barometer(100200, 1500);  // +2 m in 1 s
+    rig.run(1500, 1500);
+    const int32_t from_barometer = rig.state().own.climb_mm_s;
+    CHECK(from_barometer == doctest::Approx(2000).epsilon(0.1));
+
+    rig.push_fix(1000, 1);
+    rig.run(2000, 2000);
+    rig.push_fix(1200, 2);
+    rig.run(4000, 4000);
+
+    CHECK(rig.state().own.climb_mm_s == from_barometer);
+}
+
+// Once active the barometer stayed in charge for ever, and a dead one froze its last climb on air.
+TEST_CASE("product: a barometer that stops answering hands vertical speed back to GNSS") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_barometer(100000, 500);
+    rig.run(500, 500);
+    rig.push_barometer(100200, 1500);  // +2 m in 1 s
+    rig.run(1500, 1500);
+    REQUIRE(rig.product.ownship().barometer_active());
+
+    rig.push_fix(1000, 1);
+    rig.run(6000, 6000);
+    rig.push_fix(1010, 2);
+    rig.run(8000, 8000);
+
+    CHECK_FALSE(rig.product.ownship().barometer_active());
+    CHECK(rig.state().own.climb_valid);
+    // +10 m in 2 s of GNSS
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(5000).epsilon(0.05));
+}
+
+TEST_CASE("product: with neither a fix nor a barometer the climb is not valid") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_fix(1000, 1);
+    rig.run(1000, 1000);
+    rig.push_fix(1010, 2);
+    rig.run(3000, 3000);
+    REQUIRE(rig.state().own.climb_valid);
+
+    rig.product.bus().gnss.push(gnss::GnssSolution{});
+    rig.run(4000, 4000);
+    CHECK_FALSE(rig.state().own.climb_valid);
+}
+
+// A 2D fix differentiated the height it held and sent a climb of zero as valid.
+TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-L G.1.9)" *
+          doctest::test_suite("main")) {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_fix(1000, 1);
+    rig.run(1000, 1000);
+    rig.push_fix(1010, 2);
+    rig.run(3000, 3000);
+    REQUIRE(rig.state().own.climb_valid);
+
+    rig.push_2d_fix(1010, 3);
+    rig.run(4000, 4000);
+    CHECK(rig.state().own.fix_valid);
+    CHECK_FALSE(rig.state().own.climb_valid);
+    adsl::Packet burst{};
+    protocol::from_own(burst, rig.state().own, rig.state().activation.address(), 6, 4);
+    CHECK_FALSE(burst.has_climb());
+}
+
+TEST_CASE("product: the glass reads the climb damped, the air reads it as measured") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_barometer(0, 500);
+    rig.run(500, 500);
+    rig.push_barometer(0, 1500);
+    rig.run(1500, 1500);
+    REQUIRE(rig.state().indicated.climb_mm_s == 0);
+
+    rig.push_barometer(300, 2500);  // +3 m in 1 s
+    rig.run(2500, 2500);
+
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(3000).epsilon(0.02));
+    CHECK(rig.state().indicated.climb_mm_s == doctest::Approx(1000).epsilon(0.02));
+    adsl::Packet burst{};
+    protocol::from_own(burst, rig.state().own, rig.state().activation.address(), 6, 4);
+    // 3 m/s in ADS-L G.1.9 eighths
+    CHECK(burst.climb_e8() == 24);
+}
+
+namespace {
+
+void push_moving_fix(Rig& rig, int32_t speed_mm_s, int32_t track_cdeg, uint32_t updates) {
+    gnss::GnssSolution solution{};
+    solution.fix_valid = true;
+    solution.altitude_hae_mm = 1000000;
+    solution.vdop_e2 = 150;
+    solution.hdop_e2 = 100;
+    solution.speed_mm_s = speed_mm_s;
+    solution.track_cdeg = track_cdeg;
+    solution.sentences = updates;
+    rig.product.bus().gnss.push(solution);
+}
+
+}  // namespace
+
+// A receiver at a standstill reports a track that wanders, and it read as a turn every second.
+TEST_CASE("product: a stopped aircraft is not turning, whatever track the receiver reports") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    constexpr int32_t kStandstillMmS = 200;
+    int32_t widest = 0;
+    for (uint32_t i = 1; i <= 10; i++) {
+        push_moving_fix(rig, kStandstillMmS, static_cast<int32_t>(i % 3) * 4000, i);
+        rig.run(i * 1000, i * 1000);
+        const int32_t turn = std::abs(rig.state().own.turn_cdps);
+        if (turn > widest) widest = turn;
+    }
+    CHECK(widest == 0);
+    CHECK(rig.state().indicated.turn_cdps == 0);
+}
+
+TEST_CASE("product: rolling again, the turn is measured from the first fix that rolled") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    push_moving_fix(rig, 200, 27000, 1);
+    rig.run(1000, 1000);
+    // 3 deg/s from 90 deg; the stopped track at 270 is no reference to turn from
+    push_moving_fix(rig, 5000, 9000, 2);
+    rig.run(2000, 2000);
+    CHECK(rig.state().own.turn_cdps == 0);
+    push_moving_fix(rig, 5000, 9300, 3);
+    rig.run(3000, 3000);
+    CHECK(rig.state().own.turn_cdps == 300);
+}
+
+// The climb reference outlived a 2D spell, and the height 3D came back with read as a climb.
+TEST_CASE("product: the height a 3D fix returns with after a 2D spell is not a climb") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    int32_t steepest_mm_s = 0;
+    const auto apply_at = [&](uint32_t now_ms) {
+        rig.run(now_ms, now_ms);
+        const model::Ownship& own = rig.state().own;
+        if (own.climb_valid && std::abs(own.climb_mm_s) > steepest_mm_s)
+            steepest_mm_s = std::abs(own.climb_mm_s);
+    };
+
+    uint32_t now_ms = 1000;
+    for (; now_ms <= 3000; now_ms += 1000) {
+        rig.push_fix(1000, ++updates);
+        apply_at(now_ms);
+    }
+    for (; now_ms <= 6000; now_ms += 1000) {
+        rig.push_2d_fix(1000, ++updates);
+        apply_at(now_ms);
+    }
+    for (; now_ms <= 12000; now_ms += 1000) {
+        rig.push_fix(1100, ++updates);
+        apply_at(now_ms);
+    }
+
+    CHECK(steepest_mm_s == 0);
+    CHECK(rig.state().own.climb_valid);
+}
+
+// B3. The slot map is specified against the PPS edge, and the transmit plan is
+// armed from it. An edge rebuilt from the millisecond phase is up to a
+// millisecond late on a 5 ms guard.
+TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microsecond") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+
+    rig.platform.clock().set_microseconds(12345678);
+    rig.product.run_pass(12345);
+    CHECK(rig.state().clock.pps_locked);
+    CHECK(rig.state().clock.pps_edge_us == 12000000u);
+    CHECK(rig.state().clock.since_edge_ms == 345u);
+
+    // What the same pass used to publish, rebuilt from the phase: the sub-
+    // millisecond remainder was thrown away, and it is not a rounding error but
+    // a signed lateness on every plan armed from it.
+    const uint64_t rebuilt =
+        12345678u - static_cast<uint64_t>(rig.state().clock.since_edge_ms) * 1000;
+    CHECK(rebuilt - rig.state().clock.pps_edge_us == 678u);
+
+    rig.platform.pps().set_locked(false);
+    rig.platform.clock().set_microseconds(15345678);
+    rig.product.run_pass(15345);
+    CHECK_FALSE(rig.state().clock.pps_locked);
+    CHECK(rig.state().clock.pps_edge_us == 12000000u);
+    CHECK(rig.state().clock.since_edge_ms == 3345u);
+}
+
+TEST_CASE("product: the first fix is announced once, then own-ship settles before it flies") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 500);
+    CHECK_FALSE(rig.product.ownship().first_fix().ever_fixed());
+    CHECK_FALSE(rig.platform.annunciator().sounding());
+
+    rig.push_fix(1000, 1);
+    uint16_t first_note_hz = 0;
+    for (uint32_t now_ms = 550; now_ms <= 700; now_ms += 10) {
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
+        if (first_note_hz == 0) first_note_hz = rig.platform.annunciator().pitch_hz();
+    }
+    CHECK(rig.product.ownship().first_fix().ever_fixed());
+    CHECK(first_note_hz == annunciation::kFirstFixJingle[0].pitch_hz);
+    // The motor stays out of it: haptics mean traffic that escalated.
+    CHECK(rig.platform.annunciator().motor_starts() == 0);
+
+    // It is short and it stops by itself, so nothing has to remember to silence
+    // it before the first traffic target arrives.
+    rig.run(750, 3000);
+    CHECK_FALSE(rig.platform.annunciator().sounding());
+
+    // Nothing is worth transmitting yet, and 20 s later it is.
+    const gnss::FirstFix& fix = rig.product.ownship().first_fix();
+    CHECK_FALSE(fix.settled(3000));
+    CHECK_FALSE(fix.settled(fix.fix_since_ms() + gnss::kFirstFixSettleMs - 1));
+    CHECK(fix.settled(fix.fix_since_ms() + gnss::kFirstFixSettleMs));
+
+    // A second acquisition is not a first one: no second chirp, and the shorter
+    // wait applies.
+    gnss::GnssSolution lost{};
+    lost.fix_valid = false;
+    rig.product.bus().gnss.push(lost);
+    rig.run(3050, 3200);
+    CHECK_FALSE(fix.settled(3200));
+    rig.push_fix(1000, 2);
+    rig.run(3250, 3400);
+    CHECK_FALSE(rig.platform.annunciator().sounding());
+    CHECK(fix.settled(fix.fix_since_ms() + gnss::kRefixSettleMs));
+}
+
+// M. Vertical speed and turn rate are both differences over a window kept on
+// ports::Clock::milliseconds(), and both keep the instant they last sampled at in a
+// uint32_t whose zero is biased away rather than flagged (ownship.cpp: a stamp of
+// zero would mean "no reference yet", and the counter produces exactly one zero
+// per wrap). The windows themselves are unsigned differences, so this is what a
+// climb through the wrap instant looks like: a climb, measured over its window,
+// not a 4.29-billion-millisecond interval that reads as no climb at all.
+TEST_CASE("product: vertical speed is measured across the 49.7-day wrap") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.now_ms = 0u - 500u;  // half a second short of the wrap
+
+    rig.push_barometer(100000, rig.now_ms);
+    rig.run_span(0);
+    CHECK(rig.product.ownship().barometer_active());
+
+    // +10 m over the second that straddles zero.
+    const uint32_t after = rig.now_ms + 950u;
+    rig.push_barometer(101000, after);
+    rig.now_ms = after;
+    rig.run_span(0);
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
+
+    // And a sample inside the window is still refused after the wrap, rather than
+    // being taken as a 49-day interval that reads as no climb at all.
+    rig.push_barometer(199000, rig.now_ms);
+    rig.run_span(0);
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
+}
+
+// M. Where the radio believes it is inside the second, across the 49.7-day wrap of
+// ports::Clock::milliseconds(). With PPS locked the phase is measured from the latched
+// edge, which is a 64-bit microsecond figure and cannot wrap in the life of the
+// device. Without it the phase used to be now_ms % 1000, and that is not a phase at
+// all: 2^32 ms is 4294967.296 seconds, so at the wrap the free-running second
+// stepped 705 ms BACKWARDS and the dwell map was armed out of order for a second -
+// with the anchor already lost, which is the worst moment to add a fault. Both
+// branches read microseconds() now.
+//
+// The clock is driven in microseconds here because that is what the silicon does:
+// now_ms is the low 32 bits of the same uptime, so milliseconds() wraps underneath a
+// microseconds() that keeps counting.
+TEST_CASE("product: the free-running dwell phase steps forward through the 49.7-day wrap") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint64_t now_us = static_cast<uint64_t>(0xFFFFFF00u) * 1000u;  // 256 ms short of the wrap
+
+    // The receiver has no PPS lock, so the case is about the free-running fallback
+    // and not about the anchored path.
+    rig.platform.pps().set_locked(false);
+    rig.run_span_from_us(now_us, 0);
+    REQUIRE_FALSE(rig.state().clock.pps_locked);
+
+    int previous = rig.state().rf.dwell.phase_ms;
+    bool wrapped = false;
+    for (int step = 0; step < 20; step++) {
+        const uint32_t before_ms = rig.platform.clock().milliseconds();
+        rig.run_span_from_us(now_us, 0);
+        if (rig.platform.clock().milliseconds() < before_ms) wrapped = true;
+        // 50 ms of clock is 50 ms of phase, all the way round the second and all
+        // the way through the counter turning over.
+        CHECK(rig.state().rf.dwell.phase_ms == (previous + 50) % 1000);
+        previous = rig.state().rf.dwell.phase_ms;
+    }
+    CHECK(wrapped);
+}
+
+// A pilot on the apron asks how long this will take, and NO FIX is the same word
+// for a receiver reading satellites and one that has said nothing at all.
+TEST_CASE("product: with no fix the bus says how far the receiver has got") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+
+    rig.run(0, 100);
+    CHECK(rig.state().gnss.stage == gnss::Stage::Silent);
+
+    gnss::GnssSolution looking{};
+    rig.product.bus().gnss.push(looking);
+    rig.run(150, 200);
+    CHECK(rig.state().gnss.stage == gnss::Stage::Blind);
+
+    // A date is read off a satellite, so it is the first evidence of one.
+    gnss::GnssSolution dated{};
+    dated.utc_valid = true;
+    dated.utc_s = kBaseUtcS;
+    rig.product.bus().gnss.push(dated);
+    rig.run(250, 300);
+    CHECK(rig.state().gnss.stage == gnss::Stage::Solving);
+    CHECK(rig.state().gnss.stage_s == 0u);
+
+    rig.push_timed_fix(0, 500);
+    rig.run(350, 400);
+    CHECK(rig.state().gnss.stage == gnss::Stage::Fixed);
+
+    // A receiver that stops talking is silent again, whatever it last managed.
+    rig.run(450, 450 + gnss::kSentenceMaxAgeMs);
+    CHECK(rig.state().gnss.stage == gnss::Stage::Silent);
+}
+
+// Bench, 27sep26: a receiver that lost its fix kept naming the second of its last one, and the
+// clock the slot map runs on went three seconds back until the next fix put it right.
+TEST_CASE("product: a receiver restating its last fixed second does not wind the clock back") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.now_ms = 1000;
+    rig.seconds(3, 0, 500);
+    const uint32_t anchored = rig.state().clock.utc_s;
+    REQUIRE(anchored == kBaseUtcS + 2);
+
+    gnss::GnssSolution solving{};
+    solving.utc_valid = true;
+    solving.utc_s = anchored;
+    solving.sentences = ++rig.fix_updates;
+    rig.product.bus().gnss.push(solving);
+    rig.run(rig.now_ms, rig.now_ms + 950);
+
+    CHECK(rig.state().clock.utc_s == anchored + 1);
+}
+
+TEST_CASE("product: before any fix, the first dated sentence anchors the clock") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 950);
+
+    gnss::GnssSolution dated{};
+    dated.utc_valid = true;
+    dated.utc_s = kBaseUtcS;
+    dated.sentences = ++rig.fix_updates;
+    rig.product.bus().gnss.push(dated);
+    rig.run(1000, 1950);
+
+    CHECK(rig.state().clock.utc_s == kBaseUtcS);
+}
+
+// A target that sends only a pressure altitude is compared with ours (#193), so ours must not
+// outlive the BME280 it came from.
+TEST_CASE("product: the BME280 publishes own pressure altitude, dated, and a silent one expires") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 3000);
+    const model::Ownship& own = rig.state().own;
+    REQUIRE(rig.product.ownship().barometer_active());
+    CHECK(own.pressure_altitude_valid);
+    CHECK(own.pressure_altitude_mm ==
+          flight::pressure_to_altitude_mm(rig.state().barometer.pressure_mpa));
+    CHECK(own.pressure_altitude_at_ms <= 3000);
+    CHECK(own.pressure_altitude_at_ms + boards::kBarometerPublishPeriodMs + 50 > 3000);
+
+    rig.platform.barometer().fitted = false;
+    rig.run(3050, 3000 + 2 * boards::kBarometerPublishPeriodMs);
+    CHECK(own.pressure_altitude_valid);
+    rig.run(5050, 3000 + 4 * boards::kBarometerPublishPeriodMs + 100);
+    CHECK_FALSE(rig.product.ownship().barometer_active());
+    CHECK_FALSE(own.pressure_altitude_valid);
+}
+
+TEST_CASE("product: own pressure altitude is the sample's, at the instant it was measured") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK_FALSE(rig.state().own.pressure_altitude_valid);
+    rig.push_barometer(152400, 900);
+    rig.run(1000, 1000);
+    CHECK(rig.state().own.pressure_altitude_valid);
+    CHECK(rig.state().own.pressure_altitude_at_ms == 900);
+    CHECK(rig.state().own.pressure_altitude_mm == doctest::Approx(1524000).epsilon(0.001));
+}

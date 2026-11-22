@@ -189,19 +189,8 @@ TEST_CASE("DO-260B 2.2.3.2.6.1.2: subtype 1 is ME bits 6 to 8, and subtype 0 is 
     check_subtype_code(1);
 }
 
-// TODO: fc 17nov26 no report carries the intent change, until an application asks for it
-TEST_CASE("DO-260B 2.2.3.2.6.1.3: subtype 1's intent change flag says the intent changed" *
-          doctest::skip()) {
-    FAIL("not implemented: ME bit 9 is not read");
-}
-
 TEST_CASE("DO-260B 2.2.3.2.6.1.4: subtype 1's reserved bit A changes nothing read") {
     check_ignored(1, 10, 10);
-}
-
-// TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
-TEST_CASE("DO-260B 2.2.3.2.6.1.5: subtype 1's NACv bounds the velocity's error" * doctest::skip()) {
-    FAIL("not implemented: ME bits 11 to 13 are not read, and no NACv is reported");
 }
 
 TEST_CASE("DO-260B 2.2.3.2.6.1.6: subtype 1's east/west bit is 0 east and 1 west") {
@@ -263,19 +252,8 @@ TEST_CASE("DO-260B 2.2.3.2.6.2.2: subtype 2 is ME bits 6 to 8, and subtype 0 is 
     check_subtype_code(2);
 }
 
-// TODO: fc 17nov26 no report carries the intent change, until an application asks for it
-TEST_CASE("DO-260B 2.2.3.2.6.2.3: subtype 2's intent change flag says the intent changed" *
-          doctest::skip()) {
-    FAIL("not implemented: ME bit 9 is not read");
-}
-
 TEST_CASE("DO-260B 2.2.3.2.6.2.4: subtype 2's reserved bit A changes nothing read") {
     check_ignored(2, 10, 10);
-}
-
-// TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
-TEST_CASE("DO-260B 2.2.3.2.6.2.5: subtype 2's NACv bounds the velocity's error" * doctest::skip()) {
-    FAIL("not implemented: ME bits 11 to 13 are not read, and no NACv is reported");
 }
 
 TEST_CASE("DO-260B 2.2.3.2.6.2.6: subtype 2's east/west bit is 0 east and 1 west") {
@@ -338,19 +316,8 @@ TEST_CASE("DO-260B 2.2.3.2.6.3.2: subtype 3 is ME bits 6 to 8, and subtype 0 is 
     check_subtype_code(3);
 }
 
-// TODO: fc 17nov26 no report carries the intent change, until an application asks for it
-TEST_CASE("DO-260B 2.2.3.2.6.3.3: subtype 3's intent change flag says the intent changed" *
-          doctest::skip()) {
-    FAIL("not implemented: ME bit 9 is not read");
-}
-
 TEST_CASE("DO-260B 2.2.3.2.6.3.4: subtype 3's reserved bit A changes nothing read") {
     check_ignored(3, 10, 10);
-}
-
-// TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
-TEST_CASE("DO-260B 2.2.3.2.6.3.5: subtype 3's NACv bounds the velocity's error" * doctest::skip()) {
-    FAIL("not implemented: ME bits 11 to 13 are not read, and no NACv is reported");
 }
 
 TEST_CASE("DO-260B 2.2.3.2.6.3.6: subtype 3's heading status bit says the heading is valid") {
@@ -408,19 +375,8 @@ TEST_CASE("DO-260B 2.2.3.2.6.4.2: subtype 4 is ME bits 6 to 8, and subtype 0 is 
     check_subtype_code(4);
 }
 
-// TODO: fc 17nov26 no report carries the intent change, until an application asks for it
-TEST_CASE("DO-260B 2.2.3.2.6.4.3: subtype 4's intent change flag says the intent changed" *
-          doctest::skip()) {
-    FAIL("not implemented: ME bit 9 is not read");
-}
-
 TEST_CASE("DO-260B 2.2.3.2.6.4.4: subtype 4's reserved bit A changes nothing read") {
     check_ignored(4, 10, 10);
-}
-
-// TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
-TEST_CASE("DO-260B 2.2.3.2.6.4.5: subtype 4's NACv bounds the velocity's error" * doctest::skip()) {
-    FAIL("not implemented: ME bits 11 to 13 are not read, and no NACv is reported");
 }
 
 TEST_CASE("DO-260B 2.2.3.2.6.4.6: subtype 4's heading status bit says the heading is valid") {

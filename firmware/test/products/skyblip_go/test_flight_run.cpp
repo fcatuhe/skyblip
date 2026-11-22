@@ -1,0 +1,203 @@
+// A flight run: the glass flies while the unit sits on the bench, and nothing false goes on air.
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/profile.h"
+#include "core/protocol/adsl.h"
+#include "core/protocol/air.h"
+#include "core/timing/slot.h"
+#include "doctest/doctest.h"
+#include "products/skyblip_go/settings.h"
+#include "protocols/adsl_edge/registration.h"
+#include "simulator/simulator.h"
+#include "test/support/diagnostics_taps.h"
+#include "test/support/glass_text.h"
+#include "test/support/product_rig.h"
+#include "test/support/rig_moves.h"
+#include "test/support/simulator_run.h"
+
+using namespace skyblip;
+
+namespace {
+
+constexpr uint32_t kAirWindowMs = 30000;
+
+struct Said {
+    int positions{0};
+    int statuses{0};
+    int names{0};
+};
+
+Said said_on_air(const simulator::Air& air) {
+    return {count_payloads(air, adsl::Packet::kPayloadTypePosition),
+            count_payloads(air, adsl::Packet::kPayloadTypeStatus),
+            count_payloads(air, adsl_edge::kPayloadTypeOgnDiagnostics)};
+}
+
+void park_on_the_bench(simulator::Simulator& simulator) {
+    std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(0);
+    simulator.world().set_altitude_m(300);
+}
+
+uint32_t arm_a_flight_run(simulator::Simulator& simulator) {
+    const uint32_t armed_ms = past_settling(simulator);
+    simulator.product().diagnostics().arm(diagnostics::Profile::FlightRun);
+    run_on(simulator, armed_ms, 1000);
+    REQUIRE(simulator.product().capture().capturing());
+    simulator.world().air().clear();
+    return armed_ms + 1000;
+}
+
+void arm_flight_run(Rig& rig, uint32_t& now_ms) {
+    arm(rig, now_ms, diagnostics::Profile::FlightRun);
+}
+
+const go::Glass& glass(Rig& rig) { return rig.product.screen().framebuffer(); }
+
+}  // namespace
+
+// G.1.16: on ground the rate shall be 0.1 Hz, so the glass flies and the transmitter does not.
+TEST_CASE("flight run: a parked unit keeps the ground cadence on air while the glass flies") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    park_on_the_bench(simulator);
+    const uint32_t from_ms = arm_a_flight_run(simulator);
+    run_on(simulator, from_ms, kAirWindowMs);
+
+    CHECK(simulator.product().state().flight.running);
+    const Said said = said_on_air(simulator.world().air());
+    // a position, a Status and a name every ten seconds, one more for the window's ends
+    CHECK(said.positions >= 3);
+    CHECK(said.positions <= 4);
+    CHECK(said.statuses >= 3);
+    CHECK(said.statuses <= 4);
+    CHECK(said.names >= 3);
+    CHECK(said.names <= 4);
+}
+
+TEST_CASE("flight run: every burst on air says on ground, at the real position, standing still" *
+          doctest::test_suite("main")) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    park_on_the_bench(simulator);
+    const uint32_t from_ms = arm_a_flight_run(simulator);
+    run_on(simulator, from_ms, kAirWindowMs);
+    REQUIRE(simulator.product().state().flight.running);
+
+    const model::Ownship& own = simulator.product().state().own;
+    const simulator::Air& air = simulator.world().air();
+    int checked = 0;
+    for (int i = 0; i < air.record_count(); i++) {
+        adsl::Packet packet{};
+        if (!packet_of(air.record_at(i), packet) || !packet.is_position()) continue;
+        CHECK(packet.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
+        // the payload carries latitude in steps of 107 and longitude of 215, in 1e-7 degrees
+        CHECK(std::abs(packet.latitude_1e7() - own.latitude_1e7) < 200);
+        CHECK(std::abs(packet.longitude_1e7() - own.longitude_1e7) < 400);
+        CHECK(packet.speed_q() == 0);
+        checked++;
+    }
+    CHECK(checked >= 3);
+}
+
+TEST_CASE("flight run: records the pair every 30 s, and its boot names the profile") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_flight_run(rig, rig.now_ms);
+    rig.run_for(65000);
+    stop(rig, rig.now_ms);
+    const std::vector<diagnostics::Record> records = captured(rig);
+
+    CHECK(count_of(records, diagnostics::Type::Power) == 2);
+    CHECK(count_of(records, diagnostics::Type::Duty) == 2);
+    CHECK(count_of(records, diagnostics::Type::Flight) == 0);
+    diagnostics::Boot boot{};
+    REQUIRE(first_of(records, boot));
+    CHECK(boot.profile_recorded);
+    CHECK(boot.profile == diagnostics::Profile::FlightRun);
+    CHECK(rig.product.capture().keeps_s(diagnostics::Profile::FlightRun) ==
+          rig.product.capture().keeps_s(diagnostics::Profile::PowerRun));
+}
+
+// A simulated flight in the pilot's log could not be told from a real one, so it writes none.
+TEST_CASE("flight run: the radar flies, the flight log writes nothing, the gates stay grounded") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    REQUIRE(rig.product.screen().page() == go::Page::Radar);
+    arm_flight_run(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 65);
+
+    CHECK(rig.state().flight.running);
+    CHECK(rig.state().flight.seconds >= 60);
+    CHECK(reads_in(glass(rig), "FLIGHT", 0, 168, 50, 182));
+    CHECK(reads_in(glass(rig), "0:01", 0, 176, 60, 198, 2));
+    CHECK_FALSE(reads_in(glass(rig), "GROUND", 0, 0, 200, 199, 2));
+
+    CHECK_FALSE(rig.product.flight_log().recording());
+    CHECK(rig.product.flight_log().sessions_on_flash() == 0);
+    CHECK(rig.state().own.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
+    CHECK(rig.state().flight.confirmed_state == flight::FlightState::Ground);
+}
+
+TEST_CASE("flight run: the panel refreshes as a flown one does, and a parked one does not") {
+    Rig parked;
+    REQUIRE(parked.setup() == Status::Ok);
+    uint32_t parked_now_ms = 100;
+    taxi(parked, parked_now_ms, 3);
+    arm(parked, parked_now_ms, diagnostics::Profile::PowerRun);
+    const uint32_t parked_from = parked.state().duty.panel_partial_refreshes;
+    taxi(parked, parked_now_ms, 130);
+
+    Rig flying;
+    REQUIRE(flying.setup() == Status::Ok);
+    uint32_t flying_now_ms = 100;
+    taxi(flying, flying_now_ms, 3);
+    arm_flight_run(flying, flying_now_ms);
+    const uint32_t flying_from = flying.state().duty.panel_partial_refreshes;
+    taxi(flying, flying_now_ms, 130);
+
+    // the clock turns 0:00, 0:01 and 0:02, and FLIGHT replaces GROUND once
+    CHECK(flying.state().duty.panel_partial_refreshes - flying_from >= 2);
+    CHECK(flying.state().duty.panel_partial_refreshes - flying_from >
+          parked.state().duty.panel_partial_refreshes - parked_from);
+}
+
+TEST_CASE("flight run: a stop lands the glass, and leaves no flight time behind") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_flight_run(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 65);
+    REQUIRE(rig.state().flight.running);
+
+    stop(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 2);
+    CHECK_FALSE(rig.state().flight.running);
+    CHECK_FALSE(rig.state().flight.time_valid);
+    CHECK(rig.state().flight.seconds == 0);
+    CHECK(reads_in(glass(rig), "GROUND", 40, 120, 160, 160, 2));
+    CHECK(reads_in(glass(rig), "-:--", 0, 176, 60, 198, 2));
+}
+
+TEST_CASE("flight run: a power run and a full capture leave the glass on the ground") {
+    for (const diagnostics::Profile profile :
+         {diagnostics::Profile::Full, diagnostics::Profile::PowerRun}) {
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        rig.now_ms = 100;
+        taxi(rig, rig.now_ms, 3);
+        arm(rig, rig.now_ms, profile);
+        taxi(rig, rig.now_ms, 5);
+        CHECK_FALSE(rig.state().flight.running);
+        CHECK(reads_in(glass(rig), "GROUND", 40, 120, 160, 160, 2));
+    }
+}

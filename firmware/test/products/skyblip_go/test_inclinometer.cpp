@@ -1,0 +1,239 @@
+// The ball, end to end: a hub on the bus, a rudder mistake, ink on the glass.
+#include <cstdio>
+#include <string>
+
+#include "core/util/sha256.h"
+#include "doctest/doctest.h"
+#include "products/skyblip_go/pages/sixpack.h"
+#include "test/support/glass_text.h"
+#include "test/support/product_rig.h"
+#include "test/support/update_rig.h"
+
+using namespace skyblip;
+
+namespace {
+
+constexpr int kTurnCoordinatorCentreX = 34;
+constexpr int kTurnCoordinatorCentreY = 133;
+constexpr int kBallY = kTurnCoordinatorCentreY + 18;
+constexpr uint32_t kBootToBallMs = 4000;
+
+// The chip is a quarter turn from the case and face down with it (imu_mount.h): +X up, +Y right.
+void fly_uncoordinated(Rig& rig, int16_t right_mg) {
+    rig.platform.chips().imu.set_acceleration(1000, right_mg, 0);
+}
+
+bool ink_between(const go::Glass& canvas, int from_x, int to_x, int y) {
+    for (int x = from_x; x <= to_x; x++)
+        if (canvas.get_pixel(x, y)) return true;
+    return false;
+}
+
+}  // namespace
+
+TEST_CASE("inclinometer: a hub that boots gives the six-pack its cage and its ball") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly_uncoordinated(rig, 0);
+    rig.run(0, kBootToBallMs);
+
+    CHECK(rig.product.board().imu().stage() == parts::Bhi260::Stage::Running);
+    CHECK(rig.state().slip.valid);
+    CHECK(rig.state().slip.lateral_mg == 0);
+}
+
+TEST_CASE("inclinometer: the ball goes the way the pilot slides, and the rudder follows" *
+          doctest::test_suite("main")) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly_uncoordinated(rig, -150);
+    rig.run(0, kBootToBallMs);
+
+    CHECK(rig.state().slip.valid);
+    CHECK(rig.state().slip.lateral_mg > 0);
+
+    go::SixPackSnapshot snapshot;
+    snapshot.inclinometer_fitted = true;
+    snapshot.lateral_valid = rig.state().slip.valid;
+    snapshot.lateral_mg = rig.state().slip.lateral_mg;
+    go::Glass canvas;
+    go::draw_sixpack(canvas, snapshot);
+
+    CHECK(ink_between(canvas, kTurnCoordinatorCentreX + 1, kTurnCoordinatorCentreX + 20, kBallY));
+    CHECK_FALSE(
+        ink_between(canvas, kTurnCoordinatorCentreX - 20, kTurnCoordinatorCentreX - 8, kBallY));
+}
+
+TEST_CASE("inclinometer: a hub that stops answering takes the ball off the glass") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly_uncoordinated(rig, -150);
+    rig.run(0, kBootToBallMs);
+    REQUIRE(rig.state().slip.valid);
+
+    rig.platform.chips().imu.answers = false;
+    rig.run(kBootToBallMs, kBootToBallMs + flight::kIndicatedStaleMs + 1000);
+
+    CHECK(rig.product.board().imu().stage() == parts::Bhi260::Stage::Failed);
+    CHECK_FALSE(rig.state().slip.valid);
+}
+
+TEST_CASE("inclinometer: the status page names the stage the hub stopped in") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly_uncoordinated(rig, -150);
+    rig.run(0, kBootToBallMs);
+
+    rig.now_ms = kBootToBallMs;
+    rig.show(go::Page::Status);
+    REQUIRE(rig.product.screen().page() == go::Page::Status);
+    rig.run(rig.now_ms, rig.now_ms + 1000);
+    CHECK(reads_in(rig.product.screen().framebuffer(), "IMU RUN", 0, 55, 200, 70));
+
+    rig.platform.chips().imu.answers = false;
+    rig.run(rig.now_ms + 1000, rig.now_ms + 1000 + flight::kIndicatedStaleMs + 1000);
+    CHECK(reads_in(rig.product.screen().framebuffer(), "IMU RUN DOWN", 0, 55, 200, 70));
+}
+
+// The milliamp the gyroscope costs is never spent: virtual sensor 13 is never subscribed.
+TEST_CASE("inclinometer: the hub runs no gyroscope, and the turn rate comes off the fix") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly_uncoordinated(rig, 0);
+    rig.platform.chips().imu.set_angular_rate(-300, 0, 0);
+    rig.run(0, kBootToBallMs);
+
+    REQUIRE(rig.product.board().imu().stage() == parts::Bhi260::Stage::Running);
+    CHECK(rig.platform.chips().imu.gyroscope_rate_hz == doctest::Approx(0));
+    CHECK(rig.state().own.turn_cdps == 0);
+}
+
+TEST_CASE("inclinometer: a unit with no hub keeps the dial empty rather than centred" *
+          doctest::test_suite("main")) {
+    constexpr ports::Capabilities kNoImu = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
+        ~static_cast<uint32_t>(ports::Capability::Inclinometer));
+    Rig rig(kNoImu);
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, kBootToBallMs);
+
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Inclinometer));
+    CHECK_FALSE(rig.state().slip.valid);
+
+    go::SixPackSnapshot snapshot;
+    go::Glass canvas;
+    go::draw_sixpack(canvas, snapshot);
+    CHECK_FALSE(
+        ink_between(canvas, kTurnCoordinatorCentreX - 20, kTurnCoordinatorCentreX + 20, kBallY));
+}
+
+namespace {
+
+constexpr ports::Capabilities kPlainTEcho =
+    static_cast<ports::Capabilities>(static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
+                                     ~static_cast<uint32_t>(ports::Capability::Inclinometer));
+
+const go::SelfTestPart& imu_row(Rig& rig) {
+    for (int i = 0; i < go::kSelfTestPartCount; i++)
+        if (std::string(rig.product.self_test().parts[i].name) == "IMU")
+            return rig.product.self_test().parts[i];
+    return rig.product.self_test().parts[0];
+}
+
+std::string update_frame(Rig& rig, uint32_t at_ms) {
+    rig.send("{\"command\":\"update\"}");
+    rig.run(at_ms, at_ms + 100);
+    return rig.last_on(events::Endpoint::Config);
+}
+
+}  // namespace
+
+TEST_CASE("inclinometer: a base image with no hub image on flash says so on the status page") {
+    Rig rig;
+    rig.platform.set_imu_firmware_linked(false);
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, kBootToBallMs);
+
+    CHECK(rig.product.board().imu().stage() == parts::Bhi260::Stage::Idle);
+    CHECK_FALSE(rig.state().slip.valid);
+    rig.now_ms = kBootToBallMs;
+    rig.show(go::Page::Status);
+    rig.run(rig.now_ms, rig.now_ms + 1000);
+    CHECK(reads_in(rig.product.screen().framebuffer(), "IMU IDLE NOBLOB", 0, 55, 200, 70));
+}
+
+TEST_CASE("inclinometer: the self test names a hub that has no image to boot") {
+    Rig rig;
+    rig.platform.set_imu_firmware_linked(false);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(imu_row(rig).state == go::PartState::Pass);
+    CHECK(std::string(imu_row(rig).detail) == go::kImuDetailWithoutImage);
+
+    Rig full;
+    REQUIRE(full.setup() == Status::Ok);
+    CHECK(std::string(imu_row(full).detail) == "BHI260AP");
+}
+
+TEST_CASE("inclinometer: the phone is told what the flash holds for the hub") {
+    Rig full;
+    REQUIRE(full.setup() == Status::Ok);
+    full.raise_link();
+    full.run(0, 2000);
+    const Sha256::Digest& pin = full.platform.imu_firmware_digest();
+    char expected[17];
+    for (int i = 0; i < 8; i++)
+        std::snprintf(expected + 2 * i, 3, "%02x", pin[static_cast<size_t>(i)]);
+    const std::string held = update_frame(full, 2000);
+    CHECK(held.find("\"imu\":\"held\",") != std::string::npos);
+    CHECK(held.find(std::string("\"imu_digest\":\"") + expected + "\"") != std::string::npos);
+
+    Rig base;
+    base.platform.set_imu_firmware_linked(false);
+    REQUIRE(base.setup() == Status::Ok);
+    base.raise_link();
+    base.run(0, 200);
+    CHECK(update_frame(base, 200).find("\"imu\":\"missing\"") != std::string::npos);
+
+    Rig plain(kPlainTEcho);
+    REQUIRE(plain.setup() == Status::Ok);
+    plain.raise_link();
+    plain.run(0, 200);
+    CHECK(update_frame(plain, 200).find("\"imu\":\"none\"") != std::string::npos);
+}
+
+// The bootloader reverts it on the next reset, to the image before, which booted the hub.
+TEST_CASE("inclinometer: a base image that cannot boot its hub never confirms itself") {
+    Rig rig;
+    rig.platform.set_imu_firmware_linked(false);
+    rig.platform.dfu().image_confirmed = false;
+    REQUIRE(rig.setup() == Status::Ok);
+    receiver_speaks_without_a_fix(rig);
+    rig.run(0, 30000);
+    CHECK(rig.platform.dfu().confirms == 0);
+
+    Rig plain(kPlainTEcho);
+    plain.platform.set_imu_firmware_linked(false);
+    plain.platform.dfu().image_confirmed = false;
+    REQUIRE(plain.setup() == Status::Ok);
+    receiver_speaks_without_a_fix(plain);
+    plain.run(0, 5000);
+    CHECK(plain.platform.dfu().confirms == 1);
+}
+
+TEST_CASE(
+    "inclinometer: a full image fills an empty partition, and the base image after it boots from "
+    "it") {
+    Rig fitted;
+    REQUIRE(fitted.setup() == Status::Ok);
+    fitted.run(0, kBootToBallMs);
+    REQUIRE(fitted.product.board().imu_store().holds(fitted.platform.imu_firmware_digest()));
+
+    Rig base;
+    base.platform.imu_flash().restore(fitted.platform.imu_flash().bytes());
+    base.platform.set_imu_firmware_linked(false);
+    REQUIRE(base.setup() == Status::Ok);
+    fly_uncoordinated(base, 0);
+    base.run(0, kBootToBallMs);
+    CHECK(base.product.board().imu().stage() == parts::Bhi260::Stage::Running);
+    CHECK(base.state().slip.valid);
+}

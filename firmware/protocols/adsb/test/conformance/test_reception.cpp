@@ -59,42 +59,6 @@ TEST_CASE(
     CHECK(receive_frame(frame, message) == Status::Crc);
 }
 
-// TODO: fc 17nov26 no doubtful bit reaches the decoder, until a receiver hands up its chip pairs
-TEST_CASE("DO-260B 2.2.4.3.4.7.3: a frame with more than seven doubtful bits in a row is refused" *
-          doctest::skip()) {
-    FAIL(
-        "not implemented: Bravo's LR2021 hands up no doubtful bit, so the decoder counts no run of "
-        "them");
-}
-
-// INFO: fc 17nov26 2.2.4.4.2 binds these to classes A1S to A3, and Bravo answers to A0
-TEST_CASE("DO-260B 2.2.4.4: enhanced squitter reception copes with overlapping Mode A/C fruit" *
-          doctest::skip()) {
-    FAIL("optional: the enhanced techniques bind classes A1S to A3, and Bravo's 100 tracks are A0");
-}
-
-// INFO: fc 17nov26 a rationale for the enhanced techniques, with nothing a receiver does
-TEST_CASE("DO-260B 2.2.4.4.1: dense fruit is why enhanced reception exists" * doctest::skip()) {
-    FAIL("prose: the need for the enhanced techniques, with nothing a receiver does");
-}
-
-// INFO: fc 17nov26 2.2.4.4.2 binds these to classes A1S to A3, and Bravo answers to A0
-TEST_CASE("DO-260B 2.2.4.4.2: enhanced reception improves preamble, bit and error decisions" *
-          doctest::skip()) {
-    FAIL("optional: the enhanced techniques bind classes A1S to A3, and Bravo's 100 tracks are A0");
-}
-
-// INFO: fc 17nov26 2.2.4.5 c binds the enhanced error correction to classes A1S to A3
-TEST_CASE("DO-260B 2.2.4.4.3: errors are corrected by the enhanced techniques" * doctest::skip()) {
-    FAIL("optional: enhanced error correction binds classes A1S to A3, and Bravo answers to A0");
-}
-
-// INFO: fc 17nov26 2.2.4.5 c binds the enhanced error correction to classes A1S to A3
-TEST_CASE("DO-260B 2.2.4.4.3.1: correction is conservative and brute force, as Appendix I says" *
-          doctest::skip()) {
-    FAIL("optional: enhanced error correction binds classes A1S to A3, and Bravo answers to A0");
-}
-
 TEST_CASE("DO-260B 2.2.4.4.3.2: no sliding window repairs a wrong bit, which is refused") {
     adsb::Squitter frame = sealed(position());
     flip_bit(frame, 60);
@@ -112,14 +76,6 @@ TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is re
         flip_bit(damaged, bit);
         CHECK(receive_frame(damaged, message) == Status::Crc);
     }
-}
-
-// TODO: fc 17nov26 no frame is corrected, until #373 measures a single-bit flip on Bravo
-TEST_CASE("DO-260B 2.2.4.5: a class A0 receiver corrects errors as DO-185B Appendix A A.3 does" *
-          doctest::skip()) {
-    FAIL(
-        "not implemented: Bravo's LR2021 hands up no doubtful bit, so a frame that fails is "
-        "refused, until issue #373 measures a single-bit flip");
 }
 
 TEST_CASE("DO-260B 2.2.6: the reception function hands each message on, decoded or refused") {
@@ -171,10 +127,4 @@ TEST_CASE("DO-260B 2.2.7.1: a reserved version is valid, and reserved bits are n
 TEST_CASE("DO-260B 2.2.7.1.1: a TYPE 0 message with no altitude is discarded") {
     Message message;
     CHECK(receive_sealed(adsb::squitter(receiver::kAddress, 0, 0), message) == Status::Unsupported);
-}
-
-// INFO: fc 17nov26 item b says may, and TYPE 0 is refused whole
-TEST_CASE("DO-260B 2.2.7.1.1: a TYPE 0 altitude may refresh a tracked aircraft's altitude" *
-          doctest::skip()) {
-    FAIL("optional: item b says may, and a TYPE 0 message is refused with its altitude");
 }

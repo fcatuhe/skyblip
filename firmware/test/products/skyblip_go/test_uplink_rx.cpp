@@ -1,0 +1,401 @@
+// What a skyPost ground station actually gets onto a skyBlip Go's screen.
+//
+// The tree had an ADS-L uplink codec, a Reed-Solomon suite around it and a
+// radio service that armed the O-band dwell for its sync word - and no product
+// caller at all. Every RxDone went to protocol::receive_m_band, which frames the
+// two M-band systems and nothing else, so an uplink frame that arrived was
+// counted as rx_bad and thrown away.
+//
+// So nothing here pushes an RfEvent. A real encoded frame goes on the virtual
+// air, through the SX1262 model's own sync detector, into the dwell the product
+// armed for itself. If the arming and the transmitter disagree about the sync
+// word, the length, or the chip rate, the model delivers nothing and these
+// cases go red - which is exactly how the second bug on this branch was found:
+// the dwell was armed for a length byte of 0x18, the M band's 24-byte ADS-L
+// frame, behind an O-band sync word whose frame was then 255 bytes.
+#include <cstdlib>
+#include <initializer_list>
+
+#include "core/events/rf.h"
+#include "core/model/aircraft.h"
+#include "core/model/band.h"
+#include "core/model/ownship.h"
+#include "core/protocol/adsl.h"
+#include "core/protocol/adsl_uplink.h"
+#include "core/protocol/air.h"
+#include "core/settings/address.h"
+#include "core/timing/slot.h"
+#include "core/traffic/lease.h"
+#include "core/units/units.h"
+#include "doctest/doctest.h"
+#include "hardware/parts/sx1262/model.h"
+#include "hardware/platform/host/clock.h"
+#include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
+#include "ports/null.h"
+#include "protocols/common/test/channel.h"
+#include "test/support/product_rig.h"
+
+using namespace skyblip;
+
+namespace {
+
+constexpr uint32_t kStation = 0x00FFFE;
+// G.1.5 steps longitude by 1/46603 degree, so rounding moves a position by at most 108 in 1e-7
+// degree.
+constexpr int32_t kPositionStep1e7 = 108;
+
+// An aircraft as a ground station heard it, which G.3 forwards as its whole Traffic payload.
+model::AircraftObservation relayed_aircraft(Rig& rig, uint32_t address, int32_t north_m,
+                                            int32_t east_m, int32_t up_m) {
+    const model::Ownship& own = rig.state().own;
+    model::AircraftObservation observation{};
+    observation.address = address;
+    observation.address_mapping_table = 6;
+    observation.aircraft_category = 4;
+    observation.flight_state = 2;
+    observation.speed_q = 140;
+    observation.speed_valid = true;
+    observation.latitude_1e7 =
+        own.latitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
+    observation.longitude_1e7 =
+        own.longitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
+    observation.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value + up_m;
+    observation.position_valid = true;
+    observation.emergency = adsl::kEmergencyNone;
+    return observation;
+}
+
+// One skyPost transmission: the frame the ground station composes, put on air in
+// the uplink slot (§C.5, 200..450 ms) at §C.4's 200 kbps. The rig is left at the
+// top of the next second, the way rig.second() leaves it.
+//
+// Returns what the radio model made of the burst: false is a deaf dwell, and it
+// is a result worth asserting on rather than a test that quietly passes.
+bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraft, int count,
+           int corrupt_bytes = 0) {
+    rig.push_timed_fix(25000, 900);
+
+    protocol::AdslUplink codec;
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(codec.encode(aircraft, count, rig.state().own.utc_s + 1, timing::kGroundEmitStartMs,
+                         kStation, adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
+    if (corrupt_bytes > 0) {
+        wire::RfChannel channel(0x5150);
+        channel.apply_symbol_errors(packet + 1, packet[0], corrupt_bytes);
+    }
+
+    uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0};
+    const size_t burst_bytes = adsl::encode_o_band(packet, burst);
+
+    // Into the dwell, not around it: the radio has to have opened the O-band
+    // window (207 ms, the switch's lead before the ground station starts) before
+    // a burst arriving there means anything at all.
+    const uint32_t at_ms = now_ms + timing::kGroundEmitStartMs;
+    rig.run(now_ms, now_ms + 200);
+    rig.platform.clock().set_milliseconds(at_ms);
+    rig.product.run_pass(at_ms);
+    const bool heard = rig.platform.chips().radio.receive_air(
+        burst, static_cast<uint16_t>(burst_bytes), /*crc_error=*/false, /*rssi=*/-92,
+        adsl::kUplinkChipRateBps);
+
+    rig.run(at_ms + 10, now_ms + 950);
+    now_ms += 1000;
+    rig.utc_offset_s++;
+    return heard;
+}
+
+// A neighbour we hear for ourselves, on the M band, in the direct slot. Same
+// address as a relayed one is the interesting case.
+void hear_directly(Rig& rig, uint32_t& now_ms, uint32_t address, int32_t north_m, int32_t east_m,
+                   int32_t up_m) {
+    rig.push_timed_fix(25000, 900);
+    const model::Ownship& own = rig.state().own;
+
+    model::Ownship transmitter = own;
+    transmitter.latitude_1e7 +=
+        static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
+    transmitter.longitude_1e7 +=
+        static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
+    transmitter.altitude_hae_mm += up_m * 1000;
+    transmitter.speed_mm_s = 40000;
+    transmitter.track_cdeg = 18000;
+
+    adsl::Packet packet;
+    protocol::from_own(packet, transmitter, address, /*address_mapping_table=*/6,
+                       /*aircraft_category=*/4);
+    packet.scramble();
+    packet.set_crc();
+
+    uint8_t chips[protocol::kTxChipBytes] = {0};
+    const size_t chip_bytes =
+        wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
+
+    // 500 ms is inside the direct slot and inside the first M-band dwell.
+    rig.run(now_ms, now_ms + 500);
+    rig.platform.clock().set_milliseconds(now_ms + 500);
+    rig.platform.chips().radio.receive_air(chips, static_cast<uint16_t>(chip_bytes),
+                                           /*crc_error=*/false, /*rssi=*/-70,
+                                           adsl::kMBandChipRateBps);
+    rig.run(now_ms + 500, now_ms + 950);
+    now_ms += 1000;
+    rig.utc_offset_s++;
+}
+
+const traffic::Target* target_for(Rig& rig, uint32_t address) {
+    const traffic::TrafficTable& table = rig.state().traffic;
+    const int index = table.find(/*address_mapping_table=*/6, address);
+    return index < 0 ? nullptr : table.at(index);
+}
+
+int sourced(Rig& rig, model::Source source) {
+    const traffic::TrafficTable& table = rig.state().traffic;
+    int count = 0;
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+        const traffic::Target* target = table.at(i);
+        if (target != nullptr && target->used && target->observation.source == source) count++;
+    }
+    return count;
+}
+
+void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 25000, 900); }
+
+}  // namespace
+
+// THE GUARD. Delete the uplink branch from TrafficService, or the O-band arming
+// from RadioService, and this is the case that goes red.
+TEST_CASE("uplink: one ground-station frame carries several aircraft onto the radar" *
+          doctest::test_suite("main")) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+
+    model::AircraftObservation relayed[3] = {
+        relayed_aircraft(rig, 0x4A0001, 2400, -600, 120),
+        relayed_aircraft(rig, 0x4A0002, -1800, 900, -250),
+        relayed_aircraft(rig, 0x4A0003, 400, 3100, 60),
+    };
+    REQUIRE(relay(rig, rig.now_ms, relayed, 3));
+
+    CHECK(rig.state().air.uplink_frames == 1);
+    CHECK(rig.state().air.uplink_bad == 0);
+    CHECK(rig.state().air.uplink_targets == 3);
+    CHECK(rig.state().traffic.count() == 3);
+    CHECK(sourced(rig, model::Source::AdslUplink) == 3);
+
+    // Not merely three blips: the positions the ground station sent are the
+    // positions the table holds, to the step G.1's position fields resolve.
+    for (const model::AircraftObservation& sent : relayed) {
+        const traffic::Target* got = target_for(rig, sent.address);
+        REQUIRE(got != nullptr);
+        CHECK(std::abs(got->observation.latitude_1e7 - sent.latitude_1e7) <= kPositionStep1e7);
+        CHECK(std::abs(got->observation.longitude_1e7 - sent.longitude_1e7) <= kPositionStep1e7);
+        CHECK(got->observation.altitude_m == sent.altitude_m);
+        CHECK(got->observation.position_valid);
+        CHECK(got->observation.source == model::Source::AdslUplink);
+        CHECK(got->observation.received.at_s == rig.state().own.utc_s);
+    }
+}
+
+// The counters the bug hid behind. An uplink frame is not an M-band framing
+// failure, and a Reed-Solomon refusal is not one either: both used to land in
+// rx_bad, where a feature that did not exist looked exactly like a noisy site.
+TEST_CASE("uplink: a frame Reed-Solomon cannot repair is counted apart and dropped") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+    const uint32_t rx_bad_before = rig.state().air.rx_bad;
+
+    model::AircraftObservation relayed[2] = {
+        relayed_aircraft(rig, 0x4B0001, 1500, 200, 0),
+        relayed_aircraft(rig, 0x4B0002, -900, -400, 80),
+    };
+    // Forty symbol errors: RS(255,223) corrects sixteen, so this is past the
+    // point where the decoder is allowed to guess.
+    REQUIRE(relay(rig, rig.now_ms, relayed, 2, /*corrupt_bytes=*/40));
+
+    CHECK(rig.state().air.uplink_frames == 1);
+    CHECK(rig.state().air.uplink_bad == 1);
+    CHECK(rig.state().air.uplink_targets == 0);
+    CHECK(rig.state().traffic.count() == 0);
+    CHECK(rig.state().air.rx_bad == rx_bad_before);
+    CHECK(rig.state().air.rx_ok == 0);
+}
+
+// A relay is a rebroadcast of something we may already be hearing for ourselves.
+// One aircraft, two paths, one target - and the better report is the one that
+// stays, even though the relay of it arrives afterwards and is therefore newer.
+TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two" *
+          doctest::test_suite("main")) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+
+    hear_directly(rig, rig.now_ms, 0x4C0001, 1200, 300, 40);
+    REQUIRE(rig.state().traffic.count() == 1);
+    const traffic::Target* direct = target_for(rig, 0x4C0001);
+    REQUIRE(direct != nullptr);
+    const int32_t direct_latitude = direct->observation.latitude_1e7;
+
+    // The ground station heard the same aircraft and puts it on the uplink a
+    // second later, with a position 300 m behind where we already have it.
+    model::AircraftObservation stale = relayed_aircraft(rig, 0x4C0001, 900, 300, 40);
+    REQUIRE(relay(rig, rig.now_ms, &stale, 1));
+
+    CHECK(rig.state().traffic.count() == 1);
+    CHECK(rig.state().air.uplink_frames == 1);
+    CHECK(rig.state().air.uplink_bad == 0);
+    // Counted as decoded, refused as an update: the frame was good, the target
+    // was better.
+    CHECK(rig.state().air.uplink_targets == 1);
+
+    const traffic::Target* merged = target_for(rig, 0x4C0001);
+    REQUIRE(merged != nullptr);
+    CHECK(merged->observation.source == model::Source::AdslDirect);
+    CHECK(merged->observation.latitude_1e7 == direct_latitude);
+    CHECK(merged->observation.altitude_valid);
+    CHECK(merged->observation.altitude_m == stale.altitude_m);
+}
+
+// And the other side of that rule, so the hold is a hold and not a block: an
+// aircraft that goes quiet on the M band - behind a ridge, or out of our range
+// but not the ground station's - is picked up by the relay once the direct
+// report has gone as stale as the alarm layer's own patience with it.
+TEST_CASE("uplink: the relay takes over once the direct report has gone stale") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+
+    hear_directly(rig, rig.now_ms, 0x4C0002, 1200, 300, 40);
+    REQUIRE(rig.state().traffic.count() == 1);
+    const traffic::Target* direct = target_for(rig, 0x4C0002);
+    REQUIRE(direct != nullptr);
+
+    fly(rig, rig.now_ms, traffic::direct_preferred_max_age_s(direct->observation) + 1);
+
+    model::AircraftObservation later = relayed_aircraft(rig, 0x4C0002, 500, 300, 40);
+    REQUIRE(relay(rig, rig.now_ms, &later, 1));
+
+    CHECK(rig.state().traffic.count() == 1);
+    const traffic::Target* merged = target_for(rig, 0x4C0002);
+    REQUIRE(merged != nullptr);
+    CHECK(merged->observation.source == model::Source::AdslUplink);
+    CHECK(std::abs(merged->observation.latitude_1e7 - later.latitude_1e7) <= kPositionStep1e7);
+}
+
+// The phantom a relay can make that a direct reception never can: a ground
+// station hears us and puts us in the frame it sends back. Own-ship on the
+// radar, at own-ship's position, is a permanent level-3 collision with itself.
+TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic" *
+          doctest::test_suite("main")) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+
+    const uint32_t own_address = *rig.state().activation.address();
+    model::AircraftObservation echo[2] = {
+        relayed_aircraft(rig, own_address, 0, 0, 0),
+        relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
+    };
+    echo[0].address_mapping_table = settings::kSkyblipAddressMappingTable;
+    REQUIRE(relay(rig, rig.now_ms, echo, 2));
+
+    CHECK(rig.state().air.uplink_frames == 1);
+    CHECK(rig.state().traffic.count() == 1);
+    CHECK(rig.state().air.uplink_targets == 1);
+    CHECK(target_for(rig, own_address) == nullptr);
+    CHECK(target_for(rig, 0x4D0001) != nullptr);
+}
+
+// A ground station also relays the transponder of the aircraft we fly in, under the ICAO table.
+TEST_CASE(
+    "uplink: our aircraft's transponder relayed back is traffic until the aircraft address is "
+    "set") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+
+    model::AircraftObservation heard[2] = {
+        relayed_aircraft(rig, 0x3C6586, 0, 0, 0),
+        relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
+    };
+    heard[0].address_mapping_table = adsl::kAddressTableIcao;
+    REQUIRE(relay(rig, rig.now_ms, heard, 2));
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) >= 0);
+    CHECK(rig.state().traffic.count() == 2);
+
+    rig.settings().aircraft_address = 0x3C6586;
+    fly(rig, rig.now_ms, 1);
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) < 0);
+    CHECK(target_for(rig, 0x4D0001) != nullptr);
+    CHECK(rig.state().traffic.count() == 1);
+
+    REQUIRE(relay(rig, rig.now_ms, heard, 2));
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) < 0);
+    CHECK(rig.state().traffic.count() == 1);
+}
+
+// Point 6 of the brief, as a case rather than a paragraph: what the O-band dwell
+// is armed with, read off the chip the product programmed. The arming and a
+// §C.4 transmitter have to agree on all three or the dwell is deaf, and two of
+// the three were wrong.
+TEST_CASE("uplink: the O-band dwell is armed for the modulation SRD-860 C.4 defines") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 2);
+
+    const models::Sx1262& chip = rig.platform.chips().radio;
+
+    // Inside the uplink dwell: §C.4's chip rate, its Gaussian filter, a receiver
+    // wide enough for its 250 kHz channel, and the longest G.3 packet to read.
+    rig.push_timed_fix(25000, 900);
+    rig.run(rig.now_ms, rig.now_ms + 200);
+    rig.platform.clock().set_milliseconds(rig.now_ms + timing::kGroundEmitStartMs);
+    rig.product.run_pass(rig.now_ms + timing::kGroundEmitStartMs);
+    // The chip reports what its PLL word resolves to, which is a hertz or two
+    // off the channel it was asked for.
+    CHECK(adsl::kOBandHz - chip.frequency_hz < 100);
+    CHECK(chip.bitrate == adsl::kUplinkChipRateBps);
+    CHECK(chip.pulse_shape == parts::sx1262::kGaussianBt0p5);
+    CHECK(chip.rx_bandwidth == 0x19);
+    CHECK(chip.payload_bytes == protocol::AdslUplink::kPacketBytes);
+    CHECK(chip.sync_bits == adsl::kUplinkSyncBits);
+    CHECK(chip.sync[0] == 0x2D);
+    CHECK(chip.sync[1] == 0xD4);
+    // C.4.3's sync word is two bytes. The dwell once armed a third, 0x18, the M band's
+    // ADS-L data length and no uplink packet's, and heard nothing at all.
+    CHECK(chip.sync_bits == 16);
+
+    // And back on the M band, §C.2's, which is not the same modulation.
+    rig.run(rig.now_ms + timing::kGroundEmitStartMs + 10, rig.now_ms + 500);
+    CHECK(chip.bitrate == adsl::kMBandChipRateBps);
+    CHECK(chip.pulse_shape == parts::sx1262::kGaussianBt0p5);
+    CHECK(chip.payload_bytes == protocol::kRxChipBytes);
+    rig.now_ms += 1000;
+    rig.utc_offset_s++;
+}
+
+// The regression for the modulation half of that: a §C.4 burst into a dwell
+// still framing §C.2's chip rate is deaf, and the model says so rather than
+// delivering it anyway.
+TEST_CASE("uplink: a 200 kbps burst is not heard by a dwell framing 100 kbps") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, rig.now_ms, 3);
+
+    model::AircraftObservation relayed = relayed_aircraft(rig, 0x4F0001, 1000, 0, 0);
+    protocol::AdslUplink codec;
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(codec.encode(&relayed, 1, rig.state().own.utc_s, 500, kStation,
+                         adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
+    uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0};
+    const size_t burst_bytes = adsl::encode_o_band(packet, burst);
+
+    // In the direct slot, where the radio is on the M band at 100 kbps.
+    rig.push_timed_fix(25000, 900);
+    rig.run(rig.now_ms, rig.now_ms + 500);
+    CHECK_FALSE(rig.platform.chips().radio.receive_air(burst, static_cast<uint16_t>(burst_bytes),
+                                                       false, -92, adsl::kUplinkChipRateBps));
+    rig.run(rig.now_ms + 500, rig.now_ms + 950);
+    CHECK(rig.state().air.uplink_frames == 0);
+}

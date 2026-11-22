@@ -9,13 +9,13 @@
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
 #include "test/support/log_record_write.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kBaseUtcS = 1785628800;  // 2026-08-02T00:00:00Z
-constexpr uint8_t kParaglider = 7;          // ADS-L G.1.3
+constexpr uint8_t kParaglider = 7;  // ADS-L G.1.3
 
 flight::LogRecord sample_record() {
     flight::LogRecord record{};

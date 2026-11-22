@@ -4,7 +4,7 @@
     python3 scripts/test_blip_altitude.py
 
 The hex strings are the bytes the firmware's host suite pins its encoders to, so the two
-layouts are held to each other: firmware/test/products/test_adsb_capture.cpp,
+layouts are held to each other: firmware/test/products/common/test_adsb_capture.cpp,
 firmware/test/core/diagnostics/test_diagnostics_decided.cpp and
 firmware/test/core/test_log_events.cpp.
 """

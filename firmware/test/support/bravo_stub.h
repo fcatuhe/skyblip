@@ -9,8 +9,12 @@
 #include <utility>
 #include <vector>
 
+#include "core/comms/peer.h"
 #include "core/events/link.h"
+#include "core/identity/activation.h"
 #include "hardware/platform/host/link.h"
+#include "products/skyblip_bravo/name.h"
+#include "products/skyblip_bravo/services/peer.h"
 #include "protocols/common/test/channel.h"
 #include "test/support/config_frame.h"
 #include "test/support/registry_frames.h"
@@ -19,11 +23,8 @@ namespace skyblip {
 
 class BravoStub {
    public:
-    // INFO: fc 10nov26 schemas/link.v1.json, health: once a second whatever the traffic
-    static constexpr uint32_t kHealthPeriodMs = 1000;
-    static constexpr uint32_t kProtocolVersion = 2;
-    // INFO: fc 11nov26 the name Bravo must advertise (products/common/README.md), tag 3F2A
-    static constexpr const char* kAdvertisedName = "skyBlip Bravo 3F2A";
+    static constexpr uint32_t kHealthPeriodMs = bravo::PeerService::kHealthPeriodMs;
+    static constexpr uint32_t kProtocolVersion = comms::kPeerProtocolVersion;
 
     struct Recorded {
         uint32_t at_ms;
@@ -84,7 +85,7 @@ class BravoStub {
         link_ = std::make_unique<platform::host::Link>();
         bus_ = std::make_unique<bus::Bus>();
         link_->deliver_to(*bus_);
-        (void)link_->advertise_as(kAdvertisedName);
+        (void)link_->advertise_as(advertised_name().c_str());
         boot_epoch_ = random_.next();
         sequence_ = 0;
         sent_observation_ = false;
@@ -144,6 +145,13 @@ class BravoStub {
     }
 
     static std::string text_of(bool value) { return value ? "true" : "false"; }
+
+    // The name Bravo's own code gives the host's unit, as products/common/README.md asks.
+    static std::string advertised_name() {
+        char name[identity::kBluetoothNameBytes + 1];
+        bravo::bluetooth_name(name, sizeof(name), bravo::kProductName, kTestActivation);
+        return name;
+    }
 
     std::vector<Recorded> recording_;
     size_t next_recorded_{0};

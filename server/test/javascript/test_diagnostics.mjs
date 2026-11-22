@@ -23,7 +23,7 @@ const join = records => {
   return out;
 };
 
-// The record firmware/test/products/test_adsb_capture.cpp pins, as scripts/test_blip_altitude.py reads it.
+// The record firmware/test/products/common/test_adsb_capture.cpp pins, as scripts/test_blip_altitude.py reads it.
 test('a host capture decodes to the target the rig heard', () => {
   const decoded = decodeDiagnosticsRecord(bytes('15ffc80083886e6a5e4d3c12b80b0000edfeb004e5017a02'));
   assert.deepEqual(decoded, {

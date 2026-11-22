@@ -6,12 +6,12 @@
 #include "core/store/sector.h"
 #include "core/store/sector_allocator.h"
 #include "doctest/doctest.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kBaseUtcS = 1785628800;  // 2026-08-02T00:00:00Z
 constexpr uint32_t kSecondsPerSector = 170;
 constexpr uint32_t kSomeSession = 1;
 

@@ -25,7 +25,7 @@ struct Booted {
     uint32_t tones{tango.go.platform.annunciator().tone_commands()};
 
     Booted() {
-        tango.go.long_touch(tango.now_ms);
+        tango.go.long_touch();
         REQUIRE(tango.go.product.screen().page() == go::Page::Radar);
     }
 
@@ -55,7 +55,7 @@ TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar an
     CHECK(booted.tones_since_boot() == 0);
     CHECK(go::corner_reads(booted.glass(), "MOVE OUT"));
 
-    booted.tango.go.show(booted.tango.now_ms, go::Page::SelfTest);
+    booted.tango.go.show(go::Page::SelfTest);
     booted.tango.run_for(1100);
     CHECK(reads_in(booted.tango.go.product.screen().framebuffer(), "WAIT", 0,
                    go::kSelfTestFirstRowY, go::kGlassWidth, go::kGlassHeight));
@@ -65,16 +65,16 @@ TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar an
 TEST_CASE("tango boot: a Bravo still without UTC when the Go taxis is lost, with one tone") {
     Booted booted;
     booted.tango.run_for(go::BravoService::kBootSettleMs);
-    booted.tango.go.seconds(booted.tango.now_ms, 3, 0, 900);
+    booted.tango.go.seconds(3, 0, 900);
     REQUIRE(booted.bravo() == comms::BravoState::Waiting);
     const uint32_t parked_tones = booted.tones_since_boot();
 
-    booted.tango.go.seconds(booted.tango.now_ms, 2, 5000, 900);
+    booted.tango.go.seconds(2, 5000, 900);
     CHECK(booted.bravo() == comms::BravoState::NoUtc);
     CHECK(booted.tones_since_boot() == parked_tones + 1);
     CHECK(go::corner_reads(booted.glass(), "MOVE OUT", false));
 
-    booted.tango.go.seconds(booted.tango.now_ms, 3, 0, 900);
+    booted.tango.go.seconds(3, 0, 900);
     CHECK(booted.bravo() == comms::BravoState::NoUtc);
     CHECK(booted.tones_since_boot() == parked_tones + 1);
 }

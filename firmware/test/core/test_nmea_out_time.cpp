@@ -6,6 +6,7 @@
 #include "doctest/doctest.h"
 #include "test/support/nmea_checksum.h"
 #include "test/support/nmea_traffic.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 using namespace skyblip::protocol;
@@ -13,7 +14,7 @@ using namespace skyblip::protocol;
 // A .500 solution stamped with its whole second would put the position 500 ms off its time.
 TEST_CASE("nmea: GPRMC/GPGGA carry a .500 solution's fraction, and a whole second none") {
     auto own = own_at(481234500, -81234500, 1000);
-    own.utc_s = 1785628800u + 3661u;
+    own.utc_s = kBaseUtcS + 3661u;
     own.utc_ms = 500;
 
     char buffer[128];

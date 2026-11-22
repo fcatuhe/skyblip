@@ -152,10 +152,12 @@ class Pages(unittest.TestCase):
                       "ADS-L's physical layer, as the component reads it.", page)
 
     def test_the_go_pages_and_bravo_are_areas_apart_from_products(self):
-        self.assertEqual(behavior_index.area_of("test/products/pages/test_radar.cpp"), "pages")
-        self.assertEqual(behavior_index.area_of("test/products/skyblip_bravo/test_fold.cpp"), "bravo")
-        self.assertEqual(behavior_index.area_of("test/products/test_pipeline.cpp"), "products")
-        self.assertEqual(behavior_index.area_of("test/core/diagnostics/test_tone.cpp"), "core")
+        area_of = behavior_index.area_of
+        self.assertEqual(area_of("test/products/skyblip_go/pages/test_radar.cpp"), "pages")
+        self.assertEqual(area_of("test/products/skyblip_bravo/test_fold.cpp"), "bravo")
+        self.assertEqual(area_of("test/products/skyblip_go/services/test_rf_gate.cpp"), "products")
+        self.assertEqual(area_of("test/products/common/test_nmea_service.cpp"), "products")
+        self.assertEqual(area_of("test/core/diagnostics/test_tone.cpp"), "core")
 
 
 class Index(unittest.TestCase):

@@ -14,6 +14,7 @@ This directory holds the wire arithmetic two or more stacks share, in `skyblip::
 | `geometry.{h,cpp}` | rounded division, sines, square root, longitude wrap and the flat-earth offset, with the tree's one size of the earth | ADS-L, ADS-B, ALP-TAS |
 | `status.h` | `wire::Status`, the reason a stack refuses a frame | ADS-B, ADS-L, ALP-TAS |
 | `en300220.h` | EN 300 220-2 V3.3.1 Table 4's band M, and EN 300 220-1 V3.1.1 clause 5.21's polite spectrum access | ADS-L, and skyBlip's `core/timing/channel.h` |
+| `version_triple.h` | `is_version_triple`, which each stack's `version.h` holds its `kVersion` to at compile time | ADS-B, ADS-L edge, ALP-TAS |
 | `test/channel.h` | a deterministic bit-error channel for the stacks' tests | every stack's tests |
 
 Both air frames are read and written as `BitField` tables of offsets, the ADS-L ones as G.1 prints them. An ADS-L field reads back the middle of the step its code names, and an ALP-TAS field the bottom of it. skyBlip includes `geometry.h` directly, so the traffic table and the ADS-B cache measure distance the same way.

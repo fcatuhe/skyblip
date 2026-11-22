@@ -128,6 +128,7 @@ TEST_CASE("bravo pairing: no press, no health: the Go gives up and neither side 
     CHECK(tango.service().step() == go::BravoStep::Refused);
     CHECK(tango.service().refusal() == go::BravoRefusal::NoAnswer);
     CHECK_FALSE(tango.go_pinned());
+    CHECK_FALSE(tango.go.platform.central().up());
     CHECK_FALSE(tango.peer().paired());
     CHECK_FALSE(tango.peer().requested());
     events::BluetoothAddress stored{};
@@ -137,13 +138,13 @@ TEST_CASE("bravo pairing: no press, no health: the Go gives up and neither side 
 // Opus's review: the held press outlasted kLongPressHoldMs, so it was never a press at all.
 TEST_CASE("bravo pairing: a press held from before the request never pairs") {
     PairedProducts tango;
-    tango.go.show(tango.now_ms, go::Page::Bravo);
+    tango.go.show(go::Page::Bravo);
     tango.run_for(300);
     REQUIRE(tango.service().found_count() == 1);
-    tango.go.press(tango.now_ms);
+    tango.go.press();
     const uint32_t down_ms = tango.now_ms;
     tango.bravo.platform.set_button_down(true);
-    tango.go.press(tango.now_ms);
+    tango.go.press();
     tango.run_for(1200);
     REQUIRE(tango.peer().requested());
     REQUIRE(tango.bravo.lamp() == indication::Condition::Pairing);
@@ -272,12 +273,12 @@ TEST_CASE("bravo pairing: a Go that retries after a lost health needs a new pres
     tango.run_for(1000);
     REQUIRE_FALSE(tango.go_pinned());
 
-    tango.go.tap(tango.now_ms);
+    tango.go.tap();
     tango.air.set_flow(Flow::Flowing);
     tango.run_for(500);
     REQUIRE(tango.service().found_count() == 1);
-    tango.go.press(tango.now_ms);
-    tango.go.press(tango.now_ms);
+    tango.go.press();
+    tango.go.press();
     tango.run_for(3000);
     CHECK_FALSE(tango.go_pinned());
     CHECK_FALSE(tango.peer().paired());
@@ -403,10 +404,10 @@ TEST_CASE("bravo pairing: a Go that unpairs tells Bravo, which drops its pin and
     tango.pair_and_store();
     REQUIRE(tango.peer().paired());
 
-    tango.go.show(tango.now_ms, go::Page::Bravo);
-    tango.go.press(tango.now_ms);
+    tango.go.show(go::Page::Bravo);
+    tango.go.press();
     REQUIRE(tango.go.product.screen().bravo_page().unpairing());
-    tango.go.press(tango.now_ms);
+    tango.go.press();
     tango.run_for(1000);
     CHECK_FALSE(tango.go_pinned());
     CHECK_FALSE(tango.peer().paired());
@@ -430,9 +431,9 @@ TEST_CASE("bravo pairing: a Go unpaired with Bravo away unpins it when it asks a
     tango.air.set_in_range(false);
     tango.air.drop();
     tango.run_for(500);
-    tango.go.show(tango.now_ms, go::Page::Bravo);
-    tango.go.press(tango.now_ms);
-    tango.go.press(tango.now_ms);
+    tango.go.show(go::Page::Bravo);
+    tango.go.press();
+    tango.go.press();
     tango.run_for(500);
     REQUIRE_FALSE(tango.go_pinned());
     CHECK(tango.peer().paired());
@@ -521,7 +522,7 @@ TEST_CASE("bravo pairing: a Go that leaves its request takes the blinking lamp w
     PairedProducts tango;
     tango.ask();
     REQUIRE(tango.bravo.lamp() == indication::Condition::Pairing);
-    tango.go.tap(tango.now_ms);
+    tango.go.tap();
     tango.run_for(500);
     CHECK_FALSE(tango.peer().requested());
     CHECK(tango.bravo.lamp() != indication::Condition::Pairing);

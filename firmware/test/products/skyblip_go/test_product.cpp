@@ -1,0 +1,518 @@
+// The acceptance invariant on the host: the real product (board, services,
+// drivers) links and runs on the host platform with zero framework code. If any
+// of it leaks a Zephyr include, this stops compiling.
+
+#include <cstdlib>
+#include <string>
+
+#include "core/annunciation/annunciator.h"
+#include "core/events/link.h"
+#include "core/model/aircraft.h"
+#include "core/model/ownship.h"
+#include "core/protocol/adsl.h"
+#include "doctest/doctest.h"
+#include "test/support/product_rig.h"
+
+using namespace skyblip;
+
+TEST_CASE("product: setup brings the radio to Rx and reports its capabilities") {
+    Rig rig;
+    CHECK(rig.setup() == Status::Ok);
+    CHECK(rig.state().started);
+    CHECK(ports::has(rig.product.capabilities(), ports::Capability::Rf | ports::Capability::Gnss));
+    CHECK(ports::has(rig.product.capabilities(), platform::host::Platform::kFullyFitted));
+}
+
+TEST_CASE("product: a missing optional capability flies, a required one refuses") {
+    constexpr ports::Capabilities kNoHaptic = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
+        ~static_cast<uint32_t>(ports::Capability::Haptic));
+    Rig degraded(kNoHaptic);
+    CHECK(degraded.setup() == Status::Ok);
+    CHECK(degraded.product.flyable());
+    CHECK_FALSE(ports::has(degraded.product.capabilities(), ports::Capability::Haptic));
+
+    constexpr ports::Capabilities kNoGnss = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
+        ~static_cast<uint32_t>(ports::Capability::Gnss));
+    Rig refused(kNoGnss);
+    CHECK(refused.setup() == Status::Down);
+    CHECK_FALSE(refused.state().started);
+}
+
+TEST_CASE("product: the radio executor is armed against slot deadlines, not polled") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    const uint32_t before = rig.product.radio().arm_count();
+    rig.run(0, 3000);
+    // Two band changes per UTC second: O-band uplink dwell, then the M-band slots.
+    CHECK(rig.product.radio().arm_count() >= before + 4);
+}
+
+TEST_CASE("product: step() runs the service cycle deterministically under a modelled clock") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 3000);
+    uint8_t packet[6] = {1, 2, 3, 4, 5, 6};
+    rig.platform.chips().radio.queue_rx(packet, sizeof(packet));
+    rig.run(3000, 4200);
+    CHECK(rig.state().air.rx_unframed >= 1);  // too short to frame as either system
+    CHECK(rig.state().air.rx_bad == 0);
+    CHECK(rig.state().traffic.count() == 0);
+}
+
+TEST_CASE("product: the e-paper refreshes on change, not on cadence") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 5000);
+    // The boot black and the first radar frame, then a static sky nothing repaints.
+    CHECK(rig.platform.chips().epd.present_count == 2);
+    CHECK_FALSE(rig.platform.chips().epd.last_full);
+
+    rig.push_fix(1000, 1);  // fix arrives: the radar page changes, one partial
+    rig.run(5000, 8000);
+    CHECK(rig.platform.chips().epd.present_count == 3);
+    CHECK_FALSE(rig.platform.chips().epd.last_full);  // differential, no full
+}
+
+TEST_CASE("product: persisted settings are loaded on setup") {
+    Rig rig;
+    go::Settings settings = go::defaults();
+    settings.alarm = go::Alarm::Soft;
+    uint8_t blob[64];
+    go::to_blob(settings, blob, sizeof(blob));
+    REQUIRE(rig.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
+
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.settings().alarm == go::Alarm::Soft);
+}
+
+// Issue #126: the unlock code is the only thing that knows the address, and this wiring carries it.
+TEST_CASE("product: the identity a tablet is told is the unlock code's, not a stored setting's") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.raise_link(1);
+    rig.run(0, 100);
+    rig.send("{\"command\":\"get\"}");
+    rig.run(100, 200);
+
+    const std::string reply = rig.last_on(events::Endpoint::Config);
+    CHECK(reply.find("\"address\":23294") != std::string::npos);  // 0x005AFE, the host's serial
+    CHECK(reply.find("\"address_mapping_table\":58") != std::string::npos);
+}
+
+TEST_CASE("product: the board reads the cell and the gauge publishes it") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK_FALSE(rig.state().power.battery.valid);
+
+    rig.platform.battery().divider_mv = 3800;
+    rig.run(0, 12000);
+    CHECK(rig.state().power.battery.valid);
+    CHECK(rig.state().power.battery.cell_mv == 3800);
+    CHECK(rig.state().power.battery.percent == power::percent_from_mv(3800));
+    CHECK_FALSE(rig.state().power.battery.charging);
+    CHECK_FALSE(rig.state().power.battery.external_power);
+}
+
+// E68BD9 told its phone 100 % for 3.5 h of charging from 45 %, off the USB rail (#114).
+TEST_CASE("product: on USB power the gauge shows the cable and no state of charge") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.platform.battery().divider_mv = 3750;
+    rig.run(0, 12000);
+    REQUIRE(rig.state().power.battery.valid);
+
+    rig.platform.battery().external_power = true;
+    rig.platform.battery().divider_mv = 4690;
+    rig.run(12000, 24000);
+    CHECK(rig.state().power.battery.charging);
+    CHECK(rig.state().power.battery.external_power);
+    CHECK_FALSE(rig.state().power.battery.valid);
+    CHECK(rig.state().power.battery.percent == 0);
+}
+
+TEST_CASE("product: a board with no battery sense says so instead of reporting empty") {
+    constexpr ports::Capabilities kNoBattery = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
+        ~static_cast<uint32_t>(ports::Capability::Battery));
+    Rig rig{kNoBattery};
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Battery));
+
+    rig.run(0, 12000);
+    CHECK_FALSE(rig.state().power.battery.valid);
+    CHECK(rig.state().power.battery.percent == 0);
+}
+
+TEST_CASE("product: settings changed over the link are persisted" * doctest::test_suite("main")) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.settings().alarm = go::Alarm::Soft;
+    // The only way the device can be told it is on the ground: one stationary
+    // solution, which core/flight answers Ground to and the link's gate reads.
+    rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
+    rig.run(0, 100);
+
+    rig.send("{\"command\":\"set\",\"alarm\":\"loud\"}");
+    rig.run(100, 300);
+    rig.product.config_link().config().confirm();
+    // The write is a request now, not a call: it coalesces for
+    // DurableWriteWindow::kSettleMs and then waits for a phase of the second the
+    // NVMC may stall the core in. Two seconds is several of both.
+    rig.run(300, 2400);
+
+    uint8_t blob[64];
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
+    go::Settings stored{};
+    REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
+    CHECK(stored.alarm == go::Alarm::Loud);
+}
+
+TEST_CASE("product: the reset reason is read once at boot and kept") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::Watchdog | power::ResetCause::Software;
+    REQUIRE(rig.setup() == Status::Ok);
+    // The bite, not the reset that followed it: that is the whole diagnostic
+    // value of the register.
+    CHECK(rig.product.reset_reason() == power::ResetReason::Watchdog);
+
+    Rig fresh;
+    fresh.platform.system_power().causes = power::ResetCause::PowerOn;
+    REQUIRE(fresh.setup() == Status::Ok);
+    CHECK(fresh.product.reset_reason() == power::ResetReason::PowerOn);
+    // Two different boots must not paint the same page.
+    CHECK(fresh.self_test_page().count_black() != rig.self_test_page().count_black());
+}
+
+// D5. The panel has the reason at boot and then it is gone; the field diagnosis
+// happens over the link, days later, with the device in a bag. The dump's sys
+// group reads it off the config service, so that is where the boot has to leave it.
+TEST_CASE("product: the link is told at boot why the device came up") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::Watchdog;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.config_link().config().reset_reason() == power::ResetReason::Watchdog);
+
+    // A device that came up because someone pressed the button says that, and
+    // not the UNKNOWN a reason nobody passed on would read as.
+    Rig pressed;
+    pressed.platform.system_power().causes = power::ResetCause::Pin;
+    REQUIRE(pressed.setup() == Status::Ok);
+    CHECK(pressed.product.config_link().config().reset_reason() == power::ResetReason::Pin);
+}
+
+// D1. A VBUS event is a wake source on this SoC, so plugging a charger into a
+// device that was switched off brings the SoC up. What must not happen is that it
+// brings the DEVICE up: a unit that charges itself awake in a flight bag arrives
+// flat, and the e-paper holds its last image with the rails down, so nothing about
+// it would look wrong until a pilot needed it.
+TEST_CASE("product: a charger plugged into a sleeping device is not a boot" *
+          doctest::test_suite("main")) {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
+    CHECK(rig.setup() == Status::Ok);
+    CHECK(rig.product.boot_path() == power::BootPath::SleepAgain);
+
+    // Nothing became a device: no service loop, and not a pixel on the glass -
+    // the panel still holds whatever was painted when it was switched off.
+    CHECK_FALSE(rig.state().started);
+    CHECK(rig.product.self_test().part_count == 0);
+    CHECK(rig.platform.chips().epd.present_count == 0);
+    // And the page it would have painted names the cause anyway, for the case a
+    // bench eye holds the button and looks.
+    CHECK(rig.product.reset_reason() == power::ResetReason::ChargerWake);
+
+    // What the shell does with that: the rails go down the same way a long press
+    // takes them down, in the order core/power owns.
+    rig.platform.system_power().system_off();
+    CHECK(rig.platform.system_power().system_offs == 1);
+    CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
+          power::kPowerDownStepCount - 1);
+}
+
+// A refused boot ran bring-up, so it owes every part the park a switch-off gives it.
+TEST_CASE(
+    "product: a refusal that leaves the glass parks the radio and the lamp and sleeps the panel") {
+    Rig rig;
+    rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
+    rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Flat;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.refused_frame() == power::RefusedFrame::Leave);
+    REQUIRE(rig.platform.chips().epd.powered);
+
+    rig.sleep_again();
+    CHECK(rig.platform.chips().radio.sleeping);
+    CHECK(rig.platform.indicator().parked());
+    CHECK_FALSE(rig.platform.chips().epd.powered);
+    CHECK(rig.platform.chips().epd.present_count == 0);
+}
+
+// A panel that never reports ready must not hold a flat cell awake, nor be left awake by it.
+TEST_CASE("product: a framed refusal whose panel never settles still sleeps the panel") {
+    Rig rig;
+    rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.refused_frame() == power::RefusedFrame::FlatCell);
+    rig.platform.chips().epd.busy_stuck = true;
+
+    rig.sleep_again();
+    CHECK(rig.platform.chips().epd.present_count == 1);
+    CHECK_FALSE(rig.platform.chips().epd.powered);
+    CHECK(rig.platform.chips().radio.sleeping);
+    CHECK(rig.platform.indicator().parked());
+}
+
+// A refused boot has a cell to spare least of all, so a radio that never parks is not waited out.
+TEST_CASE("product: a refusal waits for the radio to park, and goes dark at the ceiling") {
+    Rig rig;
+    rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
+    rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Flat;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.refused_frame() == power::RefusedFrame::Leave);
+    rig.product.board().rf().defer_park = true;
+
+    const uint32_t released_ms = power::kReleaseSettleMs;
+    CHECK_FALSE(rig.product.park_refusal(0));
+    CHECK_FALSE(rig.product.park_refusal(released_ms));
+    CHECK_FALSE(rig.product.park_refusal(released_ms + go::kRadioParkCeilingMs - 1));
+    CHECK(rig.product.board().rf().abandons() == 0);
+    CHECK(rig.product.park_refusal(released_ms + go::kRadioParkCeilingMs));
+    CHECK(rig.product.board().rf().abandons() == 1);
+}
+
+TEST_CASE("product: the same charger with the button held is a boot") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.boot_path() == power::BootPath::Run);
+    CHECK(rig.state().started);
+    CHECK(rig.self_test_page().count_black() > 0);
+}
+
+// Every other wake is a device. The one that would be catastrophic and silent is
+// a unit refusing to boot the first time its cell is connected.
+TEST_CASE("product: a button wake and a first power-on are both a device") {
+    Rig pressed;
+    pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    REQUIRE(pressed.setup() == Status::Ok);
+    CHECK(pressed.product.boot_path() == power::BootPath::Run);
+    CHECK(pressed.state().started);
+
+    Rig fresh;
+    fresh.platform.system_power().causes = power::ResetCause::PowerOn;
+    REQUIRE(fresh.setup() == Status::Ok);
+    CHECK(fresh.product.boot_path() == power::BootPath::Run);
+    CHECK(fresh.state().started);
+}
+
+// H. The per-unit trim is applied once, on the way out of the queue, so the gauge
+// and the cutoff monitor act on the same millivolts. A cutoff that fired 40 mV
+// early on a trimmed unit would be the calibration causing the failure it exists
+// to prevent.
+TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule together") {
+    // This unit reads 60 mV high, measured once on the line against a bench
+    // supply and written into settings.
+    Rig trimmed;
+    go::Settings settings = go::defaults();
+    settings.battery_offset_mv = -60;
+    uint8_t blob[64];
+    go::to_blob(settings, blob, sizeof(blob));
+    REQUIRE(trimmed.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
+    REQUIRE(trimmed.setup() == Status::Ok);
+    REQUIRE(trimmed.settings().battery_offset_mv == -60);
+
+    // A reading the raw sample puts above the low-battery warning and the real
+    // cell puts below it.
+    trimmed.platform.battery().divider_mv = 3540;
+    trimmed.run(0, 12000);
+    CHECK(trimmed.state().power.battery.cell_mv == 3480);
+    CHECK(trimmed.state().power.battery.percent == power::percent_from_mv(3480));
+    // The reader that matters: the same trimmed millivolts reached the rule that
+    // decides when the device warns and when it goes down.
+    CHECK(trimmed.state().power.level == power::PowerLevel::Critical);
+
+    // The same board, the same divider, no trim: the gauge and the cutoff rule
+    // agree with each other and both are wrong by the same 60 mV.
+    Rig raw;
+    REQUIRE(raw.setup() == Status::Ok);
+    raw.platform.battery().divider_mv = 3540;
+    raw.run(0, 12000);
+    CHECK(raw.state().power.battery.cell_mv == 3540);
+    CHECK(raw.state().power.level == power::PowerLevel::Low);
+}
+
+// Taken before any service runs, so it is the reader that could have been raw.
+TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider") {
+    go::Settings settings = go::defaults();
+    settings.battery_offset_mv = -60;
+    uint8_t blob[64];
+    go::to_blob(settings, blob, sizeof(blob));
+
+    // 3440 raw is above the lockout, 3380 trimmed is below it.
+    Rig trimmed;
+    REQUIRE(trimmed.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
+    trimmed.platform.battery().divider_mv = 3440;
+    REQUIRE(trimmed.setup() == Status::Ok);
+    CHECK(trimmed.product.boot_cell().cell_mv == 3380);
+    CHECK(trimmed.product.boot_path() == power::BootPath::SleepAgain);
+
+    Rig untrimmed;
+    untrimmed.platform.battery().divider_mv = 3440;
+    REQUIRE(untrimmed.setup() == Status::Ok);
+    CHECK(untrimmed.product.boot_path() == power::BootPath::Run);
+}
+
+namespace {
+
+std::string status_of(Rig& rig, uint32_t& now_ms) {
+    rig.platform.link().clear();
+    rig.send("{\"command\":\"status\"}");
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 250;
+    return rig.last_on(events::Endpoint::Config);
+}
+
+}  // namespace
+
+// J. One reader, on a cadence the sensor deserves. Die temperature is the
+// temperature of a lump of plastic in the sun, low-passed by its own mass: it
+// moves in minutes, and the measurement is a blocking one-shot on a peripheral
+// the radio stack also uses. So it is read from the service pass, ten seconds
+// apart, and never from the radio thread.
+TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tablet") {
+    constexpr ports::Capabilities kWithDie = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) |
+        static_cast<uint32_t>(ports::Capability::DieTemperature));
+    Rig rig{kWithDie};
+    REQUIRE(rig.setup() == Status::Ok);
+    platform::host::DieTemperature& die = rig.platform.die_temperature();
+    die.hold(412);
+
+    rig.run(rig.now_ms, rig.now_ms + 100);
+    rig.now_ms += 150;
+    // Read on the first pass rather than ten seconds into the boot: the first
+    // dump a bench asks for should carry a temperature, and the self-test page
+    // is the moment a bench eye is looking.
+    CHECK(die.reads() == 1);
+    CHECK(rig.product.state().power.die_valid);
+    CHECK(rig.product.state().power.die_dc == 412);
+
+    // Five seconds of passes: still one measurement.
+    rig.run(rig.now_ms, rig.now_ms + 5000);
+    rig.now_ms += 5050;
+    CHECK(die.reads() == 1);
+
+    // Past ten seconds from the first: a second one.
+    rig.run(rig.now_ms, rig.now_ms + 6000);
+    rig.now_ms += 6050;
+    CHECK(die.reads() == 2);
+    // And nothing has read it hundreds of times, which is what a per-pass reader
+    // would have done by now.
+    rig.run(rig.now_ms, rig.now_ms + 30000);
+    rig.now_ms += 30050;
+    CHECK(die.reads() <= 6);
+
+    // A refused measurement leaves the last good reading standing rather than
+    // publishing a zero, but only for as long as the panel and the charge window
+    // still believe it: past kDieStaleMs the tablet is shown no temperature either.
+    const int before = die.reads();
+    die.refuse();
+    rig.run(rig.now_ms, rig.now_ms + 10000);
+    rig.now_ms += 10050;
+    CHECK(die.reads() > before);
+    CHECK(rig.product.state().power.die_valid);
+    CHECK(rig.product.state().power.die_dc == 412);
+
+    rig.run(rig.now_ms, rig.now_ms + common::PowerService::kDieStaleMs);
+    rig.now_ms += common::PowerService::kDieStaleMs + 50;
+    CHECK_FALSE(rig.product.state().power.die_valid);
+    CHECK(status_of(rig, rig.now_ms).find("die_temperature_c") == std::string::npos);
+}
+
+// The research prohibits charging in the 72.4 C soak; nothing here could see it.
+TEST_CASE("product: a cable in the heat is named, counted and left counted") {
+    constexpr ports::Capabilities kWithDie = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) |
+        static_cast<uint32_t>(ports::Capability::DieTemperature));
+    Rig rig{kWithDie};
+    REQUIRE(rig.setup() == Status::Ok);
+    platform::host::DieTemperature& die = rig.platform.die_temperature();
+    die.hold(250);
+
+    rig.run(rig.now_ms, rig.now_ms + 2000);
+    rig.now_ms += 2050;
+    CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
+    CHECK(rig.product.power().charge_warnings() == 0);
+
+    rig.platform.battery().external_power = true;
+    rig.run(rig.now_ms, rig.now_ms + 2000);
+    rig.now_ms += 2050;
+    CHECK(rig.state().power.charge == power::ChargeCondition::Ok);
+    CHECK(rig.product.power().charge_warnings() == 0);
+
+    die.hold(724);
+    rig.run(rig.now_ms, rig.now_ms + 15000);
+    rig.now_ms += 15050;
+    CHECK(rig.state().power.charge == power::ChargeCondition::TooHot);
+    // One event, however many passes read the same sensor.
+    CHECK(rig.product.power().charge_warnings() == 1);
+
+    rig.platform.battery().external_power = false;
+    rig.run(rig.now_ms, rig.now_ms + 2000);
+    rig.now_ms += 2050;
+    CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
+    CHECK(rig.product.power().charge_warnings() == 1);
+}
+
+// The absent case, and it is the host board itself: no sensor, no capability, no
+// key. A die reading is not a feature of the product either - nothing the device
+// does changes without it - so its absence is not a degraded state, it is a reply
+// with one less key in it.
+TEST_CASE("product: a board with no die sensor publishes no temperature at all") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::DieTemperature));
+
+    rig.run(rig.now_ms, rig.now_ms + 30000);
+    rig.now_ms += 30050;
+    CHECK_FALSE(rig.product.state().power.die_valid);
+    CHECK(status_of(rig, rig.now_ms).find("die_temperature_c") == std::string::npos);
+}
+
+// J. The range gate refuses a reception whose claimed position is further away
+// than this radio could have heard it. Whether that fires once a week or once a
+// second is the first question a support case asks, so the counter leaves the
+// device: read off the table that keeps it, on its own reply.
+TEST_CASE("product: the range gate's refusals leave the device over the link") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds(3, /*speed_mm_s=*/0, 0);
+    REQUIRE(rig.state().own.fix_valid);
+
+    rig.platform.link().clear();
+    rig.send("{\"command\":\"radio\"}");
+    rig.run(rig.now_ms, rig.now_ms + 200);
+    rig.now_ms += 250;
+    CHECK(rig.last_on(events::Endpoint::Config).find("\"range_refused\":0") != std::string::npos);
+
+    // A target on the other side of the country, claimed by a frame that passed
+    // its CRC. Pushed at the table's own door, which is where the gate lives.
+    model::AircraftObservation ghost{};
+    ghost.address = 0x00ABCDEF;
+    ghost.address_mapping_table = 5;
+    ghost.position_valid = true;
+    ghost.latitude_1e7 = rig.state().own.latitude_1e7 + 50000000;  // five degrees north
+    ghost.longitude_1e7 = rig.state().own.longitude_1e7;
+    ghost.source = model::Source::AdslDirect;
+    REQUIRE(rig.state().traffic.update(ghost, 0) < 0);
+    REQUIRE(rig.state().traffic.implausible() == 1);
+
+    rig.platform.link().clear();
+    rig.send("{\"command\":\"radio\"}");
+    rig.run(rig.now_ms, rig.now_ms + 200);
+    CHECK(link_text(rig.platform.link().last().bytes).find("\"range_refused\":1") !=
+          std::string::npos);
+}

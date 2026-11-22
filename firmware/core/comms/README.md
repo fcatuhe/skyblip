@@ -86,7 +86,7 @@ A unit with a capture ring, a Go and a Bravo both, sends the `capture` group of 
 
 ## How wide the frames are
 
-Each frame is measured at its widest, and `test/products/test_link_payload.cpp` and `test/products/test_comms_report.cpp` pin the figures.
+Each frame is measured at its widest, and `test/products/common/test_link_payload.cpp` and `test/products/common/test_comms_report.cpp` pin the figures.
 
 | Frame | Bytes at its widest |
 |---|---|

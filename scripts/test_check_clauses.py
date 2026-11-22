@@ -189,6 +189,43 @@ class ClausesOfAListing(Fixture):
         self.assertEqual(self.check(documents={"EN 300 220-1": str(self.root / "absent.md")}), 0)
 
 
+class MarkedClauses(Fixture):
+    def setUp(self):
+        super().setUp()
+        self.write("suite/test_part1.cpp", 'TEST_CASE("EN 300 220-1 5.21.1: a burst goes out") {\n}\n')
+        self.standard = dataclasses.replace(EN300220, suites=(str(self.root / "suite"),), documents={})
+
+    def check(self, marks):
+        listing = self.write("suite/clauses.txt", LISTING + marks)
+        return check_clauses.check(dataclasses.replace(self.standard, listing=listing))
+
+    def test_a_mark_under_its_clause_reads_it(self):
+        self.assertEqual(self.check("  - a busy channel is left for another\n    optional: no AFA\n"), 0)
+
+    def test_a_mark_is_read_for_its_clause_its_claim_and_its_reason(self):
+        listing = self.write("suite/clauses.txt", LISTING + "# TODO: fc 01jan27 a note\n"
+                             "  - a busy channel is left for another\n    optional: no AFA\n")
+        clauses, marks, malformed = check_clauses.listed(
+            dataclasses.replace(self.standard, listing=listing))
+        self.assertEqual(len(clauses), 2)
+        self.assertEqual(marks, [check_clauses.Mark("EN 300 220-1 5.21.4.1",
+                                                    "a busy channel is left for another",
+                                                    "optional: no AFA")])
+        self.assertEqual(malformed, [])
+
+    def test_a_mark_of_no_kind_fails(self):
+        self.assertEqual(self.check("  - a busy channel is left for another\n    no AFA\n"), 1)
+
+    def test_a_claim_with_no_reason_fails(self):
+        self.assertEqual(self.check("  - a busy channel is left for another\n"), 1)
+
+    def test_a_reason_with_no_claim_fails(self):
+        self.assertEqual(self.check("    optional: no AFA\n"), 1)
+
+    def test_a_clause_neither_marked_nor_cased_fails(self):
+        self.assertEqual(self.check(""), 1)
+
+
 class ClausesOfADraftInTwoHalves(Fixture):
     def setUp(self):
         super().setUp()
