@@ -38,15 +38,6 @@ function(skyblip_shared_layers)
   file(GLOB monocypher ${SKYBLIP_FIRMWARE}/vendor/monocypher/*.c)
   target_sources(app PRIVATE ${monocypher})
 
-  # Hot every pass: the per-byte NMEA parser and the redraw. Source options land after Zephyr's -Os, so -O2 wins.
-  set_source_files_properties(
-    ${SKYBLIP_FIRMWARE}/core/gnss/nmea.cpp
-    ${SKYBLIP_FIRMWARE}/ui/canvas.cpp
-    ${SKYBLIP_FIRMWARE}/hardware/parts/ssd1681/ssd1681.cpp
-    TARGET_DIRECTORY app
-    PROPERTIES COMPILE_OPTIONS -O2
-  )
-
   # mcumgr_hooks.cpp reads an upload request, whose header includes MCUboot's bootutil/image.h.
   if(CONFIG_MCUMGR_GRP_IMG)
     target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
