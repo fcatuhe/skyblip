@@ -1,11 +1,9 @@
-#include "core/comms/browser_link.h"
-
 #include <cstring>
 
-#include "core/comms/config.h"
 #include "core/util/cbor.h"
+#include "products/common/services/config_service.h"
 
-namespace skyblip::comms {
+namespace skyblip::common {
 
 namespace {
 constexpr const char* kBrowserDomain = link::trust_browser_signed_over::kSignature;
@@ -27,8 +25,8 @@ void ConfigService::browser_challenge() {
         refuse(link::Reason::Keyless);
         return;
     }
-    browsers_.open(claim_.peer(), nonce);
-    uint8_t frame[BrowserLink::kChallengeFrameBytes];
+    browsers_.open(channel_.claim().peer(), nonce);
+    uint8_t frame[comms::BrowserLink::kChallengeFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::BrowserChallenge);
     writer.add_bytes(link::browser_challenge_key::kNonce,
@@ -44,11 +42,11 @@ void ConfigService::browser_challenge() {
 // INFO: fc 13nov26 the nonce is spent before the check, so a refused proof is never retried on it
 void ConfigService::trust_browser(const cbor::Reader& frame) {
     identity::Nonce nonce{};
-    if (!browsers_.spend_nonce(claim_.peer(), nonce)) {
+    if (!browsers_.spend_nonce(channel_.claim().peer(), nonce)) {
         refuse(link::Reason::NoSession);
         return;
     }
-    char label[kBrowserLabelBytes + 1]{};
+    char label[comms::kBrowserLabelBytes + 1]{};
     const Status labelled = frame.read_text(link::trust_browser_key::kLabel, label, sizeof(label));
     if (labelled != Status::Ok && labelled != Status::NotFound) {
         refuse(link::Reason::Invalid);
@@ -84,15 +82,15 @@ void ConfigService::send_browser(const cbor::Reader& frame) {
         refuse(link::Reason::Invalid);
         return;
     }
-    const TrustedBrowsers& trusted = browsers_.trusted();
-    uint8_t reply_frame[BrowserLink::kEntryFrameBytes];
+    const comms::TrustedBrowsers& trusted = browsers_.trusted();
+    uint8_t reply_frame[comms::BrowserLink::kEntryFrameBytes];
     cbor::Writer writer(reply_frame, sizeof(reply_frame));
     writer.add_code(link::kCommandKey, link::Command::Browser);
     writer.add_unsigned(link::browser_key::kIndex, index.value());
     writer.add_unsigned(link::browser_key::kCount, static_cast<uint32_t>(trusted.count()));
     if (index.value() < static_cast<uint32_t>(trusted.count())) {
-        const TrustedBrowser& entry = trusted.at(static_cast<int>(index.value()));
-        const BrowserId id = entry.id();
+        const comms::TrustedBrowser& entry = trusted.at(static_cast<int>(index.value()));
+        const comms::BrowserId id = entry.id();
         writer.add_bytes(link::browser_key::kId, ConstByteSpan(id.data(), id.size()));
         writer.add_text(link::browser_key::kLabel, entry.label);
     }
@@ -109,7 +107,7 @@ void ConfigService::forget_browser(const cbor::Reader& frame) {
         refuse(link::Reason::Untrusted);
         return;
     }
-    BrowserId id{};
+    comms::BrowserId id{};
     if (frame.read_bytes(link::forget_browser_key::kId, ByteSpan(id.data(), id.size())) !=
         Status::Ok) {
         refuse(link::Reason::Invalid);
@@ -124,7 +122,7 @@ void ConfigService::forget_browser(const cbor::Reader& frame) {
 }
 
 void ConfigService::remember_browser() {
-    if (browsers_.remember(claim_.peer())) browsers_dirty_ = true;
+    if (browsers_.remember(channel_.claim().peer())) browsers_dirty_ = true;
 }
 
-}  // namespace skyblip::comms
+}  // namespace skyblip::common

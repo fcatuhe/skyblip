@@ -7,8 +7,8 @@
 #include <initializer_list>
 #include <string>
 
-#include "core/comms/config.h"
 #include "doctest/doctest.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "test/support/frame_glass.h"
@@ -18,31 +18,32 @@ using namespace skyblip::go;
 
 namespace {
 
-ConfirmSnapshot prompt(comms::Pending pending) {
+ConfirmSnapshot prompt(common::Pending pending) {
     ConfirmSnapshot snapshot;
-    snapshot.title = comms::pending_title(pending);
-    snapshot.detail = comms::pending_detail(pending);
-    snapshot.seconds_left = comms::kPromptCeilingMs / 1000;
+    snapshot.title = common::pending_title(pending);
+    snapshot.detail = common::pending_detail(pending);
+    snapshot.seconds_left = common::kPromptCeilingMs / 1000;
     return snapshot;
 }
 
-constexpr comms::Pending kEveryPrompt[] = {comms::Pending::Set,      comms::Pending::Dfu,
-                                           comms::Pending::Recovery, comms::Pending::PowerOff,
-                                           comms::Pending::EraseLog, comms::Pending::GnssColdStart,
-                                           comms::Pending::Register, comms::Pending::Capture};
+constexpr common::Pending kEveryPrompt[] = {
+    common::Pending::Set,      common::Pending::Dfu,      common::Pending::Recovery,
+    common::Pending::PowerOff, common::Pending::EraseLog, common::Pending::GnssColdStart,
+    common::Pending::Register, common::Pending::Capture};
 
 }  // namespace
 
 TEST_CASE("confirm page: the pilot is told which operation they are authorizing") {
     Glass dfu;
-    draw_confirm(dfu, prompt(comms::Pending::Dfu));
-    CHECK(reads_heading(dfu, comms::pending_title(comms::Pending::Dfu), Heading::Interrupt));
+    draw_confirm(dfu, prompt(common::Pending::Dfu));
+    CHECK(reads_heading(dfu, common::pending_title(common::Pending::Dfu), Heading::Interrupt));
 
     // Confirming a firmware upload must not look like confirming a shutdown.
     Glass off;
-    draw_confirm(off, prompt(comms::Pending::PowerOff));
-    CHECK(reads_heading(off, comms::pending_title(comms::Pending::PowerOff), Heading::Interrupt));
-    CHECK_FALSE(reads_heading(off, comms::pending_title(comms::Pending::Dfu), Heading::Interrupt));
+    draw_confirm(off, prompt(common::Pending::PowerOff));
+    CHECK(reads_heading(off, common::pending_title(common::Pending::PowerOff), Heading::Interrupt));
+    CHECK_FALSE(
+        reads_heading(off, common::pending_title(common::Pending::Dfu), Heading::Interrupt));
 }
 
 // The page as the frame lays it out: the detail's lines centred above the countdown, which sits
@@ -76,7 +77,7 @@ bool reads_prompt(const Glass& canvas, const ConfirmSnapshot& snapshot) {
 }
 
 TEST_CASE("confirm page: what it will do is on the page, in words, and not clipped") {
-    for (comms::Pending pending : kEveryPrompt) {
+    for (common::Pending pending : kEveryPrompt) {
         Glass canvas;
         const ConfirmSnapshot snapshot = prompt(pending);
         draw_confirm(canvas, snapshot);
@@ -89,13 +90,13 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
 // Arming spends the pilot's partition, so the glass names the profile and the flights it erases.
 TEST_CASE("confirm page: a capture names its profile and the flights it erases, not clipped" *
           doctest::test_suite("main")) {
-    char detail[comms::kPromptDetailBytes];
+    char detail[common::kPromptDetailBytes];
     for (const comms::CaptureProfile profile :
          {comms::CaptureProfile::Full, comms::CaptureProfile::PowerRun,
           comms::CaptureProfile::FlightRun, comms::CaptureProfile::Stop}) {
         for (const uint32_t evicts : {0u, 1u, 99u}) {
-            detail[comms::format_capture_detail(detail, profile, evicts)] = 0;
-            ConfirmSnapshot snapshot = prompt(comms::Pending::Capture);
+            detail[common::format_capture_detail(detail, profile, evicts)] = 0;
+            ConfirmSnapshot snapshot = prompt(common::Pending::Capture);
             snapshot.detail = detail;
             Glass canvas;
             draw_confirm(canvas, snapshot);
@@ -104,14 +105,14 @@ TEST_CASE("confirm page: a capture names its profile and the flights it erases, 
             CHECK(Expected(snapshot).consumed == static_cast<int>(std::strlen(snapshot.detail)));
         }
     }
-    detail[comms::format_capture_detail(detail, comms::CaptureProfile::Full, 3)] = 0;
+    detail[common::format_capture_detail(detail, comms::CaptureProfile::Full, 3)] = 0;
     CHECK(std::string(detail) == "START A FULL CAPTURE, ERASES 3 FLIGHTS");
-    detail[comms::format_capture_detail(detail, comms::CaptureProfile::PowerRun, 1)] = 0;
+    detail[common::format_capture_detail(detail, comms::CaptureProfile::PowerRun, 1)] = 0;
     CHECK(std::string(detail) == "START A POWER RUN, ERASES 1 FLIGHT");
 }
 
 TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a row") {
-    ConfirmSnapshot snapshot = prompt(comms::Pending::Set);
+    ConfirmSnapshot snapshot = prompt(common::Pending::Set);
     snapshot.detail = "CALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE";
     Glass canvas;
     draw_confirm(canvas, snapshot);
@@ -122,7 +123,7 @@ TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a ro
 TEST_CASE("confirm page: one press accepts on the button's key, the pad's key cancels" *
           doctest::test_suite("main")) {
     Glass canvas;
-    const ConfirmSnapshot snapshot = prompt(comms::Pending::Dfu);
+    const ConfirmSnapshot snapshot = prompt(common::Pending::Dfu);
     draw_confirm(canvas, snapshot);
     CHECK(reads_button_key(canvas, kConfirmAllowVerb));
     CHECK(reads_pad_key(canvas, kConfirmCancelVerb));
@@ -131,7 +132,7 @@ TEST_CASE("confirm page: one press accepts on the button's key, the pad's key ca
 }
 
 TEST_CASE("confirm page: the seconds left count down, and none left leaves the keys alone") {
-    ConfirmSnapshot snapshot = prompt(comms::Pending::Register);
+    ConfirmSnapshot snapshot = prompt(common::Pending::Register);
     snapshot.seconds_left = 7;
     Glass seven;
     draw_confirm(seven, snapshot);
@@ -149,7 +150,7 @@ TEST_CASE("confirm page: the seconds left count down, and none left leaves the k
 
 // Short or long, the message sits in the middle of the glass between the rule and the countdown.
 TEST_CASE("confirm page: the body's ink is centred between the rule and the countdown") {
-    for (comms::Pending pending : {comms::Pending::PowerOff, comms::Pending::Set}) {
+    for (common::Pending pending : {common::Pending::PowerOff, common::Pending::Set}) {
         Glass canvas;
         draw_confirm(canvas, prompt(pending));
         int top = -1, bottom = -1;
@@ -168,7 +169,7 @@ TEST_CASE("confirm page: the body's ink is centred between the rule and the coun
 
 // The countdown is pinned over the keys, whatever the detail's length.
 TEST_CASE("confirm page: the countdown sits on the line just above the keys") {
-    for (comms::Pending pending : {comms::Pending::PowerOff, comms::Pending::Set}) {
+    for (common::Pending pending : {common::Pending::PowerOff, common::Pending::Set}) {
         Glass canvas;
         draw_confirm(canvas, prompt(pending));
         CHECK(reads_foot_line(canvas, "CANCELS IN 30 S"));
@@ -178,10 +179,10 @@ TEST_CASE("confirm page: the countdown sits on the line just above the keys") {
 
 TEST_CASE("confirm page: it cannot be mistaken for a page a pilot was already on") {
     Glass canvas;
-    draw_confirm(canvas, prompt(comms::Pending::Recovery));
+    draw_confirm(canvas, prompt(common::Pending::Recovery));
     // The large mark is what a page the device pushed wears, and no page a pilot opens does.
-    CHECK(
-        reads_heading(canvas, comms::pending_title(comms::Pending::Recovery), Heading::Interrupt));
+    CHECK(reads_heading(canvas, common::pending_title(common::Pending::Recovery),
+                        Heading::Interrupt));
     CHECK_FALSE(
-        reads_heading(canvas, comms::pending_title(comms::Pending::Recovery), Heading::Opened));
+        reads_heading(canvas, common::pending_title(common::Pending::Recovery), Heading::Opened));
 }

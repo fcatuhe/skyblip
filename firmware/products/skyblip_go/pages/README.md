@@ -294,7 +294,7 @@ The keys say what each contact does on this page. The button's key is always lef
 
 The body is centred between the heading's rule and the keys, or the foot of the glass with no key, or a foot line such as a countdown. A list starts under the rule, since it is read from the top. Lines keep an 18 px pitch and a 10 px paragraph gap (`draw_body`).
 
-Every question the glass asks counts down and stands 30 s, `kAskCeilingMs`, the phone's prompt included (`comms::kPromptCeilingMs`). The upload window behind `DOWNLOAD` is not a question and keeps its ten minutes.
+Every question the glass asks counts down and stands 30 s, `kAskCeilingMs`, the phone's prompt included (`common::kPromptCeilingMs`). The upload window behind `DOWNLOAD` is not a question and keeps its ten minutes.
 
 Words are at double height, sixteen to a line, and the value a pilot checks is larger: a callsign or a name at triple height, a tag at four times. Nothing in the frame is small, because a line too small to read at arm's length is never read. The words follow ASD-STE100 Simplified Technical English: one instruction to a sentence, approved verbs only, PUSH and not press, and a comma after a condition. No line ends with a full stop, as on a cockpit legend, so a second sentence starts its own paragraph. The briefing's canvas keeps full stops in its label for screen readers.
 

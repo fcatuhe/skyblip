@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "core/comms/config.h"
 #include "core/comms/link_registry.h"
 #include "core/comms/log_link.h"
 #include "core/crypto/ed25519.h"
@@ -17,6 +16,7 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_bravo/radio_protocols.h"
 #include "products/skyblip_bravo/settings_store.h"
 #include "products/skyblip_go/services/diagnostics.h"
@@ -169,7 +169,7 @@ struct GroundedUnitWithLogs {
         taxi(rig, now_ms, 1);
     }
 
-    void outwait_prompt() { taxi(rig, now_ms, comms::kPromptCeilingMs / 1000 + 1); }
+    void outwait_prompt() { taxi(rig, now_ms, common::kPromptCeilingMs / 1000 + 1); }
 
     bool answered(size_t before, events::Endpoint endpoint, const std::string& prefix) {
         const auto& sent = rig.platform.link().sent;
@@ -250,7 +250,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dfu.bootloader.count = 2;
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
-    comms::ConfigService config(link, store, &dfu);
+    common::ConfigService config(link, store, &dfu);
     link.raise_link(1);
     link.declare_payload_bytes(495);
     config.set_battery_state(cell_off_the_cable(), power::PowerLevel::Normal);
@@ -301,7 +301,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
 void speak_bravo_config(platform::host::Link& link) {
     bravo::Settings settings = bravo::defaults();
     bravo::SettingsStore store(settings);
-    comms::ConfigService config(link, store);
+    common::ConfigService config(link, store);
     link.raise_link(1);
     config.on_rx(config_frame("{\"command\":\"get\"}"));
 }

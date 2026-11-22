@@ -48,7 +48,7 @@ TEST_CASE("bravo: paired, config answers its Go's alarm, and a set of alarm is r
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"set_on_go\"}");
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
     CHECK(rig.product.settings().alarm == bravo::Alarm::Visual);
 
     confirm_set(rig, "{\"command\":\"set\",\"aircraft_address\":3958150,\"alarm_from_go\":false}");
@@ -84,7 +84,7 @@ TEST_CASE("bravo: a set past Bravo's range is refused at the door") {
     rig.send("{\"command\":\"set\",\"aircraft_address\":16777216}");
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config).find("out_of_range") != std::string::npos);
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
 }
 
 TEST_CASE("bravo: the settings come back from flash after a reboot") {

@@ -35,7 +35,7 @@ std::string trust_browser() {
            "\",\"label\":\"Chrome on macOS\"}";
 }
 
-comms::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
+common::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
 
 void say(Rig& rig, uint32_t& now_ms, const std::string& json) {
     rig.send(json.c_str());
@@ -78,7 +78,7 @@ TEST_CASE("product: the browser whose record the .uf2 carried changes the settin
     CHECK(rig.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"trusted\"}");
     say(rig, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
-    CHECK(config(rig).pending() == comms::Pending::None);
+    CHECK(config(rig).pending() == common::Pending::None);
     CHECK(rig.settings().units == go::Units::Metric);
 }
 

@@ -1,4 +1,4 @@
-// core/comms config state machine tested over a link model with scripted JSON
+// The config endpoint's state machine tested over a link model with scripted JSON
 // messages, NO device. Covers get, set-with-confirmation,
 // the in-flight lockout (fail closed) and backpressure.
 //
@@ -10,19 +10,20 @@
 #include <string>
 #include <vector>
 
-#include "core/comms/config.h"
 #include "core/comms/link_registry.h"
 #include "core/events/link.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
 #include "ports/dfu.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
 
 using namespace skyblip;
 using namespace skyblip::comms;
+using namespace skyblip::common;
 
 TEST_CASE("comms: get returns current config on the Config endpoint" *
           doctest::test_suite("main")) {

@@ -5,7 +5,7 @@
 
 Every generated file must be byte for byte what scripts/link_registry.py writes. Every frame
 and key must carry a description.
-ConfigService::format_status in firmware/core/comms/config_reports.cpp must write the
+ConfigService::format_status in firmware/products/common/services/config_reports.cpp must write the
 status frame as the registry gives it:
 
   keys      every key of the frame, and nothing more
@@ -21,7 +21,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import link_registry  # noqa: E402
 
-STATUS_WRITER = link_registry.ROOT / "firmware" / "core" / "comms" / "config_reports.cpp"
+STATUS_WRITER = (link_registry.ROOT / "firmware" / "products" / "common" / "services" /
+                 "config_reports.cpp")
 BODY = re.compile(r"int ConfigService::format_status\([^)]*\) \{\n(.*?)\n\}", re.S)
 FIELD = re.compile(r"^\s*(if \(.*\)\s+)?writer\.add_(\w+)\(link::(?:status_key::k(\w+)|kCommandKey)",
                    re.M)

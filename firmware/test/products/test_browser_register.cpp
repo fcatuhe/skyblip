@@ -1,10 +1,10 @@
 // A trusted browser activates a unit with no press, and the press an untrusted one needs trusts it.
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/comms/link_registry.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "products/common/services/config_service.h"
 #include "test/support/activation_vectors.h"
 #include "test/support/product_rig.h"
 
@@ -42,7 +42,7 @@ struct Bench {
         pass(500);
     }
 
-    comms::ConfigService& config() { return rig.product.config_link().config(); }
+    common::ConfigService& config() { return rig.product.config_link().config(); }
 
     void pass(uint32_t for_ms) {
         rig.run(now_ms, now_ms + for_ms);
@@ -102,7 +102,7 @@ TEST_CASE("browser register: a trusted browser's register answers the registrati
     bench.challenge();
     const std::string answer = bench.register_with(bench.vectors.text("register_signature"));
     CHECK(answer.rfind("{\"command\":\"registration\"", 0) == 0);
-    CHECK(bench.config().pending() == comms::Pending::None);
+    CHECK(bench.config().pending() == common::Pending::None);
 }
 
 TEST_CASE("browser register: trust skips the press, never the nonce or the server's signature") {
@@ -113,7 +113,7 @@ TEST_CASE("browser register: trust skips the press, never the nonce or the serve
     std::string forged = bench.vectors.text("register_signature");
     forged[0] = forged[0] == '0' ? '1' : '0';
     CHECK(bench.register_with(forged) == refusal("bad_signature"));
-    CHECK(bench.config().pending() == comms::Pending::None);
+    CHECK(bench.config().pending() == common::Pending::None);
 
     bench.rig.platform.link().declare_payload_bytes(100);
     bench.challenge();
@@ -126,7 +126,7 @@ TEST_CASE("browser register: the press that allows an untrusted browser's regist
     REQUIRE(bench.prove(/*trusted=*/false).find("\"untrusted\"") != std::string::npos);
     bench.challenge();
     bench.register_with(bench.vectors.text("register_signature"));
-    REQUIRE(bench.config().pending() == comms::Pending::Register);
+    REQUIRE(bench.config().pending() == common::Pending::Register);
     CHECK(bench.config().prompt_trusts_browser());
 
     bench.pass(3000);

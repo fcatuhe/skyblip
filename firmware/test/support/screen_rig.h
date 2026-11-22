@@ -41,7 +41,7 @@ struct ScreenRig {
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation, state.own_transponder};
-    comms::ConfigService config{null.link, store};
+    common::ConfigService config{null.link, store};
     go::SelfTestSnapshot self_test{};
     common::AlarmService alarm_service{context, common::AlarmSettings{settings.alarm}};
     common::RecordPool pool{context, go::book_flash_in_dwell};

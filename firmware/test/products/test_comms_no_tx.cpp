@@ -1,17 +1,18 @@
 // The status push that says why a Go does not transmit, as its glass says it beside NO TX.
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/events/link.h"
 #include "core/timing/transmit_gate.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
 
 using namespace skyblip;
 using namespace skyblip::comms;
+using namespace skyblip::common;
 
 // A page says why the Go stopped transmitting as the glass does, without polling for it.
 TEST_CASE(

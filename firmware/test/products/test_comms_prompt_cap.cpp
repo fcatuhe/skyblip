@@ -1,10 +1,10 @@
 // One prompt at a time, thirty seconds at most, and none after the pilot refused one on that link.
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/events/link.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
@@ -13,6 +13,7 @@
 
 using namespace skyblip;
 using namespace skyblip::comms;
+using namespace skyblip::common;
 
 namespace {
 

@@ -5,12 +5,12 @@
 #include <cstdint>
 #include <optional>
 
-#include "core/comms/config.h"
 #include "core/comms/link_sessions.h"
 #include "core/comms/peer.h"
 #include "core/events/central.h"
 #include "ports/adsb_receiver.h"
 #include "products/common/services/alarm.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/observation_pacer.h"
 #include "products/skyblip_bravo/own_transponder.h"
@@ -30,7 +30,7 @@ class PeerService : public runtime::Service {
     // INFO: fc 17nov26 unverified (#194): three claim periods, so one lost claim keeps the call
     static constexpr uint32_t kCallMaxAgeMs = 3000;
 
-    PeerService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
+    PeerService(runtime::Context& context, Settings& settings, common::ConfigService& config,
                 const ports::AdsbReceiver& receiver, GateReference& gate,
                 const OwnTransponder& own_transponder, const common::AlarmService& alarm)
         : runtime::Service(context),
@@ -95,7 +95,7 @@ class PeerService : public runtime::Service {
                std::array<bool, ObservationPacer::kRecipients>& blocked, uint32_t now_ms);
 
     Settings& settings_;
-    comms::ConfigService& config_;
+    common::ConfigService& config_;
     const ports::AdsbReceiver& receiver_;
     GateReference& gate_;
     const OwnTransponder& own_transponder_;

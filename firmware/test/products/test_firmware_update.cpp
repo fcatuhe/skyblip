@@ -140,7 +140,7 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
     rig.send("{\"command\":\"recovery\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    REQUIRE(config(rig).pending() == comms::Pending::Recovery);
+    REQUIRE(config(rig).pending() == common::Pending::Recovery);
 
     config(rig).confirm();
     rig.run(now_ms, now_ms + 200);
@@ -465,13 +465,13 @@ TEST_CASE("product: a release unit refuses to ask for an older image, and asks f
     stage_versions(older);
     REQUIRE(older.setup() == Status::Ok);
     CHECK(ask_for(older, "0.1.0+11").find("\"reason\":\"older\"") != std::string::npos);
-    CHECK(config(older).pending() == comms::Pending::None);
+    CHECK(config(older).pending() == common::Pending::None);
 
     Rig same;
     stage_versions(same);
     REQUIRE(same.setup() == Status::Ok);
     CHECK(ask_for(same, "0.1.0+12").find("confirm_dfu") != std::string::npos);
-    CHECK(config(same).pending() == comms::Pending::Dfu);
+    CHECK(config(same).pending() == common::Pending::Dfu);
 }
 
 TEST_CASE("product: a development unit asks for an older image") {
@@ -480,7 +480,7 @@ TEST_CASE("product: a development unit asks for an older image") {
     rig.platform.dfu().allows_downgrade = true;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(ask_for(rig, "0.1.0+3").find("confirm_dfu") != std::string::npos);
-    CHECK(config(rig).pending() == comms::Pending::Dfu);
+    CHECK(config(rig).pending() == common::Pending::Dfu);
 }
 
 TEST_CASE("product: the update frame names the trusted key and, on a development unit, the rule") {

@@ -2,10 +2,7 @@
 
 #include <cstring>
 
-#include "core/comms/timing_report.h"
-#include "core/events/link.h"
 #include "core/util/cbor.h"
-#include "core/util/format.h"
 #include "core/util/span.h"
 
 namespace skyblip::comms {
@@ -15,175 +12,64 @@ constexpr int kAcknowledgementFrameBytes = 16;
 static_assert(
     kAcknowledgementFrameBytes <= ports::kMinimumLinkPayloadBytes,
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
-
-// INFO: fc 14nov26 Conflict is F.2.3's address check | 17nov26 Unsupported, a paired Bravo's alarm
-link::Reason settings_refusal(Status status) {
-    switch (status) {
-        case Status::OutOfRange: return link::Reason::OutOfRange;
-        case Status::Conflict: return link::Reason::NotOwnTransponder;
-        case Status::Unsupported: return link::Reason::SetOnGo;
-        default: return link::Reason::Invalid;
-    }
-}
-
-bool stages_prompt(link::Command command) {
-    switch (command) {
-        case link::Command::Set:
-        case link::Command::Dfu:
-        case link::Command::Recovery:
-        case link::Command::PowerOff:
-        case link::Command::GnssColdStart:
-        case link::Command::Register:
-        case link::Command::Capture:
-        case link::Command::Pair: return true;
-        default: return false;
-    }
-}
 }  // namespace
 
-void ConfigService::tick(uint32_t now_ms) {
-    now_ms_ = now_ms;
-    // INFO: fc 04aug26 nobody asks for a push again, so a transient refusal retries it
-    if (status_push_due_ && link_up()) push_status();
-    install_held_ = upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished();
-    if (upload_window_open_ && !install_held_ &&
-        now_ms - upload_window_opened_ms_ >= kUploadWindowMs)
-        upload_window_open_ = false;
-    if (install_held_ && !in_flight() && pending_ == Pending::None) install_received_image();
-    if (identity_ != nullptr) identity_->tick(now_ms);
-    if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptCeilingMs) {
-        pending_ = Pending::None;
-        pending_set_bytes_ = 0;
-        acknowledge(false, link::Reason::Expired);
-    }
-}
-
-void ConfigService::set_flight_state(flight::FlightState state) {
-    const bool changed = state != flight_state_;
-    flight_state_ = state;
-    // INFO: fc 20nov26 a prompt that survived the take-off roll could be confirmed by an elbow
-    if (pending_ != Pending::None && !prompt_allowed()) {
-        pending_ = Pending::None;
-        pending_set_bytes_ = 0;
-        acknowledge(false, link::Reason::InFlight);
-    }
-    // INFO: fc 03oct26 a page holding its buttons in flight learns it landed without polling
-    if (changed && link_up()) push_status();
-}
-
-bool ConfigService::connected(uint16_t session_id) const {
+bool ConfigChannel::connected(uint16_t session_id) const {
     for (int i = 0; i < connected_count_; i++)
         if (connected_sessions_[i] == session_id) return true;
     return false;
 }
 
-void ConfigService::note_connected(uint16_t session_id) {
+void ConfigChannel::connect(uint16_t session_id) {
     if (connected(session_id) || connected_count_ == static_cast<int>(LinkSessions::kMaxSessions))
         return;
     connected_sessions_[connected_count_++] = session_id;
 }
 
-void ConfigService::note_disconnected(uint16_t session_id) {
+bool ConfigChannel::disconnect(uint16_t session_id) {
     for (int i = 0; i < connected_count_; i++) {
         if (connected_sessions_[i] != session_id) continue;
         connected_sessions_[i] = connected_sessions_[--connected_count_];
-        return;
+        break;
     }
-}
-
-// INFO: fc 18sep26 A second Up on one session is the MTU exchange landing late, never a second app.
-void ConfigService::on_link_up(const events::LinkUp& event) {
-    note_connected(event.session_id);
-    if (image_state_ != dfu::ImageState::Confirmed ||
-        settings_fallback_ != settings::Fallback::None)
-        push_update(events::Peer{event.session_id, event.connection});
-}
-
-// INFO: fc 18sep26 only the holder's disconnect cancels, so another app leaving answers no prompt
-void ConfigService::on_link_down(const events::LinkDown& event) {
-    note_disconnected(event.session_id);
-    diagnostics_.link_drop_reason = event.reason;
-    if (identity_ != nullptr) identity_->forget(event.session_id);
-    browsers_.forget(event.session_id);
-    if (pairing_peer_ && pairing_peer_->session_id == event.session_id) pairing_peer_.reset();
-    if (!claim_.holds(event.session_id)) return;
+    if (!claim_.holds(session_id)) return false;
     claim_.release();
-    refused_on_device_ = false;
-    pending_ = Pending::None;
-    pending_set_bytes_ = 0;
-    upload_window_open_ = false;
-    status_push_due_ = false;
     drop_replies();
+    return true;
 }
 
-namespace {
-uint8_t battery_step(uint8_t percent) {
-    return static_cast<uint8_t>(percent / kBatteryPushStepPercent);
-}
-}
-
-void ConfigService::set_battery_state(const power::BatteryState& battery, power::PowerLevel level) {
-    const bool charging_changed = battery.charging != diagnostics_.battery.charging;
-    const bool level_changed = level != diagnostics_.power_level;
-    const bool step_changed =
-        battery_step(battery.percent) != battery_step(diagnostics_.battery.percent);
-
-    diagnostics_.battery = battery;
-    diagnostics_.power_level = level;
-
-    if (link_up() && (charging_changed || level_changed || step_changed)) push_status();
+bool ConfigChannel::admit(const events::Peer& peer) {
+    if (claim_.grant(peer)) return true;
+    refuse_unclaimed(peer);
+    return false;
 }
 
-void ConfigService::set_bravo_state(BravoState state) {
-    const bool changed = state != bravo_;
-    bravo_ = state;
-    if (changed && link_up()) push_status();
-}
-
-void ConfigService::set_no_tx(timing::NoTx reason) {
-    const bool changed = reason != no_tx_;
-    no_tx_ = reason;
-    if (changed && link_up()) push_status();
-}
-
-void ConfigService::set_own_transponder(const std::optional<OwnTransponderHeard>& heard) {
-    const bool changed = heard != own_transponder_;
-    own_transponder_ = heard;
-    if (changed && link_up()) push_status();
-}
-
-int ConfigService::payload_bytes() const { return static_cast<int>(link_.payload_bytes()); }
-
-int ConfigService::payload_bytes_to(uint16_t session_id) const {
-    return static_cast<int>(link_.payload_bytes_to(session_id));
-}
-
-// INFO: fc 04aug26 the controller fails a frame wider than the payload, so count it and keep it
-Status ConfigService::reply(const uint8_t* frame, int bytes) {
-    return reply_to(claim_.peer(), frame, bytes);
-}
-
-Status ConfigService::broadcast(const uint8_t* frame, int bytes) {
+Status ConfigChannel::broadcast(const uint8_t* frame, int bytes) {
     if (bytes <= 0 || bytes > payload_bytes()) {
-        diagnostics_.link_drops++;
+        link_drops_++;
         return Status::OutOfRange;
     }
     const Status sent =
         link_.send(events::Endpoint::Config, ConstByteSpan(frame, static_cast<size_t>(bytes)));
-    if (!is_ok(sent)) diagnostics_.link_drops++;
+    if (!is_ok(sent)) link_drops_++;
     return sent;
 }
 
-Status ConfigService::reply_to(const events::Peer& peer, const uint8_t* frame, int bytes) {
+// INFO: fc 04aug26 the controller fails a frame wider than the payload, so count it and keep it
+Status ConfigChannel::reply(const uint8_t* frame, int bytes) {
+    return reply_to(claim_.peer(), frame, bytes);
+}
+
+Status ConfigChannel::reply_to(const events::Peer& peer, const uint8_t* frame, int bytes) {
     const Status sent = deliver(peer, frame, bytes);
     if (sent == Status::OutOfRange && bytes > 0 && claim_.holds(peer)) refuse_too_wide();
     return sent;
 }
 
 // INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
-Status ConfigService::deliver(const events::Peer& peer, const uint8_t* frame, int bytes) {
+Status ConfigChannel::deliver(const events::Peer& peer, const uint8_t* frame, int bytes) {
     if (bytes <= 0 || bytes > payload_bytes_to(peer.session_id) || held_bytes_ > 0) {
-        diagnostics_.link_drops++;
+        link_drops_++;
         return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
     }
     const Status sent = link_.send_to(peer, events::Endpoint::Config,
@@ -191,13 +77,13 @@ Status ConfigService::deliver(const events::Peer& peer, const uint8_t* frame, in
     if (sent == Status::WouldBlock)
         hold(peer, frame, bytes);
     else if (!is_ok(sent))
-        diagnostics_.link_drops++;
+        link_drops_++;
     return sent;
 }
 
-void ConfigService::hold(const events::Peer& peer, const uint8_t* frame, int bytes) {
+void ConfigChannel::hold(const events::Peer& peer, const uint8_t* frame, int bytes) {
     if (bytes > kHeldFrameBytes) {
-        diagnostics_.link_drops++;
+        link_drops_++;
         return;
     }
     std::memcpy(held_frame_, frame, static_cast<size_t>(bytes));
@@ -206,13 +92,13 @@ void ConfigService::hold(const events::Peer& peer, const uint8_t* frame, int byt
     held_since_ms_ = now_ms_;
 }
 
-void ConfigService::drop_replies() {
+void ConfigChannel::drop_replies() {
     held_bytes_ = 0;
     diagnostics_report_.reset();
     timing_report_.reset();
 }
 
-void ConfigService::refuse_unclaimed(const events::Peer& peer) {
+void ConfigChannel::refuse_unclaimed(const events::Peer& peer) {
     uint8_t frame[kAcknowledgementFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Acknowledgement);
@@ -222,13 +108,7 @@ void ConfigService::refuse_unclaimed(const events::Peer& peer) {
     (void)reply_to(peer, frame, writer.finish());
 }
 
-void ConfigService::refuse_too_wide() { acknowledge(false, link::Reason::SmallMtu); }
-
-void ConfigService::stage(Pending pending, link::Reason reason) {
-    pending_ = pending;
-    pending_since_ms_ = now_ms_;
-    prompts_staged_++;
-    prompt_detail_[0] = 0;
+void ConfigChannel::acknowledge_pending(link::Reason reason) {
     uint8_t frame[kAcknowledgementFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Acknowledgement);
@@ -238,11 +118,11 @@ void ConfigService::stage(Pending pending, link::Reason reason) {
     (void)reply(frame, writer.finish());
 }
 
-void ConfigService::acknowledge(bool accepted, std::optional<link::Reason> reason) {
+void ConfigChannel::acknowledge(bool accepted, std::optional<link::Reason> reason) {
     acknowledge_to(claim_.peer(), accepted, reason);
 }
 
-void ConfigService::acknowledge_to(const events::Peer& peer, bool accepted,
+void ConfigChannel::acknowledge_to(const events::Peer& peer, bool accepted,
                                    std::optional<link::Reason> reason) {
     uint8_t frame[kAcknowledgementFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
@@ -252,230 +132,67 @@ void ConfigService::acknowledge_to(const events::Peer& peer, bool accepted,
     (void)reply_to(peer, frame, writer.finish());
 }
 
-// INFO: fc 03oct26 the version is what the press authorises, so the slot must hold that one
-void ConfigService::request_firmware(const cbor::Reader& frame) {
-    char text[dfu::kVersionTextBytes];
-    ports::ImageVersion version;
-    if (frame.read_text(link::dfu_key::kVersion, text, sizeof(text)) != Status::Ok ||
-        !dfu::parse_version(text, version)) {
-        acknowledge(false, link::Reason::NoVersion);
-        return;
-    }
-    ports::ImageVersion running;
-    if (dfu_ != nullptr && dfu_->running_version(running) &&
-        dfu::version_refusal(running, version, dfu_->downgrade_allowed()) != nullptr) {
-        acknowledge(false, link::Reason::Older);
-        return;
-    }
-    approved_version_ = version;
-    if (trusted_browser()) {
-        open_upload_window();
-        acknowledge(true, link::Reason::Dfu);
-        return;
-    }
-    stage(Pending::Dfu, link::Reason::ConfirmDfu);
-    (void)format_dfu_detail(prompt_detail_, sizeof(prompt_detail_), version);
+void ConfigChannel::start_diagnostics(const Diagnostics& diagnostics, link::Command command) {
+    start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics, command);
 }
 
-// INFO: fc 03oct26 the one press authorised the whole update, so a finished upload installs unasked
-void ConfigService::install_received_image() {
-    upload_window_open_ = false;
-    install_held_ = false;
-    ports::ImageVersion staged;
-    if (!dfu_->staged_version(staged)) {
-        refuse_landing(link::Reason::NothingStaged);
-    } else if (staged != approved_version_) {
-        refuse_landing(link::Reason::NotApproved);
-    } else if (!signed_by_trusted_key()) {
-        refuse_landing(link::Reason::WrongKey);
-    } else if (!swap_powered()) {
-        acknowledge(false, link::Reason::LowPower);
-    } else {
-        confirmed_ = Action::Install;
-        acknowledge(true, link::Reason::Install);
-    }
+void ConfigChannel::start_diagnostics(const Diagnostics& diagnostics, link::Command command,
+                                      DiagnosticsReport::Group only) {
+    start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics, command, only);
 }
 
-void ConfigService::refuse_landing(link::Reason reason) {
-    dfu::Landing landing{dfu_->check_staged()};
-    ports::SigningKeyHash key;
-    if (dfu_->staged_key(key)) landing.staged_key = key;
-    landing_ = landing;
-    refuse(reason);
+void ConfigChannel::start_timing(const timing::SlotTimingStatistics& statistics) {
+    start_report(timing_report_, kTimingFrameBytes, statistics);
 }
 
-// INFO: fc 03oct26 a key MCUboot refuses stops here, before the reboot | 15nov26 read off MCUboot
-bool ConfigService::signed_by_trusted_key() const {
-    ports::SigningKeyHash signer;
-    ports::BootloaderKeys bootloader;
-    if (dfu_->bootloader_keys(bootloader))
-        return dfu_->staged_key(signer) && bootloader.trusts(signer);
-    ports::SigningKeyHash trusted;
-    if (!dfu_->running_key(trusted)) return true;
-    return dfu_->staged_key(signer) && signer == trusted;
+template <class Report, class... Arguments>
+void ConfigChannel::start_report(std::optional<Report>& report, int frame_bytes,
+                                 const Arguments&... arguments) {
+    report_payload_bytes_ = payload_bytes_to(claim_.holder());
+    report_frame_bytes_ = frame_bytes;
+    if (!report.emplace(arguments...).fits(report_payload_bytes_)) {
+        link_drops_++;
+        report.reset();
+        refuse_too_wide();
+        return;
+    }
+    continue_report(report);
 }
 
-void ConfigService::on_rx(const events::RxFrame& frame) {
-    if (frame.endpoint != events::Endpoint::Config) return;
-    if (!claim_.grant(events::peer_of(frame))) {
-        refuse_unclaimed(events::peer_of(frame));
-        return;
-    }
-    const cbor::Reader reader(ConstByteSpan(frame.data.data(), frame.bytes));
-    const Result<uint32_t> code = reader.read_unsigned(link::kCommandKey);
-    if (!code.ok()) {
-        acknowledge(false, link::Reason::NoCommand);
-        return;
-    }
-    const link::Command command = code.value() <= UINT8_MAX
-                                      ? static_cast<link::Command>(code.value())
-                                      : link::Command::Acknowledgement;
-    if (!answers(command)) {
-        acknowledge(false, link::Reason::UnknownCommand);
-        return;
-    }
-    if (!reader.keys_within(link::host_keys(command))) {
-        acknowledge(false, link::Reason::Invalid);
-        return;
-    }
-    if (stages_prompt(command) && prompt_refused()) return;
-    switch (command) {
-        case link::Command::Get: send_config(); return;
-        case link::Command::Defaults: send_defaults(); return;
-        case link::Command::Status: send_status(); return;
-        case link::Command::Timing: send_timing(); return;
-        case link::Command::Flash: send_flash(); return;
-        case link::Command::Radio: send_radio(); return;
-        case link::Command::Update: send_update(); return;
-        case link::Command::Diagnostics: send_diagnostics(); return;
-        case link::Command::Set: stage_settings(frame); return;
-        case link::Command::Dfu:
-        case link::Command::Recovery:
-        case link::Command::PowerOff:
-        case link::Command::GnssColdStart: answer_prompt_request(command, reader); return;
-        case link::Command::Challenge: challenge(); return;
-        case link::Command::Register: register_unit(reader); return;
-        case link::Command::Unlock: unlock(reader); return;
-        case link::Command::Attest: attest(reader); return;
-        case link::Command::Capture: request_capture(reader); return;
-        case link::Command::Pair: request_pairing(reader); return;
-        case link::Command::BrowserChallenge: browser_challenge(); return;
-        case link::Command::TrustBrowser: trust_browser(reader); return;
-        case link::Command::Browsers: send_browser(reader); return;
-        case link::Command::ForgetBrowser: forget_browser(reader); return;
-        case link::Command::InstallReport: send_install_report(); return;
-        case link::Command::Protocols: send_protocols(); return;
-        case link::Command::Identity: send_identity(); return;
-        default: return;
+// INFO: fc 25sep26 a frame held for the link still counts as sent, so the next one follows it
+template <class Report>
+void ConfigChannel::continue_report(std::optional<Report>& report) {
+    uint8_t frame[kHeldFrameBytes];
+    while (report && held_bytes_ == 0) {
+        const int bytes = report->next_frame(report_payload_bytes_, frame, report_frame_bytes_);
+        if (bytes <= 0) {
+            link_drops_++;
+            report.reset();
+            return;
+        }
+        const Status sent = reply(frame, bytes);
+        if (report->exhausted() || (sent != Status::Ok && sent != Status::WouldBlock))
+            report.reset();
     }
 }
 
-bool ConfigService::answers(link::Command command) const {
-    switch (command) {
-        case link::Command::Get:
-        case link::Command::Defaults:
-        case link::Command::Status:
-        case link::Command::Timing:
-        case link::Command::Flash:
-        case link::Command::Radio:
-        case link::Command::Update:
-        case link::Command::InstallReport:
-        case link::Command::Diagnostics:
-        case link::Command::Set:
-        case link::Command::Dfu:
-        case link::Command::Recovery:
-        case link::Command::PowerOff:
-        case link::Command::GnssColdStart: return true;
-        case link::Command::Challenge:
-        case link::Command::Register:
-        case link::Command::Unlock:
-        case link::Command::Attest:
-        case link::Command::Identity:
-        case link::Command::BrowserChallenge:
-        case link::Command::TrustBrowser:
-        case link::Command::Browsers:
-        case link::Command::ForgetBrowser: return identity_ != nullptr;
-        case link::Command::Capture: return serves_captures_;
-        case link::Command::Protocols: return !radio_protocols_.empty();
-        case link::Command::Pair: return pairing_side_ != PairingSide::None;
-        case link::Command::Acknowledgement:
-        case link::Command::Config:
-        case link::Command::Registration:
-        case link::Command::Attestation:
-        case link::Command::List:
-        case link::Command::Read:
-        case link::Command::Erase:
-        case link::Command::Log:
-        case link::Command::Session:
-        case link::Command::Chunk:
-        case link::Command::Ownship:
-        case link::Command::Observation:
-        case link::Command::Health:
-        case link::Command::PeerClaim:
-        case link::Command::Browser: return false;
+void ConfigChannel::resume(uint32_t now_ms) {
+    now_ms_ = now_ms;
+    if (held_bytes_ > 0) {
+        const Status sent =
+            link_.send_to(held_for_, events::Endpoint::Config,
+                          ConstByteSpan(held_frame_, static_cast<size_t>(held_bytes_)));
+        if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyWaitCeilingMs)
+            return;
+        held_bytes_ = 0;
+        if (!is_ok(sent)) {
+            link_drops_++;
+            drop_replies();
+            return;
+        }
     }
-    return false;
-}
-
-// INFO: fc 04aug26 refused, never answered short: a config reply missing a field renders defaults
-void ConfigService::send_config() {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
-    cbor::Writer writer(frame, sizeof(frame));
-    writer.add_code(link::kCommandKey, link::Command::Config);
-    store_.write_fields(writer);
-    if (paired_tag_) writer.add_unsigned(link::config_key::kPairedTag, *paired_tag_);
-    const int bytes = writer.finish();
-    if (bytes == 0) {
-        diagnostics_.link_drops++;
-        return;
-    }
-    (void)reply(frame, bytes);
-}
-
-void ConfigService::stage_settings(const events::RxFrame& frame) {
-    if (in_flight() && !trusted_browser()) {
-        acknowledge(false, link::Reason::InFlight);
-        return;
-    }
-    // INFO: fc 20oct26 refused at the door: a pilot must never confirm a write that cannot happen
-    if (!settings_writable()) {
-        acknowledge(false, link::Reason::LowPower);
-        return;
-    }
-    const cbor::Reader reader(ConstByteSpan(frame.data.data(), frame.bytes));
-    char detail[sizeof(prompt_detail_)]{};
-    const Status described =
-        store_.describe_changes(reader, detail, static_cast<int>(sizeof(detail)));
-    if (described != Status::Ok) {
-        acknowledge(false, settings_refusal(described));
-        return;
-    }
-    if (trusted_browser()) {
-        apply_settings(reader);
-        return;
-    }
-    pending_set_bytes_ = frame.bytes;
-    std::memcpy(pending_set_frame_, frame.data.data(), frame.bytes);
-    stage(Pending::Set, link::Reason::Confirm);
-    std::memcpy(prompt_detail_, detail, sizeof(detail));
-}
-
-void ConfigService::apply_settings(const cbor::Reader& frame) {
-    const Status applied = store_.apply(frame);
-    if (applied != Status::Ok) {
-        acknowledge(false, settings_refusal(applied));
-        return;
-    }
-    remember_browser();
-    settings_dirty_ = true;
-    acknowledge(true);
-}
-
-void ConfigService::open_upload_window() {
-    upload_window_open_ = true;
-    upload_window_opened_ms_ = now_ms_;
-    landing_.reset();
-    if (dfu_) dfu_->forget_upload();
+    continue_report(diagnostics_report_);
+    continue_report(timing_report_);
 }
 
 }  // namespace skyblip::comms

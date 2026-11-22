@@ -2,7 +2,6 @@
 #include <cstring>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/comms/identity_link.h"
 #include "core/identity/unit.h"
 #include "core/util/hex.h"
@@ -12,6 +11,7 @@
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/activation_vectors.h"
@@ -109,7 +109,7 @@ struct Bench {
         return answer_since(before);
     }
 
-    comms::Pending pending() { return rig.product.config_link().config().pending(); }
+    common::Pending pending() { return rig.product.config_link().config().pending(); }
     const identity::Activation& activation() { return rig.state().activation; }
 };
 
@@ -168,7 +168,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(bench.register_with_vectors() ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,\"reason\":"
           "\"confirm_register\"}");
-    REQUIRE(bench.pending() == comms::Pending::Register);
+    REQUIRE(bench.pending() == common::Pending::Register);
 
     const std::string registration = bench.accept();
     CHECK(registration ==
@@ -212,9 +212,9 @@ TEST_CASE("activation: the glass names the operation one press authorises") {
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
     bench.read_the_prompt();
-    REQUIRE(bench.rig.product.screen().prompt() == comms::Pending::Register);
+    REQUIRE(bench.rig.product.screen().prompt() == common::Pending::Register);
     const go::Glass& glass = bench.rig.product.screen().framebuffer();
-    CHECK(reads_in(glass, comms::pending_title(comms::Pending::Register), 0, 0, go::kGlassWidth,
+    CHECK(reads_in(glass, common::pending_title(common::Pending::Register), 0, 0, go::kGlassWidth,
                    go::kGlassHeight, 2));
     CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassWidth, go::kGlassHeight, 2));
 }
@@ -237,7 +237,7 @@ TEST_CASE("activation: a tap of the pad cancels the registration, thirty seconds
         bench.challenge_with_vectors_nonce();
         bench.register_with_vectors();
         const size_t before = bench.rig.platform.link().sent.size();
-        bench.pass(comms::kPromptCeilingMs + 500);
+        bench.pass(common::kPromptCeilingMs + 500);
         CHECK(bench.answer_since(before) == refusal("expired"));
     }
 }
@@ -250,12 +250,12 @@ TEST_CASE(
     bench.boot();
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
-    REQUIRE(bench.pending() == comms::Pending::Register);
+    REQUIRE(bench.pending() == common::Pending::Register);
 
     CHECK(bench.say(
               register_command(std::string(32, '0'), bench.vectors.text("register_signature"))) ==
           refusal("prompt_pending"));
-    CHECK(bench.pending() == comms::Pending::Register);
+    CHECK(bench.pending() == common::Pending::Register);
     CHECK(bench.accept().find(bench.vectors.text("registration_signature")) != std::string::npos);
 }
 
@@ -284,7 +284,7 @@ TEST_CASE("activation: register and unlock without a challenge have no session t
     bench.boot();
     CHECK(bench.register_with_vectors() == refusal("no_session"));
     CHECK(bench.unlock_with_vectors() == refusal("no_session"));
-    CHECK(bench.pending() == comms::Pending::None);
+    CHECK(bench.pending() == common::Pending::None);
 }
 
 TEST_CASE("activation: a register the trusted server did not sign is refused at the door") {
@@ -297,7 +297,7 @@ TEST_CASE("activation: a register the trusted server did not sign is refused at 
           refusal("bad_signature"));
     CHECK(bench.say(register_command("not hex", bench.vectors.text("register_signature"))) ==
           refusal("bad_signature"));
-    CHECK(bench.pending() == comms::Pending::None);
+    CHECK(bench.pending() == common::Pending::None);
 }
 
 // A fresh challenge replaces unit_nonce, so the register signature over the old one no longer
@@ -321,7 +321,7 @@ TEST_CASE(
                                                     1);
     bench.challenge_with_vectors_nonce();
     CHECK(bench.register_with_vectors() == refusal("small_mtu"));
-    CHECK(bench.pending() == comms::Pending::None);
+    CHECK(bench.pending() == common::Pending::None);
 }
 
 // A central that never exchanged its MTU stopped the activation at its first step, unanswered.
@@ -616,7 +616,7 @@ struct Desk {
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
-    comms::ConfigService config{link, store, &dfu};
+    common::ConfigService config{link, store, &dfu};
     Identity port;
     platform::host::Random random;
     identity::Unit unit{port, random};
@@ -668,9 +668,9 @@ TEST_CASE(
         desk.say("{\"command\":\"challenge\"}");
         desk.say(register_command(desk.vectors.text("server_nonce"),
                                   desk.vectors.text("register_signature")));
-        REQUIRE(desk.config.pending() == comms::Pending::Register);
+        REQUIRE(desk.config.pending() == common::Pending::Register);
         desk.config.set_flight_state(flight_state);
-        REQUIRE(desk.config.pending() == comms::Pending::Register);
+        REQUIRE(desk.config.pending() == common::Pending::Register);
         desk.config.confirm();
         CHECK(link_text(desk.link.last().bytes).find(desk.vectors.text("registration_signature")) !=
               std::string::npos);
@@ -702,9 +702,9 @@ TEST_CASE("activation: an activated unit's register prompt is cancelled at take-
     desk.config.set_flight_state(flight::FlightState::Ground);
     REQUIRE(desk.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
     desk.register_signed_by_the_test_server();
-    REQUIRE(desk.config.pending() == comms::Pending::Register);
+    REQUIRE(desk.config.pending() == common::Pending::Register);
     desk.config.set_flight_state(flight::FlightState::Airborne);
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
     CHECK(link_text(desk.link.last().bytes) == refusal("in_flight"));
 }
 
@@ -770,7 +770,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
         desk.dfu.release = release;
         desk.say("{\"command\":\"challenge\"}");
         desk.register_signed_by_the_test_server();
-        REQUIRE(desk.config.pending() == comms::Pending::Register);
+        REQUIRE(desk.config.pending() == common::Pending::Register);
         desk.config.confirm();
         const std::string frame = link_text(desk.link.last().bytes);
         CHECK(frame.find(release ? "\"release\":true," : "\"release\":false,") !=
@@ -816,7 +816,7 @@ TEST_CASE("activation: the registration frame at the widest version is exactly t
     char signature_hex[129] = {0};
     hex::write(ConstByteSpan(signature.data(), signature.size()), signature_hex);
     desk.say(register_command(server_hex, signature_hex));
-    REQUIRE(desk.config.pending() == comms::Pending::Register);
+    REQUIRE(desk.config.pending() == common::Pending::Register);
     desk.config.confirm();
     CHECK(desk.link.last().bytes.size() == size_t(comms::IdentityLink::kRegistrationFrameBytes));
     CHECK(link_text(desk.link.last().bytes).find("9.99.99+99999") != std::string::npos);

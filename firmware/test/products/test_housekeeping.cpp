@@ -180,7 +180,7 @@ TEST_CASE("product: a confirmed gnss_cold_start restarts the receiver once") {
 
     rig.send("{\"command\":\"gnss_cold_start\"}");
     rig.run(1000, 1500);
-    REQUIRE(rig.config().pending() == comms::Pending::GnssColdStart);
+    REQUIRE(rig.config().pending() == common::Pending::GnssColdStart);
     CHECK(rig.platform.chips().gnss.restarts == 0);
 
     rig.config().confirm();
@@ -201,7 +201,7 @@ TEST_CASE("product: a confirmed power_off over the link parks the device like a 
     rig.run(1000, 1500);
     // Asking is not doing: the request is still waiting for the confirmation
     // the device demands, and nothing has moved.
-    CHECK(rig.config().pending() == comms::Pending::PowerOff);
+    CHECK(rig.config().pending() == common::Pending::PowerOff);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.product.board().rf().sleeps() == 0);
 
@@ -246,7 +246,7 @@ TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
     flying.send("{\"command\":\"power_off\"}");
     flying.run(flying_now_ms, flying_now_ms + 2000);
     flying_now_ms += 2000;
-    CHECK(flying.config().pending() == comms::Pending::None);
+    CHECK(flying.config().pending() == common::Pending::None);
     flying.config().confirm();
     flying.run(flying_now_ms, flying_now_ms + 2000);
     CHECK_FALSE(flying.product.shutdown().going_down());

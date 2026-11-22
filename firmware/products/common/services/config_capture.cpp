@@ -1,9 +1,9 @@
-#include "core/comms/config.h"
+#include "products/common/services/config_service.h"
 
-namespace skyblip::comms {
+namespace skyblip::common {
 
 namespace {
-constexpr uint32_t kLastProfileCode = static_cast<uint32_t>(CaptureProfile::Stop);
+constexpr uint32_t kLastProfileCode = static_cast<uint32_t>(comms::CaptureProfile::Stop);
 }
 
 void ConfigService::request_capture(const cbor::Reader& frame) {
@@ -22,11 +22,11 @@ void ConfigService::request_capture(const cbor::Reader& frame) {
     } else if (!capture_armed_ && stop) {
         refuse(link::Reason::NotCapturing);
     } else {
-        staged_capture_ = static_cast<CaptureProfile>(code.value());
+        staged_capture_ = static_cast<comms::CaptureProfile>(code.value());
         stage(Pending::Capture, link::Reason::ConfirmCapture);
         (void)format_capture_detail(prompt_detail_, staged_capture_,
                                     diagnostics_.capture_evicts_flights);
     }
 }
 
-}  // namespace skyblip::comms
+}  // namespace skyblip::common

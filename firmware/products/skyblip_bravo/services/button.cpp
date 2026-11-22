@@ -30,9 +30,9 @@ uint32_t ButtonService::due_in_ms(uint32_t /*now_ms*/) const {
 }
 
 void ButtonService::sync_prompt(uint32_t now_ms) {
-    const comms::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
-                                       ? config_.pending()
-                                       : comms::Pending::None;
+    const common::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
+                                        ? config_.pending()
+                                        : common::Pending::None;
     const uint32_t staged = config_.prompts_staged();
     if (pending == prompt_ && staged == prompts_staged_) return;
     prompt_ = pending;
@@ -88,7 +88,7 @@ void ButtonService::press(uint32_t now_ms) {
 
 void ButtonService::accept_prompt() {
     config_.confirm();
-    prompt_ = comms::Pending::None;
+    prompt_ = common::Pending::None;
     answer_.disarm();
 }
 
