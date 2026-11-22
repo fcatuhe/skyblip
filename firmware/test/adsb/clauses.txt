@@ -1,4 +1,5 @@
 # The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
+# A clause no case reads carries a mark under it: the claim after `  - `, then its kind and reason indented four spaces, as a skipped case would name it and FAIL.
 DO-260B 2.2.3.2 ADS-B and TIS-B Message Baseline Format and Structures
 DO-260B 2.2.3.2.1 ADS-B Message Baseline Field Descriptions
 DO-260B 2.2.3.2.1.1 "DF" Downlink Format Field
@@ -12,7 +13,13 @@ DO-260B 2.2.3.2.3.1 "TYPE" Code Subfield in ADS-B Airborne Position Messages
 DO-260B 2.2.3.2.3.1.3 Special Processing for TYPE Code Equal to ZERO
 DO-260B 2.2.3.2.3.1.3.1 Significance of TYPE Code Equal to ZERO
 DO-260B 2.2.3.2.3.2 "Surveillance Status" Subfield in ADS-B Airborne Position Messages
+# TODO: fc 17nov26 Message carries no surveillance status, until the glass can show an emergency
+  - the surveillance status names an emergency, an alert or the SPI
+    not implemented: ME bits 6 and 7 are not read, so an emergency or SPI goes unshown
 DO-260B 2.2.3.2.3.3 "NIC Supplement-B" Subfield in ADS-B Airborne Position Messages
+# TODO: fc 17nov26 no NIC is reported, until a consumer weighs a position's integrity
+  - NIC supplement B and the TYPE code give the position's NIC
+    not implemented: ME bit 8 is not read, and no NIC is reported
 DO-260B 2.2.3.2.3.4 "Altitude" Subfield in ADS-B Airborne Position Messages
 DO-260B 2.2.3.2.3.4.1 "Barometric Altitude" in ADS-B Airborne Position Messages
 DO-260B 2.2.3.2.3.4.2 "GNSS Height Above the Ellipsoid (HAE)" in ADS-B Airborne Position Messages
@@ -41,8 +48,14 @@ DO-260B 2.2.3.2.6.1 ADS-B Airborne Velocity Message - Subtype=1
 DO-260B 2.2.3.2.6.1.1 "TYPE" Code Subfield in Airborne Velocity Message - Subtype=1
 DO-260B 2.2.3.2.6.1.2 "Subtype" Code Subfield in Airborne Velocity Message - Subtype=1
 DO-260B 2.2.3.2.6.1.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=1
+# TODO: fc 17nov26 no report carries the intent change, until an application asks for it
+  - subtype 1's intent change flag says the intent changed
+    not implemented: ME bit 9 is not read
 DO-260B 2.2.3.2.6.1.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=1
 DO-260B 2.2.3.2.6.1.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=1
+# TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
+  - subtype 1's NACv bounds the velocity's error
+    not implemented: ME bits 11 to 13 are not read, and no NACv is reported
 DO-260B 2.2.3.2.6.1.6 "East/West Direction Bit" Subfield in Airborne Velocity Messages - Subtype=1
 DO-260B 2.2.3.2.6.1.7 "East/West Velocity" Subfield in Airborne Velocity Messages - Subtype=1
 DO-260B 2.2.3.2.6.1.8 "North/South Direction Bit" Subfield in Airborne Velocity Messages - Subtype=1
@@ -57,8 +70,14 @@ DO-260B 2.2.3.2.6.2 ADS-B Airborne Velocity Message - Subtype=2
 DO-260B 2.2.3.2.6.2.1 "TYPE" Code Subfield in Airborne Velocity Messages - Subtype=2
 DO-260B 2.2.3.2.6.2.2 "Subtype" Code Subfield in Airborne Velocity Messages - Subtype=2
 DO-260B 2.2.3.2.6.2.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=2
+# TODO: fc 17nov26 no report carries the intent change, until an application asks for it
+  - subtype 2's intent change flag says the intent changed
+    not implemented: ME bit 9 is not read
 DO-260B 2.2.3.2.6.2.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=2
 DO-260B 2.2.3.2.6.2.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=2
+# TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
+  - subtype 2's NACv bounds the velocity's error
+    not implemented: ME bits 11 to 13 are not read, and no NACv is reported
 DO-260B 2.2.3.2.6.2.6 "East/West Direction Bit" Subfield in Airborne Velocity Messages - Subtype=2
 DO-260B 2.2.3.2.6.2.7 "East/West Velocity" Subfield in Airborne Velocity Messages - Subtype=2
 DO-260B 2.2.3.2.6.2.8 "North/South Direction Bit" Subfield in Airborne Velocity Messages - Subtype=2
@@ -73,8 +92,14 @@ DO-260B 2.2.3.2.6.3 ADS-B Airborne Velocity Message - Subtype=3
 DO-260B 2.2.3.2.6.3.1 "TYPE" Code Subfield in Airborne Velocity Messages - Subtype=3
 DO-260B 2.2.3.2.6.3.2 "Subtype" Code Subfield in Airborne Velocity Messages - Subtype=3
 DO-260B 2.2.3.2.6.3.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=3
+# TODO: fc 17nov26 no report carries the intent change, until an application asks for it
+  - subtype 3's intent change flag says the intent changed
+    not implemented: ME bit 9 is not read
 DO-260B 2.2.3.2.6.3.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=3
 DO-260B 2.2.3.2.6.3.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=3
+# TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
+  - subtype 3's NACv bounds the velocity's error
+    not implemented: ME bits 11 to 13 are not read, and no NACv is reported
 DO-260B 2.2.3.2.6.3.6 "Heading Status Bit" Subfield in Airborne Velocity Messages - Subtype=3
 DO-260B 2.2.3.2.6.3.7 "Heading" Subfield in Airborne Velocity Messages - Subtype=3
 DO-260B 2.2.3.2.6.3.8 "Airspeed Type" Subfield in Airborne Velocity Messages - Subtype=3
@@ -89,8 +114,14 @@ DO-260B 2.2.3.2.6.4 ADS-B Airborne Velocity Message - Subtype=4
 DO-260B 2.2.3.2.6.4.1 "TYPE" Code Subfield in Airborne Velocity Messages - Subtype=4
 DO-260B 2.2.3.2.6.4.2 "Subtype" Code Subfield in Airborne Velocity Messages - Subtype=4
 DO-260B 2.2.3.2.6.4.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=4
+# TODO: fc 17nov26 no report carries the intent change, until an application asks for it
+  - subtype 4's intent change flag says the intent changed
+    not implemented: ME bit 9 is not read
 DO-260B 2.2.3.2.6.4.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=4
 DO-260B 2.2.3.2.6.4.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=4
+# TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
+  - subtype 4's NACv bounds the velocity's error
+    not implemented: ME bits 11 to 13 are not read, and no NACv is reported
 DO-260B 2.2.3.2.6.4.6 "Heading Status Bit" Subfield in Airborne Velocity Messages - Subtype=4
 DO-260B 2.2.3.2.6.4.7 "Heading" Subfield in Airborne Velocity Messages - Subtype=4
 DO-260B 2.2.3.2.6.4.8 "Airspeed Type" Subfield in Airborne Velocity Messages - Subtype=4
@@ -104,21 +135,54 @@ DO-260B 2.2.3.2.6.4.15 "Difference From Barometric Altitude" Subfield in Airborn
 DO-260B 2.2.3.2.6.5 ADS-B Airborne Velocity Messages - Subtypes "5, 6, & 7"
 DO-260B 2.2.3.2.7 ADS-B Periodic Status and Event-Driven Messages
 DO-260B 2.2.3.2.7.1 "Target State and Status" Messages
+# TODO: fc 17nov26 TYPE 29 is not decoded, until an application shows a target's selected altitude
+  - the target state and status message gives the selected altitude and heading
+    not implemented: TYPE 29 comes back Unsupported
 DO-260B 2.2.3.2.7.2 "Aircraft Operational Status" Messages
 DO-260B 2.2.3.2.7.2.1 "TYPE" Code Subfield in Aircraft Operational Status Messages
 DO-260B 2.2.3.2.7.2.2 "Subtype" Code Subfield in Aircraft Operational Status Messages
 DO-260B 2.2.3.2.7.2.3 "CAPABILITY CLASS (CC)" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no capability class is reported, until an application asks what a sender can do
+  - the capability class codes say what the sender can do
+    not implemented: ME bits 9 to 24 are not read
 DO-260B 2.2.3.2.7.2.4 "OPERATIONAL MODE (OM)" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no operational mode is reported, until an application shows an IDENT or an RA
+  - the operational mode codes give TCAS RA, IDENT, antenna and SDA
+    not implemented: ME bits 25 to 40 are not read
 DO-260B 2.2.3.2.7.2.5 ADS-B "Version Number" Subfield in Aircraft Operational Status Message
 DO-260B 2.2.3.2.7.2.6 "NIC Supplement-A" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no NIC is reported, until a consumer weighs a position's integrity
+  - NIC supplement A completes the position's NIC
+    not implemented: ME bit 44 is not read
 DO-260B 2.2.3.2.7.2.7 "Navigation Accuracy Category for Position (NACP)" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no NACp is reported, until a consumer weighs a position's accuracy
+  - the NACp bounds the position's accuracy
+    not implemented: ME bits 45 to 48 are not read
 DO-260B 2.2.3.2.7.2.8 "Geometric Vertical Accuracy (GVA)" Subfield in Aircraft Operational Status Messages
 DO-260B 2.2.3.2.7.2.9 "Source Integrity Level (SIL)" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no SIL is reported, until a consumer weighs a position's integrity
+  - the SIL bounds the chance the position is outside its containment
+    not implemented: ME bits 51 and 52 are not read
 DO-260B 2.2.3.2.7.2.10 "Barometric Altitude Integrity Code (NICBARO) Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no NICbaro is reported, until a consumer weighs an altitude's integrity
+  - NICbaro says whether the pressure altitude was cross-checked
+    not implemented: ME bit 53 of subtype 0 is not read
 DO-260B 2.2.3.2.7.2.11 "Aircraft/Vehicle Length and Width Code" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no size is reported, until a surface picture draws one
+  - the length and width code sizes a surface participant
+    not implemented: ME bits 21 to 24 of subtype 1 are not read
 DO-260B 2.2.3.2.7.2.12 "Track Angle/Heading" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no surface heading type is reported, until a surface picture draws one
+  - the track angle/heading bit says which a surface participant sends
+    not implemented: ME bit 53 of subtype 1 is not read
 DO-260B 2.2.3.2.7.2.13 "Horizontal Reference Direction (HRD)" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no heading reference is reported, until an airspeed heading is drawn as a track
+  - the HRD says whether headings are true or magnetic
+    not implemented: ME bit 54 is not read
 DO-260B 2.2.3.2.7.2.14 "SIL Supplement" Subfield in Aircraft Operational Status Messages
+# TODO: fc 17nov26 no SIL is reported, until a consumer weighs a position's integrity
+  - the SIL supplement says whether SIL counts per hour or per sample
+    not implemented: ME bit 55 is not read
 DO-260B 2.2.3.2.7.2.15 "Reserved" Subfield in Aircraft Operational Status Message
 DO-260B 2.2.3.2.7.3 TYPE Code "23" ADS-B Messages for "TEST"
 DO-260B 2.2.3.2.7.4 Surface System Status Messages with TYPE Code=24
@@ -126,53 +190,125 @@ DO-260B 2.2.3.2.7.5 RESERVED TYPE Code "25" ADS-B Messages
 DO-260B 2.2.3.2.7.6 RESERVED TYPE Code "26" ADS-B Messages
 DO-260B 2.2.3.2.7.7 RESERVED TYPE Code "27" ADS-B Messages
 DO-260B 2.2.3.2.7.8 Extended Squitter Aircraft Status Messages with TYPE Code=28
+# TODO: fc 17nov26 TYPE 28 is not decoded, until the glass can show an emergency or a TCAS RA
+  - the aircraft status gives the emergency, the Mode A code and the RA
+    not implemented: TYPE 28 comes back Unsupported
 DO-260B 2.2.3.2.7.9 RESERVED TYPE Code "30" ADS-B Messages
 DO-260B 2.2.4 ADS-B Receiver Characteristics
 DO-260B 2.2.4.1 Minimum Triggering Level (MTL) Definition
+# TODO: fc 17nov26 Bravo's MTL is not measured, until the #172 bench run gives one
+  - the MTL is the level at which 90% of messages are received
+    unmeasured: no bench has found the level at which Bravo receives 90% of messages (#172)
 DO-260B 2.2.4.3 Receivers Not Shared With TCAS
 DO-260B 2.2.4.3.1 In-Band Acceptance and Re-Triggerable Capability
 DO-260B 2.2.4.3.1.1 In-Band Acceptance
+# TODO: fc 17nov26 Bravo's MTL is not measured, until the #172 bench run gives one
+  - a class A0 receiver's MTL is -72 dBm or better
+    unmeasured: the -72 dBm of Table 2-79 has not been measured at Bravo's antenna (#172)
 DO-260B 2.2.4.3.1.2 Re-Triggerable Capability
+# INFO: fc 17nov26 the clause binds classes A1S to A3, and Bravo's 100 tracks are A0
+  - a preamble 3 dB stronger re-triggers the receiver
+    optional: re-triggering binds classes A1S to A3, and Bravo's 100 tracks are A0
 DO-260B 2.2.4.3.2 Out-of-Band Rejection
+# TODO: fc 17nov26 out-of-band rejection is unmeasured, until a bench run with a signal generator
+  - off 1090 MHz a message needs 3 to 60 dB more to be received
+    unmeasured: Table 2-80's rejection has not been measured on the LR2021 (#172)
 DO-260B 2.2.4.3.3 Dynamic Minimum Trigger Level (DMTL)
 DO-260B 2.2.4.3.4 1090 MHz ADS-B Message Reception Techniques
 DO-260B 2.2.4.3.4.1 ADS-B Message Reception
+# TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
+  - a strong pulse raises the threshold to 6 dB under it
+    not implemented: the OOK detection threshold is fixed at -110 dBm, with no DMTL
 DO-260B 2.2.4.3.4.2 Narrow Pulse Discrimination
+# TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
+  - pulses under 0.3 us do not move the DMTL
+    not implemented: there is no DMTL for a narrow pulse to move
 DO-260B 2.2.4.3.4.3 TACAN and DME Discrimination
+# TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
+  - TACAN and DME pulses do not move the DMTL
+    not implemented: there is no DMTL for a TACAN or DME pulse to move
 DO-260B 2.2.4.3.4.4 Pulse Characteristics of Received ADS-B Messages
+# INFO: fc 17nov26 the clause points back to the transmitter's pulse shape, 2.2.2.2.1
+  - received pulses are shaped as 2.2.2.2.1 transmits them
+    prose: a pointer to the transmitter's pulse characteristics
 DO-260B 2.2.4.3.4.5 Message Formats
 DO-260B 2.2.4.3.4.6 Description of 1090 MHz ADS-B Message Received Signals
+# INFO: fc 17nov26 the clause points back to the message formats, 2.2.3.2.3 to 2.2.3.2.7
+  - the received signals carry the formats of 2.2.3.2.3 to 2.2.3.2.7
+    prose: a pointer to the message formats, which the component's half reads
 DO-260B 2.2.4.3.4.7 ADS-B Signal Reception
 DO-260B 2.2.4.3.4.7.1 Criteria for ADS-B Message Transmission Pulse Detection
+# TODO: fc 17nov26 the LR2021 decides bits and reports no edges, until a part that does replaces it
+  - pulses are detected on their leading edges
+    not implemented: the LR2021 decides each bit from its chip pair and reports no pulse edges
 DO-260B 2.2.4.3.4.7.2 Criteria for Preamble Acceptance
 DO-260B 2.2.4.3.4.7.3 Criteria for Data Block Acceptance in ADS-B Message Signals
+# TODO: fc 17nov26 no doubtful bit reaches the decoder, until a receiver hands up its chip pairs
+  - a frame with more than seven doubtful bits in a row is refused
+    not implemented: Bravo's LR2021 hands up no doubtful bit, so the decoder counts no run of them
 DO-260B 2.2.4.3.5 ADS-B Receiver Duty Factor
 DO-260B 2.2.4.4 Enhanced Squitter Reception Techniques
+# INFO: fc 17nov26 2.2.4.4.2 binds these to classes A1S to A3, and Bravo answers to A0
+  - enhanced squitter reception copes with overlapping Mode A/C fruit
+    optional: the enhanced techniques bind classes A1S to A3, and Bravo's 100 tracks are A0
 DO-260B 2.2.4.4.1 Need for Enhanced Techniques
+# INFO: fc 17nov26 a rationale for the enhanced techniques, with nothing a receiver does
+  - dense fruit is why enhanced reception exists
+    prose: the need for the enhanced techniques, with nothing a receiver does
 DO-260B 2.2.4.4.2 Enhanced Squitter Reception Technique Overview
+# INFO: fc 17nov26 2.2.4.4.2 binds these to classes A1S to A3, and Bravo answers to A0
+  - enhanced reception improves preamble, bit and error decisions
+    optional: the enhanced techniques bind classes A1S to A3, and Bravo's 100 tracks are A0
 DO-260B 2.2.4.4.3 Error Correction
+# INFO: fc 17nov26 2.2.4.5 c binds the enhanced error correction to classes A1S to A3
+  - errors are corrected by the enhanced techniques
+    optional: enhanced error correction binds classes A1S to A3, and Bravo answers to A0
 DO-260B 2.2.4.4.3.1 Error Correction Requirements
+# INFO: fc 17nov26 2.2.4.5 c binds the enhanced error correction to classes A1S to A3
+  - correction is conservative and brute force, as Appendix I says
+    optional: enhanced error correction binds classes A1S to A3, and Bravo answers to A0
 DO-260B 2.2.4.4.3.2 Error Correction Restrictions
 DO-260B 2.2.4.5 ADS-B Received Message Error Protection
+# TODO: fc 17nov26 no frame is corrected, until #373 measures a single-bit flip on Bravo
+  - a class A0 receiver corrects errors as DO-185B Appendix A A.3 does
+    not implemented: Bravo's LR2021 hands up no doubtful bit, so a frame that fails is refused, until issue #373 measures a single-bit flip
 DO-260B 2.2.6 ADS-B Receiving Device Message Processor Characteristics
 DO-260B 2.2.6.1 ADS-B Message Reception Function Requirements
 DO-260B 2.2.6.1.1 ADS-B Message Reception Function Output Message Structure Requirements
 DO-260B 2.2.6.1.2 ADS-B and TIS-B Message Reception Function Output Message Delivery Requirements
+# TODO: fc 17nov26 the delivery time is unmeasured, until a bench times the IRQ to the fold
+  - a message is handed on within 2 ms of its last bit
+    unmeasured: the time from the last chip to the fold has not been measured on Bravo
 DO-260B 2.2.7 ADS-B Message Processor Characteristics
 DO-260B 2.2.7.1 ADS-B Receiving Device Message Reception
 DO-260B 2.2.7.1.1 Receipt of TYPE Code Equal to ZERO
+# INFO: fc 17nov26 item b says may, and TYPE 0 is refused whole
+  - a TYPE 0 altitude may refresh a tracked aircraft's altitude
+    optional: item b says may, and a TYPE 0 message is refused with its altitude
 DO-260B 2.2.8 ADS-B Report Characteristics
 DO-260B 2.2.8.1 ADS-B State Vector Report Characteristics
 DO-260B 2.2.8.1.1 State Vector Report Type and Structure Identification and Validity Flags
 DO-260B 2.2.8.1.1.1 State Vector Report Type and Structure Identification
+# INFO: fc 17nov26 2.2.8.1 binds the byte layout only to Table 2-81's sample structure
+  - the report type is the high nibble of byte 0
+    optional: the byte layout binds only equipment that uses Table 2-81's sample structure, and the Track is not that
 DO-260B 2.2.8.1.1.2 State Vector Report Validity Flags
+# INFO: fc 17nov26 2.2.8.1 binds the byte layout only to Table 2-81's sample structure
+  - the validity flags are bytes 3 and 4
+    optional: the byte layout binds only equipment that uses Table 2-81's sample structure, and each Track field has its own flag
 DO-260B 2.2.8.1.2 Participant Address
 DO-260B 2.2.8.1.3 Address Qualifier
 DO-260B 2.2.8.1.4 Report Time of Applicability
 DO-260B 2.2.8.1.4.1 Time of Applicability for Estimated Position/Velocity
+# TODO: fc 17nov26 the assembly estimates nothing, until a consumer asks it to extrapolate
+  - an estimated position or velocity carries the instant it was estimated for
+    not implemented: the Track carries what was heard and estimates nothing
 DO-260B 2.2.8.1.4.2 Position Time of Applicability
 DO-260B 2.2.8.1.4.2.1 Position Time of Applicability when "TIME" (T)=0
 DO-260B 2.2.8.1.4.2.2 Position Time of Applicability when "TIME" (T)=1 and UTC Time of Message Receipt is Available
+# TODO: fc 17nov26 the T bit is unused, until a consumer needs better than the receipt's instant
+  - with T 1 and UTC the position is as of the nearest 0.2 s epoch its F names
+    not implemented: a T 1 position keeps the instant of its receipt, not the 0.2 s UTC epoch
 DO-260B 2.2.8.1.4.2.3 Position Time of Applicability when "TIME" (T)=1 and UTC Time of Message Receipt is NOT Available
 DO-260B 2.2.8.1.4.3 Velocity Time of Applicability
 DO-260B 2.2.8.1.5 Latitude (WGS-84)
@@ -187,40 +323,118 @@ DO-260B 2.2.8.1.13 Vertical Rate, Geometric/Barometric
 DO-260B 2.2.8.1.14 Vertical Rate, Geometric (WGS-84)
 DO-260B 2.2.8.1.15 Barometric Altitude Rate
 DO-260B 2.2.8.1.16 Navigation Integrity Category (NIC)
+# TODO: fc 17nov26 no NIC is reported, until a consumer weighs a position's integrity
+  - the NIC comes from the TYPE code and the NIC supplements
+    not implemented: no NIC is reported
 DO-260B 2.2.8.1.17 Estimated Latitude (WGS-84)
+# TODO: fc 17nov26 the assembly estimates nothing, until a consumer asks it to extrapolate
+  - the estimated latitude follows the latest position and velocity
+    not implemented: the Track carries what was heard and estimates nothing
 DO-260B 2.2.8.1.18 Estimated Longitude (WGS-84)
+# TODO: fc 17nov26 the assembly estimates nothing, until a consumer asks it to extrapolate
+  - the estimated longitude follows the latest position and velocity
+    not implemented: the Track carries what was heard and estimates nothing
 DO-260B 2.2.8.1.19 Estimated North/South Velocity
+# INFO: fc 17nov26 its note makes velocity estimation optional, and the assembly does not estimate
+  - the estimated north/south velocity follows the latest velocity
+    optional: the clause's note leaves velocity estimation to the implementer
 DO-260B 2.2.8.1.20 Estimated East/West Velocity
+# INFO: fc 17nov26 its note makes velocity estimation optional, and the assembly does not estimate
+  - the estimated east/west velocity follows the latest velocity
+    optional: the clause's note leaves velocity estimation to the implementer
 DO-260B 2.2.8.1.21 Surveillance Status / Discretes
+# TODO: fc 17nov26 neither field is read, until the glass can show an emergency or a SPI
+  - the surveillance status and intent change flag ride in the report
+    not implemented: neither the surveillance status nor the intent change flag is read
 DO-260B 2.2.8.1.22 Report Mode
+# INFO: fc 17nov26 Table 2-101 lists the report mode as not required
+  - the report mode says acquisition or track
+    optional: Table 2-101 does not require the report mode, and the Track has none
 DO-260B 2.2.8.2 ADS-B Mode Status Report Characteristics
 DO-260B 2.2.8.2.1 Mode Status Report Type and Structure Identification and Validity Flags
 DO-260B 2.2.8.2.1.1 Mode Status Report Type and Structure Identification
+# INFO: fc 17nov26 2.2.8.2 binds the byte layout only to Table 2-88's sample structure
+  - the mode status report type and structure are its first bytes
+    optional: the byte layout binds only equipment that uses Table 2-88's sample structure
 DO-260B 2.2.8.2.1.2 Mode Status Report Validity Flags
+# INFO: fc 17nov26 2.2.8.2 binds the byte layout only to Table 2-88's sample structure
+  - the mode status validity flags are byte 3
+    optional: the byte layout binds only equipment that uses Table 2-88's sample structure, and each Track field has its own flag
 DO-260B 2.2.8.2.2 Paritcipant Address
 DO-260B 2.2.8.2.3 Address Qualifier
 DO-260B 2.2.8.2.4 Report Time of Applicability
 DO-260B 2.2.8.2.5 Version Number
 DO-260B 2.2.8.2.6 Call Sign
+# TODO: fc 17nov26 the call sign stays on the Message, until a consumer of the Track needs it there
+  - the call sign is the eight identification characters as IA-5
+    not implemented: the Track says it was identified but does not carry the call sign, which Bravo reads off the Message
 DO-260B 2.2.8.2.7 Emitter Category
 DO-260B 2.2.8.2.8 Aircraft/Vehicle (A/V) Length and Width Code
+# TODO: fc 17nov26 no size is reported, until a surface picture draws one
+  - the length and width code sizes a surface participant
+    not implemented: the operational status's length and width code is not read
 DO-260B 2.2.8.2.9 Emergency / Priority Status
+# TODO: fc 17nov26 TYPE 28 is not decoded, until the glass can show an emergency
+  - the emergency/priority status comes from TYPE 28
+    not implemented: TYPE 28 is not decoded
 DO-260B 2.2.8.2.10 Capability Class Codes
+# TODO: fc 17nov26 no capability class is reported, until an application asks what a sender can do
+  - the capability class codes come from the operational status
+    not implemented: the capability class is not read
 DO-260B 2.2.8.2.11 Operational Mode
+# TODO: fc 17nov26 no operational mode is reported, until an application shows an IDENT or an RA
+  - the operational mode comes from the operational status
+    not implemented: the operational mode is not read
 DO-260B 2.2.8.2.12 SV Quality - NACP
+# TODO: fc 17nov26 no NACp is reported, until a consumer weighs a position's accuracy
+  - the NACp comes from the operational status
+    not implemented: the NACp is not read
 DO-260B 2.2.8.2.13 SV Quality - NACV
+# TODO: fc 17nov26 no NACv is reported, until a consumer weighs a velocity's accuracy
+  - the NACv comes from the velocity
+    not implemented: the NACv is not read
 DO-260B 2.2.8.2.14 SV Quality - SIL, SIL Supplement, SDA
+# TODO: fc 17nov26 no integrity level is reported, until a consumer weighs a position's integrity
+  - the SIL, its supplement and the SDA come from the operational status
+    not implemented: none of the three is read
 DO-260B 2.2.8.2.14.1 SV Quality - Source Integrity Level (SIL)
+# TODO: fc 17nov26 no SIL is reported, until a consumer weighs a position's integrity
+  - the SIL comes from the operational status
+    not implemented: the SIL is not read
 DO-260B 2.2.8.2.14.2 SV Quality - SIL Supplement
+# TODO: fc 17nov26 no SIL is reported, until a consumer weighs a position's integrity
+  - the SIL supplement comes from the operational status
+    not implemented: the SIL supplement is not read
 DO-260B 2.2.8.2.14.3 SV Quality - System Design Assurance (SDA)
+# TODO: fc 17nov26 no SDA is reported, until a consumer weighs a source's design assurance
+  - the SDA comes from the operational mode
+    not implemented: the SDA is not read
 DO-260B 2.2.8.2.15 SV Quality - GVA
 DO-260B 2.2.8.2.16 SV Quality - NICBARO
+# TODO: fc 17nov26 no NICbaro is reported, until a consumer weighs an altitude's integrity
+  - the NICbaro comes from the operational status
+    not implemented: the NICbaro is not read
 DO-260B 2.2.8.2.17 Track/Heading and Horizontal Reference Direction (HRD)
+# TODO: fc 17nov26 no heading reference is reported, until an airspeed heading is drawn as a track
+  - the track/heading bit and the HRD come from the operational status
+    not implemented: neither bit is read
 DO-260B 2.2.8.2.18 Vertical Rate Type
 DO-260B 2.2.8.2.19 (Reserved for) Flight Mode Specific Data
+# INFO: fc 17nov26 Table 2-102 lists the reserved field as not required
+  - the reserved flight mode data is all zeros
+    optional: Table 2-102 does not require the reserved field, and the Track has none
 DO-260B 2.2.8.3 ADS-B On-Condition Report Characteristics
+# INFO: fc 17nov26 2.2.9.1.3 and 2.2.9.1.4 require neither report of class A0
+  - the on-condition reports are the target state and the air-referenced velocity
+    optional: class A0 is required to give neither on-condition report, and Bravo gives none
 DO-260B 2.2.8.3.1 ADS-B Target State Report
+# INFO: fc 17nov26 2.2.9.1.3 requires it only of classes A2 and A3
+  - the target state report gives the selected altitude, heading and modes
+    optional: 2.2.9.1.3 does not require it of class A0, the class Bravo's 100 track files match
 DO-260B 2.2.8.3.2 Air Referenced Velocity (ARV) Report
+# INFO: fc 17nov26 2.2.9.1.4 requires it only of classes A1S to A3
+  - the air-referenced velocity report gives airspeed and heading
+    optional: 2.2.9.1.4 does not require it of class A0, the class Bravo's 100 track files match
 DO-260B 2.2.8.4 Processing of Reserved Message TYPE Codes
 DO-260B 2.2.8.5 Receiving Installation Time Processing
 DO-260B 2.2.8.5.1 Precision Installations
@@ -230,11 +444,23 @@ DO-260B 2.2.9.1 ADS-B Receiver Reporting Requirements for Class A Equipage
 DO-260B 2.2.9.1.1 ADS-B State Vector Reports for Class A Equipage
 DO-260B 2.2.9.1.2 ADS-B Mode Status Reports for Class A Equipage
 DO-260B 2.2.9.1.3 ADS-B Target State Reports for Class A Equipage
+# INFO: fc 17nov26 its item a exempts class A0
+  - classes A2 and A3 give target state reports
+    optional: class A0 is not required to give target state reports
 DO-260B 2.2.9.1.4 ADS-B Air Referenced Velocity Reports for Class A Equipage
+# INFO: fc 17nov26 its item a exempts class A0
+  - classes A1S to A3 give air-referenced velocity reports
+    optional: class A0 is not required to give air-referenced velocity reports
 DO-260B 2.2.9.2 ADS-B Receiver Report Content Requirements for Class B Equipage
+# INFO: fc 17nov26 a transmit-only class, with nothing a receiver does
+  - class B, broadcast only, has no report
+    prose: there is nothing a receiver does for class B
 DO-260B 2.2.10 ADS-B Receiver Report Assembly and Delivery
 DO-260B 2.2.10.1 Fundamental Principals of Report Assembly and Delivery
 DO-260B 2.2.10.1.1 General Data Flow
+# INFO: fc 17nov26 a figure of the data flow, with nothing a receiver does beyond its subclauses
+  - messages flow from reception to assembly to the reports
+    prose: Figure 2-19's data flow, executed by the subclauses that follow it
 DO-260B 2.2.10.1.2 ADS-B Report Organization
 DO-260B 2.2.10.1.3 ADS-B Message Temporary Retention
 DO-260B 2.2.10.1.4 Participant ADS-B Track Files
@@ -260,11 +486,29 @@ DO-260B 2.2.10.6.1 Reasonableness Test Overview
 DO-260B 2.2.10.6.2 Reasonableness Test Applied to Positions Determined from Globally Unambiguous CPR Decoding
 DO-260B 2.2.10.6.3 Reasonableness Test Applied to Positions Determined from Locally Unambiguous CPR Decoding
 DO-260B 2.2.10.7 Duplicate Address Processing
+# TODO: fc 17nov26 one record per address, until a duplicate address is seen often enough to matter
+  - two aircraft sending one address are told apart
+    not implemented: a second aircraft with a tracked address only counts as implausible
 DO-260B 2.2.10.7.1 Candidate Duplicate Address Report
+# TODO: fc 17nov26 one record per address, until a duplicate address is seen often enough to matter
+  - a local decode that fails opens a candidate duplicate record
+    not implemented: the failed position is counted and dropped, and no candidate is opened
 DO-260B 2.2.10.7.2 Duplicate Address Condition
+# TODO: fc 17nov26 one record per address, until a duplicate address is seen often enough to matter
+  - a candidate's own pair declares the duplicate and flags both reports
+    not implemented: no duplicate address flag is reported
 DO-260B 2.2.17.4 TIS-B Message Processing and Report Generation
+# TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads TIS-B
+  - TIS-B messages are decoded into reports
+    not implemented: TIS-B rides DF18, which the decoder refuses as unsupported
 DO-260B 2.2.18.4 ADS-R Message Processing
+# TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads ADS-R
+  - ADS-R messages are decoded
+    not implemented: ADS-R rides DF18 CF 6, which the decoder refuses as unsupported
 DO-260B 2.2.18.5 ADS-R Report Processing
+# TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads ADS-R
+  - ADS-R reports are kept apart from ADS-B reports
+    not implemented: no ADS-R message is ever heard, so no ADS-R report is kept
 DO-260B A.1.7 Latitude/Longitude Coding Using Compact Position Reporting (CPR)
 DO-260B A.1.7.1 Principle of the CPR algorithm
 DO-260B A.1.7.2 CPR Algorithm Parameters and Internal Functions
@@ -276,8 +520,14 @@ DO-260B A.1.7.7 Globally Unambiguous Airborne Position Decoding
 DO-260B A.1.7.8 Globally Unambiguous CPR Decoding of Surface Position
 DO-260B A.1.7.9 CPR Decoding of Received Position Reports
 DO-260B A.1.7.9.1 Overview
+# INFO: fc 17nov26 a note on how global and local decoding combine, executed by A.1.7.9.2
+  - global decoding starts a track and local decoding continues it
+    prose: a note on how A.1.7.4 and A.1.7.7 combine, which A.1.7.9.2 executes
 DO-260B A.1.7.9.2 Emitter Centered Local Decoding
 DO-260B A.1.7.10 Reasonableness Test for CPR Decoding of Received Position Messages
 DO-260B A.1.7.10.1 Overview
+# INFO: fc 17nov26 a note on why decodes are tested, executed by A.1.7.10.2 and A.1.7.10.3
+  - a decode can be wrong, so each is tested
+    prose: the reason for the tests that A.1.7.10.2 and A.1.7.10.3 specify
 DO-260B A.1.7.10.2 Reasonableness Test Applied to Position Determined from Globally Unambiguous Decoding
 DO-260B A.1.7.10.3 Reasonableness Test Applied to Position Determined from Locally Unambiguous Decoding

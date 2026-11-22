@@ -144,6 +144,10 @@ ADSB_SKIPPED = [
     (ADSB_DEVICE, "DO-260B 2.2.4.3.4: the receiver meets its sensitivity target",
      "unmeasured: no bench measurement yet"),
 ]
+ADSB_MARKED = [
+    ("test/adsb/clauses.txt", "DO-260B 2.2.4.3.4.7: a doubtful bit is repaired",
+     "not implemented: the radio hands up no doubtful bit"),
+]
 ADSB_PROSE = {
     ADSB_COMPONENT: {},
     ADSB_CPR: {},
@@ -156,10 +160,11 @@ class AdsbConformance(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             listing = pathlib.Path(directory, "clauses.txt")
             listing.write_text(ADSB_CLAUSES, encoding="utf-8")
-            self.clauses = conformance.do260b_clauses(listing)
+            self.clauses, _ = conformance.do260b_clauses(listing)
 
-    def rendered(self, passed=ADSB_PASSED, skipped=ADSB_SKIPPED):
-        return conformance.render_adsb(passed, skipped, ADSB_PROSE, self.clauses, ADSB_VERSION)
+    def rendered(self, passed=ADSB_PASSED, skipped=ADSB_SKIPPED, marked=ADSB_MARKED):
+        return conformance.render_adsb(passed, skipped, marked, ADSB_PROSE, self.clauses,
+                                       ADSB_VERSION)
 
     def test_the_header_limits_the_report_to_the_receive_side_and_counts_the_cases(self):
         text = self.rendered()
@@ -167,7 +172,8 @@ class AdsbConformance(unittest.TestCase):
         self.assertIn("RTCA DO-260B draft 4.2 (1090-WP30-18)", text)
         self.assertIn("3 receive-side clauses", text)
         self.assertIn("test Bravo's driver against an LR2021 radio model", text)
-        self.assertIn("passed 3 cases and skipped 1 (1 unmeasured)", text)
+        self.assertIn("passed 3 cases and makes no claim on 2 (1 not implemented, 1 unmeasured): "
+                      "1 cases it skipped and 1 clauses `clauses.txt` marks", text)
         self.assertNotIn("EN 300 220", text)
 
     def test_each_section_appears_once_and_its_clauses_follow_the_listing(self):
@@ -190,6 +196,29 @@ class AdsbConformance(unittest.TestCase):
         self.assertIn("### DO-260B 2.2.4.3.4 Receiver Signal Processing\n\n"
                       f"- the receiver meets its sensitivity target (`{ADSB_DEVICE}`)\n"
                       "  > Skipped, unmeasured: no bench measurement yet", self.rendered())
+
+    def test_a_marked_clause_says_why_after_the_cases_of_its_clause(self):
+        self.assertIn(f"- a framed burst reaches the decoder (`{ADSB_DEVICE}`)\n"
+                      "  > The driver hands the whole message up.\n"
+                      "- a doubtful bit is repaired (`test/adsb/clauses.txt`)\n"
+                      "  > Skipped, not implemented: the radio hands up no doubtful bit", self.rendered())
+
+    def test_a_mark_in_the_listing_becomes_a_skipped_claim(self):
+        with tempfile.TemporaryDirectory() as directory:
+            listing = pathlib.Path(directory, "clauses.txt")
+            listing.write_text(ADSB_CLAUSES + "  - a doubtful bit is repaired\n"
+                               "    not implemented: the radio hands up no doubtful bit\n",
+                               encoding="utf-8")
+            _, marks = conformance.do260b_clauses(listing)
+        self.assertEqual(conformance.marked_cases(marks), ADSB_MARKED)
+
+    def test_a_mark_of_no_kind_stops_the_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            listing = pathlib.Path(directory, "clauses.txt")
+            listing.write_text(ADSB_CLAUSES + "  - a doubtful bit is repaired\n    no reason\n",
+                               encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, r"no recognized reason: no reason"):
+                conformance.do260b_clauses(listing)
 
     def test_a_skipped_case_cannot_disappear_by_naming_an_unlisted_clause(self):
         skipped = [(ADSB_DEVICE, "DO-260B 2.2.4.99: the receiver meets its sensitivity target",

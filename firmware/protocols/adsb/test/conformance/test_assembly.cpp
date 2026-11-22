@@ -50,12 +50,6 @@ TEST_CASE("DO-260B 2.2.10.1: messages fold into a track by the address they came
     CHECK(bravo.heard.address == 0x3C6586);
 }
 
-// INFO: fc 17nov26 a figure of the data flow, with nothing a receiver does beyond its subclauses
-TEST_CASE("DO-260B 2.2.10.1.1: messages flow from reception to assembly to the reports" *
-          doctest::skip()) {
-    FAIL("prose: Figure 2-19's data flow, executed by the subclauses that follow it");
-}
-
 TEST_CASE("DO-260B 2.2.10.1.2: receptions and reports are indexed by the participant address") {
     Bravo bravo;
     REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 0));
@@ -304,22 +298,4 @@ TEST_CASE("DO-260B 2.2.10.6.3: past 30 s a single position is not believed, and 
     CHECK(bravo.heard.at_ms == 500);
     bravo.fly(kLatitude + 0.1, kLongitude, 500 + kTrackJumpWindowMs + 500, true);
     CHECK(metres_from(bravo.heard, kLatitude + 0.1, kLongitude) < 5.1);
-}
-
-// TODO: fc 17nov26 one record per address, until a duplicate address is seen often enough to matter
-TEST_CASE("DO-260B 2.2.10.7: two aircraft sending one address are told apart" * doctest::skip()) {
-    FAIL("not implemented: a second aircraft with a tracked address only counts as implausible");
-}
-
-// TODO: fc 17nov26 one record per address, until a duplicate address is seen often enough to matter
-TEST_CASE("DO-260B 2.2.10.7.1: a local decode that fails opens a candidate duplicate record" *
-          doctest::skip()) {
-    FAIL("not implemented: the failed position is counted and dropped, and no candidate is opened");
-}
-
-// TODO: fc 17nov26 one record per address, until a duplicate address is seen often enough to matter
-TEST_CASE(
-    "DO-260B 2.2.10.7.2: a candidate's own pair declares the duplicate and flags both reports" *
-    doctest::skip()) {
-    FAIL("not implemented: no duplicate address flag is reported");
 }

@@ -39,12 +39,6 @@ TEST_CASE("DO-260B 2.2.4: Bravo's receiver listens on 1090 MHz at two chips a mi
     CHECK(part.payload_bytes == adsb::kFrameBytes);
 }
 
-// TODO: fc 17nov26 Bravo's MTL is not measured, until the #172 bench run gives one
-TEST_CASE("DO-260B 2.2.4.1: the MTL is the level at which 90% of messages are received" *
-          doctest::skip()) {
-    FAIL("unmeasured: no bench has found the level at which Bravo receives 90% of messages (#172)");
-}
-
 TEST_CASE("DO-260B 2.2.4.3: Bravo's receiver is its own, shared with no TCAS") {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
@@ -54,23 +48,6 @@ TEST_CASE("DO-260B 2.2.4.3: Bravo's receiver is its own, shared with no TCAS") {
 
 TEST_CASE("DO-260B 2.2.4.3.1: a message in band is accepted and handed up") {
     CHECK(framed(identification()));
-}
-
-// TODO: fc 17nov26 Bravo's MTL is not measured, until the #172 bench run gives one
-TEST_CASE("DO-260B 2.2.4.3.1.1: a class A0 receiver's MTL is -72 dBm or better" * doctest::skip()) {
-    FAIL("unmeasured: the -72 dBm of Table 2-79 has not been measured at Bravo's antenna (#172)");
-}
-
-// INFO: fc 17nov26 the clause binds classes A1S to A3, and Bravo's 100 tracks are A0
-TEST_CASE("DO-260B 2.2.4.3.1.2: a preamble 3 dB stronger re-triggers the receiver" *
-          doctest::skip()) {
-    FAIL("optional: re-triggering binds classes A1S to A3, and Bravo's 100 tracks are A0");
-}
-
-// TODO: fc 17nov26 out-of-band rejection is unmeasured, until a bench run with a signal generator
-TEST_CASE("DO-260B 2.2.4.3.2: off 1090 MHz a message needs 3 to 60 dB more to be received" *
-          doctest::skip()) {
-    FAIL("unmeasured: Table 2-80's rejection has not been measured on the LR2021 (#172)");
 }
 
 // TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
@@ -87,34 +64,6 @@ TEST_CASE("DO-260B 2.2.4.3.4: a message is framed by its preamble and its first 
     CHECK_FALSE(framed(noise));
 }
 
-// TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
-TEST_CASE("DO-260B 2.2.4.3.4.1: a strong pulse raises the threshold to 6 dB under it" *
-          doctest::skip()) {
-    FAIL("not implemented: the OOK detection threshold is fixed at -110 dBm, with no DMTL");
-}
-
-// TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
-TEST_CASE("DO-260B 2.2.4.3.4.2: pulses under 0.3 us do not move the DMTL" * doctest::skip()) {
-    FAIL("not implemented: there is no DMTL for a narrow pulse to move");
-}
-
-// TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
-TEST_CASE("DO-260B 2.2.4.3.4.3: TACAN and DME pulses do not move the DMTL" * doctest::skip()) {
-    FAIL("not implemented: there is no DMTL for a TACAN or DME pulse to move");
-}
-
-// INFO: fc 17nov26 the clause points back to the transmitter's pulse shape, 2.2.2.2.1
-TEST_CASE("DO-260B 2.2.4.3.4.4: received pulses are shaped as 2.2.2.2.1 transmits them" *
-          doctest::skip()) {
-    FAIL("prose: a pointer to the transmitter's pulse characteristics");
-}
-
-// INFO: fc 17nov26 the clause points back to the message formats, 2.2.3.2.3 to 2.2.3.2.7
-TEST_CASE("DO-260B 2.2.4.3.4.6: the received signals carry the formats of 2.2.3.2.3 to 2.2.3.2.7" *
-          doctest::skip()) {
-    FAIL("prose: a pointer to the message formats, which the component's half reads");
-}
-
 TEST_CASE("DO-260B 2.2.4.3.4.7: a framed burst is a message the decoder reads") {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
@@ -125,13 +74,6 @@ TEST_CASE("DO-260B 2.2.4.3.4.7: a framed burst is a message the decoder reads") 
     adsb::Message message{};
     REQUIRE(adsb::receive(frame, sizeof(frame), adsb::Reception{}, message) == wire::Status::Ok);
     CHECK(message.address == kAddress);
-}
-
-// TODO: fc 17nov26 the LR2021 decides bits and reports no edges, until a part that does replaces it
-TEST_CASE("DO-260B 2.2.4.3.4.7.1: pulses are detected on their leading edges" * doctest::skip()) {
-    FAIL(
-        "not implemented: the LR2021 decides each bit from its chip pair and reports no pulse "
-        "edges");
 }
 
 TEST_CASE("DO-260B 2.2.4.3.4.7.2: the preamble is four pulses at 0, 1, 3.5 and 4.5 us") {
@@ -155,12 +97,6 @@ TEST_CASE("DO-260B 2.2.4.3.5: the driver receives three modeled bursts after one
         REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
     }
     CHECK(part.count(chip::kSetRx) == 1);
-}
-
-// TODO: fc 17nov26 the delivery time is unmeasured, until a bench times the IRQ to the fold
-TEST_CASE("DO-260B 2.2.6.1.2: a message is handed on within 2 ms of its last bit" *
-          doctest::skip()) {
-    FAIL("unmeasured: the time from the last chip to the fold has not been measured on Bravo");
 }
 
 TEST_CASE("DO-260B 2.2.8.5: every frame is dated by the instant the radio reported it") {
@@ -194,19 +130,4 @@ TEST_CASE(
     REQUIRE(assembly.fold(message, static_cast<uint32_t>(12345678 / 1000), adsb::Receipt{},
                           adsb::Reference{}, track));
     CHECK(track.at_ms == 12345);
-}
-
-// TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads TIS-B
-TEST_CASE("DO-260B 2.2.17.4: TIS-B messages are decoded into reports" * doctest::skip()) {
-    FAIL("not implemented: TIS-B rides DF18, which the decoder refuses as unsupported");
-}
-
-// TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads ADS-R
-TEST_CASE("DO-260B 2.2.18.4: ADS-R messages are decoded" * doctest::skip()) {
-    FAIL("not implemented: ADS-R rides DF18 CF 6, which the decoder refuses as unsupported");
-}
-
-// TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads ADS-R
-TEST_CASE("DO-260B 2.2.18.5: ADS-R reports are kept apart from ADS-B reports" * doctest::skip()) {
-    FAIL("not implemented: no ADS-R message is ever heard, so no ADS-R report is kept");
 }

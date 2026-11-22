@@ -196,18 +196,6 @@ TEST_CASE(
     CHECK(hear(frame).status == Status::Unsupported);
 }
 
-// TODO: fc 17nov26 Message carries no surveillance status, until the glass can show an emergency
-TEST_CASE("DO-260B 2.2.3.2.3.2: the surveillance status names an emergency, an alert or the SPI" *
-          doctest::skip()) {
-    FAIL("not implemented: ME bits 6 and 7 are not read, so an emergency or SPI goes unshown");
-}
-
-// TODO: fc 17nov26 no NIC is reported, until a consumer weighs a position's integrity
-TEST_CASE("DO-260B 2.2.3.2.3.3: NIC supplement B and the TYPE code give the position's NIC" *
-          doctest::skip()) {
-    FAIL("not implemented: ME bit 8 is not read, and no NIC is reported");
-}
-
 TEST_CASE("DO-260B 2.2.3.2.3.4: the altitude is the 12 bits of ME 9 to 20") {
     adsb::Squitter frame = airborne(11, 0);
     put(frame, 9, 20, q_field(40));

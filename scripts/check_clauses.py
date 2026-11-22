@@ -10,7 +10,12 @@ checked against the fetched document when it is present.
 
 Every clause must have a case named `<clause>: what holds`. A clause the firmware does not
 meet gets a doctest::skip() case whose message opens on its kind: "not implemented:",
-"prose:", "paperwork:", "optional:" or "unmeasured:".
+"prose:", "paperwork:", "optional:" or "unmeasured:". A clause no case can read, such as
+prose or a field not decoded, is marked in its `clauses.txt` instead, under its line:
+
+    DO-260B 2.2.9.2 Class B Equipment Report Requirements
+      - class B, broadcast only, has no report
+        prose: there is nothing a receiver does for class B
 """
 import dataclasses
 import functools
@@ -23,6 +28,8 @@ REFERENCE = os.path.join(ROOT, "docs", "reference")
 FIRMWARE = os.path.join(ROOT, "firmware")
 
 KINDS = ("not implemented", "prose", "paperwork", "optional", "unmeasured")
+CLAIM = re.compile(r"^  - (\S.*?)\s*$")
+REASON = re.compile(r"^    (\S.*?)\s*$")
 SKIPPED = re.compile(r"doctest::skip\(\)\)\s*\{(.*?)\n\}", re.S)
 FAILED = re.compile(r'FAIL\(\s*((?:"[^"]*"\s*)+)\)', re.S)
 NAMED = re.compile(r'TEST_CASE\(\s*\n?\s*"([^"]*)')
@@ -37,6 +44,13 @@ def markdown_heading(text, number, heading):
 
 def draft_heading(text, number, heading):
     return f" {number} {plain(heading)}" in flattened(text)
+
+
+@dataclasses.dataclass
+class Mark:
+    clause: str
+    claim: str
+    message: str
 
 
 @dataclasses.dataclass
@@ -89,8 +103,9 @@ def main():
 
 
 def check(standard):
-    clauses, malformed = listed(standard)
+    clauses, marks, malformed = listed(standard)
     covered, named, skipped = suite_clauses(standard)
+    covered |= {mark.clause for mark in marks}
     wrong, absent = unheaded(standard, clauses)
     subject = subject_pattern(standard)
 
@@ -98,6 +113,8 @@ def check(standard):
     unknown = sorted(covered - set(clauses) - set(standard.unnumbered))
     stray = [(path, case) for path, case in named if not re.match(rf"{subject}: ", case)]
     kindless = [(path, message) for path, message in skipped if kind_of(message) is None]
+    kindless += [(os.path.relpath(standard.listing, ROOT), mark.message) for mark in marks
+                 if kind_of(mark.message) is None]
 
     for line in malformed:
         report(f"not a clause line: {line}")
@@ -108,15 +125,16 @@ def check(standard):
     for path, case in stray:
         report(f"a case in {path} is not named after a clause: {case}")
     for path, message in kindless:
-        report(f"a skipped case in {path} opens on none of {', '.join(KINDS)}: {message!r}")
+        report(f"a skip or a mark in {path} opens on none of {', '.join(KINDS)}: {message!r}")
     for problem in wrong:
         report(problem)
 
     if malformed or missing or unknown or stray or kindless or wrong:
         return 1
-    counts = ", ".join(f"{sum(kind_of(m) == kind for _, m in skipped)} {kind}" for kind in KINDS)
+    messages = [message for _, message in skipped] + [mark.message for mark in marks]
+    counts = ", ".join(f"{sum(kind_of(m) == kind for m in messages)} {kind}" for kind in KINDS)
     report(f"OK: all {len(clauses)} clauses of {standard.title} are read by the suite.")
-    report(f"{len(skipped)} cases are skipped: {counts}.")
+    report(f"{len(skipped)} cases are skipped and {len(marks)} clauses marked: {counts}.")
     for part in absent:
         report(f"{part} is not fetched, so its headings were not checked ({standard.fetcher}).")
     return 0
@@ -130,19 +148,28 @@ def listed(standard):
     if standard.spec:
         with open(standard.spec, encoding="utf-8") as spec:
             heading = re.compile(rf"^#+\s+({standard.clause})\b", re.M)
-            return {match.group(1): None for match in heading.finditer(spec.read())}, []
-    clauses, malformed = {}, []
+            return {match.group(1): None for match in heading.finditer(spec.read())}, [], []
+    clauses, marks, malformed = {}, [], []
     line_of = re.compile(rf"^({standard.clause}) (\S.*?)\s*$")
+    clause = claim = None
     with open(standard.listing, encoding="utf-8") as listing:
         for number, line in enumerate(listing, 1):
             if not line.strip() or line.startswith("#"):
                 continue
-            match = line_of.match(line)
-            if match:
-                clauses[match.group(1)] = match.group(2)
+            match, claimed, reason = line_of.match(line), CLAIM.match(line), REASON.match(line)
+            if match and claim is None:
+                clause = match.group(1)
+                clauses[clause] = match.group(2)
+            elif claimed and clause and claim is None:
+                claim = claimed.group(1)
+            elif reason and claim is not None:
+                marks.append(Mark(clause, claim, reason.group(1)))
+                claim = None
             else:
                 malformed.append(f"{os.path.relpath(standard.listing, ROOT)}:{number}: {line.rstrip()}")
-    return clauses, malformed
+    if claim is not None:
+        malformed.append(f"{os.path.relpath(standard.listing, ROOT)}: the mark {claim!r} has no reason")
+    return clauses, marks, malformed
 
 
 def suite_clauses(standard):
