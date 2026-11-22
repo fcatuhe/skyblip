@@ -266,6 +266,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude a
 // The clause calls the track invalid when the speed is, so nothing may fly a target along it.
 TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown along its track") {
     adsl::Packet packet = traffic_packet();
+    packet.set_protocol_version(1);
     packet.set_speed_invalid();
     packet.set_track_c9(256);
 
@@ -282,6 +283,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
 
     // A ground speed of zero is the clause's other invalid track, and it moves no further.
     adsl::Packet parked = traffic_packet();
+    parked.set_protocol_version(1);
     parked.set_speed_q(0);
     parked.set_track_c9(256);
     model::AircraftObservation still{};

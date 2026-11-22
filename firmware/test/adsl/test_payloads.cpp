@@ -16,10 +16,12 @@
 #include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/settings.h"
 #include "protocols/adsb/squitter.h"
+#include "protocols/adsl/test/conformance/reference.h"
 #include "protocols/common/bit_field.h"
 #include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
 #include "simulator/world/adsb_out.h"
+#include "test/support/m_band_rig.h"
 #include "test/support/simulator_run.h"
 #include "test/support/tango.h"
 
@@ -161,6 +163,39 @@ TEST_CASE(
 
 TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version this device reads") {
     CHECK(status_field(wire::BitField{40, 4}) == 1);
+}
+
+TEST_CASE("ADS-L.4.SRD860.G.2.1: the Go keeps Issue 1 endpoints without inventing Issue 2 motion") {
+    using namespace adsl::conformance;
+    for (const auto* frame : {kIssue1EndpointFrame, kIssue2EndpointFrame}) {
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        settle(rig, rig.now_ms);
+        REQUIRE_FALSE(rig.state().own.fix_valid);
+
+        hear_m_band(rig, adsl::kSyncWord, frame, 24);
+        settle(rig, rig.now_ms);
+
+        CHECK(heard_verdict(rig) == radio::Verdict::Received);
+        const int slot = rig.state().traffic.find(6, 0x123456);
+        REQUIRE(slot >= 0);
+        const auto& observation = rig.state().traffic.at(slot)->observation;
+        const bool issue1 = frame[0] == 0;
+        CAPTURE(issue1);
+        CHECK(observation.position_valid);
+        CHECK(observation.adsl_version == (issue1 ? 0 : 1));
+        CHECK(observation.altitude_valid == issue1);
+        CHECK(observation.speed_valid == issue1);
+        CHECK(observation.climb_valid == issue1);
+        if (issue1) {
+            CHECK_GE(observation.altitude_m, 61112);
+            CHECK_LT(observation.altitude_m, 61112 + 8);
+            CHECK_GE(observation.speed_q, 238 * 4);
+            CHECK_LT(observation.speed_q, 238 * 4 + 8);
+            CHECK_GE(-observation.climb_e8, 119 * 8);
+            CHECK_LT(-observation.climb_e8, 119 * 8 + 8);
+        }
+    }
 }
 
 // The dwells hear 868.2 MHz from 450 to 822 ms and 868.4 MHz from 827 to 1000, of the direct slot's

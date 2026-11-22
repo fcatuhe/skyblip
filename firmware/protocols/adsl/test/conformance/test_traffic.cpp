@@ -242,6 +242,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked exampl
     CHECK(altitude_code(packet) == 0x3FFEu);
     packet.set_altitude_m(100000);
     CHECK(altitude_code(packet) == 0x3FFEu);
+    packet.set_protocol_version(1);
     packet.set_altitude_invalid();
     CHECK(altitude_code(packet) == 0x3FFFu);
     CHECK_FALSE(packet.has_altitude());
@@ -251,6 +252,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked exampl
 // The invalid code decoded as 61116 m, and the range gate threw a 2D neighbour 60 km up.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: an altitude marked invalid decodes as no altitude, not 61 km") {
     adsl::Packet packet = traffic_packet();
+    packet.set_protocol_version(1);
     packet.set_altitude_invalid();
     adsl::Traffic observation;
     REQUIRE(heard(packet, observation));
@@ -277,6 +279,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.8: the ground speed encodes the clause's worked ex
     CHECK(speed_code(packet) == 0xFEu);
     packet.set_speed_q(400 * 4);
     CHECK(speed_code(packet) == 0xFEu);
+    packet.set_protocol_version(1);
     packet.set_speed_invalid();
     CHECK(speed_code(packet) == 0xFFu);
     CHECK_FALSE(packet.has_speed());
@@ -301,6 +304,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.9: the vertical rate encodes the clause's worked e
     CHECK(climb_code(packet) == 0x1FEu);
     packet.set_climb_e8(-32000);
     CHECK(climb_code(packet) == 0x1FEu);
+    packet.set_protocol_version(1);
     packet.set_climb_invalid();
     CHECK(climb_code(packet) == 0x1FFu);
     CHECK_FALSE(packet.has_climb());
@@ -317,6 +321,55 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: the ground track is 512 steps of 0.703125 degr
     }
     // 512 steps to the turn: a quarter of it is 90 degrees, clockwise from true north.
     CHECK(128 * 360 / 512 == 90);
+}
+
+// The Issue 1 tables name the lower magnitude of each eight-unit bucket.
+TEST_CASE(
+    "ADS-L.4.SRD860.E.1.1: Traffic endpoint codes in Issue 1 are unavailable only in Issue 2" *
+    doctest::test_suite("main")) {
+    const uint8_t erasures[24] = {};
+    adsl::Packet packet{};
+    adsl::Traffic traffic{};
+    REQUIRE(adsl::receive(kIssue1EndpointFrame, erasures, packet) == wire::Status::Ok);
+    REQUIRE(adsl::decode_traffic(packet, traffic) == wire::Status::Ok);
+    CHECK(packet.protocol_version() == 0);
+    CHECK(packet.has_altitude());
+    CHECK(packet.has_speed());
+    CHECK(packet.has_climb());
+    CHECK(traffic.altitude_valid);
+    CHECK(traffic.speed_valid);
+    CHECK(traffic.climb_valid);
+    CHECK_GE(traffic.altitude_m, 61112);
+    CHECK_LT(traffic.altitude_m, 61112 + 8);
+    CHECK_GE(traffic.speed_q, 238 * 4);
+    CHECK_LT(traffic.speed_q, 238 * 4 + 8);
+    CHECK_GE(-traffic.climb_e8, 119 * 8);
+    CHECK_LT(-traffic.climb_e8, 119 * 8 + 8);
+
+    REQUIRE(adsl::receive(kIssue2EndpointFrame, erasures, packet) == wire::Status::Ok);
+    REQUIRE(adsl::decode_traffic(packet, traffic) == wire::Status::Ok);
+    CHECK(packet.protocol_version() == 1);
+    CHECK_FALSE(packet.has_altitude());
+    CHECK_FALSE(packet.has_speed());
+    CHECK_FALSE(packet.has_climb());
+    CHECK_FALSE(traffic.altitude_valid);
+    CHECK_FALSE(traffic.speed_valid);
+    CHECK_FALSE(traffic.climb_valid);
+}
+
+TEST_CASE("ADS-L.4.SRD860.G.1.9: Issue 1 negative zero means absent climb, not level flight") {
+    // G.1 offset 86 holds the sign bit alone, with E.2 scrambling and E.3.1 CRC.
+    const uint8_t frame[24] = {
+        0x00, 0xEF, 0x80, 0x3C, 0x81, 0xA4, 0x92, 0x6E, 0xFB, 0xCE, 0x65, 0xE8,
+        0x52, 0xED, 0xE0, 0xF6, 0xEC, 0xA1, 0x94, 0xB1, 0x37, 0x5D, 0x91, 0x0D,
+    };
+    const uint8_t erasures[24] = {};
+    adsl::Packet packet{};
+    adsl::Traffic traffic{};
+    REQUIRE(adsl::receive(frame, erasures, packet) == wire::Status::Ok);
+    REQUIRE(adsl::decode_traffic(packet, traffic) == wire::Status::Ok);
+    CHECK_FALSE(packet.has_climb());
+    CHECK_FALSE(traffic.climb_valid);
 }
 
 // The rates the clause names. How an integrator spaces reports inside them is its own reading.

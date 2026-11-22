@@ -30,12 +30,11 @@ void hear(Rig& rig, int32_t north_m, bool altitude_sent) {
     transmitter.latitude_1e7 +=
         static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     transmitter.speed_mm_s = 0;
-    transmitter.vdop_e2 = 150;
+    transmitter.vdop_e2 = altitude_sent ? 150 : 0;
 
     adsl::Packet packet;
     protocol::from_own(packet, transmitter, kAddress, /*address_mapping_table=*/6,
                        /*aircraft_category=*/4);
-    if (!altitude_sent) packet.set_altitude_invalid();
     packet.scramble();
     packet.set_crc();
 
