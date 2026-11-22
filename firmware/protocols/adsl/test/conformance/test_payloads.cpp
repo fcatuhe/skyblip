@@ -71,16 +71,15 @@ TEST_CASE("ADS-L.4.SRD860.G.3: the number of targets is read from the Packet Len
         sent_uplink(traffic, count, packet);
         CHECK(packet[0] == adsl::uplink_length(count, adsl::ErrorControl::Fec));
 
-        adsl::Packet heard[adsl::kUplinkMaxTargets];
-        adsl::UplinkStatistics statistics;
-        REQUIRE(adsl::Uplink{}.decode(packet, sizeof(packet), heard, adsl::kUplinkMaxTargets,
-                                      statistics) == wire::Status::Ok);
-        CHECK(statistics.targets == count);
-
-        adsl::conformance::spec_uplink(traffic, count, 0x01, false, packet);
-        REQUIRE(adsl::Uplink{}.decode(packet, sizeof(packet), heard, adsl::kUplinkMaxTargets,
-                                      statistics) == wire::Status::Ok);
-        CHECK(statistics.targets == count);
+        for (const bool fec : {false, true}) {
+            CAPTURE(fec);
+            adsl::conformance::spec_uplink(traffic, count, fec ? 0x81 : 0x01, fec, packet);
+            adsl::Packet heard[adsl::kUplinkMaxTargets];
+            adsl::UplinkStatistics statistics;
+            REQUIRE(adsl::Uplink{}.decode(packet, sizeof(packet), heard, adsl::kUplinkMaxTargets,
+                                          statistics) == wire::Status::Ok);
+            CHECK(statistics.targets == count);
+        }
     }
 }
 
@@ -92,9 +91,13 @@ TEST_CASE("ADS-L.4.SRD860.G.3: an uplink is read under either parity, with one r
         int count;
         int length;
     };
-    const Sent cases[] = {
-        {0x01, false, 1, 28}, {0x01, false, 10, 200}, {0x81, true, 1, 57}, {0x81, true, 10, 229}};
+    const Sent cases[] = {{0x01, false, 1, 28},
+                          {0x01, false, 10, 200},
+                          {0x61, false, 1, 28},
+                          {0x81, true, 1, 57},
+                          {0x81, true, 10, 229}};
     for (const Sent& sent : cases) {
+        CAPTURE(int(sent.network_header));
         CAPTURE(sent.length);
         adsl::Packet traffic[adsl::kUplinkMaxTargets];
         for (int i = 0; i < sent.count; i++)
