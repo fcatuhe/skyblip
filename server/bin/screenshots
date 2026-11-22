@@ -601,7 +601,7 @@ function* drawnBlips() {
   execFileSync(
     "c++",
     [
-      "-std=c++17", "-O1", `-I${firmware}`, "-fno-exceptions", "-fno-rtti",
+      "-std=c++20", "-O1", `-I${firmware}`, "-fno-exceptions", "-fno-rtti",
       join(website, "bin", "blips.cpp"),
       join(firmware, "ui", "canvas.cpp"),
       join(firmware, "ui", "widgets", "blip.cpp"),

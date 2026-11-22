@@ -64,6 +64,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         k_sched_unlock();
         statistics.roll(clock_.microseconds());
         statistics.dropped += out_.dropped();
+        statistics.irq_armed = irq_wakes_;
         return statistics;
     }
 

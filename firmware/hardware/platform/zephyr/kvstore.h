@@ -7,6 +7,7 @@
 #include <zephyr/kvss/nvs.h>
 #include <zephyr/storage/flash_map.h>
 
+#include "hardware/platform/nvs_record.h"
 #include "hardware/platform/store_mount.h"
 #include "ports/kvstore.h"
 
@@ -32,8 +33,9 @@ class KeyValueStore : public ports::KeyValueStore {
 
     Status read(const char* key, uint8_t* out, size_t capacity, size_t& out_bytes) override {
         if (!mounted_) return Status::Down;
-        ssize_t stored = nvs_read(&file_system_, record_id(key), out, capacity);
-        if (stored <= 0) return Status::NotFound;
+        const ssize_t stored = nvs_read(&file_system_, nvs_record_id(key), out, capacity);
+        if (stored == -ENOENT || stored == 0) return Status::NotFound;
+        if (stored < 0) return Status::Down;
         // INFO: fc 23sep26 nvs_read answers the stored length, and copies only capacity of it
         if (static_cast<size_t>(stored) > capacity) return Status::OutOfRange;
         out_bytes = static_cast<size_t>(stored);
@@ -41,16 +43,21 @@ class KeyValueStore : public ports::KeyValueStore {
     }
     Status write(const char* key, const uint8_t* data, size_t bytes) override {
         if (!mounted_) return Status::Down;
-        ssize_t written = nvs_write(&file_system_, record_id(key), data, bytes);
-        return (written == static_cast<ssize_t>(bytes) || written == 0) ? Status::Ok : Status::Full;
+        return status_of(nvs_write(&file_system_, nvs_record_id(key), data, bytes));
     }
     Status erase(const char* key) override {
         if (!mounted_) return Status::Down;
-        return nvs_delete(&file_system_, record_id(key)) == 0 ? Status::Ok : Status::NotFound;
+        return status_of(nvs_delete(&file_system_, nvs_record_id(key)));
     }
 
    private:
     static constexpr uint16_t kSectors = 3;
+
+    // INFO: fc 21nov26 nvs_write answers the length, or 0 if unchanged: only a negative errno fails
+    static Status status_of(ssize_t written) {
+        if (written == -ENOSPC) return Status::Full;
+        return written < 0 ? Status::Down : Status::Ok;
+    }
 
     struct Partition {
         bool read_word(int sector, uint32_t& word) {
@@ -75,13 +82,6 @@ class KeyValueStore : public ports::KeyValueStore {
         struct nvs_fs& file_system;
     };
 
-    static uint16_t record_id(const char* key) {
-        uint32_t hash = 2166136261u;
-        for (const char* character = key; *character; ++character)
-            hash = (hash ^ static_cast<uint8_t>(*character)) * 16777619u;
-        // INFO: fc 20nov26 the low bit is forced so that no key hashes to id 0
-        return static_cast<uint16_t>(hash & 0xFFFF) | 1u;
-    }
     struct nvs_fs file_system_{};
     bool mounted_{false};
 };

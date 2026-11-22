@@ -22,6 +22,8 @@ struct AdsbReceiverStatistics {
     uint32_t resets{0};
     uint32_t command_errors{0};
     uint16_t device_errors{0};
+    // INFO: fc 21nov26 false means the thread polls every 200 us, since the IRQ edge never armed
+    bool irq_armed{false};
     uint32_t rssi[kRssiBuckets]{};
     uint64_t counting_second{0};
     uint32_t counted{0};

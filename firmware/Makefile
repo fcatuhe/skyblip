@@ -5,7 +5,7 @@ MAKEFLAGS += -j$(shell nproc 2>/dev/null || echo 4)
 
 CXX      ?= c++
 # -Wconversion stays off for the fixed-point bit math, and -MMD -MP rebuild every object a header touches.
-CXXFLAGS := -std=c++17 -O1 -g -Wall -Wextra -Wshadow -Werror \
+CXXFLAGS := -std=c++20 -O1 -g -Wall -Wextra -Wshadow -Werror \
             -fno-exceptions -fno-rtti -I. -Ivendor -MMD -MP \
             -DDOCTEST_CONFIG_NO_EXCEPTIONS_BUT_WITH_ALL_ASSERTS
 LDFLAGS  :=
@@ -37,6 +37,8 @@ FUZZ_SECONDS_air ?= 60
 FUZZ_SECONDS_adsb ?= 30
 FUZZ_SECONDS_adsb_assembly ?= 30
 FUZZ_SECONDS_link ?= 90
+FUZZ_SECONDS_peer_bravo ?= 60
+FUZZ_SECONDS_peer_go ?= 60
 FUZZ_BUILD := build/fuzz$(ABI_SUFFIX)
 ifdef FUZZ
 BUILD := $(FUZZ_BUILD)
@@ -78,7 +80,7 @@ WEB_OUT := $(WEB_DIST)/skyblip_simulator.js
 WEB_BUILD := $(BUILD)/web
 WEB_STAMP := $(BUILD)/web/emsdk-version
 WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC)) $(patsubst %.c,$(WEB_BUILD)/%.o,$(VENDOR_SRC))
-WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
+WEB_CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
 
 .PHONY: test test-sanitize test-protocols fuzz fuzzers all clean browser watch tidy
 all: test
@@ -92,7 +94,8 @@ test-sanitize:
 # Each stack is built alone with protocols/common, doctest and any stack it extends, so a stray include fails.
 PROTOCOLS_BUILD := $(BUILD)/protocols-alone
 PROTOCOL_STACKS := $(filter-out common,$(patsubst protocols/%/,%,$(wildcard protocols/*/)))
-PROTOCOLS_CXXFLAGS := $(filter-out -I. -Ivendor -MMD -MP,$(CXXFLAGS))
+# The stacks promise C++17 to the project that takes one (protocols/README.md), so they are built as it.
+PROTOCOLS_CXXFLAGS := $(filter-out -std=c++20 -I. -Ivendor -MMD -MP,$(CXXFLAGS)) -std=c++17
 PROTOCOL_EXTENDS_adsl_edge := adsl
 
 test-protocols: $(addprefix test-protocol-,$(PROTOCOL_STACKS))

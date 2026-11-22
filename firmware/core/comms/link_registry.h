@@ -289,6 +289,7 @@ enum : uint32_t {
     kReceiverRecoveries = 92,
     kLinkDropReason = 94,
     kNoTx = 95,
+    kIrqArmed = 96,
 };
 }
 

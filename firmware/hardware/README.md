@@ -45,6 +45,8 @@ Our own values cannot open on a magic, which starts 0x57 0x52 (`W`, `R`). A sett
 
 Meshtastic's LittleFS sits at 0xED000..0xF4000 (`meshtastic/Adafruit_nRF52_Arduino` `0fd295f1`, `libraries/InternalFileSytem/src/InternalFileSystem.cpp:29,34`), outside the X1's sectors. On the T-Echo the second and third sectors fall inside it. Nothing here recognises a LittleFS block: NVS decides, and a refusal erases it like any other content.
 
+NVS stores a record under a 16-bit id, so each key is stored under the FNV-1a hash of its name folded to 16 bits (`platform/nvs_record.h`). `test/hardware/test_nvs_record.cpp` fails when two keys the products store share an id, or when one takes 0xFFFF, which NVS keeps for itself.
+
 ## The power-failure comparator, through nrfx
 
 `platform/zephyr/supply_monitor.h` arms the nRF52840's power-failure comparator, POFCON, through nrfx, because Zephyr has no driver or binding for it (checked at Zephyr v4.5.0, hal_nordic `c708b9fe`). `core/power` decides what a warning means (`core/power/cutoff.h`, `may_write`).

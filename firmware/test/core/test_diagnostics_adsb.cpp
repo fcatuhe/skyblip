@@ -80,6 +80,19 @@ TEST_CASE("diagnostics adsb: the receiver's counters and its RSSI histogram reac
     CHECK(has(frame, "\"rssi_dbm\":[0,1,2,3,4,5,6,7]"));
 }
 
+// A receiver whose IRQ edge never armed polls 5000 times a second, and only a counter showed it.
+TEST_CASE("diagnostics adsb: a receiver polling without its IRQ edge says so") {
+    Diagnostics diagnostics = receiving();
+    DiagnosticsReport polling(diagnostics, link::Command::Diagnostics,
+                              DiagnosticsReport::Group::Adsb);
+    CHECK(has(only_adsb_frame(polling), "\"irq_armed\":false"));
+
+    diagnostics.adsb.irq_armed = true;
+    DiagnosticsReport armed(diagnostics, link::Command::Diagnostics,
+                            DiagnosticsReport::Group::Adsb);
+    CHECK(has(only_adsb_frame(armed), "\"irq_armed\":true"));
+}
+
 // A refresh lands every second while a phone may still be reading the last dump's frames.
 TEST_CASE("diagnostics adsb: the histogram is copied when the dump is built") {
     Diagnostics diagnostics = receiving();
@@ -89,8 +102,8 @@ TEST_CASE("diagnostics adsb: the histogram is copied when the dump is built") {
     CHECK(has(only_adsb_frame(report), "\"rssi_dbm\":[0,1,2,3,4,5,6,7]"));
 }
 
-// 127 for the receiver, then formats' 2 + 2 + 25 x 5 and four counters of 7, past 182 bytes.
-TEST_CASE("diagnostics adsb: the widest adsb group is 284 bytes, two frames on an iPhone") {
+// 127 for the receiver, formats' 2 + 2 + 25 x 5, four counters of 7, irq_armed's 3: past 182.
+TEST_CASE("diagnostics adsb: the widest adsb group is 287 bytes, two frames on an iPhone") {
     Diagnostics diagnostics = receiving();
     diagnostics.adsb.frames = diagnostics.adsb.frame_rate_hz = 0xFFFFFFFFu;
     diagnostics.adsb_crc = diagnostics.adsb_unsupported = 0xFFFFFFFFu;
@@ -107,7 +120,7 @@ TEST_CASE("diagnostics adsb: the widest adsb group is 284 bytes, two frames on a
                              DiagnosticsReport::Group::Adsb);
     uint8_t buffer[DiagnosticsReport::kFrameBytes];
     const int written = report.next_frame(512, buffer, static_cast<int>(sizeof(buffer)));
-    CHECK(written == 284);
+    CHECK(written == 287);
 }
 
 // The config service holds a report in a std::optional, so a copy must carry its own counts.

@@ -1014,6 +1014,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 95,
           "type": "enum",
           "enum": "no_tx"
+        },
+        {
+          "name": "irq_armed",
+          "number": 96,
+          "type": "boolean"
         }
       ],
       "keys_of": "diagnostics"
@@ -1505,6 +1510,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 95,
           "type": "enum",
           "enum": "no_tx"
+        },
+        {
+          "name": "irq_armed",
+          "number": 96,
+          "type": "boolean"
         }
       ]
     },

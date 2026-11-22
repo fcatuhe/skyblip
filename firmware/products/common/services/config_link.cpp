@@ -339,9 +339,14 @@ void ConfigLinkService::load() {
 
     uint8_t blob[kBlobBytes];
     size_t blob_bytes = 0;
-    if (!is_ok(context_.roles.key_value.read(kSettingsKey, blob, sizeof(blob), blob_bytes))) return;
+    const Status read = context_.roles.key_value.read(kSettingsKey, blob, sizeof(blob), blob_bytes);
+    if (read == Status::NotFound) return;
     loaded_ = true;
-    if (adopt(blob, blob_bytes)) {
+    // INFO: fc 21nov26 settings the store holds and cannot hand over are a fault, never a fresh
+    // unit
+    if (!is_ok(read)) {
+        fallback_ = settings::Fallback::Defaults;
+    } else if (adopt(blob, blob_bytes)) {
         remember(blob, blob_bytes);
     } else if (newer_layout(blob, blob_bytes)) {
         newer_kept_ = true;

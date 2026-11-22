@@ -23,6 +23,9 @@ class ConfigLinkService : public runtime::Service {
    public:
     static constexpr const char* kSettingsKey = "settings";
     static constexpr const char* kBrowsersKey = "browsers";
+    static constexpr const char* kUpdateKey = "update";
+    static constexpr const char* kPriorSettingsKey = "settings.prior";
+    static constexpr const char* kReportKey = "install.report";
 
     ConfigLinkService(runtime::Context& context, SettingsStore& store,
                       const power::CutoffMonitor& power, const char* product_name,
@@ -88,9 +91,6 @@ class ConfigLinkService : public runtime::Service {
     // INFO: fc 18oct26 a Bluetooth that never came up is asked once a second, not every pass
     static constexpr uint32_t kAdvertiseRetryPeriodMs = 1000;
     static constexpr size_t kBlobBytes = 64;
-    static constexpr const char* kUpdateKey = "update";
-    static constexpr const char* kPriorSettingsKey = "settings.prior";
-    static constexpr const char* kReportKey = "install.report";
 
     void drain_link_events(uint32_t now_ms);
     void take_request(uint32_t now_ms);
