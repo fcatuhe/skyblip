@@ -4,13 +4,19 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "core/comms/config_store.h"
+#include "core/util/cbor.h"
 #include "core/util/result.h"
 
 namespace skyblip::common {
 
-class SettingsStore : public comms::ConfigStore {
+class SettingsStore {
    public:
+    virtual ~SettingsStore() = default;
+    virtual void write_fields(cbor::Writer& writer) const = 0;
+    virtual void write_default_fields(cbor::Writer& writer) const = 0;
+    virtual Status apply(const cbor::Reader& frame) = 0;
+    // INFO: fc 03oct26 what apply() would change, rows split by '\n' | 20oct26 or its refusal
+    virtual Status describe_changes(const cbor::Reader& frame, char* out, int capacity) const = 0;
     virtual void restore_defaults() = 0;
     virtual uint8_t blob_version() const = 0;
     // INFO: fc 10nov26 a refused blob leaves the settings in use untouched

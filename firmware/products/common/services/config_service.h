@@ -5,7 +5,6 @@
 
 #include "core/comms/browser_link.h"
 #include "core/comms/config.h"
-#include "core/comms/config_store.h"
 #include "core/comms/diagnostics.h"
 #include "core/comms/identity_link.h"
 #include "core/comms/link_claim.h"
@@ -28,6 +27,7 @@
 #include "core/util/span.h"
 #include "ports/dfu.h"
 #include "ports/link.h"
+#include "products/common/settings_store.h"
 
 namespace skyblip::common {
 
@@ -73,7 +73,7 @@ constexpr int kPromptDetailBytes = 128;
 
 class ConfigService {
    public:
-    ConfigService(ports::Link& link, comms::ConfigStore& store, ports::Dfu* dfu = nullptr,
+    ConfigService(ports::Link& link, SettingsStore& store, ports::Dfu* dfu = nullptr,
                   const timing::SlotTimingStatistics* timing_statistics = nullptr)
         : channel_(link, diagnostics_.link_drops),
           store_(store),
@@ -290,7 +290,7 @@ class ConfigService {
 
     comms::Diagnostics diagnostics_{};
     comms::ConfigChannel channel_;
-    comms::ConfigStore& store_;
+    SettingsStore& store_;
     ports::Dfu* dfu_;
     const timing::SlotTimingStatistics* timing_statistics_;
     const timing::DurableWriteWindow* durable_writes_{nullptr};
