@@ -1,7 +1,6 @@
 #ifndef SKYBLIP_HARDWARE_PLATFORM_HOST_MESHTRACKER_X1_H
 #define SKYBLIP_HARDWARE_PLATFORM_HOST_MESHTRACKER_X1_H
 
-#include "boards/seeed/meshtracker_x1/pins.h"
 #include "hardware/parts/ag3335/model.h"
 #include "hardware/parts/drv2605/model.h"
 #include "hardware/parts/lr2021/model.h"
@@ -32,12 +31,24 @@ class MeshtrackerX1Gpio : public io::Gpio {
         if (io::Gpio* owner = route(pin)) owner->mode_input(pin, pullup);
     }
 
+    void wire(const io::PinMap& map) {
+        for (int i = 0; i < map.count; i++) {
+            const io::PinRole& role = map.roles[i];
+            switch (role.function) {
+                case io::PinFunction::RadioBusy: radio_.busy_pin = role.pin; break;
+                case io::PinFunction::RadioReset: radio_.reset_pin = role.pin; break;
+                case io::PinFunction::RadioIrq: radio_.irq_pin = role.pin; break;
+                case io::PinFunction::HapticEnable: haptic_.enable_pin = role.pin; break;
+                default: break;
+            }
+        }
+    }
+
    private:
     io::Gpio* route(int pin) {
-        if (pin == boards::meshtracker_x1::kRadioBusy ||
-            pin == boards::meshtracker_x1::kRadioReset || pin == boards::meshtracker_x1::kRadioIrq)
+        if (pin == radio_.busy_pin || pin == radio_.reset_pin || pin == radio_.irq_pin)
             return &radio_;
-        if (pin == boards::meshtracker_x1::kHapticEnable) return &haptic_;
+        if (pin == haptic_.enable_pin) return &haptic_;
         return nullptr;
     }
 
@@ -56,14 +67,9 @@ class MeshtrackerX1 {
         ports::Capability::Battery | ports::Capability::Indicator;
 
     explicit MeshtrackerX1(ports::Capabilities fitted = kFullyFitted) : fitted_(fitted) {
-        radio_.busy_pin = boards::meshtracker_x1::kRadioBusy;
-        radio_.reset_pin = boards::meshtracker_x1::kRadioReset;
-        radio_.irq_pin = boards::meshtracker_x1::kRadioIrq;
-        radio_.irq_dio = boards::meshtracker_x1::kRadioIrqDio;
         radio_.miso_dead = !ports::has(fitted, ports::Capability::AdsbReceiver);
         barometer_.attach_clock(clock_);
         barometer_.answers = ports::has(fitted, ports::Capability::Barometer);
-        haptic_.enable_pin = boards::meshtracker_x1::kHapticEnable;
         haptic_.answers = ports::has(fitted, ports::Capability::Haptic);
         battery_.fitted = ports::has(fitted, ports::Capability::Battery);
         log_flash_.set_fitted(ports::has(fitted, ports::Capability::Storage));
@@ -84,7 +90,8 @@ class MeshtrackerX1 {
     io::I2c& i2c(io::BusId) { return sensor_bus_; }
     io::Gpio& gpio() { return gpio_; }
     io::Delay& delay() { return radio_; }
-    static int radio_irq() { return boards::meshtracker_x1::kRadioIrq; }
+    void wire(const io::PinMap& map) { gpio_.wire(map); }
+    int radio_irq() const { return radio_.irq_pin; }
 
     host::Clock& clock() { return clock_; }
     host::Link& link() { return link_; }

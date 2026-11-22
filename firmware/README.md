@@ -16,7 +16,7 @@ The C++ tree. Each directory carries its own README for what it decides:
 
 Put a file in the narrowest layer that decides its content. A radio protocol's specification is `protocols/`, which includes nothing of skyBlip's ([`protocols/README.md`](protocols/README.md)). Any other spec, physical law or arithmetic is `core/`. What the core needs done for it is `ports/`. A datasheet is `hardware/` and a schematic is `boards/`. Which pages exist, what a press means and which settings a pilot gets belong to the product. Pixels any product would draw the same way are `ui/`.
 
-Put a service that more than one product runs in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)), not in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone or an alarm. No file in `products/common/` includes a product's header. A product hands a shared service the settings it needs as a small struct the product fills. The config link loads and writes the settings, so it takes the product's `common::SettingsStore` instead. The device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`.
+Put a service that more than one product runs in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)), not in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone, an alarm or a device. No file in `products/common/` includes a product's header. A product hands a shared service the settings it needs as a small struct the product fills. The config link loads and writes the settings, so it takes the product's `common::SettingsStore` instead. The device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`.
 
 `ports/` declares the roles the core needs filled, in the core's own vocabulary. It is a port layer, not a hardware abstraction layer, and holds no register code. `hardware/` fills the roles. The core calls a port. What the world does to a sensor arrives as an `events::` value on a queue instead ([`hardware/README.md`](hardware/README.md)). `protocols/`, `core/` and `ui/` compile with no framework headers, so the host suite and the WASM simulator can build them. Zephyr is used freely below `ports/` and never above it.
 
@@ -29,7 +29,7 @@ Put a service that more than one product runs in `products/common/`, in namespac
 | `make fuzz-<name>` | runs one harness: `nmea`, `air`, `adsb`, `adsb_assembly` or `link` |
 | `make tidy` | runs clang-tidy over what the host build compiles, as CI does |
 | `make browser` | compiles the WASM that the Rails app's `/briefing/simulator` loads from a release, and bundles `scenarios/*.json` into the `scenarios.json` beside it |
-| `make watch` | rebuilds and reruns the host tests on every save, or the WASM with `WATCH=browser` |
+| `make watch` | rebuilds and reruns the host tests on every save, or the WASM with `WATCH=browser`, through `watchexec` |
 | `make clean` | removes `build/` |
 | `make ... ABI=ilp32` | builds any of the above for i386, where `long` is 32 bits as on the nRF52 |
 | `scripts/build_local.sh`, from the repo root | builds the device images |

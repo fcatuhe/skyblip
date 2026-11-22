@@ -122,6 +122,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | the gauge needs three readings to reject a transient, so this still shows charge on the first screen |
 | `kWindowSamples` | 3 | samples | Window | - |
 | `kLevelSamples` | 3 | samples | Samples | [README](../firmware/core/power/README.md) argues it |
 | `kRailSettleMs` | 20 | milliseconds | Settle | the rail's discharge before the wake pin is armed, the 20 ms MB waits after driving the enables low (nRF52.cpp:2075) |
@@ -262,11 +263,11 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | a pass waits while own-ship's burst is armed, never longer than this, so the cadence stays a cadence |
 | `kBarometerClimbWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
 | `kGnssClimbWindowMs` | 2000 (2 s) | milliseconds | Window | - |
-| `kBarometerMaxAgeMs` | `3 * runtime::kBarometerPublishPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
+| `kBarometerMaxAgeMs` | `3 * boards::kBarometerPublishPeriodMs` | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
 | `kPpsRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | an edge is a record, and a second that brought none is the record saying so |
 | `kMotionRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the hub reports faster than the filters behind it move, in whole seconds |
 | `kDieStaleMs` | 30000 (30 s) | milliseconds | Stale | a sensor that stopped answering must neither hold nor drive the glass |
-| `kRecordPeriodMs` | `runtime::kBatteryPeriodMs` = 1000 (1 s) | milliseconds | Period | the cadence the cell is sampled at, so no record repeats a reading |
+| `kRecordPeriodMs` | `power::kBatteryPeriodMs` = 1000 (1 s) | milliseconds | Period | the cadence the cell is sampled at, so no record repeats a reading |
 | `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
 | `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | the die moves in minutes, and each read sleeps on the HFCLK: 10 s is plenty |
 
@@ -423,12 +424,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceRestCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | the longest the loop sleeps with nothing due, well inside the silence ceiling |
 | `kServicePassFloorMs` | 2 | milliseconds | Floor | a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second |
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
-| `kHardwareWatchdogCeilingMs` | 12000 (12 s) | milliseconds | Ceiling | SoftRF's nRF52 figure (src/platform/nRF52.cpp:4558), above kServiceSilenceCeilingMs so the loop refuses to feed first |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
-| `kBarometerPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
-| `kBarometerPpsWindowMs` | `2 * kServicePassCeilingMs` = 20 | milliseconds | Window | - |
-| `kBarometerConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA |
-| `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
-| `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | the gauge needs three readings to reject a transient, so this still shows charge on the first screen |
 
-286 constants over 26 folders.
+281 constants over 26 folders.

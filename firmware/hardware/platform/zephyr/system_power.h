@@ -8,7 +8,6 @@
 #include <zephyr/drivers/spi.h>
 #include <zephyr/kernel.h>
 
-#include "boards/lilygo/t_echo_plus/pins.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "hardware/platform/zephyr/power_down.h"
 #include "hardware/platform/zephyr/rf.h"
@@ -46,26 +45,25 @@ constexpr uint32_t kSensorI2cSclPin = pin_of(SKYBLIP_PSEL(DT_ALIAS(sensor_i2c), 
 
 class SystemPower : public PowerDown {
    public:
-    explicit SystemPower(const struct gpio_dt_spec& wake) : wake_(wake) {}
+    SystemPower(const struct gpio_dt_spec& wake, power::DfuButton factory_dfu_button)
+        : PowerDown(factory_dfu_button), wake_(wake) {}
 
     void begin() {
         read_causes();
         arm_supply_monitor();
     }
 
-    void system_off() override { power_off(boards::t_echo_plus::kFactoryDfuButton); }
-
-    power::CellOnGlass cell_on_glass() const override {
+    power::CellOnGlass cell_on_glass() const {
         if (retained(kFlatOnGlassBit)) return power::CellOnGlass::Flat;
         if (retained(kLowOnGlassBit)) return power::CellOnGlass::Low;
         return power::CellOnGlass::None;
     }
-    void set_cell_on_glass(power::CellOnGlass word) override {
+    void set_cell_on_glass(power::CellOnGlass word) {
         retain(kFlatOnGlassBit, word == power::CellOnGlass::Flat);
         retain(kLowOnGlassBit, word == power::CellOnGlass::Low);
     }
-    bool went_dark_flat() const override { return retained(kWentDarkFlatBit); }
-    void set_went_dark_flat(bool flat) override { retain(kWentDarkFlatBit, flat); }
+    bool went_dark_flat() const { return retained(kWentDarkFlatBit); }
+    void set_went_dark_flat(bool flat) { retain(kWentDarkFlatBit, flat); }
 
    private:
     // INFO: fc 21sep26 a power-on clears GPREGRET2, and a magic makes anything else read as no

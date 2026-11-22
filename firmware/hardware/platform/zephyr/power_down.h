@@ -11,11 +11,12 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/poweroff.h>
 
+#include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
+#include "core/power/wake.h"
 #include "hardware/platform/zephyr/dfu.h"
 #include "hardware/platform/zephyr/reset_causes.h"
 #include "hardware/platform/zephyr/supply_monitor.h"
-#include "ports/system_power.h"
 
 namespace skyblip::platform::zephyr {
 
@@ -30,8 +31,11 @@ constexpr uint32_t kUarteStopTimeoutUs = 21000;
 constexpr uint32_t kUarteStopPollUs = 10;
 
 // INFO: fc 19nov26 every board's way into SYSTEM OFF, whose perform() walks core/power's order
-class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
+class PowerDown : protected power::PowerDownSink {
    public:
+    explicit PowerDown(power::DfuButton factory_dfu_button)
+        : factory_dfu_button_(factory_dfu_button) {}
+
     // INFO: fc 12nov26 read once and cleared: a second read of RESETREAS reads as a power-on
     void read_causes() {
         if (causes_read_) return;
@@ -42,21 +46,20 @@ class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
 
     void arm_supply_monitor() { supply_monitor_.arm(); }
 
-    power::ResetCause reset_causes() const override { return causes_; }
-    bool supply_monitor_armed() const override { return supply_monitor_.armed(); }
-    bool take_supply_warning() override { return supply_monitor_.take_warning(); }
+    power::ResetCause reset_causes() const { return causes_; }
+    bool take_supply_warning() { return supply_monitor_.take_warning(); }
 
-   protected:
-    void power_off(power::DfuButton factory_dfu_button) {
+    void system_off() {
         // INFO: fc 05oct26 first, as it outlives the rails, and without a retention area there is
         // no recovery either
-        (void)write_boot_magic(Dfu::boot_magic_for_system_off(factory_dfu_button));
+        (void)write_boot_magic(Dfu::boot_magic_for_system_off(factory_dfu_button_));
         power::power_down(*this);
         // INFO: fc 05aug26 after the walk, which arms a level wake: a stale DETECT wakes us at once
         clear_stale_latches();
         sys_poweroff();
     }
 
+   protected:
     static void lower(const struct gpio_dt_spec& pin) {
         (void)gpio_pin_configure_dt(&pin, GPIO_OUTPUT_INACTIVE);
     }
@@ -101,6 +104,7 @@ class PowerDown : public ports::SystemPower, protected power::PowerDownSink {
 
    private:
     SupplyMonitor supply_monitor_{};
+    power::DfuButton factory_dfu_button_;
     power::ResetCause causes_{power::ResetCause::None};
     bool causes_read_{false};
 };

@@ -8,6 +8,10 @@
 
 namespace skyblip::power {
 
+// INFO: fc 20nov26 the gauge needs three readings to reject a transient, so this still shows charge
+// on the first screen
+constexpr uint32_t kBatteryPeriodMs = 1000;
+
 constexpr uint16_t kEmptyMv = kFlatMv;
 constexpr uint16_t kFullMv = 4200;
 // INFO: fc 05oct26 no 4.2 V cell reads this high, a USB rail does: README.md

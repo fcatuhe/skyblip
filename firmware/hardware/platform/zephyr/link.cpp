@@ -2,55 +2,39 @@
 
 #include "hardware/platform/zephyr/link.h"
 
-#include <zephyr/bluetooth/att.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
-#include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
 
 #include "core/bus/bus.h"
 #include "core/comms/link_sessions.h"
 #include "core/events/link.h"
-#include "core/identity/activation.h"
 #include "hardware/platform/zephyr/att_budget.h"
 #include "hardware/platform/zephyr/bluetooth_address.h"
+#include "hardware/platform/zephyr/link_state.h"
 #include "hardware/platform/zephyr/loop_wake.h"
-#include "hardware/platform/zephyr/skyblip_uuid.h"
 
 namespace skyblip::platform::zephyr {
 
+using link_state::g_bus;
+using link_state::g_lock;
+using link_state::g_sessions;
+using link_state::kMaxNotifyAttributes;
+using link_state::notify_attributes;
+using link_state::phone;
+using link_state::resume_advertising;
+using link_state::session_of;
 using skyblip::events::Endpoint;
 using skyblip::events::LinkEvent;
 using skyblip::events::MtuRequest;
-using skyblip::events::RxFrame;
 
 namespace {
-
-// INFO: fc 18sep26 Nordic's roles: the app writes RX, we notify TX (XCSoar BleSerialPort.java:100).
-#define NUS_UUID(id) BT_UUID_128_ENCODE(0x6e400000 | (id), 0xb5a3, 0xf393, 0xe0a9, 0xe50e24dcca9e)
-static struct bt_uuid_128 nus_service_uuid = BT_UUID_INIT_128(NUS_UUID(0x0001));
-static struct bt_uuid_128 nus_rx_uuid = BT_UUID_INIT_128(NUS_UUID(0x0002));
-static struct bt_uuid_128 nus_tx_uuid = BT_UUID_INIT_128(NUS_UUID(0x0003));
-
-// INFO: fc 13nov26 HM-10, what PowerFLARM Fusion and Flex ship: one characteristic.
-static struct bt_uuid_16 hm10_service_uuid = BT_UUID_INIT_16(0xFFE0);
-static struct bt_uuid_16 hm10_characteristic_uuid = BT_UUID_INIT_16(0xFFE1);
-
-static struct bt_uuid_128 skyblip_service_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kSkyblipServiceId));
-static struct bt_uuid_128 config_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kConfigCharacteristicId));
-// INFO: fc 20nov26 the log offload gets its own characteristic so its round trips cannot starve the
-// pilot's prompts
-static struct bt_uuid_128 log_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kLogCharacteristicId));
 
 // INFO: fc 04aug26 opcode and value handle, so an iPhone's ATT_MTU of 185 carries 182 bytes of
 // payload
 constexpr uint16_t kNotifyHeaderBytes = 3;
 
-bus::Bus* g_bus = nullptr;
-// INFO: fc 19nov26 every callback pushes onto the bus under this lock, so the stack is one producer
-struct k_spinlock g_lock;
-comms::LinkSessions g_sessions;
 struct bt_conn* g_connections[CONFIG_BT_MAX_CONN] = {};
 // INFO: fc 11nov26 equal: every phone is a row, and a reserved Bravo finds a free connection
 static_assert(CONFIG_BT_MAX_CONN == static_cast<int>(comms::LinkSessions::kMaxSessions),
@@ -60,17 +44,6 @@ atomic_t g_in_flight[CONFIG_BT_MAX_CONN];
 
 void notified(struct bt_conn* connection, void* /*user_data*/) {
     atomic_dec(&g_in_flight[bt_conn_index(connection)]);
-}
-
-// INFO: fc 11nov26 the Go's own link to its Bravo is central.cpp's: no session, no NMEA, no MTU ask
-bool phone(struct bt_conn* connection) {
-    struct bt_conn_info info = {};
-    return bt_conn_get_info(connection, &info) == 0 && info.role == BT_CONN_ROLE_PERIPHERAL;
-}
-
-// INFO: fc 18sep26 bt_conn_index() is the controller's own slot, so session ids never collide.
-uint16_t session_of(struct bt_conn* connection) {
-    return static_cast<uint16_t>(bt_conn_index(connection) + 1);
 }
 
 // INFO: fc 23sep26 referenced under the callbacks' lock, so a released connection is never notified
@@ -106,157 +79,10 @@ uint16_t payload_from_mtu(uint16_t mtu) {
                                     : static_cast<uint16_t>(0);
 }
 
-Status push_rx(struct bt_conn* connection, Endpoint endpoint, const void* data, uint16_t bytes) {
-    RxFrame frame{};
-    frame.session_id = session_of(connection);
-    frame.endpoint = endpoint;
-    frame.bytes = bytes > frame.data.size() ? static_cast<uint16_t>(frame.data.size()) : bytes;
-    const uint8_t* incoming = static_cast<const uint8_t*>(data);
-    for (uint16_t i = 0; i < frame.bytes; i++) frame.data[i] = incoming[i];
-    k_spinlock_key_t key = k_spin_lock(&g_lock);
-    frame.connection = g_sessions.connection(frame.session_id);
-    const bool queued = g_bus != nullptr && g_bus->deliver(frame);
-    k_spin_unlock(&g_lock, key);
-    g_loop_wake.wake();
-    return queued ? Status::Ok : Status::Full;
-}
-
 // INFO: fc 19nov26 called under g_lock, after the sessions raised an Up or a Down
 void forward_events() {
     LinkEvent event{};
     while (g_bus != nullptr && g_sessions.pop(event)) (void)g_bus->link_events.push(event);
-}
-
-// INFO: fc 04aug26 a write longer than RxFrame is refused with an ATT error, because a truncated
-// set would half-apply
-constexpr size_t kMaxInboundBytes = sizeof(RxFrame::data);
-bool too_long(uint16_t bytes) { return bytes > kMaxInboundBytes; }
-
-// INFO: fc 23sep26 a write with response learns the queue was full, one without is dropped unseen
-ssize_t accept_write(struct bt_conn* connection, Endpoint endpoint, const void* data,
-                     uint16_t bytes) {
-    if (!phone(connection)) return BT_GATT_ERR(BT_ATT_ERR_WRITE_NOT_PERMITTED);
-    if (too_long(bytes)) return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
-    if (!is_ok(push_rx(connection, endpoint, data, bytes)))
-        return BT_GATT_ERR(BT_ATT_ERR_INSUFFICIENT_RESOURCES);
-    return bytes;
-}
-
-ssize_t on_config_write(struct bt_conn* connection, const struct bt_gatt_attr*, const void* data,
-                        uint16_t bytes, uint16_t /*offset*/, uint8_t /*flags*/) {
-    return accept_write(connection, Endpoint::Config, data, bytes);
-}
-
-ssize_t on_log_write(struct bt_conn* connection, const struct bt_gatt_attr*, const void* data,
-                     uint16_t bytes, uint16_t /*offset*/, uint8_t /*flags*/) {
-    return accept_write(connection, Endpoint::Log, data, bytes);
-}
-
-// INFO: fc 18sep26 XCSoar refuses a UART service with no write characteristic, nothing reads this.
-ssize_t on_stream_write(struct bt_conn*, const struct bt_gatt_attr*, const void*, uint16_t bytes,
-                        uint16_t /*offset*/, uint8_t /*flags*/) {
-    return bytes;
-}
-
-BT_GATT_SERVICE_DEFINE(nus_service, BT_GATT_PRIMARY_SERVICE(&nus_service_uuid),
-                       BT_GATT_CHARACTERISTIC(&nus_rx_uuid.uuid,
-                                              BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
-                                              BT_GATT_PERM_WRITE, nullptr, on_stream_write,
-                                              nullptr),
-                       BT_GATT_CHARACTERISTIC(&nus_tx_uuid.uuid, BT_GATT_CHRC_NOTIFY,
-                                              BT_GATT_PERM_NONE, nullptr, nullptr, nullptr),
-                       BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
-constexpr int kNusNotifyAttribute = 4;
-
-BT_GATT_SERVICE_DEFINE(hm10_service, BT_GATT_PRIMARY_SERVICE(&hm10_service_uuid),
-                       BT_GATT_CHARACTERISTIC(&hm10_characteristic_uuid.uuid,
-                                              BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_WRITE |
-                                                  BT_GATT_CHRC_WRITE_WITHOUT_RESP,
-                                              BT_GATT_PERM_WRITE, nullptr, on_stream_write,
-                                              nullptr),
-                       BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
-constexpr int kHm10NotifyAttribute = 2;
-
-// INFO: fc 11nov26 Bravo serves peer to its Go, and the Go reaches Bravo's as a central
-#if defined(CONFIG_SKYBLIP_PEER_SERVER)
-static struct bt_uuid_128 peer_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kPeerCharacteristicId));
-
-ssize_t on_peer_write(struct bt_conn* connection, const struct bt_gatt_attr*, const void* data,
-                      uint16_t bytes, uint16_t /*offset*/, uint8_t /*flags*/) {
-    return accept_write(connection, Endpoint::Peer, data, bytes);
-}
-
-#define SKYBLIP_PEER_ATTRIBUTES                                                         \
-    ,                                                                                   \
-        BT_GATT_CHARACTERISTIC(                                                         \
-            &peer_uuid.uuid,                                                            \
-            BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP | BT_GATT_CHRC_NOTIFY, \
-            BT_GATT_PERM_WRITE, nullptr, on_peer_write, nullptr),                       \
-        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE)
-constexpr int kPeerNotifyAttribute = 8;
-#else
-#define SKYBLIP_PEER_ATTRIBUTES
-#endif
-
-BT_GATT_SERVICE_DEFINE(skyblip_service, BT_GATT_PRIMARY_SERVICE(&skyblip_service_uuid),
-                       BT_GATT_CHARACTERISTIC(&config_uuid.uuid,
-                                              BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
-                                                  BT_GATT_CHRC_NOTIFY,
-                                              BT_GATT_PERM_WRITE, nullptr, on_config_write,
-                                              nullptr),
-                       BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-                       BT_GATT_CHARACTERISTIC(&log_uuid.uuid,
-                                              BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
-                                                  BT_GATT_CHRC_NOTIFY,
-                                              BT_GATT_PERM_WRITE, nullptr, on_log_write, nullptr),
-                       BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE)
-                           SKYBLIP_PEER_ATTRIBUTES);
-constexpr int kConfigNotifyAttribute = 2;
-constexpr int kLogNotifyAttribute = 5;
-constexpr int kMaxNotifyAttributes = 2;
-
-int notify_attributes(Endpoint endpoint, const struct bt_gatt_attr** out) {
-    switch (endpoint) {
-        case Endpoint::Nmea:
-            out[0] = &nus_service.attrs[kNusNotifyAttribute];
-            out[1] = &hm10_service.attrs[kHm10NotifyAttribute];
-            return 2;
-        case Endpoint::Config: out[0] = &skyblip_service.attrs[kConfigNotifyAttribute]; return 1;
-        case Endpoint::Log: out[0] = &skyblip_service.attrs[kLogNotifyAttribute]; return 1;
-        case Endpoint::Peer:
-#if defined(CONFIG_SKYBLIP_PEER_SERVER)
-            out[0] = &skyblip_service.attrs[kPeerNotifyAttribute];
-            return 1;
-#else
-            return 0;
-#endif
-    }
-    return 0;
-}
-
-// INFO: fc 18sep26 XCSoar scan-filters by service UUID, so a name-only advert is invisible to it.
-const struct bt_data advertising_data[] = {
-    BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
-    BT_DATA_BYTES(BT_DATA_UUID128_ALL, NUS_UUID(0x0001)),
-    BT_DATA_BYTES(BT_DATA_UUID16_ALL, BT_UUID_16_ENCODE(0xFFE0)),
-};
-
-// INFO: fc 18sep26 Both UUIDs fill the 31-byte advert, so the name rides the scan response.
-static_assert(identity::kBluetoothNameBytes < CONFIG_BT_DEVICE_NAME_MAX,
-              "every name the product builds fits the GAP name and its terminator");
-struct ScanResponse {
-    char name[CONFIG_BT_DEVICE_NAME_MAX];
-    struct bt_data scan_data[1];
-};
-// INFO: fc 18oct26 two, swapped whole: the loop renames while the host may resume
-ScanResponse g_responses[2];
-atomic_ptr_t g_response = ATOMIC_PTR_INIT(nullptr);
-atomic_t g_advertising = ATOMIC_INIT(0);
-
-int start_advertising() {
-    const ScanResponse* response = static_cast<const ScanResponse*>(atomic_ptr_get(&g_response));
-    return bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, advertising_data, ARRAY_SIZE(advertising_data),
-                           response->scan_data, ARRAY_SIZE(response->scan_data));
 }
 
 void note_mtu_request(struct bt_conn* connection, MtuRequest outcome, uint8_t error) {
@@ -280,15 +106,6 @@ void request_mtu(struct bt_conn* connection) {
         note_mtu_request(connection, MtuRequest::AlreadyExchanged, 0);
     else if (error != 0)
         note_mtu_request(connection, MtuRequest::Unsent, static_cast<uint8_t>(-error));
-}
-
-// INFO: fc 18sep26 -ENOMEM is every connection object in use, and recycled() is what undoes it.
-void resume_advertising() {
-    if (atomic_get(&g_advertising) == 0) return;
-    k_spinlock_key_t key = k_spin_lock(&g_lock);
-    const bool admits = g_sessions.admits();
-    k_spin_unlock(&g_lock, key);
-    if (admits) (void)start_advertising();
 }
 
 // INFO: le 04aug26 the callbacks touch no service, they push onto the bus and wake the loop
@@ -352,34 +169,6 @@ Status Link::begin() {
     return Status::Ok;
 }
 
-// INFO: fc 18oct26 a live rename: a link connected now sees the new name at its next scan
-Status Link::advertise_as(const char* name) {
-    ScanResponse* next =
-        atomic_ptr_get(&g_response) == &g_responses[0] ? &g_responses[1] : &g_responses[0];
-    size_t name_bytes = 0;
-    while (name[name_bytes] != 0 && name_bytes < sizeof(next->name) - 1) {
-        next->name[name_bytes] = name[name_bytes];
-        name_bytes++;
-    }
-    next->name[name_bytes] = 0;
-    next->scan_data[0].type = BT_DATA_NAME_COMPLETE;
-    next->scan_data[0].data_len = static_cast<uint8_t>(name_bytes);
-    next->scan_data[0].data = reinterpret_cast<const uint8_t*>(next->name);
-    atomic_ptr_set(&g_response, next);
-
-    const int named = bt_set_name(next->name);
-    int error = 0;
-    if (atomic_get(&g_advertising) == 0) {
-        error = start_advertising();
-        if (error == 0) atomic_set(&g_advertising, 1);
-    } else {
-        error = bt_le_adv_update_data(advertising_data, ARRAY_SIZE(advertising_data),
-                                      next->scan_data, ARRAY_SIZE(next->scan_data));
-        if (error == -EAGAIN) error = 0;
-    }
-    return named == 0 && error == 0 ? Status::Ok : Status::Down;
-}
-
 Status Link::reserve_peer_connection(bool reserved) {
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     const Status status = g_sessions.reserve_peer(reserved);
@@ -408,16 +197,6 @@ int Link::phones() const {
     const int phones = g_sessions.phones();
     k_spin_unlock(&g_lock, key);
     return phones;
-}
-
-Status Link::advertise_within_ceiling(Status status, bool admits) {
-    if (status != Status::Ok) return status;
-    if (admits) {
-        resume_advertising();
-        return status;
-    }
-    (void)bt_le_adv_stop();
-    return status;
 }
 
 uint16_t Link::payload_bytes() const {

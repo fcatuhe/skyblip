@@ -7,65 +7,19 @@
 #include "core/events/link.h"
 #include "hardware/platform/host/platform.h"
 #include "products/skyblip_go/product.h"
-#include "runtime/tasks.h"
-#include "simulator/lamp_look.h"
-#include "simulator/world/world.h"
+#include "simulator/unit_simulator.h"
 
 namespace skyblip::simulator {
 
-class Simulator {
+class Simulator : public UnitSimulator<Simulator, platform::host::Platform,
+                                       go::Product<platform::host::Platform>> {
    public:
     using Product = go::Product<platform::host::Platform>;
 
     Status setup() {
         platform_.retune_gnss_port(true);
-        const Status started = product_.setup();
-        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
-        return started == Status::Ok ? armed : started;
+        return UnitSimulator::setup();
     }
-
-    void step(uint32_t now_ms) {
-        platform_.clock().set_milliseconds(now_ms);
-        world_.step(now_ms, product_.state());
-        product_.run_pass(now_ms);
-        // INFO: fc 29sep26 on air in the step that keyed it, not the next: 5 ms of a burst's slack
-        world_.air().take_own_transmission(platform_.clock().microseconds(),
-                                           platform_.chips().radio);
-        lamp_.watch();
-    }
-
-    bool park_refusal(uint32_t now_ms) {
-        platform_.clock().set_milliseconds(now_ms);
-        return product_.park_refusal(now_ms);
-    }
-
-    // INFO: fc 20nov26 finer than the 5 ms guard on the O to M edge, or the simulation misses a
-    // slot boundary the firmware keeps
-    static constexpr uint32_t kStepMs = 5;
-
-    void run(uint32_t until_ms, uint32_t step_ms = kStepMs) {
-        for (uint32_t now_ms = 0; now_ms <= until_ms; now_ms += step_ms) step(now_ms);
-    }
-
-    void load(const Scenario& scenario) {
-        scenario_ = scenario;
-        world_.load(scenario);
-        name_device(scenario.callsign);
-    }
-
-    bool load_file(const char* path) {
-        Scenario scenario;
-        if (!load_scenario(path, scenario)) return false;
-        load(scenario);
-        return true;
-    }
-
-    Mode mode() const { return scenario_.mode; }
-    const Scenario& scenario() const { return scenario_; }
-
-    Product& product() { return product_; }
-    World<platform::host::Platform>& world() { return world_; }
-    platform::host::Platform& platform() { return platform_; }
 
     // INFO: fc 20nov26 true only once the event travelled platform, board, bus and config service
     bool companion_connected() { return product_.config_link().config().link_up(); }
@@ -83,9 +37,18 @@ class Simulator {
     }
     // INFO: fc 20nov26 gaps included, so assert on this to ask whether traffic is called out at all
     traffic::Level announcing_level() { return product_.alarm().announcing_level(); }
-    indication::Colour lamp_since_last_look() { return lamp_.since_last_look(); }
 
    private:
+    friend UnitSimulator;
+
+    // INFO: fc 29sep26 on air in the step that keyed it, not the next: 5 ms of a burst's slack
+    void after_pass() {
+        world_.air().take_own_transmission(platform_.clock().microseconds(),
+                                           platform_.chips().radio);
+    }
+
+    void after_load() { name_device(scenario_.callsign); }
+
     // INFO: fc 21sep26 settings are what a device was found with, not an act inside the scenario
     void name_device(const std::string& callsign) {
         char* out = product_.settings().callsign;
@@ -96,12 +59,6 @@ class Simulator {
     }
 
     parts::Ssd1681& panel_driver() { return product_.board().display(); }
-
-    platform::host::Platform platform_{};
-    Product product_{platform_};
-    World<platform::host::Platform> world_{platform_};
-    Scenario scenario_{};
-    LampLook lamp_{platform_.indicator()};
 };
 
 }  // namespace skyblip::simulator

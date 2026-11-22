@@ -35,13 +35,14 @@ def configure(activation, imu_image, central=False):
 class SharedLayers(unittest.TestCase):
     def test_a_product_without_activation_a_hub_or_a_central_builds_none(self):
         platform, generated, _ = configure(activation=False, imu_image=False)
-        self.assertEqual(platform, {"link.cpp", "mcumgr_hooks.cpp"})
+        self.assertEqual(platform, {"link.cpp", "link_advertising.cpp", "link_gatt.cpp",
+                                    "mcumgr_hooks.cpp"})
         self.assertEqual(generated, set())
 
     def test_the_go_builds_its_unit_key_its_central_and_pins_its_hub_image(self):
         platform, generated, _ = configure(activation=True, imu_image=True, central=True)
         self.assertEqual(platform, {"central.cpp", "identity.cpp", "imu_firmware.cpp", "link.cpp",
-                                    "mcumgr_hooks.cpp"})
+                                    "link_advertising.cpp", "link_gatt.cpp", "mcumgr_hooks.cpp"})
         self.assertEqual(generated, {"skyblip_server_key.inc", "bhi260ap_fw_sha256.inc"})
 
     def test_every_protocol_stack_goes_into_the_image_and_its_tests_do_not(self):

@@ -192,7 +192,7 @@ class Product {
     // INFO: fc 12nov26 ownship fixes before adsb folds, and the lamp's prompt before the button
     // answers
     static constexpr int kServiceCount = 10;
-    const runtime::Loop::Entry services_[kServiceCount]{
+    const runtime::LoopEntry services_[kServiceCount]{
         {&config_link_, diagnostics::LoopService::Config},
         {&ownship_, diagnostics::LoopService::Ownship},
         {&power_, diagnostics::LoopService::Power},
@@ -203,7 +203,7 @@ class Product {
         {&flight_log_, diagnostics::LoopService::FlightLog},
         {&capture_, diagnostics::LoopService::Capture},
         {&peer_, diagnostics::LoopService::Peer}};
-    runtime::Loop loop_{services_};
+    runtime::Loop<kServiceCount> loop_{services_};
     common::Shell<Product> shell_{*this, kReceiverParkCeilingMs};
 
     power::ButtonRelease refusal_release_{};

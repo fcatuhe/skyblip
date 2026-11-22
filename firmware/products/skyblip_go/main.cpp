@@ -1,3 +1,4 @@
+#include "boards/lilygo/t_echo_plus/pins.h"
 #include "hardware/platform/zephyr/t_echo_plus.h"
 #include "products/common/main_loop.h"
 #include "products/skyblip_go/product.h"
@@ -9,7 +10,7 @@ namespace {
 
 using Go = go::Product<platform::zephyr::TEchoPlus>;
 
-platform::zephyr::TEchoPlus g_platform;
+platform::zephyr::TEchoPlus g_platform{boards::t_echo_plus::kFactoryDfuButton};
 Go g_product{g_platform};
 go::DiagnosticsCollector<Go> g_diagnostics;
 

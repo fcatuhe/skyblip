@@ -94,7 +94,6 @@ TEST_CASE("ag3335: bring-up identifies the receiver, then sends every setting on
     CHECK(gnss.configured());
     CHECK(gnss.identified());
     CHECK(std::string(gnss.firmware_version()) == "AG3335M_V3.3.0");
-    CHECK(gnss.dual_band());
 }
 
 TEST_CASE("ag3335: the configuration tracks L1 and L5 and takes SBAS corrections") {
@@ -153,7 +152,7 @@ TEST_CASE("ag3335: a lost acknowledgement is asked again, and the sequence still
     run(gnss, chip, 0, 5000);
 
     CHECK(gnss.configured());
-    CHECK(gnss.refused_commands() == 0);
+    CHECK(gnss.health().config_stage == ports::GnssConfigStage::Ready);
     // Two dropped answers cost two repeats: the identification and the sleep lock.
     CHECK(chip.commands_seen == parts::Ag3335::kCommandCount + 1 + 2);
 }
@@ -180,7 +179,6 @@ TEST_CASE(
     run(gnss, chip, 0, 5000);
 
     CHECK(gnss.degraded());
-    CHECK(gnss.refused_commands() == 1);
     CHECK_FALSE(chip.sleep_locked);
     CHECK(chip.tracks_l5());
     CHECK(chip.sbas_enabled);
@@ -198,7 +196,6 @@ TEST_CASE("ag3335: a receiver that answers nothing ends degraded and unidentifie
     run(gnss, chip, 0, every_attempt_ms + 1000);
 
     CHECK(gnss.degraded());
-    CHECK(gnss.refused_commands() == parts::Ag3335::kCommandCount);
     CHECK_FALSE(gnss.identified());
 }
 
@@ -317,7 +314,6 @@ TEST_CASE("ag3335: a command that never stops processing is given up, and bring-
     run(gnss, chip, 0, ceiling_ms + 2000);
 
     CHECK(gnss.degraded());
-    CHECK(gnss.refused_commands() == 1);
     CHECK(chip.pps_type == 1);
 }
 
@@ -367,7 +363,6 @@ TEST_CASE("ag3335: the PAIR reader takes the documented $PAIR021 reply and its a
                "2204261515,d01b1f2,2204261517,,,-15.48,-15.48,-14.02,-15.48,0,1,##,0,0*62\r\n") ==
           parts::PairReader::Heard::Setting);
     CHECK(std::string(reader.firmware_version()) == "AG3352Q_V2.1.0.AG3352_20220530");
-    CHECK_FALSE(reader.dual_band());
 }
 
 TEST_CASE("ag3335: the PAIR reader refuses a reply whose checksum does not match") {

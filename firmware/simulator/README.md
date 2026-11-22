@@ -1,6 +1,6 @@
 # simulator
 
-The simulator runs a real product on the host platform, inside a world that drives the part models. `simulator.h` flies a skyBlip Go on the T-Echo's models, `bravo_simulator.h` a skyBlip Bravo on the MeshTracker X1's (`hardware/platform/host/meshtracker_x1.h`), and `paired_simulator.h` both in one aircraft. `frontends/browser.cpp` draws them and the host suite asserts on them. Neither adds behaviour.
+The simulator runs a real product on the host platform, inside a world that drives the part models. `simulator.h` flies a skyBlip Go on the T-Echo's models, `bravo_simulator.h` a skyBlip Bravo on the MeshTracker X1's (`hardware/platform/host/meshtracker_x1.h`), and `paired_simulator.h` both in one aircraft. The first two share `unit_simulator.h`, which steps one unit through its world. `frontends/browser.cpp` draws them and the host suite asserts on them. Neither adds behaviour.
 
 ## The world
 
@@ -9,7 +9,7 @@ The simulator runs a real product on the host platform, inside a world that driv
 - `Sky` is the aircraft and the bands they reach a unit on. ADS-L, ALP-TAS and the skyPost uplink go out on 868 MHz through `Air` into the Sx1262 model, as genuine frames, so the production receive path runs. ADS-B goes out on 1090 MHz into the LR2021 model (`world/world_adsb.cpp`).
 - `World<Platform>` is a `Sky` carrying one unit: its GNSS, barometer, button, pad, cell and phone link. A Go hears 868 MHz and a Bravo 1090 MHz, so an aircraft with both systems is heard by each on its own band.
 
-Each aircraft is placed north and east of where own-ship was when it was added, then flies over the ground on its own, so two manoeuvring aircraft describe one encounter. `Air` logs every burst, heard or not, and decides whether the radio hears one by where it was tuned when the burst started, so a slot-timing bug shows on the tape as `Deaf`. A step is `Simulator::kStepMs`, 5 ms, finer than the guard on the O to M edge.
+Each aircraft is placed north and east of where own-ship was when it was added, then flies over the ground on its own, so two manoeuvring aircraft describe one encounter. `Air` logs every burst, heard or not, and decides whether the radio hears one by where it was tuned when the burst started, so a slot-timing bug shows on the tape as `Deaf`. A step is `UnitSimulator::kStepMs`, 5 ms, finer than the guard on the O to M edge.
 
 The Go's L76K is brought up as on a T-Echo: met at 9600, raised to 115200 and set to solve twice a second, on `.000` and `.500` of its UTC, which the host PPS puts on the clock's whole second. The host GNSS port retunes only once `Simulator::setup()` says a world ticks the receiver, because a product rig feeds fixes onto the bus instead. A case can set `models::L76k`'s latency after a solution, 0 unless it asks for the 70 ms SoftRF measured, read what it `solved()`, stall the wire, have it answer, refuse or hang on a sub-second `$PCAS02`, hang until RESET_N is pulsed, or lose UTC.
 

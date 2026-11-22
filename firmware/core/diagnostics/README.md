@@ -166,7 +166,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Dwell` | `products/skyblip_go/services/radio.cpp` `record_dwell` | every dwell armed, three a second |
 | `Flight` | `products/common/services/ownship.cpp` `record_flight` | every evaluation of the flight machine, on a whole-second solution |
 | `Power` | `products/common/services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, and once more as a capture parks |
-| `Barometer` | `products/common/services/ownship.cpp` `record_barometer` | every sample the board polls (`runtime::kBarometerPublishPeriodMs`) |
+| `Barometer` | `products/common/services/ownship.cpp` `record_barometer` | every sample the board polls (`boards::kBarometerPublishPeriodMs`) |
 | `Motion` | `products/common/services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, where a hub is fitted |
 | `Contact` | `products/skyblip_go/services/screen.cpp` `record_contact` | every debounced edge, with the gesture the product made of it |
 | `Link` | `products/common/services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |

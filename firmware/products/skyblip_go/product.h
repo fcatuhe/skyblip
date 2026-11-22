@@ -181,7 +181,7 @@ class Product {
     }
 
     void take_went_dark_flat() {
-        ports::SystemPower& retained = platform_.system_power();
+        auto& retained = platform_.system_power();
         went_dark_flat_ =
             glass_remembered_ == power::CellOnGlass::Flat || retained.went_dark_flat();
         retained.set_went_dark_flat(boot_path() == power::BootPath::SleepAgain && went_dark_flat_);
@@ -307,7 +307,7 @@ class Product {
 
     // INFO: fc 20nov26 the order is the dataflow (README.md, What a service is), never a preference
     static constexpr int kServiceCount = 11;
-    const runtime::Loop::Entry services_[kServiceCount]{
+    const runtime::LoopEntry services_[kServiceCount]{
         {&config_link_, diagnostics::LoopService::Config},
         {&ownship_, diagnostics::LoopService::Ownship},
         {&power_, diagnostics::LoopService::Power},
@@ -319,7 +319,7 @@ class Product {
         {&capture_, diagnostics::LoopService::Capture},
         {&screen_, diagnostics::LoopService::Screen},
         {&bravo_, diagnostics::LoopService::Bravo}};
-    runtime::Loop loop_{services_};
+    runtime::Loop<kServiceCount> loop_{services_};
     common::Shell<Product> shell_{*this, kRadioParkCeilingMs};
 
     SelfTestPart self_test_parts_[kSelfTestPartCount]{};

@@ -1,6 +1,6 @@
 # Host test and simulator build, with nothing but a C++ compiler: README.md lists the targets.
 
-# 155 translation units and no ccache: serial, a full rebuild is five minutes.
+# One job per core, as no ccache keeps objects between trees.
 MAKEFLAGS += -j$(shell nproc 2>/dev/null || echo 4)
 
 CXX      ?= c++
@@ -181,27 +181,12 @@ $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -x c++ -c $< -o $@
 
-# Rebuilds on every save, the host tests by default and the WASM with WATCH=browser.
+# Rebuilds on every save, the host tests by default and the WASM with WATCH=browser. Needs watchexec.
 WATCH ?= test
-WATCH_SRC := core ui ports hardware boards runtime products simulator test
+WATCH_SRC := protocols core ui ports hardware boards runtime products simulator scenarios test vendor
 
 watch:
-	@echo "watching (target: $(WATCH)), Ctrl-C to stop"
-	@if command -v watchexec >/dev/null 2>&1; then \
-	  watchexec -e cpp,h,html --debounce 400ms -- $(MAKE) --no-print-directory $(WATCH); \
-	else \
-	  last=""; \
-	  while true; do \
-	    cur=$$(find $(WATCH_SRC) \( -name '*.cpp' -o -name '*.h' -o -name '*.html' \) \
-	           -exec ls -l {} + 2>/dev/null | cksum); \
-	    if [ "$$cur" != "$$last" ]; then \
-	      last="$$cur"; \
-	      printf '\n=== %s: rebuilding ===\n' "$$(date +%H:%M:%S)"; \
-	      $(MAKE) --no-print-directory $(WATCH) || true; \
-	    fi; \
-	    sleep 1; \
-	  done; \
-	fi
+	watchexec $(addprefix -w ,$(WATCH_SRC)) -e cpp,h,c,js,json --debounce 400ms -- $(MAKE) --no-print-directory $(WATCH)
 
 clean:
 	rm -rf $(BUILD)

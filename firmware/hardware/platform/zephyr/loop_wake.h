@@ -8,7 +8,6 @@
 #include <cstdint>
 
 #include "core/util/result.h"
-#include "runtime/tasks.h"
 
 namespace skyblip::platform::zephyr {
 
@@ -19,13 +18,12 @@ class LoopWake {
     // INFO: fc 03oct26 limit 1 and the pass drains every ring: a burst of wakes is one more pass
     void wake() { k_sem_give(&woken_); }
 
-    void rest_after(int64_t pass_began_ticks, uint32_t due_in_ms) {
+    void rest_after(int64_t pass_began_ticks, uint32_t due_in_ms, uint32_t floor_ms) {
         const int64_t due =
             pass_began_ticks + static_cast<int64_t>(k_ms_to_ticks_ceil64(due_in_ms));
         (void)k_sem_take(&woken_, K_TIMEOUT_ABS_TICKS(due));
         const int64_t earliest =
-            pass_began_ticks +
-            static_cast<int64_t>(k_ms_to_ticks_ceil64(runtime::kServicePassFloorMs));
+            pass_began_ticks + static_cast<int64_t>(k_ms_to_ticks_ceil64(floor_ms));
         if (k_uptime_ticks() < earliest) k_sleep(K_TIMEOUT_ABS_TICKS(earliest));
     }
 

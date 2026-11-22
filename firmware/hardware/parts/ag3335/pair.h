@@ -28,7 +28,6 @@ class PairReader {
 
     const char* firmware_version() const { return firmware_version_; }
     bool identified() const { return firmware_version_[0] != 0; }
-    bool dual_band() const { return dual_band_; }
 
    private:
     // INFO: fc 11nov26 SIM65M §2.3.12 prints a 153-byte $PAIR021 with both L5 fields empty
@@ -44,7 +43,6 @@ class PairReader {
     char firmware_version_[kVersionBytes]{};
     uint16_t ack_command_{0};
     PairResult ack_result_{PairResult::Success};
-    bool dual_band_{false};
 };
 
 }  // namespace skyblip::parts

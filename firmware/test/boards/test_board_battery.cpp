@@ -24,7 +24,7 @@ struct Unit {
     std::vector<events::BatterySample> passes(int count) {
         std::vector<events::BatterySample> published;
         for (int i = 0; i < count; i++) {
-            now_ms += runtime::kBatteryPeriodMs;
+            now_ms += power::kBatteryPeriodMs;
             platform.clock().set_milliseconds(now_ms);
             board.poll(state, now_ms);
             events::BatterySample sample{};
@@ -90,7 +90,7 @@ TEST_CASE("board: a contact down asks for every pass, an idle board waits") {
     unit.now_ms -= runtime::kServicePassCeilingMs;
     const uint32_t idle_ms = unit.board.due_in_ms(unit.state.clock, unit.now_ms);
     CHECK(idle_ms > runtime::kServicePassCeilingMs);
-    CHECK(idle_ms <= runtime::kBatteryPeriodMs);
+    CHECK(idle_ms <= power::kBatteryPeriodMs);
 
     unit.platform.board_gpio().button_down = true;
     unit.board.poll(unit.state, unit.now_ms);

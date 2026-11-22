@@ -37,7 +37,10 @@ static_assert(t_echo_plus::kGlassWidth == parts::Ssd1681::kGlassWidth &&
                   t_echo_plus::kGlassHeight == parts::Ssd1681::kGlassHeight,
               "the glass on this board is what its controller drives");
 
-static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerConversionPeriodMs,
+// INFO: fc 03oct26 four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA
+constexpr uint32_t kBarometerConversionPeriodMs = 250;
+
+static_assert(kBarometerConversionCeilingMs < kBarometerConversionPeriodMs,
               "a barometer conversion is read or given up before the next one is triggered");
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
@@ -173,7 +176,7 @@ class TEchoPlus {
             barometer_quarter_ = 0;
             trigger_barometer(now_ms, true);
         } else if (unpublished_barometer_due(clock, now_ms)) {
-            barometer_quarter_ = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
+            barometer_quarter_ = clock.since_edge_ms / kBarometerConversionPeriodMs;
             trigger_barometer(now_ms, false);
         }
     }
@@ -195,15 +198,15 @@ class TEchoPlus {
                 reading.temperature_dc, reading.temperature_valid});
             return;
         }
-        if (now_ms - barometer_triggered_ms_ < runtime::kBarometerConversionCeilingMs) return;
+        if (now_ms - barometer_triggered_ms_ < kBarometerConversionCeilingMs) return;
         barometer_converting_ = false;
         if (barometer_published_) barometer_faults_++;
     }
 
     bool unpublished_barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!clock.pps_locked)
-            return now_ms - barometer_triggered_ms_ >= runtime::kBarometerConversionPeriodMs;
-        const uint32_t quarter = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
+            return now_ms - barometer_triggered_ms_ >= kBarometerConversionPeriodMs;
+        const uint32_t quarter = clock.since_edge_ms / kBarometerConversionPeriodMs;
         return quarter > barometer_quarter_ && quarter < kBarometerConversionsPerSecond;
     }
 
@@ -262,7 +265,7 @@ class TEchoPlus {
 
    private:
     static constexpr uint32_t kBarometerConversionsPerSecond =
-        runtime::kBarometerPublishPeriodMs / runtime::kBarometerConversionPeriodMs;
+        kBarometerPublishPeriodMs / kBarometerConversionPeriodMs;
 
     uint32_t barometer_due_in_ms(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!ports::has(capabilities_, ports::Capability::Barometer))
@@ -270,10 +273,10 @@ class TEchoPlus {
         if (barometer_converting_ && barometer_published_) return runtime::kServicePassCeilingMs;
         if (barometer_converting_)
             return runtime::remaining_ms(now_ms - barometer_triggered_ms_,
-                                         runtime::kBarometerConversionCeilingMs);
+                                         kBarometerConversionCeilingMs);
         const uint32_t published_ms =
             boards::barometer_due_in_ms(clock, now_ms - last_barometer_ms_);
-        const uint32_t period_ms = runtime::kBarometerConversionPeriodMs;
+        const uint32_t period_ms = kBarometerConversionPeriodMs;
         if (!clock.pps_locked)
             return std::min(published_ms,
                             runtime::remaining_ms(now_ms - barometer_triggered_ms_, period_ms));

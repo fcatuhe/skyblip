@@ -75,7 +75,7 @@ A device that reaches `kFlatMv` paints `BATTERY EMPTY` before the rails go, beca
 
 A device switched off while the cell is `Low` or `Critical` wears `CHARGE THE BATTERY`. The next press gets a device, unless the cell has since drained past the lockout: that refusal pushes `BATTERY EMPTY` over it.
 
-`ports::SystemPower::cell_on_glass` keeps the word across SYSTEM OFF. A platform with nowhere to keep it answers `None`, which costs a repeated frame. A second retained bit, `went_dark_flat`, is set wherever the cutoff or a refused boot parks the flat frame. The next boot that runs reports it on the self-test page and in the status reply, then drops it, so a support case learns it after the glass has changed.
+The platform's `system_power().cell_on_glass()` keeps the word across SYSTEM OFF. A second retained bit, `went_dark_flat`, is set wherever the cutoff or a refused boot parks the flat frame. The next boot that runs reports it on the self-test page and in the status reply, then drops it, so a support case learns it after the glass has changed.
 
 The cable alone changes nothing on the glass, plugged in or pulled out. A press on the cable gets a device whatever the cell reads, because the lockout spares external power, and its first frame takes the word off. Until then the charger's own red LED says the cell is filling.
 

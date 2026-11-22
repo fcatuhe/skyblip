@@ -113,7 +113,6 @@ TEST_CASE("flash window: a fired power-failure comparator stops settings writes"
     uint32_t now_ms = 0;
     stand_on_the_ground(rig, now_ms);
     REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
-    REQUIRE(rig.platform.system_power().supply_monitor_armed());
 
     const uint32_t before = writes(rig);
     rig.platform.system_power().supply_warning = true;

@@ -46,7 +46,7 @@ class PowerService : public runtime::Service {
     static constexpr uint32_t kDieStaleMs = 30000;
 
     // INFO: fc 20sep26 the cadence the cell is sampled at, so no record repeats a reading
-    static constexpr uint32_t kRecordPeriodMs = runtime::kBatteryPeriodMs;
+    static constexpr uint32_t kRecordPeriodMs = power::kBatteryPeriodMs;
 
     // INFO: fc 21sep26 a counter of screen, receiver and buzzer seconds needs no finer grain
     static constexpr uint32_t kDutyRecordPeriodMs = 10000;

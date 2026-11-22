@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_OWNSHIP_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_OWNSHIP_H
 
+#include "boards/common/producer.h"
 #include "core/events/sensor.h"
 #include "core/flight/atmosphere.h"
 #include "core/flight/extrapolate.h"
@@ -108,7 +109,7 @@ class OwnshipService : public runtime::Service {
     static constexpr uint32_t kBarometerClimbWindowMs = flight::kClimbWindowFloorMs;
     static constexpr uint32_t kGnssClimbWindowMs = 2000;
     // INFO: fc 23sep26 three missed samples: a barometer that went silent hands the climb back
-    static constexpr uint32_t kBarometerMaxAgeMs = 3 * runtime::kBarometerPublishPeriodMs;
+    static constexpr uint32_t kBarometerMaxAgeMs = 3 * boards::kBarometerPublishPeriodMs;
     // INFO: fc 20sep26 an edge is a record, and a second that brought none is the record saying so
     static constexpr uint32_t kPpsRecordPeriodMs = 1000;
     // INFO: fc 20sep26 the hub reports faster than the filters behind it move, in whole seconds

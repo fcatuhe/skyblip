@@ -1,33 +1,32 @@
 #ifndef SKYBLIP_HARDWARE_PLATFORM_HOST_SYSTEM_POWER_H
 #define SKYBLIP_HARDWARE_PLATFORM_HOST_SYSTEM_POWER_H
 
+#include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
-#include "ports/system_power.h"
+#include "core/power/wake.h"
 
 namespace skyblip::platform::host {
 
-class SystemPower : public ports::SystemPower, private power::PowerDownSink {
+class SystemPower : private power::PowerDownSink {
    public:
-    power::ResetCause reset_causes() const override { return causes; }
+    power::ResetCause reset_causes() const { return causes; }
 
-    void system_off() override {
+    void system_off() {
         performed_count = 0;
         power::power_down(*this);
         system_offs++;
     }
 
-    bool supply_monitor_armed() const override { return supply_monitor_fitted; }
-
-    bool take_supply_warning() override {
+    bool take_supply_warning() {
         if (!supply_warning) return false;
         supply_warning = false;
         return true;
     }
 
-    power::CellOnGlass cell_on_glass() const override { return retained_cell_on_glass; }
-    void set_cell_on_glass(power::CellOnGlass word) override { retained_cell_on_glass = word; }
-    bool went_dark_flat() const override { return retained_went_dark_flat; }
-    void set_went_dark_flat(bool flat) override { retained_went_dark_flat = flat; }
+    power::CellOnGlass cell_on_glass() const { return retained_cell_on_glass; }
+    void set_cell_on_glass(power::CellOnGlass word) { retained_cell_on_glass = word; }
+    bool went_dark_flat() const { return retained_went_dark_flat; }
+    void set_went_dark_flat(bool flat) { retained_went_dark_flat = flat; }
 
     int order_of(power::PowerDownStep step) const {
         for (int i = 0; i < performed_count; i++)
@@ -36,9 +35,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     }
 
     power::ResetCause causes{power::ResetCause::PowerOn};
-    // INFO: fc 20nov26 carried so the policy above it is testable, and settable so its absence is
-    // too
-    bool supply_monitor_fitted{true};
     bool supply_warning{false};
     // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
     power::CellOnGlass retained_cell_on_glass{power::CellOnGlass::None};

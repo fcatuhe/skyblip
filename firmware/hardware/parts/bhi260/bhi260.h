@@ -70,8 +70,6 @@ class Bhi260 {
     const char* fault_text() const;
     bool running() const { return stage_ == Stage::Running; }
     uint8_t address() const { return address_; }
-    uint16_t kernel_version() const { return kernel_version_; }
-    uint32_t uploaded_bytes() const { return uploaded_bytes_; }
     uint32_t unparsed_events() const { return unparsed_events_; }
     uint32_t fifo_bytes() const { return fifo_bytes_; }
     uint8_t hub_error() const { return hub_error_; }
@@ -179,7 +177,6 @@ class Bhi260 {
     uint8_t meta_event_{0};
     uint8_t sensor_error_{0};
     uint8_t errored_sensor_{0};
-    uint16_t kernel_version_{0};
     Acceleration sample_{};
     bool sample_fresh_{false};
     uint8_t frame_[1 + kCommandHeaderBytes + kUploadChunkBytes]{};
