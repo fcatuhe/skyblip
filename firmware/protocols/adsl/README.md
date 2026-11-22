@@ -27,7 +27,7 @@ These are skyBlip's choices, built on this stack:
 - which packets are forced and how a deferred burst is re-armed (`products/skyblip_go/services/radio_access.cpp`), and the channel assessment (`hardware/platform/zephyr/rf.h`)
 - the address table and the ICAO address (`core/settings/address.h`, `on_air()`), and the configurations the Go refuses (`products/skyblip_go/settings.*`)
 - the receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
-- B.5's bookkeeping: each target's Max. Protocol Version (`core/traffic/table.*`), and when own Traffic goes in its Issue 1 form or is held (`products/skyblip_go/services/radio_frames.cpp`)
+- B.5's bookkeeping: each client's Max. Protocol Version and where it is, apart from the display (`core/traffic/versions.*`), and when own Traffic goes in its Issue 1 form or is held (`products/skyblip_go/services/radio_frames.cpp`)
 
 ## What the receiver refuses
 
@@ -117,7 +117,7 @@ A code marked 0 still reads as true to an Issue 1 receiver, so it stays at versi
 
 §B.5 lets the specification move on without splitting the air. Every packet carries the version it is written in (§E.1.1), and the Status the highest version its sender reads (§G.2.1, `Packet::kMaxProtocolVersion`, 1 here). `status_max_version()` reads that field, and `traffic_max_version()` the version a Traffic payload came in, which §B.5 has a receiver assume until it hears a Status. Both return nothing for any other payload.
 
-`close_client()` is §B.5's test for a neighbour own Traffic must stay readable to: under 1 km horizontally and 800 m vertically, or under 800 m vertically and under 30 s from the closest point of approach, the horizontal distance over the closure rate (`kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`). Own Traffic then goes out in the lowest version any close neighbour reads.
+`close_client()` is §B.5's test for a neighbour own Traffic must stay readable to: under 1 km horizontally and 800 m vertically, or under 800 m vertically and under 30 s from the closest point of approach, the horizontal distance over the closure rate (`kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`). Own Traffic then goes out in the lowest version any close neighbour reads. The stack keeps no list of neighbours: which clients a device has heard, and for how long it believes them, is the integrator's (`core/traffic/README.md`, Which ADS-L version a client reads).
 
 `issue1_form()` re-codes a Traffic payload in Issue 1's codes, as version 0. It answers false, leaving the packet as it was, for any other payload and wherever Issue 1 has no true code:
 

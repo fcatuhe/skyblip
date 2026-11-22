@@ -15,10 +15,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
                                        sender.address_mapping_table,
                                        context_.state.own.aircraft_category);
             if (!built && sender.address) hold_for_fix(utc_s);
-            if (built &&
-                outgoing_.protocol_version() >
-                    context_.state.traffic.readable_version(
-                        context_.state.own, static_cast<uint32_t>(tx_at_us / 1000)) &&
+            if (built && outgoing_.protocol_version() > readable_version_at(tx_at_us) &&
                 !protocol::issue1_form(outgoing_, context_.state.own)) {
                 built = false;
                 if (!held_for_b5_ || held_for_b5_s_ != utc_s) context_.state.air.tx_held_for_b5++;
@@ -41,6 +38,10 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
     outgoing_.set_crc(bytes);
     return static_cast<uint8_t>(
         protocol::m_band_payload(adsl::sync_word(bytes), outgoing_.data, bytes, chips));
+}
+
+uint8_t RadioService::readable_version_at(uint64_t tx_at_us) const {
+    return versions_.readable_version(context_.state.own, static_cast<uint32_t>(tx_at_us / 1000));
 }
 
 // INFO: fc 13nov26 G.2.6 leaves an unknown capability unset: ADS-B counts while Bravo is live

@@ -15,6 +15,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "core/timing/transmit_gate.h"
+#include "core/traffic/versions.h"
 #include "products/skyblip_go/settings.h"
 #include "protocols/adsl/media_access.h"
 #include "runtime/service.h"
@@ -32,8 +33,9 @@ class RadioService : public runtime::Service {
     // INFO: fc 19nov26 one refused dwell is a transient, a second inside the age a fault
     static constexpr uint32_t kRadioRefusalSamples = 2;
 
-    RadioService(runtime::Context& context, const Settings& settings)
-        : runtime::Service(context), settings_(settings) {}
+    RadioService(runtime::Context& context, const Settings& settings,
+                 const traffic::VersionTable& versions)
+        : runtime::Service(context), settings_(settings), versions_(versions) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
@@ -171,6 +173,7 @@ class RadioService : public runtime::Service {
     void log_access(radio::Verdict verdict, const Armed& dwell, Payload payload,
                     const bus::RfState::Busy& busy, uint32_t now_ms);
     bool rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced);
+    uint8_t readable_version_at(uint64_t tx_at_us) const;
     bool fix_too_old_at(uint64_t tx_at_us) const;
     void await_fix(uint32_t utc_s);
     bool silenced(uint64_t tx_at_us) const;
@@ -216,6 +219,7 @@ class RadioService : public runtime::Service {
     bool over_budget_{false};
     bool held_logged_{false};
     const Settings& settings_;
+    const traffic::VersionTable& versions_;
 };
 
 }  // namespace skyblip::go

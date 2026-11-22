@@ -38,7 +38,8 @@ struct RefusingExecutor {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::RadioService radio{context, settings};
+    traffic::VersionTable versions{};
+    go::RadioService radio{context, settings, versions};
 
     RefusingExecutor() {
         roles.capabilities = ports::Capability::Rf;

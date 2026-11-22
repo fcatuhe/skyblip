@@ -1,16 +1,27 @@
 // ADS-L 4 SRD-860 issue 2 Subpart B, the overview: bit order, transmission sequence and versioning.
 #include <cstdint>
 #include <cstring>
+#include <vector>
 
+#include "core/bus/state.h"
+#include "core/events/rf.h"
 #include "core/model/aircraft.h"
+#include "core/model/band.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
+#include "core/protocol/air.h"
 #include "core/radio/log.h"
 #include "core/settings/address.h"
+#include "core/timing/slot.h"
 #include "core/traffic/table.h"
+#include "core/traffic/versions.h"
 #include "doctest/doctest.h"
+#include "hardware/parts/sx1262/model.h"
 #include "hardware/platform/host/identity.h"
+#include "protocols/adsl/flight_state.h"
 #include "protocols/adsl/packet.h"
+#include "protocols/adsl/physical.h"
+#include "protocols/common/manchester.h"
 #include "simulator/simulator.h"
 #include "test/support/m_band_rig.h"
 #include "test/support/product_rig.h"
@@ -67,16 +78,14 @@ model::AircraftObservation neighbour(const model::Ownship& own, int32_t east_m, 
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour that is neither close nor closing leaves the version") {
     model::Ownship own = flying_own();
     own.track_cdeg = 27000;
-    traffic::TrafficTable table;
-    table.set_own_reference(own);
-    REQUIRE(table.update(neighbour(own, 5000, 0), own.utc_s) >= 0);
-    CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
+    traffic::VersionTable versions;
+    versions.hear_traffic(neighbour(own, 5000, 0), own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
 
     model::AircraftObservation above = neighbour(own, 500, 0);
     above.altitude_m = 1900;
-    traffic::TrafficTable stacked;
-    stacked.set_own_reference(own);
-    REQUIRE(stacked.update(above, own.utc_s) >= 0);
+    traffic::VersionTable stacked;
+    stacked.hear_traffic(above, own.utc_s);
     CHECK(stacked.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
 }
 
@@ -84,28 +93,30 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour that is neither close nor closing lea
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour less than 30 s from CPA counts as close") {
     model::Ownship own = flying_own();
     own.speed_mm_s = 75000;
-    traffic::TrafficTable table;
-    table.set_own_reference(own);
+    traffic::VersionTable versions;
     model::AircraftObservation head_on = neighbour(own, 4000, 0);
     head_on.speed_q = 300;
     head_on.track_c9 = 384;
-    REQUIRE(table.update(head_on, own.utc_s) >= 0);
-    CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+    versions.hear_traffic(head_on, own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
 }
 
 // B.5 reads a Traffic packet's version only for a client whose Status has not been heard.
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour's Status outranks the version its Traffic came in") {
     const model::Ownship own = flying_own();
-    traffic::TrafficTable table;
-    table.set_own_reference(own);
-    REQUIRE(table.update(neighbour(own, 500, 0), own.utc_s) >= 0);
-    REQUIRE(table.readable_version(own, own.fix_at_ms) == 0);
+    traffic::VersionTable versions;
+    versions.hear_traffic(neighbour(own, 500, 0), own.utc_s);
+    REQUIRE(versions.readable_version(own, own.fix_at_ms) == 0);
 
-    CHECK(table.declare_max_version(adsl::kAddressTableFlarm, kNeighbour, 1));
-    CHECK(table.readable_version(own, own.fix_at_ms) == 1);
-    REQUIRE(table.update(neighbour(own, 450, 0), own.utc_s + 1) >= 0);
-    CHECK(table.readable_version(own, own.fix_at_ms) == 1);
-    CHECK_FALSE(table.declare_max_version(adsl::kAddressTableFlarm, 0x111111, 0));
+    versions.hear_status(adsl::kAddressTableFlarm, kNeighbour, 1, own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == 1);
+    versions.hear_traffic(neighbour(own, 450, 0), own.utc_s + 1);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == 1);
+
+    // A Status with no Traffic behind it has no position, so it can be close to nobody yet.
+    versions.hear_status(adsl::kAddressTableFlarm, 0x111111, 0, own.utc_s + 1);
+    CHECK(versions.count() == 2);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == 1);
 }
 
 TEST_CASE("ADS-L.4.SRD860.B.5: a Status heard from a tracked aircraft is filed against it") {
@@ -121,9 +132,10 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a Status heard from a tracked aircraft is filed a
     traffic.set_protocol_version(0);
     hear_adsl(rig, traffic);
     settle(rig, now_ms);
-    const int index = rig.state().traffic.find(adsl::kAddressTableFlarm, kNeighbour);
+    const traffic::VersionTable& versions = rig.product.versions();
+    const int index = versions.find(adsl::kAddressTableFlarm, kNeighbour);
     REQUIRE(index >= 0);
-    CHECK(int(rig.state().traffic.at(index)->version.max) == 0);
+    CHECK(int(versions.at(index)->max_version()) == 0);
 
     adsl::Packet status{};
     adsl::encode_status(status, kNeighbour, adsl::kAddressTableFlarm, adsl::StatusReport{});
@@ -132,11 +144,11 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a Status heard from a tracked aircraft is filed a
 
     CHECK(heard_verdict(rig) == radio::Verdict::Declared);
     CHECK(rig.state().air.rx_status == 1);
-    CHECK(rig.state().traffic.at(index)->version.declared);
-    CHECK(int(rig.state().traffic.at(index)->version.max) == adsl::Packet::kMaxProtocolVersion);
+    CHECK(versions.at(index)->declared);
+    CHECK(int(versions.at(index)->max_version()) == adsl::Packet::kMaxProtocolVersion);
 }
 
-TEST_CASE("ADS-L.4.SRD860.B.5: a Status from an aircraft not in the table changes nothing") {
+TEST_CASE("ADS-L.4.SRD860.B.5: a Status from an aircraft not on the display is kept for it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -147,9 +159,33 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a Status from an aircraft not in the table change
     hear_adsl(rig, status);
     settle(rig, now_ms);
 
+    CHECK(heard_verdict(rig) == radio::Verdict::Declared);
+    CHECK(rig.state().air.rx_status == 1);
+    CHECK(rig.state().traffic.count() == 0);
+    const traffic::VersionTable& versions = rig.product.versions();
+    const int index = versions.find(adsl::kAddressTableFlarm, kNeighbour);
+    REQUIRE(index >= 0);
+    CHECK(versions.at(index)->declared);
+    CHECK_FALSE(versions.at(index)->placed);
+    CHECK(int(versions.at(index)->max_version()) == adsl::Packet::kMaxProtocolVersion);
+}
+
+// B.5 is kept for the clients heard direct, and F.2's relay flag says another station sent this.
+TEST_CASE("ADS-L.4.SRD860.B.5: a relayed Status is not filed") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
+
+    adsl::Packet status{};
+    adsl::encode_status(status, kNeighbour, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    status.set_relay();
+    hear_adsl(rig, status);
+    settle(rig, now_ms);
+
     CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
     CHECK(rig.state().air.rx_status == 0);
-    CHECK(rig.state().traffic.count() == 0);
+    CHECK(rig.product.versions().count() == 0);
 }
 
 namespace {
@@ -241,4 +277,166 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a held ground position is retried 2 s on until it
     CHECK(parked.sent == 0);
     CHECK(parked.held >= 15);
     CHECK(parked.given_up >= 3);
+}
+
+namespace {
+
+constexpr uint32_t kFarClientBase = 0x3A0000;
+constexpr int kFarClients = 48;
+constexpr int32_t kCloseNorthM = 300;
+constexpr int32_t kFarNorthM = 20000;
+
+struct OwnPosition {
+    uint64_t at_us{0};
+    uint8_t version{0};
+    uint8_t category{0};
+};
+
+// A heavy helicopter flown in the simulator: its category on air says which issue wrote it, 15 in
+// Issue 2 and 3, Issue 1's rotorcraft, in Issue 1.
+struct Flight {
+    simulator::Simulator simulator;
+    uint32_t now_ms{0};
+    uint32_t step_ms{simulator::Simulator::kStepMs};
+
+    explicit Flight(uint32_t step = simulator::Simulator::kStepMs) : step_ms(step) {
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.product().settings().aircraft_type = kHeavyRotorcraft;
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(60);
+        now_ms = past_settling(simulator);
+    }
+
+    const bus::State& state() { return simulator.product().state(); }
+
+    void run_for(uint32_t for_ms) {
+        const uint32_t until_ms = now_ms + for_ms;
+        while (now_ms < until_ms) {
+            now_ms += step_ms;
+            simulator.step(now_ms);
+        }
+    }
+
+    // Another client north of us at our height and speed, as a conforming encoder writes it.
+    adsl::Packet traffic(uint32_t address, int32_t north_m, uint8_t version) {
+        model::Ownship sender = state().own;
+        sender.latitude_1e7 += north_m * 90;
+        adsl::Packet packet{};
+        REQUIRE(protocol::from_own(packet, sender, address, adsl::kAddressTableFlarm, 4));
+        packet.set_protocol_version(version);
+        return packet;
+    }
+
+    // A burst handed over as the chip delivers it, read by TrafficService on the next pass.
+    void hear(adsl::Packet packet) {
+        const uint8_t bytes = packet.data_bytes();
+        packet.scramble(bytes);
+        packet.set_crc(bytes);
+        uint8_t chips[protocol::kTxChipBytes];
+        const size_t chip_bytes =
+            wire::manchester_frame(adsl::sync_word(bytes), packet.data, bytes, chips);
+        events::RfEvent event{};
+        event.type = events::RfEventType::RxDone;
+        event.band = model::Band::M;
+        event.rssi_dbm = -60;
+        event.rssi_valid = true;
+        event.bytes = models::Sx1262::deliver_after_sync(
+            chips, static_cast<uint16_t>(chip_bytes), protocol::kSharedSync,
+            protocol::kSharedSyncBits, event.data.data(), protocol::kRxChipBytes);
+        REQUIRE(simulator.product().bus().rf.push(event));
+        run_for(step_ms);
+    }
+
+    // The same burst on the channel at an absolute instant, heard only if the radio listens there.
+    void emit(adsl::Packet packet, uint64_t at_us, uint32_t frequency_hz) {
+        packet.scramble();
+        packet.set_crc();
+        uint8_t chips[protocol::kTxChipBytes];
+        const size_t chip_bytes =
+            wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
+        simulator.world().air().emit(at_us, frequency_hz, chips, static_cast<uint16_t>(chip_bytes),
+                                     -60);
+    }
+
+    std::vector<OwnPosition> positions() {
+        std::vector<OwnPosition> sent;
+        for (const simulator::AirRecord& record :
+             records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+            adsl::Packet packet{};
+            REQUIRE(packet_of(record, packet));
+            if (packet.address() != settings::address_of(platform::host::Identity::kSerial))
+                continue;
+            sent.push_back({record.at_us, packet.protocol_version(), packet.aircraft_category});
+        }
+        return sent;
+    }
+};
+
+// Every position on air in Issue 2 as itself, or every one in Issue 1's form.
+void check_written_in(const std::vector<OwnPosition>& sent, uint8_t version) {
+    for (const OwnPosition& position : sent) {
+        CHECK(int(position.version) == version);
+        CHECK(int(position.category) == (version == 0 ? 3 : kHeavyRotorcraft));
+    }
+}
+
+}  // namespace
+
+// A client may send its Status before its first Traffic, and E.1.1 writes that Traffic in the
+// lowest version that encodes it, so an Issue 2 client often sends version 0.
+TEST_CASE(
+    "ADS-L.4.SRD860.B.5: a Status heard before its sender's Traffic is kept and outranks it") {
+    Flight flight;
+    adsl::Packet status{};
+    adsl::encode_status(status, kNeighbour, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    flight.hear(status);
+    CHECK(flight.state().air.rx_status == 1);
+
+    flight.simulator.world().air().clear();
+    for (int second = 0; second < 8; second++) {
+        flight.hear(flight.traffic(kNeighbour, kCloseNorthM, adsl::Packet::kProtocolVersionIssue1));
+        flight.run_for(1000);
+    }
+    const std::vector<OwnPosition> sent = flight.positions();
+    CHECK(sent.size() >= 6);
+    check_written_in(sent, adsl::Packet::kProtocolVersionIssue2);
+}
+
+// The display keeps the nearest airborne targets, so a busy sky can leave a close client on the
+// ground off it: B.5 counts the client all the same.
+TEST_CASE("ADS-L.4.SRD860.B.5: a close Issue 1 client on the ground counts beside a full table") {
+    Flight flight;
+    for (int i = 0; i < kFarClients; i++)
+        flight.hear(flight.traffic(kFarClientBase + static_cast<uint32_t>(i), kFarNorthM + i * 100,
+                                   adsl::Packet::kProtocolVersionIssue2));
+    REQUIRE(flight.state().traffic.count() == traffic::TrafficTable::kMaxTargets);
+
+    adsl::Packet parked = flight.traffic(kNeighbour, kCloseNorthM, 0);
+    parked.flight_state = static_cast<uint8_t>(adsl::FlightState::Ground);
+    parked.set_altitude_m(flight.state().own.altitude_hae_mm / 1000 - 300);
+    flight.hear(parked);
+    CHECK(flight.state().traffic.find(adsl::kAddressTableFlarm, kNeighbour) < 0);
+
+    flight.simulator.world().air().clear();
+    flight.run_for(4000);
+    const std::vector<OwnPosition> sent = flight.positions();
+    CHECK(sent.size() >= 3);
+    check_written_in(sent, adsl::Packet::kProtocolVersionIssue1);
+}
+
+// F.2's relay flag says another station sent it on the sender's behalf: the sender may be out of
+// our range, and the version may be the relay's.
+TEST_CASE("ADS-L.4.SRD860.B.5: a relayed Traffic leaves the version to the clients heard direct") {
+    Flight flight;
+    flight.simulator.world().air().clear();
+    for (int second = 0; second < 6; second++) {
+        adsl::Packet relayed = flight.traffic(kNeighbour, kCloseNorthM, 0);
+        relayed.set_relay();
+        flight.hear(relayed);
+        flight.run_for(1000);
+    }
+    CHECK(flight.state().traffic.find(adsl::kAddressTableFlarm, kNeighbour) >= 0);
+    const std::vector<OwnPosition> sent = flight.positions();
+    CHECK(sent.size() >= 4);
+    check_written_in(sent, adsl::Packet::kProtocolVersionIssue2);
 }

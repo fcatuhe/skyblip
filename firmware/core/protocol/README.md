@@ -40,7 +40,7 @@ The aircraft's transponder is known once a paired Bravo on the ground names the 
 
 ## Writing for an Issue 1 neighbour
 
-§B.5 asks own Traffic to go out in a version every close neighbour reads (`core/traffic/README.md` finds the lowest). With no close Issue 1 client, a position goes out in the lowest version with the same encoding (§E.1.1), so one with category 14 to 17 or an unknown field goes as version 1.
+§B.5 asks own Traffic to go out in a version every close neighbour reads (`core/traffic/README.md`, Which ADS-L version a client reads, finds the lowest). With no close Issue 1 client, a position goes out in the lowest version with the same encoding (§E.1.1), so one with category 14 to 17 or an unknown field goes as version 1.
 
 Beside a close Issue 1 client, `issue1_form` re-codes the payload as version 0 only where Issue 1 has a truthful code for every field (`protocols/adsl/README.md`, Soft versioning). Otherwise the position is held, counted in `air.tx_held_for_b5` and retried like any burst that did not go out (`core/timing/README.md`), so the device never claims a value it does not have. The Issue 1 form keeps the table and address, since Issue 1's F.2.2 also has table 5 for ICAO. §B.5 covers only Traffic, so Status and the name always go out as version 1.
 

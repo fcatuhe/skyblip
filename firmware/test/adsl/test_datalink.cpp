@@ -8,6 +8,7 @@
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
 #include "core/timing/transmit.h"
+#include "core/traffic/versions.h"
 #include "doctest/doctest.h"
 #include "protocols/adsl/media_access.h"
 #include "protocols/adsl/physical.h"
@@ -129,9 +130,9 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status padded to 24 bytes is refused, never f
     settle(rig, now_ms);
     CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
     CHECK(rig.state().air.rx_status == 0);
-    const int index = rig.state().traffic.find(adsl::kAddressTableFlarm, 0xC5D804);
+    const int index = rig.product.versions().find(adsl::kAddressTableFlarm, 0xC5D804);
     REQUIRE(index >= 0);
-    CHECK_FALSE(rig.state().traffic.at(index)->version.declared);
+    CHECK_FALSE(rig.product.versions().at(index)->declared);
 }
 
 // The length byte rides outside the CRC: one bit misheard there costs neither frame.
