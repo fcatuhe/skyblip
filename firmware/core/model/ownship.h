@@ -24,6 +24,9 @@ struct Ownship {
     int32_t speed_mm_s;
     // INFO: fc 20nov26 hundredths, 0 to 35999, because the turn rate is differentiated from it
     int32_t track_cdeg;
+    // INFO: fc 22nov26 the receiver reported each, so a speed of 0 is a standstill, not a gap
+    bool speed_valid;
+    bool track_valid;
     // INFO: fc 20nov26 positive to the right, zero when nothing measured it
     int16_t turn_cdps;
     uint32_t utc_s;

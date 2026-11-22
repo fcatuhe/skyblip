@@ -109,6 +109,8 @@ struct Rig {
     void push_fix(int32_t altitude_m, uint32_t updates) {
         gnss::GnssSolution solution{};
         solution.fix_valid = true;
+        solution.speed_valid = true;
+        solution.track_valid = true;
         solution.altitude_hae_mm = altitude_m * 1000;
         solution.vdop_e2 = 150;
         solution.sentences = updates;
@@ -119,6 +121,8 @@ struct Rig {
     void push_2d_fix(int32_t altitude_m, uint32_t updates) {
         gnss::GnssSolution solution{};
         solution.fix_valid = true;
+        solution.speed_valid = true;
+        solution.track_valid = true;
         solution.fix_mode = gnss::kFixMode2D;
         solution.altitude_hae_mm = altitude_m * 1000;
         solution.sentences = updates;

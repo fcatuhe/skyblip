@@ -64,6 +64,8 @@ struct HousekeepingRig {
         gnss::GnssSolution solution{};
         solution.fix_valid = true;
         solution.speed_mm_s = speed_mm_s;
+        solution.speed_valid = true;
+        solution.track_valid = true;
         solution.altitude_msl_mm = altitude_msl_m * 1000;
         solution.sentences = 1;
         product.bus().gnss.push(solution);

@@ -98,8 +98,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSettleResidualM` | `flight::kFlightSpeedMmS / 1000` = 12 | metres | Settle | the takeoff speed over the second a residual spans, so no smaller error invents a flight |
 | `kConvergedFixes` | 3 | fixes | Fixes | [README](../firmware/core/gnss/README.md) argues it |
 | `kTornStampMs` | -2 | milliseconds | - | - |
-| `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea |
-| `kAltitudeCeilingM` | 100000 | metres | Ceiling | - |
+| `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | COCOM's 1000 kn, far past G.1.8's 236 m/s, so a faster speed is held there |
+| `kAltitudeCeilingM` | 100000 | metres | Ceiling | no aircraft flies past the Karman line, or 1 km under the sea |
 | `kAltitudeFloorM` | -1000 | metres | Floor | - |
 | `kSolutionLatencyCeilingMs` | 250 | milliseconds | Ceiling | the stated assumption: the L76K delivers a solution within a quarter |
 | `kStampToleranceMs` | 10 | milliseconds | - | G.1.1's 10 ms: a stamp that close to a quarter is that quarter |

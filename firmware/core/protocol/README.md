@@ -19,6 +19,8 @@ Adapters between skyBlip's model and the stacks in `protocols/`, which hold what
 
 `from_own` writes the newest solution unextrapolated: its position, height, speed and track, with a Timestamp naming its own quarter second from `own.utc_s` and `own.utc_ms` (G.1.1). A stamp more than 10 ms from a quarter builds nothing, since no quarter dates it to G.1.1's 10 ms, and `RadioService` counts that position in `air.tx_held_for_fix`. `from_own` decides nothing about age: `RadioService` arms a position only while it will be at most 500 ms old on air (G.1.16, `core/timing/README.md`, The age of a position). The climb is the one derived field, differenced over a window by own-ship, with its own validity (G.1.9).
 
+A speed the receiver did not report goes as G.1.8's invalid code, never as 0 m/s, and a speed past 236 m/s goes as the saturated code. G.1.10 gives the track no invalid code of its own, and calls it invalid when the speed is zero or invalid. So a solution with a speed but no track sends its speed as invalid, unless that speed encodes as zero.
+
 ## The Status payload
 
 `from_own_status` hands `adsl::encode_status` the values below for §G.2's payload type 3. The layout and the version are the stack's (`protocols/adsl/README.md`).

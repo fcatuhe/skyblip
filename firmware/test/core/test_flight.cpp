@@ -16,6 +16,13 @@ FlightSample solution(double speed_mps, uint16_t hdop_e2 = 90) {
     sample.speed_mm_s = static_cast<int32_t>(speed_mps * 1000);
     sample.hdop_e2 = hdop_e2;
     sample.fix_valid = true;
+    sample.speed_valid = true;
+    return sample;
+}
+
+FlightSample no_speed() {
+    FlightSample sample{};
+    sample.fix_valid = true;
     return sample;
 }
 
@@ -33,6 +40,15 @@ struct Stream {
     FlightState one(double speed_mps, uint16_t hdop_e2 = 90) {
         now_ms += 1000;
         return monitor.update(solution(speed_mps, hdop_e2), now_ms);
+    }
+
+    FlightState unmoving(int seconds) {
+        FlightState state = monitor.state();
+        for (int i = 0; i < seconds; i++) {
+            now_ms += 1000;
+            state = monitor.update(no_speed(), now_ms);
+        }
+        return state;
     }
 
     FlightState blind(int seconds = 1) {
@@ -205,6 +221,21 @@ TEST_CASE("flight: no fix is not a landing") {
     CHECK(sky.state() == FlightState::Airborne);
 
     CHECK(sky.one(30.0) == FlightState::Airborne);
+}
+
+// An empty RMC speed read as 0 m/s, which landed an aircraft in flight on one solution.
+TEST_CASE("flight: a fix with no ground speed keeps the state it had, landing hold included") {
+    Stream sky;
+    CHECK(sky.unmoving(5) == FlightState::Unknown);
+    REQUIRE(sky.hold(3, 30.0) == FlightState::Airborne);
+
+    CHECK(sky.unmoving(30) == FlightState::Airborne);
+    CHECK(sky.hold(9, 4.0) == FlightState::Airborne);
+    CHECK(sky.unmoving(1) == FlightState::Airborne);
+    CHECK(sky.hold(9, 4.0) == FlightState::Airborne);
+
+    REQUIRE(sky.hold(1, 0.0) == FlightState::Ground);
+    CHECK(sky.unmoving(30) == FlightState::Ground);
 }
 
 // The jerk gate compares two consecutive solutions, so an outage must not arm it.

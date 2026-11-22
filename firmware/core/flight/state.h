@@ -16,6 +16,7 @@ struct FlightSample {
     // INFO: fc 20nov26 0 means the receiver did not report a dilution of precision
     uint16_t hdop_e2{0};
     bool fix_valid{false};
+    bool speed_valid{false};
 };
 
 constexpr int32_t kFlightSpeedMmS = 12000;

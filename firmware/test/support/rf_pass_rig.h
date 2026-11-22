@@ -56,6 +56,8 @@ struct Pass {
         const Status status = rf.begin();
         if (status != Status::Ok) return status;
         state.own.fix_valid = true;
+        state.own.speed_valid = true;
+        state.own.track_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
         state.own.fix_dated = true;

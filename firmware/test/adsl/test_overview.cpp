@@ -34,6 +34,8 @@ model::Ownship flying_own() {
     own.altitude_hae_mm = 1000000;
     own.speed_mm_s = 30000;
     own.track_cdeg = 9000;
+    own.speed_valid = true;
+    own.track_valid = true;
     own.hdop_e2 = 90;
     own.vdop_e2 = 120;
     own.climb_valid = true;
