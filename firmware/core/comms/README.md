@@ -63,7 +63,7 @@ A staged `set` asks the power rule at the door and again at the press, and reach
 
 A status without the transponder is 20 bytes at its widest, so it fits a central that never exchanged its MTU. Key 7, `die_temperature_c`, left it for that budget and is retired. A unit on the ground that hears its transponder adds `own_transponder`, its callsign and its category, for 38 bytes, which a 20-byte link drops and counts.
 
-What a support case reads lives in the diagnostics dump, `reset` and `link_drop_reason` in its system group and `battery_valid` and `cell_mv` in its power group (`core/power/README.md`), and the address and the callsign in the config reply. One boot fact stays in `status`, `went_dark_flat`, because "the battery went flat" is the answer a pilot is owed for a unit that switched itself off. A key with no reading behind it is left out, never sent as a zero. `scripts/check_link_registry.py` holds `format_status` to the schema.
+What a support case reads lives in the diagnostics dump, `reset`, `link_drop_reason` and `failed_writes` in its system group and `battery_valid` and `cell_mv` in its power group (`core/power/README.md`), and the address and the callsign in the config reply. One boot fact stays in `status`, `went_dark_flat`, because "the battery went flat" is the answer a pilot is owed for a unit that switched itself off. A key with no reading behind it is left out, never sent as a zero. `scripts/check_link_registry.py` holds `format_status` to the schema.
 
 ## The 1090 MHz group
 
