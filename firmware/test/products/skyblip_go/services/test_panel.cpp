@@ -194,8 +194,8 @@ TEST_CASE("product: a flat cell takes the front light down with the panel") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    open_menu(rig, rig.now_ms);
-    change(rig, rig.now_ms);
+    open_menu(rig);
+    change(rig);
     REQUIRE(rig.platform.chips().epd.backlight);
 
     rig.platform.battery().divider_mv = 3100;
@@ -213,8 +213,8 @@ TEST_CASE("product: a park with no frame to push still puts the front light out"
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    open_menu(rig, rig.now_ms);
-    change(rig, rig.now_ms);
+    open_menu(rig);
+    change(rig);
     REQUIRE(rig.platform.chips().epd.backlight);
 
     rig.platform.system_power().supply_warning = true;

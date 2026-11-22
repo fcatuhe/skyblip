@@ -33,10 +33,9 @@ std::string trust_browser() {
            hex_text(ConstByteSpan(signature.data(), signature.size())) + "\"}";
 }
 
-void say(Rig& rig, uint32_t& now_ms, const std::string& json) {
+void say(Rig& rig, const std::string& json) {
     rig.send(json.c_str());
-    rig.run(now_ms, now_ms + 2000);
-    now_ms += 2000;
+    rig.run_for(2000);
 }
 
 bool reads_trust(Rig& rig) {
@@ -50,9 +49,9 @@ TEST_CASE("product: a prompt from a browser that proved a key says the press tru
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.random().queue(kNonce);
-    say(rig, rig.now_ms, "{\"command\":\"browser_challenge\"}");
-    say(rig, rig.now_ms, trust_browser());
-    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    say(rig, "{\"command\":\"browser_challenge\"}");
+    say(rig, trust_browser());
+    say(rig, "{\"command\":\"set\",\"units\":\"metric\"}");
     REQUIRE(rig.product.config_link().config().pending() == common::Pending::Set);
     CHECK(reads_trust(rig));
 }
@@ -60,7 +59,7 @@ TEST_CASE("product: a prompt from a browser that proved a key says the press tru
 TEST_CASE("product: a prompt from a browser with no proven key says nothing of trust") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    say(rig, "{\"command\":\"set\",\"units\":\"metric\"}");
     REQUIRE(rig.product.config_link().config().pending() == common::Pending::Set);
     CHECK_FALSE(reads_trust(rig));
 }

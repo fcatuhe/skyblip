@@ -257,19 +257,19 @@ TEST_CASE("formation: a second aircraft catching up after the takeoff is announc
 TEST_CASE("formation: a member is not traffic on the radar's count, and is still listed nearby") {
     Flight flight;
     flight.listen();
-    uint32_t now_ms = flight.hold_station(1000);
+    flight.rig.now_ms = flight.hold_station(1000);
     REQUIRE(flight.target()->in_formation);
 
-    flight.rig.run_seconds(now_ms, 2);
+    flight.rig.run_seconds(2);
     REQUIRE(flight.rig.screen.page() == go::Page::Radar);
     CHECK(flight.radar_counts("0"));
 
-    flight.hear(6000, 0, 0, 40, 270, now_ms, flight::FlightState::Unknown, 0x626262);
-    flight.rig.run_seconds(now_ms, 2);
+    flight.hear(6000, 0, 0, 40, 270, flight.rig.now_ms, flight::FlightState::Unknown, 0x626262);
+    flight.rig.run_seconds(2);
     CHECK(flight.radar_counts("1"));
 
-    flight.rig.show(now_ms, go::Page::Nearby);
-    flight.rig.run_seconds(now_ms, 2);
+    flight.rig.show(go::Page::Nearby);
+    flight.rig.run_seconds(2);
     CHECK(go::nearby_lists(flight.rig.screen.framebuffer(), 'L', "515151"));
     CHECK(go::nearby_lists(flight.rig.screen.framebuffer(), 'L', "626262"));
 }
