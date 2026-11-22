@@ -4,12 +4,12 @@
 #include <cstdint>
 #include <optional>
 
-#include "core/comms/config.h"
 #include "core/comms/peer.h"
 #include "core/events/central.h"
 #include "ports/central.h"
 #include "products/common/services/adsb_capture.h"
 #include "products/common/services/alarm.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/aircraft_address_warning.h"
 #include "products/skyblip_go/bravo_log.h"
 #include "products/skyblip_go/pairing.h"
@@ -44,7 +44,7 @@ class BravoService : public runtime::Service {
     // INFO: fc 11nov26 two health periods for Bravo to answer an unpairing Go, then the link drops
     static constexpr uint32_t kFarewellCeilingMs = 2000;
 
-    BravoService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
+    BravoService(runtime::Context& context, Settings& settings, common::ConfigService& config,
                  ports::Central& central, bus::CentralQueue& central_events,
                  common::AlarmService& alarm)
         : runtime::Service(context),
@@ -134,7 +134,7 @@ class BravoService : public runtime::Service {
     }
 
     Settings& settings_;
-    comms::ConfigService& config_;
+    common::ConfigService& config_;
     ports::Central& central_;
     bus::CentralQueue& central_events_;
     common::AlarmService& alarm_;

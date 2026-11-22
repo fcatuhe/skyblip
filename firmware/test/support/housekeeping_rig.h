@@ -96,7 +96,7 @@ struct HousekeepingRig {
             link_frame(events::Endpoint::Config, platform.link().session_id(), json));
     }
 
-    comms::ConfigService& config() { return product.config_link().config(); }
+    common::ConfigService& config() { return product.config_link().config(); }
 };
 
 }  // namespace

@@ -1,10 +1,8 @@
-#include "core/comms/identity_link.h"
-
-#include "core/comms/config.h"
 #include "core/dfu/update.h"
 #include "core/util/cbor.h"
+#include "products/common/services/config_service.h"
 
-namespace skyblip::comms {
+namespace skyblip::common {
 
 namespace {
 constexpr uint32_t kSerialCeiling = 0xFFFF;
@@ -29,15 +27,6 @@ bool ConfigService::running_version_text(char* out, size_t capacity) const {
     return dfu::format_version(running, out, capacity) > 0;
 }
 
-bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
-    close();
-    if (!unit_.draw_nonce(unit_nonce_)) return false;
-    session_id_ = session_id;
-    opened_ms_ = now_ms;
-    open_ = true;
-    return true;
-}
-
 // INFO: fc 18oct26 an unactivated unit is silent, so only an activated one is refused in flight
 bool ConfigService::identity_refused_in_flight() {
     if (!identity_->activated() || !in_flight()) return false;
@@ -50,11 +39,11 @@ void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextBytes] = {0};
     if (!identity_->unit().key_provisioned() || !running_version_text(version, sizeof(version)) ||
-        !identity_->open(claim_.holder(), now_ms_)) {
+        !identity_->open(channel_.claim().holder(), channel_.now_ms())) {
         refuse(link::Reason::Keyless);
         return;
     }
-    uint8_t frame[IdentityLink::kChallengeFrameBytes];
+    uint8_t frame[comms::IdentityLink::kChallengeFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Challenge);
     add_bytes<link::challenge_bytes::kNonce>(writer, link::challenge_key::kNonce,
@@ -76,11 +65,12 @@ void ConfigService::register_unit(const cbor::Reader& frame) {
         refuse(link::Reason::Keyless);
         return;
     }
-    if (!identity_->live(claim_.holder(), now_ms_)) {
+    if (!identity_->live(channel_.claim().holder(), channel_.now_ms())) {
         refuse(link::Reason::NoSession);
         return;
     }
-    if (payload_bytes_to(claim_.holder()) < IdentityLink::kRegistrationFrameBytes) {
+    if (channel_.payload_bytes_to(channel_.claim().holder()) <
+        comms::IdentityLink::kRegistrationFrameBytes) {
         refuse_too_wide();
         return;
     }
@@ -103,7 +93,8 @@ void ConfigService::register_unit(const cbor::Reader& frame) {
 }
 
 void ConfigService::send_registration() {
-    if (identity_ == nullptr || !identity_->registering(claim_.holder(), now_ms_)) {
+    if (identity_ == nullptr ||
+        !identity_->registering(channel_.claim().holder(), channel_.now_ms())) {
         refuse(link::Reason::NoSession);
         return;
     }
@@ -123,7 +114,7 @@ void ConfigService::send_registration() {
         refuse(link::Reason::Keyless);
         return;
     }
-    uint8_t frame[IdentityLink::kRegistrationFrameBytes];
+    uint8_t frame[comms::IdentityLink::kRegistrationFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Registration);
     add_bytes<link::registration_bytes::kDeviceId>(writer, link::registration_key::kDeviceId,
@@ -153,7 +144,8 @@ void ConfigService::attest(const cbor::Reader& frame) {
         refuse(link::Reason::Keyless);
         return;
     }
-    if (payload_bytes_to(claim_.holder()) < IdentityLink::kAttestationFrameBytes) {
+    if (channel_.payload_bytes_to(channel_.claim().holder()) <
+        comms::IdentityLink::kAttestationFrameBytes) {
         refuse_too_wide();
         return;
     }
@@ -173,7 +165,7 @@ void ConfigService::attest(const cbor::Reader& frame) {
         refuse(link::Reason::Keyless);
         return;
     }
-    uint8_t reply_frame[IdentityLink::kAttestationFrameBytes];
+    uint8_t reply_frame[comms::IdentityLink::kAttestationFrameBytes];
     cbor::Writer writer(reply_frame, sizeof(reply_frame));
     writer.add_code(link::kCommandKey, link::Command::Attestation);
     writer.add_code(link::attestation_key::kProduct, product_);
@@ -195,7 +187,7 @@ void ConfigService::attest(const cbor::Reader& frame) {
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it
 void ConfigService::unlock(const cbor::Reader& frame) {
     if (identity_refused_in_flight()) return;
-    if (!identity_->live(claim_.holder(), now_ms_)) {
+    if (!identity_->live(channel_.claim().holder(), channel_.now_ms())) {
         refuse(link::Reason::NoSession);
         return;
     }
@@ -244,4 +236,4 @@ void ConfigService::settle_unlock() {
     acknowledge(true, link::Reason::Unlock);
 }
 
-}  // namespace skyblip::comms
+}  // namespace skyblip::common

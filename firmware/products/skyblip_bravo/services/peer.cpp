@@ -19,7 +19,7 @@ ConstByteSpan span_of(const events::RxFrame& frame) {
 }  // namespace
 
 Status PeerService::setup() {
-    config_.serve_pairing(comms::PairingSide::Bravo);
+    config_.serve_pairing(common::PairingSide::Bravo);
     const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
     if (!epoch) return Status::Down;
     boot_epoch_ = *epoch;

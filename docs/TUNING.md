@@ -40,8 +40,6 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kPromptCeilingMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Ceiling | an unanswered prompt is an open authorisation a stranger can walk up to |
-| `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | ~730 KB over BLE on a slow phone, short of a bench writable all afternoon |
 | `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | refreshed every second, because the link may ask at any instant |
 | `kNonceForgetMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Forget | #126: long enough to reach the server and back, short of a forgotten tab |
 | `kIntoCeilingMs` | 999 | milliseconds | Ceiling | schemas/link.v1.json, observation: 0 to 999 milliseconds into at_s |
@@ -257,6 +255,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
 | `kDrainCeilingRecords` | 16 | records | Ceiling | caps the flash work one pass books in the product's flash window |
 | `kAdvertiseRetryPeriodMs` | 1000 (1 s) | milliseconds | Period | a Bluetooth that never came up is asked once a second, not every pass |
+| `kPromptCeilingMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Ceiling | an unanswered prompt is an open authorisation a stranger can walk up to |
+| `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | ~730 KB over BLE on a slow phone, short of a bench writable all afternoon |
 | `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | ADS-L and ALP-TAS key once a second, so a faster pass repeats a position and a slower one makes the map jump |
 | `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | core/traffic's freshness rule, so the tablet never holds a target longer than the device would alarm on it |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | a pass waits while own-ship's burst is armed, never longer than this, so the cadence stays a cadence |
@@ -311,7 +311,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kAskCeilingMs` | `comms::kPromptCeilingMs` = 30000 (30 s) | milliseconds | Ceiling | a question the Go asks of itself stands as long as a phone's prompt does |
+| `kAskCeilingMs` | `common::kPromptCeilingMs` = 30000 (30 s) | milliseconds | Ceiling | a question the Go asks of itself stands as long as a phone's prompt does |
 | `kLevelFlightMg` | `flight::kLevelFlightMg` = 1000 | thousandths of g | - | - |
 | `kIdleReturnHoldMs` | 60000 (1 min) | milliseconds | Hold | a menu left open is the traffic picture taken away, and nobody dismissed it |
 | `kClimbFigureStepFpm` | 10 | feet per minute | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |

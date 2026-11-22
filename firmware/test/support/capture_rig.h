@@ -19,7 +19,7 @@ inline void order_over_the_link(Rig& rig, uint32_t& now_ms, const char* profile)
     rig.send(json.c_str());
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Capture);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Capture);
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;

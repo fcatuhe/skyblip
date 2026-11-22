@@ -1,7 +1,6 @@
 // pair at the config door: who may ask, what it answers, and where the Go's verdict goes.
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/comms/identity_link.h"
 #include "core/comms/link_registry.h"
 #include "core/identity/unit.h"
@@ -11,6 +10,7 @@
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings_store.h"
 #include "simulator/world/hex.h"
 #include "test/support/config_frame.h"
@@ -40,13 +40,13 @@ struct Desk {
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
-    comms::ConfigService config{link, store, &dfu};
+    common::ConfigService config{link, store, &dfu};
     platform::host::Identity port{std::nullopt};
     platform::host::Random random;
     identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
 
-    explicit Desk(comms::PairingSide side) {
+    explicit Desk(common::PairingSide side) {
         link.declare_payload_bytes(495);
         link.raise_link(1);
         unit.load();
@@ -85,17 +85,17 @@ struct Desk {
 }  // namespace
 
 TEST_CASE("pair: a trusted browser starts the Go's pairing at once, and hands it the tag once") {
-    Desk desk(comms::PairingSide::Go);
+    Desk desk(common::PairingSide::Go);
     desk.trust();
     CHECK(desk.pair(kBravoTag) == acknowledgement(true, "pair"));
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
     CHECK(desk.config.take_pair_request() == kBravoTag);
     CHECK_FALSE(desk.config.take_pair_request());
 }
 
 TEST_CASE("pair: an untrusted browser's pair asks on the Go's glass, and the press trusts it" *
           doctest::test_suite("main")) {
-    Desk desk(comms::PairingSide::Go);
+    Desk desk(common::PairingSide::Go);
     const crypto::Ed25519::PublicKey key = crypto::Ed25519::public_key_of(kBrowserSeed);
     desk.random.queue(kNonce);
     desk.say("{\"command\":\"browser_challenge\"}");
@@ -112,8 +112,8 @@ TEST_CASE("pair: an untrusted browser's pair asks on the Go's glass, and the pre
     CHECK(desk.pair(kBravoTag) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,"
           "\"reason\":\"confirm_pair\"}");
-    CHECK(desk.config.pending() == comms::Pending::Pair);
-    CHECK(std::string(comms::pending_title(comms::Pending::Pair)) == "PAIR BRAVO");
+    CHECK(desk.config.pending() == common::Pending::Pair);
+    CHECK(std::string(common::pending_title(common::Pending::Pair)) == "PAIR BRAVO");
     CHECK(std::string(desk.config.prompt_detail()) == "PAIR WITH BRAVO 3F2A");
     CHECK(desk.config.prompt_trusts_browser());
     CHECK_FALSE(desk.config.take_pair_request());
@@ -126,27 +126,27 @@ TEST_CASE("pair: an untrusted browser's pair asks on the Go's glass, and the pre
 }
 
 TEST_CASE("pair: a press refused, a take-off or thirty seconds start no pairing") {
-    Desk desk(comms::PairingSide::Go);
+    Desk desk(common::PairingSide::Go);
     desk.pair(kBravoTag);
     desk.config.cancel();
     CHECK_FALSE(desk.config.take_pair_request());
     CHECK(desk.pair(kBravoTag) == acknowledgement(false, "refused_on_device"));
 
-    Desk flying(comms::PairingSide::Go);
+    Desk flying(common::PairingSide::Go);
     flying.pair(kBravoTag);
     flying.config.set_flight_state(flight::FlightState::Airborne);
     CHECK(link_text(flying.link.last().bytes) == acknowledgement(false, "in_flight"));
-    CHECK(flying.config.pending() == comms::Pending::None);
+    CHECK(flying.config.pending() == common::Pending::None);
 
-    Desk waiting(comms::PairingSide::Go);
+    Desk waiting(common::PairingSide::Go);
     waiting.pair(kBravoTag);
-    waiting.config.tick(comms::kPromptCeilingMs);
+    waiting.config.tick(common::kPromptCeilingMs);
     CHECK(link_text(waiting.link.last().bytes) == acknowledgement(false, "expired"));
     CHECK_FALSE(waiting.config.take_pair_request());
 }
 
 TEST_CASE("pair: refused in flight, invalid without a tag, out_of_range past 16 bits") {
-    Desk desk(comms::PairingSide::Go);
+    Desk desk(common::PairingSide::Go);
     desk.trust();
     CHECK(desk.say("{\"command\":\"pair\"}") == acknowledgement(false, "invalid"));
     CHECK(desk.pair(65536) == acknowledgement(false, "out_of_range"));
@@ -156,10 +156,10 @@ TEST_CASE("pair: refused in flight, invalid without a tag, out_of_range past 16 
 }
 
 TEST_CASE("pair: a unit already paired with that tag answers paired, and its config names it") {
-    Desk desk(comms::PairingSide::Go);
+    Desk desk(common::PairingSide::Go);
     desk.config.set_paired_tag(kBravoTag);
     CHECK(desk.pair(kBravoTag) == acknowledgement(true, "paired"));
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
     CHECK(desk.say("{\"command\":\"get\"}").find("\"paired_tag\":16170}") != std::string::npos);
 
     desk.config.set_paired_tag(std::nullopt);
@@ -173,9 +173,9 @@ TEST_CASE("pair: a unit already paired with that tag answers paired, and its con
 }
 
 TEST_CASE("pair: Bravo pairs only for a trusted browser, and never asks on a glass it lacks") {
-    Desk desk(comms::PairingSide::Bravo);
+    Desk desk(common::PairingSide::Bravo);
     CHECK(desk.pair(0x1C5B) == acknowledgement(false, "untrusted"));
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
     desk.trust();
     CHECK(desk.pair(0x1C5B) == acknowledgement(true, "pair"));
     CHECK(desk.config.take_pair_request() == 0x1C5B);
@@ -184,12 +184,12 @@ TEST_CASE("pair: Bravo pairs only for a trusted browser, and never asks on a gla
 }
 
 TEST_CASE("pair: a unit that pairs with nothing answers unknown_command") {
-    Desk desk(comms::PairingSide::None);
+    Desk desk(common::PairingSide::None);
     CHECK(desk.pair(kBravoTag) == acknowledgement(false, "unknown_command"));
 }
 
 TEST_CASE("pair: the Go's verdict reaches the session that asked, and nobody once it dropped") {
-    Desk desk(comms::PairingSide::Go);
+    Desk desk(common::PairingSide::Go);
     desk.trust();
     desk.pair(kBravoTag);
     const size_t before = desk.link.sent.size();
@@ -210,7 +210,7 @@ TEST_CASE("pair: the Go's verdict reaches the session that asked, and nobody onc
 }
 
 TEST_CASE("pair: a newer pair on the Go tells the browser of the one it replaced cancelled") {
-    Desk desk(comms::PairingSide::Go);
+    Desk desk(common::PairingSide::Go);
     desk.trust();
     desk.pair(kBravoTag);
     const size_t before = desk.link.sent.size();

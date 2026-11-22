@@ -502,7 +502,7 @@ TEST_CASE("simulator: a confirmed recovery asks for the press, as the board does
     run(simulator, 20000, 20200);
     simulator.world().send_config("{\"command\":\"recovery\"}");
     run(simulator, 20200, 20400);
-    REQUIRE(simulator.product().config_link().config().pending() == comms::Pending::Recovery);
+    REQUIRE(simulator.product().config_link().config().pending() == common::Pending::Recovery);
 
     simulator.product().config_link().config().confirm();
     run(simulator, 20400, 20400 + power::kParkSettleMs + power::kReleaseSettleMs + 5000);

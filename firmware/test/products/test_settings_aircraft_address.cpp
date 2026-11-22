@@ -4,10 +4,10 @@
 #include <optional>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/flight/state.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
@@ -28,10 +28,10 @@ std::string answer_to_set(Settings& settings,
     platform::host::Link link;
     link.raise_link(1);
     SettingsStore store(settings, kTestActivation, own_transponder);
-    comms::ConfigService config(link, store);
+    common::ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame(json));
-    if (config.pending() == comms::Pending::Set) config.confirm();
+    if (config.pending() == common::Pending::Set) config.confirm();
     return link_text(link.last().bytes);
 }
 
@@ -103,10 +103,10 @@ TEST_CASE(
     platform::host::Link link;
     link.raise_link(1);
     SettingsStore store(settings, kTestActivation, heard);
-    comms::ConfigService config(link, store);
+    common::ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_address\":3934737}"));
-    REQUIRE(config.pending() == comms::Pending::Set);
+    REQUIRE(config.pending() == common::Pending::Set);
 
     heard = comms::OwnTransponderHeard{kHeard};
     config.confirm();

@@ -1,7 +1,6 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_CONFIG_LINK_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_CONFIG_LINK_H
 
-#include "core/comms/config.h"
 #include "core/comms/install_trust.h"
 #include "core/dfu/install_report.h"
 #include "core/dfu/update.h"
@@ -12,6 +11,7 @@
 #include "core/power/duty.h"
 #include "core/settings/blob.h"
 #include "core/timing/durable_write.h"
+#include "products/common/services/config_service.h"
 #include "products/common/settings_store.h"
 #include "runtime/service.h"
 
@@ -52,7 +52,7 @@ class ConfigLinkService : public runtime::Service {
 
     void set_product_name(const char* product_name) { product_name_ = product_name; }
 
-    comms::ConfigService& config() { return config_; }
+    ConfigService& config() { return config_; }
     const timing::DurableWriteWindow& durable_writes() const { return writes_; }
 
     // INFO: fc 20nov26 counted once per change, so the number reads as changes waiting for a
@@ -126,7 +126,7 @@ class ConfigLinkService : public runtime::Service {
     bool hold_for_power();
 
     SettingsStore& store_;
-    comms::ConfigService config_;
+    ConfigService config_;
     const power::CutoffMonitor& power_;
     const char* product_name_;
     identity::NameRule name_rule_;

@@ -55,8 +55,8 @@ TEST_CASE(
     say(rig, "{\"command\":\"browser_challenge\"}");
     CHECK(say(rig, trust_browser()).find("untrusted") != std::string::npos);
     say(rig, "{\"command\":\"set\",\"alarm\":\"soft\"}");
-    comms::ConfigService& config = rig.product.config_link().config();
-    REQUIRE(config.pending() == comms::Pending::Set);
+    common::ConfigService& config = rig.product.config_link().config();
+    REQUIRE(config.pending() == common::Pending::Set);
     config.confirm();
     rig.run_for(200);
     REQUIRE(config.trusted_browsers().count() == 1);
@@ -65,7 +65,7 @@ TEST_CASE(
           "{\"command\":\"browser\",\"index\":0,\"count\":1,\"id\":\"" + id_text() +
               "\",\"label\":\"Chrome on Android\"}");
     say(rig, "{\"command\":\"set\",\"alarm\":\"loud\"}");
-    CHECK(config.pending() == comms::Pending::None);
+    CHECK(config.pending() == common::Pending::None);
 
     CHECK(say(rig, "{\"command\":\"forget_browser\",\"id\":\"" + id_text() + "\"}")
               .find("forgotten") != std::string::npos);

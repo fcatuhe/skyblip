@@ -3,11 +3,11 @@
 #include <cstring>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/events/link.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
 #include "ports/dfu.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
@@ -16,6 +16,7 @@
 
 using namespace skyblip;
 using namespace skyblip::comms;
+using namespace skyblip::common;
 
 namespace {
 
@@ -179,7 +180,7 @@ TEST_CASE(
     config.tick(100 + 11u * 60u * 1000u);
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(100 + 12u * 60u * 1000u);
-    CHECK(taken(config) == comms::Action::Install);
+    CHECK(taken(config) == common::Action::Install);
     CHECK(link_text(link.last().bytes) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"install\"}");
 }
@@ -204,8 +205,8 @@ TEST_CASE("comms flight gate: a set in flight leaves the radar and an advisory o
         uint32_t at_ms = now_ms;
         sent.run_seconds(at_ms, 20);
         untouched.run_seconds(now_ms, 20);
-        CHECK(sent.config.pending() == comms::Pending::None);
-        CHECK(sent.screen.prompt() == comms::Pending::None);
+        CHECK(sent.config.pending() == common::Pending::None);
+        CHECK(sent.screen.prompt() == common::Pending::None);
     }
     REQUIRE(sent.state.alarm_undismissed == traffic::Level::Advisory);
     CHECK(sent.screen.page() == go::Page::Radar);

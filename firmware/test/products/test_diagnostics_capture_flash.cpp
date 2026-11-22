@@ -113,7 +113,7 @@ struct SmallPoolRig {
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation, state.own_transponder};
-    comms::ConfigService config{link, store};
+    common::ConfigService config{link, store};
     common::RecordPool pool{context, go::book_flash_in_dwell};
     common::RecordStore flights{pool, store::SectorOwner::Flights};
     common::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};

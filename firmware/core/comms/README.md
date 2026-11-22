@@ -2,6 +2,8 @@
 
 The companion link, from the side that does not know what Bluetooth is. A platform fills `ports::Link`, and everything here speaks endpoints, sessions and CBOR frames with numbered keys.
 
+What the link and its schema decide lives here: the frames, the claim, the sessions and `ConfigChannel` (`config.h`), which admits a frame, sends a reply to the peer that asked, holds one the link refused with `WouldBlock` and streams a report. What a product answers on the config endpoint is `common::ConfigService` in `products/common/services/`: the prompts, the flight gate, the upload window, pairing, captures, activation and trusted browsers (`../../products/common/README.md`). The rules below are its rules too, because they are what a phone sees on the wire.
+
 ## The wire
 
 Every frame on the config, log and peer endpoints is one CBOR map (RFC 8949) in one write or one notification: unsigned keys in ascending order, each head in its shortest form with an argument of at most 32 bits, definite lengths, no floats, no tags, and nothing nested but an array of unsigned integers. Key 0 is `command`, whose code names the frame and so its key table. [`schemas/link.v1.json`](../../../schemas/link.v1.json) is the one place the numbers are written, and `scripts/link_registry.py` generates `link_registry.h` and the clients' tables from it. The device carries no names: `core/util/cbor.h` writes and reads numbers.
@@ -20,7 +22,7 @@ iOS always starts the MTU exchange, but Android only when the app calls `request
 
 `LinkSessions` is the session table on both platforms, driven by Zephyr's connection callbacks on silicon and by `raise_link()`/`drop_link()` in the host suite.
 
-A session id is the controller's slot, `bt_conn_index() + 1`, so the next phone may reuse it. `LinkSessions` therefore numbers every connection once, the platform stamps each inbound frame with that number under its queue lock, and `ports::Link::connection()` answers the number a session id names now. `ConfigService::from_live_connection()` drops a frame whose connection has gone before it can take the claim or stage a prompt.
+A session id is the controller's slot, `bt_conn_index() + 1`, so the next phone may reuse it. `LinkSessions` therefore numbers every connection once, the platform stamps each inbound frame with that number under its queue lock, and `ports::Link::connection()` answers the number a session id names now. `ConfigChannel::from_live_connection()` drops a frame whose connection has gone before it can take the claim or stage a prompt.
 
 Every reply is addressed to an `events::Peer`, the session id and the connection number together. A held reply, a chunked log read and a log erase's verdict keep the peer of the request they answer. Every other late verdict answers the claim holder, and the holder's disconnect drops it. `ports::Link::send_to()` answers `Down` once the peer's connection is gone, so a reply never reaches the next phone under the same id. On Zephyr the comparison and `bt_conn_ref()` share one critical section under `g_lock`.
 
@@ -43,7 +45,7 @@ A prompt takes the glass from the radar and both controls from the pilot, and an
 - While a prompt stands, such a command is refused `prompt_pending`, and the standing prompt keeps its operation, its detail and its deadline. No command renews a prompt, so it expires `kPromptCeilingMs`, thirty seconds, after it was staged.
 - After the pilot refuses a prompt with one press, every such command from that connection is refused `refused_on_device` until it drops. Only that press counts, not an expiry, a take-off, a dropped link or the press that stops an upload.
 
-`ConfigService::prompt_refused()` asks both after the claim and the key table and before the command's own checks, so the answer does not depend on what the command carries. A dropped link takes the prompt, so a new connection can stage another before the product's next pass sees `pending()` go back to `None`. A product that reads a new `prompts_staged()` count treats the prompt as new: it disarms its gesture and asks again (#245).
+`ConfigService::prompt_refused()` (`config_prompt.cpp`) asks both after the claim and the key table and before the command's own checks, so the answer does not depend on what the command carries. A dropped link takes the prompt, so a new connection can stage another before the product's next pass sees `pending()` go back to `None`. A product that reads a new `prompts_staged()` count treats the prompt as new: it disarms its gesture and asks again (#245).
 
 ## The flight gate
 
@@ -165,7 +167,7 @@ The reconnect scan is the Bluetooth Core's slow scanning mode 1, 11.25 ms every 
 
 ## Pairing from a browser
 
-`pair` pairs a Go and a Bravo from a browser with one key, `tag`: on a Go the Bravo to pair with, on a Bravo the Go to accept. A unit's tag is the low 16 bits of its Bluetooth address, in its advertised name and as `bluetooth_tag` in its `identity` frame. The peer link pins that same address, because Zephyr's controller takes its static random identity address from FICR DEVICEADDR (`subsys/bluetooth/controller/ll_sw/nordic/hci/hci_vendor.c`) and neither product enables `CONFIG_BT_PRIVACY`. The config reply carries `paired_tag` while a unit is paired. `pair` is refused `in_flight`, and answered `paired` at once when already paired with that tag. The handlers are in `pair_link.cpp`, and each product names its side with `ConfigService::serve_pairing()`.
+`pair` pairs a Go and a Bravo from a browser with one key, `tag`: on a Go the Bravo to pair with, on a Bravo the Go to accept. A unit's tag is the low 16 bits of its Bluetooth address, in its advertised name and as `bluetooth_tag` in its `identity` frame. The peer link pins that same address, because Zephyr's controller takes its static random identity address from FICR DEVICEADDR (`subsys/bluetooth/controller/ll_sw/nordic/hci/hci_vendor.c`) and neither product enables `CONFIG_BT_PRIVACY`. The config reply carries `paired_tag` while a unit is paired. `pair` is refused `in_flight`, and answered `paired` at once when already paired with that tag. The handlers are in `config_pair.cpp`, and each product names its side with `ConfigService::serve_pairing()`.
 
 On a Go a trusted session's `pair` starts at once. Any other stands on the glass under `confirm_pair`, and the press trusts the browser and starts the pairing. `BravoService::pair_with()` unpairs any Bravo the Go holds and goes on as a menu pairing does. When the pairing ends the Go sends the session that asked, if it is still connected, an unasked acknowledgement:
 
@@ -184,7 +186,7 @@ Bravo has no glass, so it answers `pair` only to a trusted session, refuses any 
 
 ## A reply too wide for its link
 
-A whole reply wider than the asking session's payload is never sent short and never left unanswered: the sender counts a `link_drops` and answers `small_mtu`, 8 bytes on config and 8 or 10 on log, in `ConfigService::reply_to()` and `RecordPool::send()`. A timing or diagnostics report that cannot be split this narrow, a `register` or an `attest` whose frame does not fit, and a `read` whose chunk cannot hold one record are refused before any frame exists, and are not drops.
+A whole reply wider than the asking session's payload is never sent short and never left unanswered: the sender counts a `link_drops` and answers `small_mtu`, 8 bytes on config and 8 or 10 on log, in `ConfigChannel::reply_to()` and `RecordPool::send()`. A timing or diagnostics report that cannot be split this narrow, a `register` or an `attest` whose frame does not fit, and a `read` whose chunk cannot hold one record are refused before any frame exists, and are not drops.
 
 A push is never refused, because the refusal would be noise: a push that does not fit is counted and dropped. The `update` frame pushed on a connection's first `Up` goes again on the late MTU exchange's second `Up`.
 
@@ -194,13 +196,13 @@ Each connection leaves one `Link` `down` record in a `Full` capture, with `paylo
 
 ## Activation
 
-`challenge`, `register` and `unlock` travel on the config endpoint: `IdentityLink` in `identity_link.h` holds the session, and the handlers are in `identity_link.cpp`. `schemas/activation.v1.schema.json` says what each signature covers, and `core/identity/README.md` the messages.
+`challenge`, `register` and `unlock` travel on the config endpoint: `IdentityLink` in `identity_link.h` holds the session, and the handlers are in `config_identity.cpp`. `schemas/activation.v1.schema.json` says what each signature covers, and `core/identity/README.md` the messages.
 
 `challenge` draws `unit_nonce`, 16 bytes from the hardware RNG, for the claim holder, and answers it with `server_key_id`. The nonce is single-use, and dies when `unlock` spends it, when the holder's link drops, or at `IdentityLink::kNonceForgetMs`, ten minutes. `register` verifies the server's signature over `unit_nonce` and `server_nonce`, stands `Pending::Register` under `confirm_register`, and one press answers the registration frame, signed by the unit's key. `unlock` verifies the unlock signature over the unit's DEVICEID, its current key, the serial and `unit_nonce`, and refuses serial 0, which would put 0x000000 on the air. The nonce is spent before the check, so a refused code is never retried on it. The code is written and read back before the `unlock` acknowledgement goes out. An activated unit's radio runs, so the code waits in `IdentityLink` for the product's own `timing::DurableWriteWindow`, and the power rule is asked again then: a cell that fell through it drops the code with `low_power`, never a forced write. A held code dies with its sender's link.
 
 An unactivated unit transmits nothing, so none of this is gated on the flight state, and its `register` prompt survives a take-off. An activated unit refuses `challenge`, `register`, `unlock` and `attest` `in_flight`, and cancels its register prompt at take-off.
 
-Every identity refusal but `small_mtu` and `invalid` is written in `identity_link.cpp` as `refuse(link::Reason::Word)`, so the server's activation page can grep its rows apart:
+Every identity refusal but `small_mtu` and `invalid` is written in `config_identity.cpp` as `refuse(link::Reason::Word)`, so the server's activation page can grep its rows apart:
 
 | Word | When |
 |---|---|
@@ -226,7 +228,7 @@ It stages no prompt, because signing takes nothing from the pilot and SMP alread
 
 ## Trusted browsers
 
-A browser the pilot approved once with a press, or the browser that installed the unit, changes the settings, starts an update, activates the unit and pairs it with no press after that. The link has no bonding and a phone connects from a new private address each time, so the browser proves a key instead. `BrowserLink` (`browser_link.h`) holds the session, `TrustedBrowsers` (`trusted_browsers.h`) the list.
+A browser the pilot approved once with a press, or the browser that installed the unit, changes the settings, starts an update, activates the unit and pairs it with no press after that. The link has no bonding and a phone connects from a new private address each time, so the browser proves a key instead. `BrowserLink` (`browser_link.h`) holds the session, `TrustedBrowsers` (`trusted_browsers.h`) the list, and the handlers are in `config_browser.cpp`.
 
 - **The proof.** `browser_challenge` draws 16 bytes for the claim holder. `trust_browser` carries the browser's raw Ed25519 public key, its signature over `skyblip:browser:v1` followed by that nonce, and a label of at most 24 bytes. The nonce is spent before the check. A listed key makes the session trusted until its link drops or it asks `browser_challenge` again. Any other key is answered `untrusted` and held as the session's proven key.
 - **Enrollment.** The next `set`, `dfu`, `register` or `pair` a press confirms on that link stores the proven key. The Go's confirm page shows `TRUSTS BROWSER` whenever `ConfigService::prompt_trusts_browser()` holds, so a foreign page cannot enroll a key unseen. The unit keeps eight keys, and a ninth replaces the one stored first.

@@ -25,7 +25,14 @@ class IdentityLink {
     identity::Unit& unit() { return unit_; }
     bool activated() const { return unit_.activation().activated(); }
 
-    bool open(uint16_t session_id, uint32_t now_ms);
+    bool open(uint16_t session_id, uint32_t now_ms) {
+        close();
+        if (!unit_.draw_nonce(unit_nonce_)) return false;
+        session_id_ = session_id;
+        opened_ms_ = now_ms;
+        open_ = true;
+        return true;
+    }
     bool live(uint16_t session_id, uint32_t now_ms) const {
         return open_ && session_id_ == session_id && now_ms - opened_ms_ < kNonceForgetMs;
     }

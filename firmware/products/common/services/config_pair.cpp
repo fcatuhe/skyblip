@@ -1,9 +1,9 @@
 #include <cstdint>
 
-#include "core/comms/config.h"
 #include "core/util/cbor.h"
+#include "products/common/services/config_service.h"
 
-namespace skyblip::comms {
+namespace skyblip::common {
 
 // INFO: fc 16nov26 Bravo has no glass, so only a browser it trusts may arm its press
 void ConfigService::request_pairing(const cbor::Reader& frame) {
@@ -40,7 +40,7 @@ void ConfigService::request_pairing(const cbor::Reader& frame) {
 void ConfigService::start_pairing(uint16_t tag) {
     pair_requested_ = tag;
     pairing_ended(link::Reason::Cancelled);
-    if (pairing_side_ == PairingSide::Go) pairing_peer_ = claim_.peer();
+    if (pairing_side_ == PairingSide::Go) pairing_peer_ = channel_.claim().peer();
     acknowledge(true, link::Reason::Pair);
 }
 
@@ -54,8 +54,8 @@ void ConfigService::pairing_ended(link::Reason verdict) {
     if (!pairing_peer_) return;
     const events::Peer peer = *pairing_peer_;
     pairing_peer_.reset();
-    if (link_.connection(peer.session_id) != peer.connection) return;
-    acknowledge_to(peer, verdict == link::Reason::Paired, verdict);
+    if (!channel_.live(peer)) return;
+    channel_.acknowledge_to(peer, verdict == link::Reason::Paired, verdict);
 }
 
-}  // namespace skyblip::comms
+}  // namespace skyblip::common

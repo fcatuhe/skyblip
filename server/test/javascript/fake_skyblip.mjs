@@ -313,7 +313,7 @@ export class FakeSkyblip {
     this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: `confirm_${command}` });
   }
 
-  // INFO: fc 13nov26 browser_link.cpp's order: the nonce, the label, then the signature
+  // INFO: fc 13nov26 config_browser.cpp's order: the nonce, the label, then the signature
   async answerBrowser(command, fields) {
     if (command === 'browser_challenge') {
       this.forgetSession();
@@ -351,7 +351,7 @@ export class FakeSkyblip {
     this.sessionTrusted = true;
   }
 
-  // INFO: fc 17nov26 config.cpp's pair: the prompt guards and the flight, then a Bravo arms for a trusted page and a Go asks or starts
+  // INFO: fc 17nov26 config_pair.cpp's pair: the prompt guards and the flight, then a Bravo arms for a trusted page and a Go asks or starts
   askToPair({ tag }) {
     if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
     if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
@@ -366,7 +366,7 @@ export class FakeSkyblip {
     this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_pair' });
   }
 
-  // INFO: fc 12nov26 capture_request.cpp's order: the prompt guards, the flight, then the capture's state
+  // INFO: fc 12nov26 config_capture.cpp's order: the prompt guards, the flight, then the capture's state
   stageCapture({ profile }) {
     if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
     if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');

@@ -4,11 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "core/comms/config.h"
 #include "core/comms/radio_protocols.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
 #include "ports/link.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_bravo/radio_protocols.h"
 #include "products/skyblip_go/radio_protocols.h"
 #include "products/skyblip_go/settings_store.h"
@@ -112,7 +112,7 @@ TEST_CASE("radio protocols: a config service handed no stacks answers unknown_co
     platform::host::Link link;
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, identity::Activation{}, kNoOwnTransponder};
-    comms::ConfigService config{link, store, nullptr};
+    common::ConfigService config{link, store, nullptr};
     link.raise_link(1);
     config.on_rx(config_frame(kAsk));
     CHECK(link_text(link.last().bytes) ==

@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "core/comms/config.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/frame.h"
 
@@ -28,7 +28,7 @@ constexpr const char* kConfirmTrustsBrowser = "TRUSTS BROWSER";
 constexpr int kConfirmCountdownBytes = 24;
 
 // INFO: fc 14nov26 a question the Go asks of itself stands as long as a phone's prompt does
-constexpr uint32_t kAskCeilingMs = comms::kPromptCeilingMs;
+constexpr uint32_t kAskCeilingMs = common::kPromptCeilingMs;
 
 int format_confirm_countdown(char* out, uint32_t seconds_left);
 uint32_t seconds_left(uint32_t asked_ms, uint32_t now_ms, uint32_t ceiling_ms);

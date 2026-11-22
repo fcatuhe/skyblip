@@ -1,8 +1,8 @@
 // The ordinals a diagnostics record carries that core/diagnostics does not own: gesture, page,
 // mode, prompt.
-#include "core/comms/config.h"
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/pages/page.h"
 #include "products/skyblip_go/services/screen.h"
@@ -49,18 +49,18 @@ uint8_t wire(go::Mode value) {
     return kUnpinned;
 }
 
-uint8_t wire(comms::Pending value) {
+uint8_t wire(common::Pending value) {
     switch (value) {
-        case comms::Pending::None: return 0;
-        case comms::Pending::Set: return 1;
-        case comms::Pending::Dfu: return 2;
-        case comms::Pending::Recovery: return 4;
-        case comms::Pending::PowerOff: return 5;
-        case comms::Pending::EraseLog: return 6;
-        case comms::Pending::GnssColdStart: return 7;
-        case comms::Pending::Register: return 8;
-        case comms::Pending::Capture: return 9;
-        case comms::Pending::Pair: return 10;
+        case common::Pending::None: return 0;
+        case common::Pending::Set: return 1;
+        case common::Pending::Dfu: return 2;
+        case common::Pending::Recovery: return 4;
+        case common::Pending::PowerOff: return 5;
+        case common::Pending::EraseLog: return 6;
+        case common::Pending::GnssColdStart: return 7;
+        case common::Pending::Register: return 8;
+        case common::Pending::Capture: return 9;
+        case common::Pending::Pair: return 10;
     }
     return kUnpinned;
 }
@@ -101,8 +101,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "diagnostics product codes: comms::Pending's codes are the screen record's prompt byte, and a "
+    "diagnostics product codes: common::Pending's codes are the screen record's prompt byte, and a "
     "code changed or added here moves the prompt list in the schema") {
     // 3 was apply, and stays out of use so a capture written before still reads
-    codes_pinned<comms::Pending>(11, /*retired=*/1);
+    codes_pinned<common::Pending>(11, /*retired=*/1);
 }

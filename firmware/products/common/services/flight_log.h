@@ -1,12 +1,12 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_FLIGHT_LOG_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_FLIGHT_LOG_H
 
-#include "core/comms/config.h"
 #include "core/comms/log_link.h"
 #include "core/diagnostics/payload.h"
 #include "core/flight/log_events.h"
 #include "core/flight/log_session.h"
 #include "core/traffic/table.h"
+#include "products/common/services/config_service.h"
 #include "products/common/services/record_store.h"
 #include "runtime/service.h"
 
@@ -18,7 +18,7 @@ static_assert(flight::kLogTargetSlots == traffic::TrafficTable::kMaxTargets,
 class FlightLogService : public runtime::Service {
    public:
     FlightLogService(runtime::Context& context, RecordStore& flights, RecordStore* diagnostics,
-                     comms::ConfigService& config)
+                     ConfigService& config)
         : runtime::Service(context),
           flights_(flights),
           diagnostics_(diagnostics),
@@ -67,7 +67,7 @@ class FlightLogService : public runtime::Service {
 
     RecordStore& flights_;
     RecordStore* const diagnostics_;
-    comms::ConfigService& config_;
+    ConfigService& config_;
     flight::LogSession session_{};
     flight::LogEvents events_{};
     uint32_t recorded_drops_{0};
