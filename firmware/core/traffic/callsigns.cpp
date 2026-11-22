@@ -41,15 +41,6 @@ void CallsignTable::age_out(uint32_t now_s, uint32_t forget_s) {
     }
 }
 
-int CallsignTable::count() const {
-    int count = 0;
-    for (const Entry& entry : slots_)
-        if (entry.used) count++;
-    return count;
-}
-
-void CallsignTable::clear() { slots_ = {}; }
-
 int CallsignTable::find_slot(uint8_t address_mapping_table, uint32_t address) const {
     for (int i = 0; i < kMaxCallsigns; i++) {
         const Entry& entry = slots_[static_cast<size_t>(i)];

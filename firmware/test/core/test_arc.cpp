@@ -1,6 +1,5 @@
 // Where an aircraft will be if it keeps doing what it is doing: one path, drawn and alarmed on.
 #include "core/flight/arc.h"
-#include "core/units/units.h"
 #include "doctest/doctest.h"
 #include "protocols/common/geometry.h"
 
@@ -9,7 +8,7 @@ using namespace skyblip::flight;
 
 namespace {
 
-constexpr uint32_t kStepMs = 1000;
+constexpr int32_t kStepS = 1;
 constexpr int32_t kThermalSpeedMmS = 23150;
 
 Motion flying(int track_deg, int32_t speed_mm_s, int16_t turn_dps) {
@@ -21,11 +20,10 @@ Motion flying(int track_deg, int32_t speed_mm_s, int16_t turn_dps) {
     return motion;
 }
 
-Position after(Motion motion, int seconds, uint32_t step_ms = kStepMs) {
-    Arc arc(motion, step_ms);
-    Position position = arc.here();
-    for (uint32_t elapsed = 0; elapsed < static_cast<uint32_t>(seconds) * 1000u; elapsed += step_ms)
-        position = arc.advance();
+Position after(Motion motion, int seconds, int32_t step_s = kStepS) {
+    Arc arc(motion, step_s);
+    Position position{};
+    for (int elapsed_s = 0; elapsed_s < seconds; elapsed_s += step_s) position = arc.advance();
     return position;
 }
 
@@ -67,18 +65,9 @@ TEST_CASE("arc: a left turn mirrors a right turn") {
 
 TEST_CASE("arc: the step is a cadence, not a shape") {
     const Motion motion = flying(30, kThermalSpeedMmS, 9);
-    const Position coarse = after(motion, 20, 2000);
-    const Position fine = after(motion, 20, 500);
+    const Position coarse = after(motion, 20, 2);
+    const Position fine = after(motion, 20, 1);
     CHECK(wire::hypotenuse(coarse.north_m - fine.north_m, coarse.east_m - fine.east_m) < 10);
-}
-
-TEST_CASE("arc: a climb is carried with the path") {
-    Motion motion = flying(0, 30000, 0);
-    motion.climb_mm_s = 3000;
-    motion.climbing = true;
-    CHECK(after(motion, 10).up_m == 30);
-    motion.climbing = false;
-    CHECK(after(motion, 10).up_m == 0);
 }
 
 TEST_CASE("arc: a turn rate no aeroplane holds is clamped, not believed") {
@@ -92,11 +81,9 @@ TEST_CASE("arc: a turn rate no aeroplane holds is clamped, not believed") {
     CHECK(wild.east_m == clamped.east_m);
 }
 
-TEST_CASE("arc: a target with no velocity of its own does not fly anywhere") {
-    model::AircraftObservation observation{};
-    observation.speed_valid = false;
-    observation.track_c9 = to_cordic9(CentiDegrees(18000)).value;
-    const Position position = after(motion_of(observation, 0, false), 60);
-    CHECK(position.north_m == 0);
-    CHECK(position.east_m == 0);
+// Positions are int32 millimetres, so the fastest speed an AircraftObservation holds must not wrap.
+TEST_CASE("arc: the fastest speed a target can report flies two minutes without wrapping") {
+    const Position far = after(flying(0, 16383750, 0), 120, 5);
+    CHECK(far.north_m == 1966050);
+    CHECK(far.east_m == 0);
 }

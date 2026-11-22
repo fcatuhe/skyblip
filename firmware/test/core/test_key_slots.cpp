@@ -5,8 +5,8 @@
 
 #include "core/crypto/ed25519.h"
 #include "core/identity/key_slots.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 
 using skyblip::ByteSpan;
 using skyblip::crypto::Ed25519;

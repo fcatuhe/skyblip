@@ -9,6 +9,7 @@
 #include "core/diagnostics/profile.h"
 #include "doctest/doctest.h"
 #include "test/support/diagnostics_corpus.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/product_rig.h"
 #include "test/support/rig_moves.h"
 

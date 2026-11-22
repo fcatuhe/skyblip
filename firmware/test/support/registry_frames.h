@@ -9,8 +9,8 @@
 #include "core/comms/link_registry.h"
 #include "core/events/link.h"
 #include "core/util/cbor.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 #include "simulator/world/link_names.h"
 #include "simulator/world/link_text.h"
 

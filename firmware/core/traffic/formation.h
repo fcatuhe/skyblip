@@ -37,7 +37,6 @@ class Tracker {
     Report observe(const model::Ownship& own_fix, const model::AircraftObservation& reported,
                    const flight::Liftoff& target_liftoff, uint32_t now_ms);
 
-    bool together(uint8_t address_mapping_table, uint32_t address) const;
     int members() const;
 
     void forget_stale(uint32_t now_ms);
@@ -65,7 +64,6 @@ class Tracker {
     bool lifting(const flight::Liftoff& target_liftoff, uint32_t now_ms) const;
     void drop(uint8_t address_mapping_table, uint32_t address);
     Slot* slot_for(const model::AircraftObservation& target, uint32_t now_ms);
-    const Slot* find(uint8_t address_mapping_table, uint32_t address) const;
     Slot* find(uint8_t address_mapping_table, uint32_t address);
 
     std::array<Slot, kMaxTrackedTargets> slots_{};

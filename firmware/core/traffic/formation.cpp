@@ -147,11 +147,6 @@ void Tracker::off_station(Slot& slot, const Report& fix, uint32_t now_ms) {
     }
 }
 
-bool Tracker::together(uint8_t address_mapping_table, uint32_t address) const {
-    const Slot* slot = find(address_mapping_table, address);
-    return slot != nullptr && slot->state == State::Together;
-}
-
 int Tracker::members() const {
     int count = 0;
     for (const Slot& slot : slots_)
@@ -193,14 +188,6 @@ Tracker::Slot* Tracker::slot_for(const model::AircraftObservation& target, uint3
     slot->address_mapping_table = target.address_mapping_table;
     slot->seen_ms = now_ms;
     return slot;
-}
-
-const Tracker::Slot* Tracker::find(uint8_t address_mapping_table, uint32_t address) const {
-    for (const Slot& slot : slots_)
-        if (slot.used && slot.address == address &&
-            slot.address_mapping_table == address_mapping_table)
-            return &slot;
-    return nullptr;
 }
 
 Tracker::Slot* Tracker::find(uint8_t address_mapping_table, uint32_t address) {

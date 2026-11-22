@@ -8,7 +8,7 @@
 #include "core/comms/link_registry.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
-#include "test/support/link_vectors.h"
+#include "test/support/hex_vectors.h"
 
 using namespace skyblip;
 
@@ -220,7 +220,7 @@ TEST_CASE("cbor: an array of counts is read item by item") {
 
 // One grammar for the three readers of the link: the firmware's, blip.py's and the pages'.
 TEST_CASE("cbor: the reader refuses every frame the link's shared vectors say is not one") {
-    const LinkVectors vectors;
+    const HexVectors vectors("../schemas/link.v1.vectors.json");
     for (const std::vector<uint8_t>& frame : vectors.frames("not_frames")) {
         CAPTURE(frame.size());
         CHECK_FALSE(reader_of(frame).valid());

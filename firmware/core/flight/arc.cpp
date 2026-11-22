@@ -23,57 +23,18 @@ int16_t clamped_turn_cdps(int32_t turn_cdps) {
     return static_cast<int16_t>(turn_cdps);
 }
 
-Motion motion_of(const model::Ownship& own) {
-    Motion motion{};
-    motion.speed_mm_s = own.speed_mm_s;
-    motion.track_cdeg = own.track_cdeg;
-    motion.turn_cdps = clamped_turn_cdps(own.turn_cdps);
-    motion.turning = true;
-    motion.climb_mm_s = own.climb_mm_s;
-    motion.climbing = own.climb_valid;
-    return motion;
-}
-
-Motion motion_of(const model::AircraftObservation& observation, int16_t turn_cdps,
-                 bool turn_valid) {
-    Motion motion{};
-    motion.speed_mm_s =
-        observation.speed_valid ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).value : 0;
-    motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).value;
-    motion.turn_cdps = turn_valid ? clamped_turn_cdps(turn_cdps) : 0;
-    motion.turning = turn_valid;
-    motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).value;
-    motion.climbing = observation.climb_valid;
-    return motion;
-}
-
-Arc::Arc(const Motion& motion, uint32_t step_ms)
-    : north_mm_(static_cast<int64_t>(motion.north_m) * kMillimetresPerMetre),
-      east_mm_(static_cast<int64_t>(motion.east_m) * kMillimetresPerMetre),
-      up_mm_(static_cast<int64_t>(motion.up_m) * kMillimetresPerMetre),
-      climb_mm_s_(motion.climbing ? motion.climb_mm_s : 0),
-      step_ms_(static_cast<int32_t>(step_ms)) {
+Arc::Arc(const Motion& motion, int32_t step_s) : step_s_(step_s) {
     const int16_t angle = to_angle16(CentiDegrees(motion.track_cdeg));
     velocity_north_mm_s_ = static_cast<int32_t>(wire::divide_rounded<int64_t>(
         static_cast<int64_t>(motion.speed_mm_s) * wire::cosine(angle), wire::kTrigOne));
     velocity_east_mm_s_ = static_cast<int32_t>(wire::divide_rounded<int64_t>(
         static_cast<int64_t>(motion.speed_mm_s) * wire::sine(angle), wire::kTrigOne));
-    const int32_t half_turn =
-        motion.turning ? turn_angle16(clamped_turn_cdps(motion.turn_cdps), step_ms_ / 2) : 0;
+    const int32_t half_turn = motion.turning ? turn_angle16(clamped_turn_cdps(motion.turn_cdps),
+                                                            step_s * kMillisecondsPerSecond / 2)
+                                             : 0;
     const int16_t half = static_cast<int16_t>(static_cast<uint16_t>(half_turn));
     half_cosine_ = wire::cosine(half);
     half_sine_ = wire::sine(half);
-}
-
-Position Arc::here() const {
-    Position position{};
-    position.north_m =
-        static_cast<int32_t>(wire::divide_rounded<int64_t>(north_mm_, kMillimetresPerMetre));
-    position.east_m =
-        static_cast<int32_t>(wire::divide_rounded<int64_t>(east_mm_, kMillimetresPerMetre));
-    position.up_m =
-        static_cast<int32_t>(wire::divide_rounded<int64_t>(up_mm_, kMillimetresPerMetre));
-    return position;
 }
 
 void Arc::rotate_half() {
@@ -86,14 +47,11 @@ void Arc::rotate_half() {
 
 Position Arc::advance() {
     rotate_half();
-    north_mm_ += wire::divide_rounded<int64_t>(
-        static_cast<int64_t>(velocity_north_mm_s_) * step_ms_, kMillisecondsPerSecond);
-    east_mm_ += wire::divide_rounded<int64_t>(static_cast<int64_t>(velocity_east_mm_s_) * step_ms_,
-                                              kMillisecondsPerSecond);
-    up_mm_ += wire::divide_rounded<int64_t>(static_cast<int64_t>(climb_mm_s_) * step_ms_,
-                                            kMillisecondsPerSecond);
+    north_mm_ += velocity_north_mm_s_ * step_s_;
+    east_mm_ += velocity_east_mm_s_ * step_s_;
     rotate_half();
-    return here();
+    return {wire::divide_rounded(north_mm_, kMillimetresPerMetre),
+            wire::divide_rounded(east_mm_, kMillimetresPerMetre)};
 }
 
 }  // namespace skyblip::flight

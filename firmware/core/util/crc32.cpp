@@ -1,6 +1,6 @@
-#include "core/fec/crc.h"
+#include "core/util/crc32.h"
 
-namespace skyblip::fec {
+namespace skyblip {
 
 namespace {
 
@@ -28,4 +28,4 @@ uint32_t crc32(const uint8_t* data, size_t bytes, uint32_t crc) {
     return crc ^ 0xFFFFFFFFu;
 }
 
-}  // namespace skyblip::fec
+}  // namespace skyblip

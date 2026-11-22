@@ -4,8 +4,8 @@
 #include <cstring>
 
 #include "core/dfu/image.h"
-#include "core/fec/crc.h"
 #include "core/util/cbor.h"
+#include "core/util/crc32.h"
 #include "protocols/common/little_endian.h"
 
 namespace skyblip::comms {
@@ -38,7 +38,7 @@ std::optional<uint32_t> running_image_end(ports::Dfu& slots) {
 std::optional<InstallTrustRecord> read_install_trust_record(ConstByteSpan record) {
     if (record.size() < kInstallTrustRecordBytes ||
         std::memcmp(record.data(), kInstallTrustMagic, kInstallTrustMagicBytes) != 0 ||
-        fec::crc32(record.data(), kCrcAt) != wire::get_uint32(record.data() + kCrcAt))
+        crc32(record.data(), kCrcAt) != wire::get_uint32(record.data() + kCrcAt))
         return std::nullopt;
     const size_t label_bytes = record[kLabelBytesAt];
     if (label_bytes > kBrowserLabelBytes) return std::nullopt;

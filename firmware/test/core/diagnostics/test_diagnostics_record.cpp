@@ -5,6 +5,7 @@
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
 #include "protocols/common/little_endian.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/diagnostics_round_trip.h"
 
 using namespace skyblip;

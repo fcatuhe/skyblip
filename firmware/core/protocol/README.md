@@ -8,7 +8,7 @@ Adapters between skyBlip's model and the stacks in `protocols/`, which hold what
 | `callsign.{h,cpp}` | the name ADS-L has no field for (below) |
 | `adsl_uplink.{h,cpp}` | G.3's uplink over observations. `decode` drops as stale a record older than 10 s or dated after the second it was heard in. `encode` dates each record when sent, which G.3 allows only for traffic from systems other than ADS-L, so only the simulated skyPost and the tests use it |
 | `air.{h,cpp}` | one M-band dwell that hears ADS-L and ALP-TAS behind one shared sync window and names the system from the sync tail, and the M-band buffer the SX1262 sends. On the O band, a burst is an uplink packet only when its §D.1.1 length byte names one of G.3's packet lengths |
-| `alptas.{h,cpp}` | an ALP-TAS position as an observation and back, and `AlptasReceiver`, which follows a random address (below) |
+| `alptas.{h,cpp}` | an ALP-TAS position as an observation, and `AlptasReceiver`, which follows a random address (below). skyBlip only receives ALP-TAS, so the simulator builds the frames its aircraft send (`simulator/world/alptas_out.h`) |
 | `adsb_observation.{h,cpp}` | an ADS-B track as an observation, in ADS-L units |
 | `adsb_category.{h,cpp}` | an ADS-B emitter category in ADS-L's terms (below) |
 | `nmea_out.{h,cpp}` | `$PFLAU`, `$PFLAA`, `$PGRMZ`, `$LK8EX1`, `$GPRMC` and `$GPGGA` |

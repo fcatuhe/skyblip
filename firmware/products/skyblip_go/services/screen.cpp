@@ -3,8 +3,8 @@
 #include <algorithm>
 
 #include "core/events/input.h"
-#include "core/fec/crc.h"
 #include "core/power/cutoff.h"
+#include "core/util/crc32.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/parked.h"
 #include "products/skyblip_go/pages/recovery.h"
@@ -329,7 +329,7 @@ void ScreenService::tick(uint32_t now_ms) {
     render(now_ms);
     render_us_ = microseconds_since(render_began_us);
 
-    const uint32_t frame_crc = fec::crc32(framebuffer_.data(), Glass::kBytes);
+    const uint32_t frame_crc = crc32(framebuffer_.data(), Glass::kBytes);
     const bool changed =
         !presented_once_ || change_ == Change::Wiped || frame_crc != presented_crc_;
     if (!changed) return;

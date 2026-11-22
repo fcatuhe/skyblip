@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/bravo.h"
+#include "simulator/world/hex.h"
 #include "test/support/config_frame.h"
 #include "test/support/paired_products.h"
 

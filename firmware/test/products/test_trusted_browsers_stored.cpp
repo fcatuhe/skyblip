@@ -2,8 +2,8 @@
 #include <string>
 
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;

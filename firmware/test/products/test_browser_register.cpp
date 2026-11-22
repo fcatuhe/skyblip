@@ -2,9 +2,9 @@
 #include <string>
 
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "products/common/services/config_service.h"
+#include "simulator/world/hex.h"
 #include "test/support/activation_vectors.h"
 #include "test/support/product_rig.h"
 

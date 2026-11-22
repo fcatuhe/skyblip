@@ -6,7 +6,6 @@
 #include "core/dfu/update.h"
 #include "core/identity/unit.h"
 #include "core/identity/variant.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
@@ -15,6 +14,7 @@
 #include "hardware/platform/host/watchdog.h"
 #include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings_store.h"
+#include "simulator/world/hex.h"
 #include "test/support/activation_vectors.h"
 #include "test/support/config_frame.h"
 

@@ -14,6 +14,7 @@
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/capture_rig.h"
 #include "test/support/config_frame.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 

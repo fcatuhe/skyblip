@@ -9,11 +9,11 @@
 #include <string>
 
 #include "core/comms/link_registry.h"
-#include "core/fec/crc.h"
 #include "core/power/battery.h"
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
 #include "core/util/cbor.h"
+#include "core/util/crc32.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/world/link_names.h"

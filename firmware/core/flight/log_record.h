@@ -112,8 +112,6 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* ou
 Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out);
 
 void encode_log_event(const LogEvent& event, uint32_t base_utc_s, uint8_t* out);
-// INFO: fc 15oct26 Unsupported for a fix or an unknown kind, so neither is read as the other
-Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out);
 
 // INFO: fc 20nov26 checked before the CRC, so an erased slot is never a checksum question
 bool log_slot_erased(const uint8_t* raw, uint32_t bytes);

@@ -10,10 +10,10 @@
 #include "core/identity/unit.h"
 #include "core/identity/unlock_code.h"
 #include "core/identity/variant.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/random.h"
+#include "simulator/world/hex.h"
 #include "test/support/activation_vectors.h"
 
 using namespace skyblip;

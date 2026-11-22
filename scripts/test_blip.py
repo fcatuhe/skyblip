@@ -25,6 +25,7 @@ import blip_ndjson as ndjson  # noqa: E402
 import blip_records as records  # noqa: E402
 
 SCHEMA = pathlib.Path(__file__).resolve().parents[1] / "schemas" / "diagnostics_log.v1.schema.json"
+VECTORS = SCHEMA.with_name("diagnostics_log.v1.vectors.json")
 
 
 def diagnostics_record(type_id, payload, flags=0, into_ms=0, at_s=0):
@@ -340,30 +341,14 @@ class TablesAgainstTheSchema(unittest.TestCase):
 class GoldenVectors(unittest.TestCase):
     """Bytes the firmware's own encoders produced, so the two layouts are pinned to each other."""
 
-    def test_a_gnss_record_encoded_by_the_firmware(self):
-        decoded = records.decode_diagnostics_record(
-            bytes.fromhex("037fb00400f153655e010c007800b40084030b1103040200"))
-        self.assertEqual(decoded["at_s"], 1_700_000_000)
-        self.assertEqual(decoded["into_ms"], 1200)
-        self.assertEqual(decoded["solution_phase_ms"], 350)
-        self.assertEqual(decoded["stage_s"], 900)
-        self.assertEqual(decoded["reject"], "STALE")
-        self.assertEqual(decoded["stage"], "solving")
-
-    def test_a_burst_record_encoded_by_the_firmware(self):
-        decoded = records.decode_diagnostics_record(
-            bytes.fromhex("053fb00400f15365ab0201009a01c003080201011a9ffe00"))
-        self.assertEqual(decoded["address"], 0x0102AB)
-        self.assertEqual(decoded["verdict"], "miskeyed")
-        self.assertEqual(decoded["rssi_dbm"], -97)
-        self.assertEqual(decoded["key_offset_s"], -2)
-
-    def test_a_pps_record_encoded_by_the_firmware(self):
-        decoded = records.decode_diagnostics_record(
-            bytes.fromhex("040fb00400f1536533420f00f3ffffff100e00000200c201"))
-        self.assertEqual(decoded["interval_us"], 999_987)
-        self.assertEqual(decoded["error_us"], -13)
-        self.assertEqual(decoded["samples"], 3600)
+    def test_every_diagnostics_record_the_firmware_pins_decodes_to_its_fields(self):
+        vectors = json.loads(VECTORS.read_text(encoding="utf-8"))["records"]
+        self.assertEqual([vector["decoded"]["type"] for vector in vectors],
+                         [name for name, _ in (records.DIAGNOSTICS_TYPES[key]
+                                               for key in sorted(records.DIAGNOSTICS_TYPES))])
+        for vector in vectors:
+            self.assertEqual(records.decode_diagnostics_record(bytes.fromhex(vector["hex"])),
+                             vector["decoded"])
 
     def test_a_flight_fix_encoded_by_the_firmware(self):
         decoded = records.decode_flight_record(

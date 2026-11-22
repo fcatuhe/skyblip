@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "core/fec/crc.h"
+#include "core/util/crc32.h"
 #include "protocols/common/little_endian.h"
 
 namespace skyblip::settings {
@@ -20,12 +20,12 @@ void seal(uint8_t version, const void* payload, size_t payload_bytes, uint8_t* o
     if (capacity < blob_bytes(payload_bytes)) return;
     out[0] = version;
     std::memcpy(out + 1, payload, payload_bytes);
-    wire::put_uint32(out + 1 + payload_bytes, fec::crc32(out, 1 + payload_bytes));
+    wire::put_uint32(out + 1 + payload_bytes, crc32(out, 1 + payload_bytes));
 }
 
 Status open(const uint8_t* data, size_t bytes, size_t payload_bytes, void* payload_out) {
     if (bytes < blob_bytes(payload_bytes)) return Status::Crc;
-    if (fec::crc32(data, 1 + payload_bytes) != stored_crc(data, payload_bytes)) return Status::Crc;
+    if (crc32(data, 1 + payload_bytes) != stored_crc(data, payload_bytes)) return Status::Crc;
     std::memcpy(payload_out, data + 1, payload_bytes);
     return Status::Ok;
 }
@@ -33,7 +33,7 @@ Status open(const uint8_t* data, size_t bytes, size_t payload_bytes, void* paylo
 bool sealed(const uint8_t* data, size_t bytes) {
     if (bytes < kBlobOverhead) return false;
     const size_t payload_bytes = bytes - kBlobOverhead;
-    return fec::crc32(data, 1 + payload_bytes) == stored_crc(data, payload_bytes);
+    return crc32(data, 1 + payload_bytes) == stored_crc(data, payload_bytes);
 }
 
 }  // namespace skyblip::settings

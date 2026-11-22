@@ -34,28 +34,6 @@ Record record_of(const Gnss& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Gnss& out) {
-    if (record.type != Type::Gnss) return false;
-    out = Gnss{};
-    out.solution_phase_ms = wire::get_uint16(record.payload + 0);
-    out.residual_m = wire::get_uint16(record.payload + 2);
-    out.hdop_e2 = wire::get_uint16(record.payload + 4);
-    out.vdop_e2 = wire::get_uint16(record.payload + 6);
-    out.stage_s = wire::get_uint16(record.payload + 8);
-    out.satellites = record.payload[10];
-    out.satellites_in_view = record.payload[11];
-    out.fix_mode = record.payload[12];
-    out.reject = static_cast<gnss::FixReject>(record.payload[13]);
-    out.stage = static_cast<gnss::Stage>(record.payload[14]);
-    out.fix_valid = record.flagged(kGnssFlagFixValid);
-    out.residual_valid = record.flagged(kGnssFlagResidualValid);
-    out.pps_locked = record.flagged(kGnssFlagPpsLocked);
-    out.geoid_measured = record.flagged(kGnssFlagGeoidMeasured);
-    out.tx_settled = record.flagged(kGnssFlagTxSettled);
-    out.levels_fresh = record.flagged(kGnssFlagLevelsFresh);
-    return true;
-}
-
 Record record_of(const Pps& value, const Instant& at) {
     Record record = framed(Type::Pps, at);
     wire::put_uint32(record.payload + 0, value.interval_us);
@@ -66,19 +44,6 @@ Record record_of(const Pps& value, const Instant& at) {
     set_flag(record.flags, kPpsFlagLocked, value.locked);
     set_flag(record.flags, kPpsFlagUtcValid, value.utc_valid);
     return record;
-}
-
-bool read(const Record& record, Pps& out) {
-    if (record.type != Type::Pps) return false;
-    out = Pps{};
-    out.interval_us = wire::get_uint32(record.payload + 0);
-    out.error_us = wire::get_int32(record.payload + 4);
-    out.samples = wire::get_uint32(record.payload + 8);
-    out.holdover_events = wire::get_uint16(record.payload + 12);
-    out.since_edge_ms = wire::get_uint16(record.payload + 14);
-    out.locked = record.flagged(kPpsFlagLocked);
-    out.utc_valid = record.flagged(kPpsFlagUtcValid);
-    return true;
 }
 
 Record record_of(const radio::Entry& value) {
@@ -108,34 +73,6 @@ Record record_of(const radio::Entry& value) {
     return record;
 }
 
-bool read(const Record& record, radio::Entry& out) {
-    if (record.type != Type::Burst) return false;
-    out = radio::Entry{};
-    out.at_s = record.at_s;
-    out.into_ms = record.into_ms;
-    out.phase_valid = record.phase_valid();
-    out.utc_dated = record.utc_dated();
-    out.address = wire::get_uint32(record.payload + 0);
-    out.tx_keyed_us = wire::get_uint16(record.payload + 4);
-    out.tx_span_us = wire::get_uint16(record.payload + 6);
-    out.verdict = static_cast<radio::Verdict>(record.payload[8]);
-    out.source = static_cast<model::Source>(record.payload[9]);
-    out.band = static_cast<model::Band>(record.payload[10]);
-    out.channel = record.payload[11];
-    out.bytes = record.payload[12];
-    out.rssi_dbm = get_int8(record.payload + 13);
-    out.key_offset_s = get_int8(record.payload + 14);
-    out.tx_stage_margin_us =
-        static_cast<int16_t>(get_int8(record.payload + 15) * kStageMarginStepUs);
-    out.address_valid = record.flagged(kBurstFlagAddressValid);
-    out.rssi_valid = record.flagged(kBurstFlagRssiValid);
-    out.airborne = record.flagged(kBurstFlagAirborne);
-    out.tx_span_valid = record.flagged(kBurstFlagTxSpanValid);
-    out.callsign = record.flagged(kBurstFlagCallsign);
-    out.status = record.flagged(kBurstFlagStatus);
-    return true;
-}
-
 Record record_of(const Barometer& value, const Instant& at) {
     Record record = framed(Type::Barometer, at);
     wire::put_uint32(record.payload + 0, value.pressure_mpa);
@@ -146,19 +83,6 @@ Record record_of(const Barometer& value, const Instant& at) {
     set_flag(record.flags, kBarometerFlagTemperatureValid, value.temperature_valid);
     set_flag(record.flags, kBarometerFlagClimbAdopted, value.climb_adopted);
     return record;
-}
-
-bool read(const Record& record, Barometer& out) {
-    if (record.type != Type::Barometer) return false;
-    out = Barometer{};
-    out.pressure_mpa = wire::get_uint32(record.payload + 0);
-    out.altitude_mm = wire::get_int32(record.payload + 4);
-    out.climb_mm_s = wire::get_int32(record.payload + 8);
-    out.temperature_dc = wire::get_int16(record.payload + 12);
-    out.active = record.flagged(kBarometerFlagActive);
-    out.temperature_valid = record.flagged(kBarometerFlagTemperatureValid);
-    out.climb_adopted = record.flagged(kBarometerFlagClimbAdopted);
-    return true;
 }
 
 Record record_of(const Motion& value, const Instant& at) {
@@ -175,23 +99,6 @@ Record record_of(const Motion& value, const Instant& at) {
     set_flag(record.flags, kMotionFlagGLoadValid, value.gload_valid);
     set_flag(record.flags, kMotionFlagFitted, value.fitted);
     return record;
-}
-
-bool read(const Record& record, Motion& out) {
-    if (record.type != Type::Motion) return false;
-    out = Motion{};
-    out.slip_mg = wire::get_int16(record.payload + 0);
-    out.normal_mg = wire::get_int16(record.payload + 2);
-    out.lateral_mg = wire::get_int16(record.payload + 4);
-    out.longitudinal_mg = wire::get_int16(record.payload + 6);
-    out.most_normal_mg = wire::get_int16(record.payload + 8);
-    out.least_normal_mg = wire::get_int16(record.payload + 10);
-    out.imu_error = record.payload[12];
-    out.sensor_error = record.payload[13];
-    out.slip_valid = record.flagged(kMotionFlagSlipValid);
-    out.gload_valid = record.flagged(kMotionFlagGLoadValid);
-    out.fitted = record.flagged(kMotionFlagFitted);
-    return true;
 }
 
 Record record_of(const Power& value, const Instant& at) {
@@ -212,25 +119,6 @@ Record record_of(const Power& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Power& out) {
-    if (record.type != Type::Power) return false;
-    out = Power{};
-    out.cell_mv = wire::get_uint16(record.payload + 0);
-    out.supply_warnings = wire::get_uint16(record.payload + 2);
-    out.implausible = wire::get_uint16(record.payload + 4);
-    out.charge_warnings = wire::get_uint16(record.payload + 6);
-    out.die_dc = wire::get_int16(record.payload + 8);
-    out.percent = record.payload[10];
-    out.power_level = static_cast<power::PowerLevel>(record.payload[11]);
-    out.charge = static_cast<power::ChargeCondition>(record.payload[12]);
-    out.sample_offset_mv = get_int8(record.payload + 15);
-    out.charging = record.flagged(kPowerFlagCharging);
-    out.external_power = record.flagged(kPowerFlagExternalPower);
-    out.battery_valid = record.flagged(kPowerFlagBatteryValid);
-    out.die_valid = record.flagged(kPowerFlagDieValid);
-    return true;
-}
-
 Record record_of(const Contact& value, const Instant& at) {
     Record record = framed(Type::Contact, at);
     wire::put_uint32(record.payload + 0, value.at_ms);
@@ -239,17 +127,6 @@ Record record_of(const Contact& value, const Instant& at) {
     record.payload[9] = value.gesture;
     set_flag(record.flags, kContactFlagDown, value.down);
     return record;
-}
-
-bool read(const Record& record, Contact& out) {
-    if (record.type != Type::Contact) return false;
-    out = Contact{};
-    out.at_ms = wire::get_uint32(record.payload + 0);
-    out.held_ms = wire::get_uint32(record.payload + 4);
-    out.contact = static_cast<events::Contact>(record.payload[8]);
-    out.gesture = record.payload[9];
-    out.down = record.flagged(kContactFlagDown);
-    return true;
 }
 
 Record record_of(const Link& value, const Instant& at) {
@@ -266,21 +143,6 @@ Record record_of(const Link& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Link& out) {
-    if (record.type != Type::Link) return false;
-    out = Link{};
-    out.link_session = wire::get_uint16(record.payload + 0);
-    out.payload_bytes = wire::get_uint16(record.payload + 2);
-    out.frame_bytes = wire::get_uint16(record.payload + 4);
-    out.holder = wire::get_uint16(record.payload + 6);
-    out.drops = wire::get_uint16(record.payload + 8);
-    out.action = static_cast<LinkAction>(record.payload[10]);
-    out.endpoint = static_cast<events::Endpoint>(record.payload[11]);
-    out.mtu_exchange_started_by = static_cast<events::MtuExchangeStarter>(record.payload[12]);
-    out.claim_held = record.flagged(kLinkFlagClaimHeld);
-    return true;
-}
-
 Record record_of(const Switch& value, const Instant& at) {
     Record record = framed(Type::Switch, at);
     wire::put_uint32(record.payload + 0, value.to_hz);
@@ -291,19 +153,6 @@ Record record_of(const Switch& value, const Instant& at) {
     set_flag(record.flags, kSwitchFlagArmedAhead, value.armed_ahead);
     set_flag(record.flags, kSwitchFlagLate, value.late);
     return record;
-}
-
-bool read(const Record& record, Switch& out) {
-    if (record.type != Type::Switch) return false;
-    out = Switch{};
-    out.to_hz = wire::get_uint32(record.payload + 0);
-    out.margin_us = wire::get_int32(record.payload + 4);
-    out.took_us = wire::get_uint16(record.payload + 8);
-    out.gap_us = wire::get_uint16(record.payload + 10);
-    out.change = static_cast<SwitchKind>(record.payload[12]);
-    out.armed_ahead = record.flagged(kSwitchFlagArmedAhead);
-    out.late = record.flagged(kSwitchFlagLate);
-    return true;
 }
 
 Adsb adsb_of(const model::Ownship& own, const model::AircraftObservation& target, uint32_t now_ms) {
@@ -350,28 +199,6 @@ Record record_of(const Adsb& value, const Instant& at) {
     set_flag(record.flags, kAdsbFlagPressureRelativeAltitudeValid,
              value.pressure_relative_altitude_valid);
     return record;
-}
-
-bool read(const Record& record, Adsb& out) {
-    if (record.type != Type::Adsb) return false;
-    out = Adsb{};
-    out.address = static_cast<uint32_t>(record.payload[0]) |
-                  (static_cast<uint32_t>(record.payload[1]) << 8) |
-                  (static_cast<uint32_t>(record.payload[2]) << 16);
-    out.adsb_version = record.payload[3] & kAdsbVersionMask;
-    out.gva = (record.payload[3] >> kAdsbGvaShift) & kAdsbGvaMask;
-    out.pressure_altitude_ft = wire::get_int32(record.payload + 4);
-    out.height_difference_ft = wire::get_int16(record.payload + 8);
-    out.height_difference_age_ms = wire::get_int16(record.payload + 10);
-    out.gnss_relative_altitude_m = wire::get_int16(record.payload + 12);
-    out.pressure_relative_altitude_m = wire::get_int16(record.payload + 14);
-    out.adsb_version_valid = record.flagged(kAdsbFlagVersionValid);
-    out.gva_valid = record.flagged(kAdsbFlagGvaValid);
-    out.pressure_altitude_valid = record.flagged(kAdsbFlagPressureAltitudeValid);
-    out.height_difference_valid = record.flagged(kAdsbFlagHeightDifferenceValid);
-    out.gnss_relative_altitude_valid = record.flagged(kAdsbFlagGnssRelativeAltitudeValid);
-    out.pressure_relative_altitude_valid = record.flagged(kAdsbFlagPressureRelativeAltitudeValid);
-    return true;
 }
 
 }  // namespace skyblip::diagnostics

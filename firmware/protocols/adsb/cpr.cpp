@@ -33,7 +33,11 @@ int64_t floor_divided(int64_t number, int64_t divisor) {
     return (number % divisor != 0 && number < 0) ? quotient - 1 : quotient;
 }
 
-int64_t modulo(int64_t number, int64_t divisor) { return ((number % divisor) + divisor) % divisor; }
+int32_t modulo(int64_t number, int64_t divisor) {
+    const auto zone = static_cast<int32_t>(number);
+    const auto zones = static_cast<int32_t>(divisor);
+    return ((zone % zones) + zones) % zones;
+}
 
 int64_t turn_of(CprFormat format) {
     return format == CprFormat::Surface ? kQuarterTurn1e7 : kE7PerTurn;
