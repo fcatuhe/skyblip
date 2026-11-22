@@ -127,14 +127,13 @@ TEST_CASE("nmea: a tablet that pairs starts hearing sentences, and they stop whe
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
 
     // Nobody is listening, so nothing is said - and nothing was formatted to say.
     CHECK(rig.platform.link().count_on(events::Endpoint::Nmea) == 0);
 
     rig.raise_link();
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     REQUIRE(rig.link_up());
     const std::vector<std::string> heard = sentences(rig);
     REQUIRE(heard.size() >= 3);
@@ -145,7 +144,7 @@ TEST_CASE("nmea: a tablet that pairs starts hearing sentences, and they stop whe
 
     rig.platform.link().clear();
     rig.drop_link();
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     CHECK(rig.platform.link().count_on(events::Endpoint::Nmea) == 0);
 }
 
@@ -153,15 +152,14 @@ TEST_CASE("nmea: an aircraft heard over the air becomes a $PFLAA a tablet can pa
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
     rig.platform.link().clear();
 
     // 1200 m north, 800 m east, 150 m above.
     hear(rig, 0xC5D804, 1200, 800, 150);
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
 
     std::string traffic;
     for (const std::string& sentence : sentences(rig))
@@ -186,16 +184,15 @@ TEST_CASE("nmea: an aircraft heard over the air becomes a $PFLAA a tablet can pa
 TEST_CASE("nmea: a target that named itself reaches the tablet with the name on its ID") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
 
     hear(rig, 0xC5D804, 1200, 800, 150);
     hear_callsign(rig, 0xC5D804, "D-KXYZ");
     rig.platform.link().clear();
     hear(rig, 0xC5D804, 1200, 800, 150);
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
 
     const std::vector<std::string> values = fields(last_of(rig, "$PFLAA,"));
     REQUIRE(values.size() >= 12);
@@ -206,10 +203,9 @@ TEST_CASE("nmea: a target that named itself reaches the tablet with the name on 
 TEST_CASE("nmea: PFLAU says GPS 1 on the ground, which XCSoar draws as a 2D fix") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    park(rig, now_ms, 3);
+    park(rig, rig.now_ms, 3);
     rig.raise_link();
-    park(rig, now_ms, 3);
+    park(rig, rig.now_ms, 3);
     REQUIRE(rig.state().own.fix_valid);
     REQUIRE(flight::state_from(rig.state().own.flight_state) == flight::FlightState::Ground);
     CHECK(fields(last_of(rig, "$PFLAU"))[3] == "1");
@@ -218,7 +214,7 @@ TEST_CASE("nmea: PFLAU says GPS 1 on the ground, which XCSoar draws as a 2D fix"
     CHECK(fields(last_of(rig, "$PGRMZ"))[3] == "3");
 
     rig.platform.link().clear();
-    fly(rig, now_ms, 12);
+    fly(rig, rig.now_ms, 12);
     REQUIRE(flight::state_from(rig.state().own.flight_state) == flight::FlightState::Airborne);
     CHECK(fields(last_of(rig, "$PFLAU"))[3] == "2");
 }
@@ -227,19 +223,18 @@ TEST_CASE("nmea: PFLAU says GPS 1 on the ground, which XCSoar draws as a 2D fix"
 TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent device admits it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    REQUIRE(rig.bring_receiver_up(now_ms));
-    fly(rig, now_ms, 3);
+    REQUIRE(rig.bring_receiver_up());
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
     // Nothing goes on air before the first fix has settled, so neither does a TX of 1.
-    fly(rig, now_ms, gnss::kFirstFixSettleMs / 1000);
+    fly(rig, rig.now_ms, gnss::kFirstFixSettleMs / 1000);
     REQUIRE(rig.state().own.tx_settled);
     REQUIRE(fields(last_of(rig, "$PFLAU"))[2] == "1");
 
     rig.platform.pps().set_locked(false);
-    fly(rig, now_ms, timing::kPpsEdgeMaxAgeMs / 1000 + 1);
+    fly(rig, rig.now_ms, timing::kPpsEdgeMaxAgeMs / 1000 + 1);
     rig.platform.link().clear();
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
     const std::vector<std::string> values = fields(last_of(rig, "$PFLAU"));
     CHECK(values[2] == "0");
     CHECK(values[3] == "2");
@@ -251,16 +246,15 @@ TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent dev
 TEST_CASE("nmea: an advisory goes out as FLARM alarm level 1" * doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
 
     // Co-altitude off the left wing and well inside the advisory window: the
     // level core/traffic assessed, not one written into the table by hand.
     for (int pass = 0; pass < 4; pass++) {
         hear(rig, 0x112233, 400, 150, 31, /*track_c9=*/223);
-        fly(rig, now_ms, 1);
+        fly(rig, rig.now_ms, 1);
     }
     REQUIRE(rig.state().alarm_level == traffic::Level::Advisory);
 
@@ -294,16 +288,15 @@ TEST_CASE(
     "nmea: every frame fits the payload the central negotiated, down to what BLE guarantees") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     // The phone that never exchanges an MTU: 23 bytes of ATT, 20 of payload.
     // A $PFLAA does not fit in one of those, so a sender that framed one
     // sentence per notification would send this pilot nothing at all.
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
     hear(rig, 0xABCDEF, 900, -400, -60);
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
 
     int frames = 0;
     for (const auto& frame : rig.platform.link().sent) {
@@ -327,10 +320,9 @@ TEST_CASE(
 TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the bound") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
 
     // A full table: five times what one pass may carry, so the bound below is
     // exercised at the worst case the device can be in rather than near it.
@@ -341,17 +333,17 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
         // once a pass: a sky this busy arrives over several passes, as it does
         // on air.
         if ((i + 1) % 4 == 0) {
-            rig.run(now_ms, now_ms + 40);
-            now_ms += 50;
+            rig.run(rig.now_ms, rig.now_ms + 40);
+            rig.now_ms += 50;
         }
     }
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
     REQUIRE(rig.state().traffic.count() == count);
     rig.platform.link().clear();
 
     // One bound's worth of passes, and every aircraft in the table has been
     // named at least once inside it.
-    fly(rig, now_ms, common::NmeaService::kTargetRefreshCeilingMs / 1000);
+    fly(rig, rig.now_ms, common::NmeaService::kTargetRefreshCeilingMs / 1000);
     const std::vector<std::string> heard = sentences(rig);
     for (int i = 0; i < count; i++) {
         char address_hex[8];
@@ -376,14 +368,13 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
 TEST_CASE("nmea: a pass longer than the link's share reaches a tablet at the BLE minimum whole") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
     for (int i = 0; i < 4; i++)
         hear(rig, 0x300000u + static_cast<uint32_t>(i), 500 + 100 * i, 200, 40 + 5 * i);
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
     REQUIRE(rig.state().traffic.count() == 4);
 
     rig.platform.link().hold_after(4);
@@ -392,9 +383,9 @@ TEST_CASE("nmea: a pass longer than the link's share reaches a tablet at the BLE
         rig.push_timed_fix(25000, 900);
         for (uint32_t offset_ms = 0; offset_ms < 1000; offset_ms += 10) {
             rig.platform.link().serve();
-            rig.run(now_ms + offset_ms, now_ms + offset_ms, 10);
+            rig.run(rig.now_ms + offset_ms, rig.now_ms + offset_ms, 10);
         }
-        now_ms += 1000;
+        rig.now_ms += 1000;
         rig.utc_offset_s++;
     }
 
@@ -467,15 +458,15 @@ TEST_CASE("nmea: a board with no link fitted says nothing on it") {
 TEST_CASE("nmea: a paired tablet keeps hearing the device across the 49.7-day wrap") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0xFFFFFF00u - 2000u;  // a couple of seconds short of the wrap
+    rig.now_ms = 0xFFFFFF00u - 2000u;  // a couple of seconds short of the wrap
     rig.raise_link();
-    for (int i = 0; i < 2; i++) rig.second_across(now_ms, 25000, 900);
+    for (int i = 0; i < 2; i++) rig.second_across(25000, 900);
     REQUIRE(rig.link_up());
     REQUIRE(count_of(rig, "$PFLAU") >= 2);
 
     // Four more seconds, stepped straight through zero.
     rig.platform.link().clear();
-    for (int i = 0; i < 4; i++) rig.second_across(now_ms, 25000, 900);
+    for (int i = 0; i < 4; i++) rig.second_across(25000, 900);
     CHECK(count_of(rig, "$PFLAU") >= 4);
     for (const std::string& sentence : sentences(rig)) CHECK(checksum_ok(sentence));
 }

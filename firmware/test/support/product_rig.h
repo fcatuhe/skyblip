@@ -53,37 +53,46 @@ struct Rig {
     go::Settings& settings() { return product.settings(); }
 
     // One pass of the loop, with the receiver talking on its UART once the case brought it up.
-    void pass(uint32_t now_ms) {
-        if (receiver_live_) platform.chips().gnss.tick(now_ms);
-        product.run_pass(now_ms);
+    void pass(uint32_t at_ms) {
+        if (receiver_live_) platform.chips().gnss.tick(at_ms);
+        product.run_pass(at_ms);
     }
 
     // The L76K model brought up to 2 Hz at 115200 by the driver, as on the device, before any
     // fix. From then on the timed fixes a case flies are the model's own, reported through the
     // driver as on the device, so the Go transmits.
-    [[nodiscard]] bool bring_receiver_up(uint32_t& now_ms) {
+    [[nodiscard]] bool bring_receiver_up(uint32_t& clock_ms) {
         models::L76k& chip = platform.chips().gnss;
         platform.retune_gnss_port(true);
         chip.fix_valid = false;
         receiver_live_ = true;
         for (int step = 0; step < 400 && !product.board().gnss().holds_rate(); step++) {
-            platform.clock().set_milliseconds(now_ms);
-            pass(now_ms);
-            if (world) world(now_ms);
-            now_ms += 50;
+            platform.clock().set_milliseconds(clock_ms);
+            pass(clock_ms);
+            if (world) world(clock_ms);
+            clock_ms += 50;
         }
-        now_ms = (now_ms / 1000 + 1) * 1000;
+        clock_ms = (clock_ms / 1000 + 1) * 1000;
         return product.board().gnss().holds_rate();
     }
 
     bool receiver_live_{false};
 
     void run(uint32_t from_ms, uint32_t to_ms, uint32_t step_ms = 50) {
-        for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += step_ms) {
-            platform.clock().set_milliseconds(now_ms);
-            pass(now_ms);
-            if (world) world(now_ms);
+        for (uint32_t at_ms = from_ms; at_ms <= to_ms; at_ms += step_ms) {
+            platform.clock().set_milliseconds(at_ms);
+            pass(at_ms);
+            if (world) world(at_ms);
         }
+    }
+
+    // The rig's own clock, which every rig steps the same way: passes from now_ms to now_ms +
+    // span_ms, both included, then the clock moves on by the span.
+    uint32_t now_ms{0};
+
+    void run_for(uint32_t span_ms, uint32_t step_ms = 50) {
+        run(now_ms, now_ms + span_ms, step_ms);
+        now_ms += span_ms;
     }
 
     // INFO: fc 11nov26 what else lives through each pass, a paired Bravo and the air between
@@ -91,9 +100,9 @@ struct Rig {
 
     // The shell's other loop: a refused boot settles the frame it owes the glass.
     void sleep_again(uint32_t step_ms = 50) {
-        for (uint32_t now_ms = 0; now_ms <= 20000; now_ms += step_ms) {
-            platform.clock().set_milliseconds(now_ms);
-            if (product.park_refusal(now_ms)) return;
+        for (uint32_t at_ms = 0; at_ms <= 20000; at_ms += step_ms) {
+            platform.clock().set_milliseconds(at_ms);
+            if (product.park_refusal(at_ms)) return;
         }
     }
 
@@ -150,41 +159,41 @@ struct Rig {
     }
 
     // One second of the world: a solution, then the passes that follow it.
-    void second(uint32_t& now_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
+    void second(uint32_t& clock_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
         push_timed_fix(speed_mm_s, altitude_msl_m);
-        run(now_ms, now_ms + 950);
-        now_ms += 1000;
+        run(clock_ms, clock_ms + 950);
+        clock_ms += 1000;
         utc_offset_s++;
     }
 
     // What the driver publishes once the receiver has gone quiet: not a fix.
-    void blind_second(uint32_t& now_ms) {
+    void blind_second(uint32_t& clock_ms) {
         gnss::GnssSolution solution{};
         solution.fix_valid = false;
         solution.sentences = ++fix_updates;
         product.bus().gnss.push(solution);
-        run(now_ms, now_ms + 950);
-        now_ms += 1000;
+        run(clock_ms, clock_ms + 950);
+        clock_ms += 1000;
         utc_offset_s++;
     }
 
-    void blind_seconds(uint32_t& now_ms, uint32_t seconds) {
-        for (uint32_t i = 0; i < seconds; i++) blind_second(now_ms);
+    void blind_seconds(uint32_t& clock_ms, uint32_t seconds) {
+        for (uint32_t i = 0; i < seconds; i++) blind_second(clock_ms);
     }
 
-    void seconds(uint32_t& now_ms, uint32_t seconds, int32_t speed_mm_s, int32_t altitude_msl_m) {
-        for (uint32_t i = 0; i < seconds; i++) second(now_ms, speed_mm_s, altitude_msl_m);
+    void seconds(uint32_t& clock_ms, uint32_t seconds, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        for (uint32_t i = 0; i < seconds; i++) second(clock_ms, speed_mm_s, altitude_msl_m);
     }
 
-    // The same passes, counted instead of bounded: `now_ms <= to_ms` above cannot cross
+    // The same passes, counted instead of bounded: `at_ms <= to_ms` above cannot cross
     // the 49.7-day wrap of ports::Clock::milliseconds(), because that is a comparison of
     // two instants (ports/clock.h). A case that wants the device stepped THROUGH the
-    // wrap advances by an elapsed span instead. Steps now_ms forward by span + step_ms.
-    void run_span(uint32_t& now_ms, uint32_t span_ms, uint32_t step_ms = 50) {
+    // wrap advances by an elapsed span instead. Steps clock_ms forward by span + step_ms.
+    void run_span(uint32_t& clock_ms, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
-            platform.clock().set_milliseconds(now_ms);
-            pass(now_ms);
-            now_ms += step_ms;
+            platform.clock().set_milliseconds(clock_ms);
+            pass(clock_ms);
+            clock_ms += step_ms;
         }
     }
 
@@ -203,9 +212,9 @@ struct Rig {
 
     // One second of the world, wherever the counter happens to be: run_span(950)
     // in 50 ms steps is the whole second.
-    void second_across(uint32_t& now_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
+    void second_across(uint32_t& clock_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
         push_timed_fix(speed_mm_s, altitude_msl_m);
-        run_span(now_ms, 950);
+        run_span(clock_ms, 950);
         utc_offset_s++;
     }
 
@@ -218,40 +227,42 @@ struct Rig {
 
     // Held across steps, then released across steps: a level has to be stable
     // through the board's debounce window before it is an edge at all.
-    void press(uint32_t& now_ms) {
+    void press(uint32_t& clock_ms) {
         platform.board_gpio().button_down = true;
-        settle(now_ms);
+        settle(clock_ms);
         platform.board_gpio().button_down = false;
-        settle(now_ms);
+        settle(clock_ms);
     }
 
-    void settle(uint32_t& now_ms) {
+    void settle(uint32_t& clock_ms) {
         for (int i = 0; i < 2; i++) {
-            platform.clock().set_milliseconds(now_ms);
-            pass(now_ms);
-            if (world) world(now_ms);
-            now_ms += 40;
+            platform.clock().set_milliseconds(clock_ms);
+            pass(clock_ms);
+            if (world) world(clock_ms);
+            clock_ms += 40;
         }
     }
 
     // The three gestures the device answers, as go::ScreenService names them.
-    void tap(uint32_t& now_ms) { touch_pad(now_ms, 200); }
+    void tap(uint32_t& clock_ms) { touch_pad(clock_ms, 200); }
 
-    void long_touch(uint32_t& now_ms) { touch_pad(now_ms, go::Controls::kLongTouchHoldMs + 200); }
+    void long_touch(uint32_t& clock_ms) {
+        touch_pad(clock_ms, go::Controls::kLongTouchHoldMs + 200);
+    }
 
     // Reached the way a thumb reaches it: the pad along the walk, then the menu.
-    void show(uint32_t& now_ms, go::Page page) {
+    void show(uint32_t& clock_ms, go::Page page) {
         for (int i = 0; i < go::kPageCount && product.screen().page() != go::menu_owner(page); i++)
-            tap(now_ms);
+            tap(clock_ms);
         if (go::walked(page)) return;
-        press(now_ms);
+        press(clock_ms);
         const go::Menu menu = go::menu_for(go::menu_owner(page));
         for (int i = 0; i < menu.row_count && product.screen().editor().focus() != row_for(page);
              i++)
-            tap(now_ms);
-        press(now_ms);
-        run(now_ms, now_ms + 200);
-        now_ms += 200;
+            tap(clock_ms);
+        press(clock_ms);
+        run(clock_ms, clock_ms + 200);
+        clock_ms += 200;
     }
 
     static go::MenuRow row_for(go::Page page) {
@@ -261,14 +272,35 @@ struct Rig {
         return go::MenuRow::kCount;
     }
 
-    void touch_pad(uint32_t& now_ms, uint32_t held_ms) {
+    void touch_pad(uint32_t& clock_ms, uint32_t held_ms) {
         platform.board_gpio().pad_down = true;
-        run(now_ms, now_ms + held_ms);
-        now_ms += held_ms;
+        run(clock_ms, clock_ms + held_ms);
+        clock_ms += held_ms;
         platform.board_gpio().pad_down = false;
-        run(now_ms, now_ms + 100);
-        now_ms += 100;
+        run(clock_ms, clock_ms + 100);
+        clock_ms += 100;
     }
+
+    // The same moves on the rig's own clock.
+    [[nodiscard]] bool bring_receiver_up() { return bring_receiver_up(now_ms); }
+    void second(int32_t speed_mm_s, int32_t altitude_msl_m) {
+        second(now_ms, speed_mm_s, altitude_msl_m);
+    }
+    void blind_second() { blind_second(now_ms); }
+    void blind_seconds(uint32_t count) { blind_seconds(now_ms, count); }
+    void seconds(uint32_t count, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        seconds(now_ms, count, speed_mm_s, altitude_msl_m);
+    }
+    void run_span(uint32_t span_ms) { run_span(now_ms, span_ms); }
+    void second_across(int32_t speed_mm_s, int32_t altitude_msl_m) {
+        second_across(now_ms, speed_mm_s, altitude_msl_m);
+    }
+    void press() { press(now_ms); }
+    void settle() { settle(now_ms); }
+    void tap() { tap(now_ms); }
+    void long_touch() { long_touch(now_ms); }
+    void show(go::Page page) { show(now_ms, page); }
+    void touch_pad(uint32_t held_ms) { touch_pad(now_ms, held_ms); }
 
     bus::State& state() { return product.state(); }
 

@@ -391,9 +391,8 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     platform::host::DieTemperature& die = rig.platform.die_temperature();
     die.hold(412);
 
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 100);
-    now_ms += 150;
+    rig.run(rig.now_ms, rig.now_ms + 100);
+    rig.now_ms += 150;
     // Read on the first pass rather than ten seconds into the boot: the first
     // dump a bench asks for should carry a temperature, and the self-test page
     // is the moment a bench eye is looking.
@@ -402,18 +401,18 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     CHECK(rig.product.state().power.die_dc == 412);
 
     // Five seconds of passes: still one measurement.
-    rig.run(now_ms, now_ms + 5000);
-    now_ms += 5050;
+    rig.run(rig.now_ms, rig.now_ms + 5000);
+    rig.now_ms += 5050;
     CHECK(die.reads() == 1);
 
     // Past ten seconds from the first: a second one.
-    rig.run(now_ms, now_ms + 6000);
-    now_ms += 6050;
+    rig.run(rig.now_ms, rig.now_ms + 6000);
+    rig.now_ms += 6050;
     CHECK(die.reads() == 2);
     // And nothing has read it hundreds of times, which is what a per-pass reader
     // would have done by now.
-    rig.run(now_ms, now_ms + 30000);
-    now_ms += 30050;
+    rig.run(rig.now_ms, rig.now_ms + 30000);
+    rig.now_ms += 30050;
     CHECK(die.reads() <= 6);
 
     // A refused measurement leaves the last good reading standing rather than
@@ -421,16 +420,16 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     // still believe it: past kDieStaleMs the tablet is shown no temperature either.
     const int before = die.reads();
     die.refuse();
-    rig.run(now_ms, now_ms + 10000);
-    now_ms += 10050;
+    rig.run(rig.now_ms, rig.now_ms + 10000);
+    rig.now_ms += 10050;
     CHECK(die.reads() > before);
     CHECK(rig.product.state().power.die_valid);
     CHECK(rig.product.state().power.die_dc == 412);
 
-    rig.run(now_ms, now_ms + common::PowerService::kDieStaleMs);
-    now_ms += common::PowerService::kDieStaleMs + 50;
+    rig.run(rig.now_ms, rig.now_ms + common::PowerService::kDieStaleMs);
+    rig.now_ms += common::PowerService::kDieStaleMs + 50;
     CHECK_FALSE(rig.product.state().power.die_valid);
-    CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
+    CHECK(status_of(rig, rig.now_ms).find("die_temperature_c") == std::string::npos);
 }
 
 // The research prohibits charging in the 72.4 C soak; nothing here could see it.
@@ -443,28 +442,27 @@ TEST_CASE("product: a cable in the heat is named, counted and left counted") {
     platform::host::DieTemperature& die = rig.platform.die_temperature();
     die.hold(250);
 
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 2000);
-    now_ms += 2050;
+    rig.run(rig.now_ms, rig.now_ms + 2000);
+    rig.now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.product.power().charge_warnings() == 0);
 
     rig.platform.battery().external_power = true;
-    rig.run(now_ms, now_ms + 2000);
-    now_ms += 2050;
+    rig.run(rig.now_ms, rig.now_ms + 2000);
+    rig.now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Ok);
     CHECK(rig.product.power().charge_warnings() == 0);
 
     die.hold(724);
-    rig.run(now_ms, now_ms + 15000);
-    now_ms += 15050;
+    rig.run(rig.now_ms, rig.now_ms + 15000);
+    rig.now_ms += 15050;
     CHECK(rig.state().power.charge == power::ChargeCondition::TooHot);
     // One event, however many passes read the same sensor.
     CHECK(rig.product.power().charge_warnings() == 1);
 
     rig.platform.battery().external_power = false;
-    rig.run(now_ms, now_ms + 2000);
-    now_ms += 2050;
+    rig.run(rig.now_ms, rig.now_ms + 2000);
+    rig.now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.product.power().charge_warnings() == 1);
 }
@@ -478,11 +476,10 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
     REQUIRE(rig.setup() == Status::Ok);
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::DieTemperature));
 
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 30000);
-    now_ms += 30050;
+    rig.run(rig.now_ms, rig.now_ms + 30000);
+    rig.now_ms += 30050;
     CHECK_FALSE(rig.product.state().power.die_valid);
-    CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
+    CHECK(status_of(rig, rig.now_ms).find("die_temperature_c") == std::string::npos);
 }
 
 // J. The range gate refuses a reception whose claimed position is further away
@@ -492,14 +489,13 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
 TEST_CASE("product: the range gate's refusals leave the device over the link") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.seconds(now_ms, 3, /*speed_mm_s=*/0, 0);
+    rig.seconds(3, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().own.fix_valid);
 
     rig.platform.link().clear();
     rig.send("{\"command\":\"radio\"}");
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 250;
+    rig.run(rig.now_ms, rig.now_ms + 200);
+    rig.now_ms += 250;
     CHECK(rig.last_on(events::Endpoint::Config).find("\"range_refused\":0") != std::string::npos);
 
     // A target on the other side of the country, claimed by a frame that passed
@@ -516,7 +512,7 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
 
     rig.platform.link().clear();
     rig.send("{\"command\":\"radio\"}");
-    rig.run(now_ms, now_ms + 200);
+    rig.run(rig.now_ms, rig.now_ms + 200);
     CHECK(link_text(rig.platform.link().last().bytes).find("\"range_refused\":1") !=
           std::string::npos);
 }

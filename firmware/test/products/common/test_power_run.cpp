@@ -58,11 +58,10 @@ uint32_t nominal_keeps_s(Rig& rig) {
 TEST_CASE("power run: before its first pair lands, the span quoted is the nominal one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
-    arm_power_run(rig, now_ms);
-    rig.run(now_ms, now_ms + 5000);
-    now_ms += 5000;
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_power_run(rig, rig.now_ms);
+    rig.run_for(5000);
 
     CHECK(rig.product.capture().records_written() == 2);
     CHECK(quoted_keeps_s(rig) == nominal_keeps_s(rig));
@@ -71,13 +70,12 @@ TEST_CASE("power run: before its first pair lands, the span quoted is the nomina
 TEST_CASE("power run: once pairs land, the span quoted is the one they are landing at") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
-    arm_power_run(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_power_run(rig, rig.now_ms);
 
     for (uint32_t elapsed_s = 7; elapsed_s <= 91; elapsed_s += 7) {
-        rig.run(now_ms, now_ms + 7000);
-        now_ms += 7000;
+        rig.run_for(7000);
         // the first pair reaches the flash within a second of 30 s after the session opened
         CHECK(quoted_keeps_s(rig) >= nominal_keeps_s(rig) * 29 / 30);
         CHECK(quoted_keeps_s(rig) <= nominal_keeps_s(rig) * 31 / 30);
@@ -88,13 +86,12 @@ TEST_CASE("power run: once pairs land, the span quoted is the one they are landi
 TEST_CASE("park: a power run taken down by its cell ends on a cutoff power record, then duty") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
-    arm_power_run(rig, now_ms);
-    rig.run(now_ms, now_ms + 40000);
-    now_ms += 40000;
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_power_run(rig, rig.now_ms);
+    rig.run_for(40000);
     rig.platform.battery().divider_mv = kBelowCutoffMv;
-    run_until_parked(rig, now_ms);
+    run_until_parked(rig, rig.now_ms);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
 
     const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
@@ -109,13 +106,12 @@ TEST_CASE("park: a power run taken down by its cell ends on a cutoff power recor
 TEST_CASE("park: a power run the pilot switches off closes on power, then duty, all the same") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
-    arm_power_run(rig, now_ms);
-    rig.run(now_ms, now_ms + 40000);
-    now_ms += 40000;
-    rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
-    run_until_parked(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_power_run(rig, rig.now_ms);
+    rig.run_for(40000);
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, rig.now_ms);
+    run_until_parked(rig, rig.now_ms);
 
     const std::vector<diagnostics::Record> records = captured(rig);
     const std::vector<diagnostics::Record> last = tail(records, 3);
@@ -132,12 +128,12 @@ TEST_CASE("park: a power run the pilot switches off closes on power, then duty, 
 TEST_CASE("park: a full capture closes on the same pair, off its own cadence") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
     rig.product.diagnostics().arm(diagnostics::Profile::Full);
-    taxi(rig, now_ms, 4);
-    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, now_ms);
-    run_until_parked(rig, now_ms);
+    taxi(rig, rig.now_ms, 4);
+    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, rig.now_ms);
+    run_until_parked(rig, rig.now_ms);
 
     const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
     CHECK(last[0].type == diagnostics::Type::Power);

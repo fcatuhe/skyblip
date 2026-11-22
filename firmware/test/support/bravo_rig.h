@@ -57,11 +57,12 @@ struct BravoRig {
         product.run_pass(now_ms);
     }
 
+    // As Rig::run_for: passes from now_ms to now_ms + span_ms, both included.
     void run_for(uint32_t span_ms, uint32_t step_ms = runtime::kServicePassCeilingMs) {
-        for (uint32_t stepped = 0; stepped < span_ms; stepped += step_ms) {
-            step();
-            now_ms += step_ms;
-        }
+        const uint32_t until_ms = now_ms + span_ms;
+        for (; static_cast<int32_t>(until_ms - now_ms) > 0; now_ms += step_ms) step();
+        now_ms = until_ms;
+        step();
     }
 
     // A solution as the AG3335 driver publishes one, on the ground where the case puts it.

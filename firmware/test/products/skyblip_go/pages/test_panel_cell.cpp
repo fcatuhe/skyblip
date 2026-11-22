@@ -12,18 +12,15 @@ using namespace skyblip;
 TEST_CASE("product: a cable takes the cell's word off the radar, and no charge climbs there") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 2000);
-    now_ms += 2000;
+    rig.run_for(2000);
 
     rig.platform.battery().divider_mv = power::kCriticalMv - 100;
-    rig.run(now_ms, now_ms + 8000);
-    now_ms += 8000;
+    rig.run_for(8000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "BAT", 40, 120, 160, 160, 2));
 
     rig.platform.battery().external_power = true;
-    rig.run(now_ms, now_ms + 8000);
+    rig.run(rig.now_ms, rig.now_ms + 8000);
     CHECK(rig.state().power.level == power::PowerLevel::Normal);
     CHECK_FALSE(reads_in(rig.platform.chips().epd.framebuffer(), "BAT", 0, 0, 200, 199, 2));
     CHECK_FALSE(reads_in(rig.platform.chips().epd.framebuffer(), "%", 0, 0, 200, 199, 2));
@@ -126,18 +123,17 @@ TEST_CASE("product: a refused press goes dark only once the button has come up")
     REQUIRE(rig.product.refused_frame() == power::RefusedFrame::FlatCell);
 
     bool dark = false;
-    uint32_t now_ms = 0;
-    for (; now_ms <= go::kRefusalParkCeilingMs + 2000; now_ms += 50) {
-        rig.platform.clock().set_milliseconds(now_ms);
-        dark = dark || rig.product.park_refusal(now_ms);
+    for (; rig.now_ms <= go::kRefusalParkCeilingMs + 2000; rig.now_ms += 50) {
+        rig.platform.clock().set_milliseconds(rig.now_ms);
+        dark = dark || rig.product.park_refusal(rig.now_ms);
     }
     CHECK_FALSE(dark);
     CHECK(rig.platform.chips().epd.present_count == 1);
 
     rig.platform.board_gpio().button_down = false;
-    CHECK_FALSE(rig.product.park_refusal(now_ms));
-    CHECK_FALSE(rig.product.park_refusal(now_ms + power::kReleaseSettleMs - 1));
-    CHECK(rig.product.park_refusal(now_ms + power::kReleaseSettleMs));
+    CHECK_FALSE(rig.product.park_refusal(rig.now_ms));
+    CHECK_FALSE(rig.product.park_refusal(rig.now_ms + power::kReleaseSettleMs - 1));
+    CHECK(rig.product.park_refusal(rig.now_ms + power::kReleaseSettleMs));
 }
 
 // The lockout spares external power, so the cable and a press are the way out of a flat cell.

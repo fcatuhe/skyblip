@@ -167,7 +167,7 @@ TEST_CASE("bravo alarm: a long touch on the Go dismisses the alarm on both units
     Flight flight;
     flight.seconds(20);
     flight.both_call();
-    flight.pair.go.long_touch(flight.pair.now_ms);
+    flight.pair.go.long_touch();
     flight.pair.run_for(200);
     CHECK(flight.go_standing() == traffic::Level::None);
     CHECK(flight.bravo_standing() == traffic::Level::None);
@@ -189,7 +189,7 @@ TEST_CASE("bravo alarm: with the link down, a press on either unit silences only
         flight.seconds(20);
         flight.both_call();
         flight.out_of_reach();
-        flight.pair.go.long_touch(flight.pair.now_ms);
+        flight.pair.go.long_touch();
         CHECK(flight.go_standing() == traffic::Level::None);
         CHECK(flight.bravo_standing() == traffic::Level::Advisory);
     }

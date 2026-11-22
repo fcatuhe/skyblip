@@ -155,12 +155,11 @@ TEST_CASE("unknown altitude: a target that sends its altitude is written as know
 TEST_CASE("unknown altitude: an advisory on distance, a PFLAU with no vertical, and no PFLAA") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 1);
+    fly(rig, rig.now_ms, 1);
 
-    hear_for(rig, now_ms, 1500, 4);
+    hear_for(rig, rig.now_ms, 1500, 4);
     REQUIRE(rig.state().traffic.count() == 1);
     CHECK(rig.state().alarm_level == traffic::Level::Advisory);
 
@@ -180,18 +179,17 @@ TEST_CASE("unknown altitude: a ring on the radar and two dashes on nearby" *
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
 
-    hear_for(rig, now_ms, 5000, 3);
+    hear_for(rig, rig.now_ms, 5000, 3);
     REQUIRE(rig.state().traffic.count() == 1);
     REQUIRE(rig.state().alarm_level == traffic::Level::None);
     REQUIRE(rig.product.screen().page() == go::Page::Radar);
     CHECK(blip_anywhere(rig.product.screen().framebuffer(), ui::Vertical::Unknown));
     CHECK_FALSE(blip_anywhere(rig.product.screen().framebuffer(), ui::Vertical::Level));
 
-    rig.show(now_ms, go::Page::Nearby);
-    hear_for(rig, now_ms, 5000, 2);
+    rig.show(go::Page::Nearby);
+    hear_for(rig, rig.now_ms, 5000, 2);
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
     const int dashes_x = go::kNearbyRelativeAltitudeEnd - 2 * ui::kCellWidth * go::kNearbyScale;
     CHECK(reads_at(rig.product.screen().framebuffer(), dashes_x, go::kNearbyFirstRowY, "--",

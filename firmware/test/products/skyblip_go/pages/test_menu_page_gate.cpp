@@ -49,17 +49,16 @@ void hold_button(Rig& rig, uint32_t& now_ms, uint32_t held_ms, bool down = true)
 TEST_CASE("product: a prompt takes the page, and the taps already in flight cannot answer it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    on_ground(rig, now_ms);
-    open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::Alarm);
+    rig.now_ms = 100;
+    on_ground(rig, rig.now_ms);
+    open_menu(rig, rig.now_ms);
+    focus_on(rig, rig.now_ms, go::MenuRow::Alarm);
     const go::Alarm volume = rig.settings().alarm;
 
     // A phone asks to overwrite the firmware while the pilot is tapping a value
     // up. The prompt takes the glass at once.
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(now_ms, now_ms + 300);
-    now_ms += 300;
+    rig.run_for(300);
     REQUIRE(rig.product.screen().prompt() == common::Pending::Dfu);
 
     // The thumb has not caught up: it keeps tapping at the rhythm that was
@@ -67,18 +66,16 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     // those taps authorises anything, and none of them reaches the value
     // either - a press stream that began before the question cannot answer it.
     for (int i = 0; i < 6; i++) {
-        rig.press(now_ms);
+        rig.press();
         CHECK_FALSE(rig.product.config_link().config().upload_allowed());
     }
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     CHECK(rig.product.config_link().config().pending() == common::Pending::Dfu);
     CHECK_FALSE(rig.product.config_link().config().upload_allowed());
     CHECK(rig.settings().alarm == volume);
 
     // The pilot stops, and the question is on the glass where it can be read.
-    rig.run(now_ms, now_ms + 4000);
-    now_ms += 4000;
+    rig.run_for(4000);
     go::ConfirmSnapshot expect;
     expect.title = common::pending_title(common::Pending::Dfu);
     expect.detail = "INSTALL 0.2.0+15 FROM THE PHONE";
@@ -92,10 +89,9 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
 
     // Only now is it answerable, and only by the gesture: physical presence,
     // deliberately, after the reading.
-    rig.press(now_ms);
-    rig.press(now_ms);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.press();
+    rig.press();
+    rig.run_for(200);
     CHECK(rig.product.config_link().config().upload_allowed());
 
     // Back on the rows, at the top: the pilot was reading something else in between.
@@ -106,12 +102,12 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
 TEST_CASE("product: a long press in the middle of an edit still switches the device off") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::Alarm);
+    rig.now_ms = 100;
+    open_menu(rig, rig.now_ms);
+    focus_on(rig, rig.now_ms, go::MenuRow::Alarm);
     const go::Alarm volume = rig.settings().alarm;
 
-    hold_button(rig, now_ms, power::kLongPressHoldMs + 300);
+    hold_button(rig, rig.now_ms, power::kLongPressHoldMs + 300);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK_FALSE(rig.product.screen().powered());
@@ -126,28 +122,27 @@ TEST_CASE("product: the alarm can be turned up in the air, where a phone is refu
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
+    rig.now_ms = 100;
     rig.settings().alarm = go::Alarm::Soft;
-    airborne(rig, now_ms);
+    airborne(rig, rig.now_ms);
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Airborne);
 
     // The companion app cannot: an unattended phone rewriting the whole struct
     // mid-flight is what that rule is for.
     rig.send("{\"command\":\"set\",\"alarm\":3}");
-    rig.run(now_ms, now_ms + 300);
-    now_ms += 300;
+    rig.run_for(300);
     CHECK(rig.product.config_link().config().pending() == common::Pending::None);
     CHECK(rig.settings().alarm == go::Alarm::Soft);
 
     // The pilot, on the glass, can. Presence is the thing the phone lacks, and
     // an alarm that is too quiet under a headset is a thing you find out about
     // in the air.
-    open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::Alarm);
-    change(rig, now_ms);
-    change(rig, now_ms);
-    change(rig, now_ms);
-    run_past_the_write_settle(rig, now_ms);
+    open_menu(rig, rig.now_ms);
+    focus_on(rig, rig.now_ms, go::MenuRow::Alarm);
+    change(rig, rig.now_ms);
+    change(rig, rig.now_ms);
+    change(rig, rig.now_ms);
+    run_past_the_write_settle(rig, rig.now_ms);
     CHECK(rig.settings().alarm == go::Alarm::Loud);
 
     go::Settings stored{};

@@ -11,10 +11,9 @@ using namespace skyblip;
 TEST_CASE("product: neither a Go's update frame nor a Bravo's names a product") {
     Rig go;
     REQUIRE(go.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    on_ground(go, now_ms);
+    on_ground(go, go.now_ms);
     go.send("{\"command\":\"update\"}");
-    go.run(now_ms, now_ms + 200);
+    go.run(go.now_ms, go.now_ms + 200);
     const std::string go_frame = go.last_on(events::Endpoint::Config);
     CHECK(go_frame.rfind("{\"command\":\"update\"", 0) == 0);
     CHECK(go_frame.find("\"product\"") == std::string::npos);

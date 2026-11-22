@@ -203,8 +203,7 @@ TEST_CASE("comms prompt cap: one press on a running upload leaves the next insta
 TEST_CASE("comms prompt cap: the update page's settings, install and retry run on one link") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.seconds(now_ms, 20, 0, 300);
+    rig.seconds(20, 0, 300);
     ConfigService& config = rig.product.config_link().config();
     REQUIRE(config.flight_state() == flight::FlightState::Ground);
 
@@ -212,26 +211,22 @@ TEST_CASE("comms prompt cap: the update page's settings, install and retry run o
         const std::string set =
             std::string("{\"command\":\"set\",\"callsign\":\"") + callsign + "\"}";
         rig.send(set.c_str());
-        rig.run(now_ms, now_ms + 3000);
-        now_ms += 3000;
+        rig.run_for(3000);
         REQUIRE(config.pending() == Pending::Set);
-        rig.press(now_ms);
-        rig.run(now_ms, now_ms + 1000);
-        now_ms += 1000;
+        rig.press();
+        rig.run_for(1000);
         CHECK(std::string(rig.settings().callsign) == callsign);
     }
 
     rig.send("{\"command\":\"recovery\"}");
-    rig.run(now_ms, now_ms + kPromptCeilingMs + 1000);
-    now_ms += kPromptCeilingMs + 1000;
+    rig.run_for(kPromptCeilingMs + 1000);
     REQUIRE(rig.last_on(events::Endpoint::Config) == refusal("expired"));
 
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    rig.run_for(3000);
     REQUIRE(config.pending() == Pending::Dfu);
-    rig.press(now_ms);
-    rig.run(now_ms, now_ms + 1000);
+    rig.press();
+    rig.run(rig.now_ms, rig.now_ms + 1000);
     CHECK(config.receiving_firmware());
 }
 
@@ -239,31 +234,26 @@ TEST_CASE("comms prompt cap: on the glass, a tap refuses and a new connection as
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.seconds(now_ms, 20, 0, 300);
+    rig.seconds(20, 0, 300);
     ConfigService& config = rig.product.config_link().config();
 
     rig.send(kSetType);
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    rig.run_for(3000);
     REQUIRE(rig.product.screen().prompt() == Pending::Set);
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 1000);
-    now_ms += 1000;
+    rig.tap();
+    rig.run_for(1000);
     REQUIRE(rig.last_on(events::Endpoint::Config) == refusal("cancelled"));
 
     rig.send(kSetType);
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    rig.run_for(3000);
     CHECK(rig.last_on(events::Endpoint::Config) == refusal("refused_on_device"));
     CHECK(rig.product.screen().prompt() == Pending::None);
 
     rig.drop_link();
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     rig.raise_link(2);
     rig.send_from(2, kSetType);
-    rig.run(now_ms, now_ms + 3000);
+    rig.run(rig.now_ms, rig.now_ms + 3000);
     CHECK(rig.product.screen().prompt() == Pending::Set);
     CHECK(config.claim_holder() == 2);
 }

@@ -27,12 +27,11 @@ TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum" *
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     // The air the aircraft is actually flying through, nowhere near standard.
     rig.platform.barometer().chip.set_pressure_mpa(90000000);
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
     REQUIRE(rig.state().barometer.active);
 
     std::string altitude;
@@ -61,14 +60,13 @@ TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum" *
 TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the $PGRMZ pass") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     // A cell in the flat middle, and air the aircraft is really flying through.
     rig.platform.battery().divider_mv = 3800;
     rig.platform.barometer().chip.set_pressure_mpa(90000000);
     rig.platform.barometer().chip.set_temperature_dc(-72);
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
     REQUIRE(rig.state().barometer.active);
     REQUIRE(rig.state().power.battery.valid);
 
@@ -100,7 +98,7 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
 
     // Same pass as $PGRMZ, so the same cadence, second for second.
     rig.platform.link().clear();
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     CHECK(count_of(rig, "$LK8EX1") >= 3);
     CHECK(count_of(rig, "$LK8EX1") == count_of(rig, "$PGRMZ"));
     CHECK(count_of(rig, "$LK8EX1") == count_of(rig, "$PFLAU"));
@@ -115,11 +113,10 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
 TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about its cell") {
     Rig rig(kBarometerByHand);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.platform.battery().divider_mv = 3600;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
     REQUIRE_FALSE(rig.state().barometer.active);
     REQUIRE(rig.state().power.battery.valid);
 
@@ -152,10 +149,9 @@ TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about 
 TEST_CASE("nmea: GPRMC/GPGGA give a panel-mounted tablet the position it has no GNSS for") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     rig.raise_link();
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
     REQUIRE(rig.state().own.fix_valid);
     REQUIRE(rig.state().own.utc_valid);
 
@@ -183,7 +179,7 @@ TEST_CASE("nmea: GPRMC/GPGGA give a panel-mounted tablet the position it has no 
     // One pass a second, one of each per pass: two more seconds of flight is
     // two more of each, same as the $PFLAU heartbeat they now share a pass with.
     rig.platform.link().clear();
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
     CHECK(count_of(rig, "$GPRMC") >= 2);
     CHECK(count_of(rig, "$GPGGA") >= 2);
     CHECK(count_of(rig, "$GPRMC") == count_of(rig, "$PFLAU"));

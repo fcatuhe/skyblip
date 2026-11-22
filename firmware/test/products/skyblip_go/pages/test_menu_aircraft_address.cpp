@@ -44,14 +44,14 @@ TEST_CASE("menu: an aircraft address typed against the transponder Bravo names s
     Tango tango;
     tango.bravo.health.aircraft_address_set = true;
     tango.pair_and_store();
-    tango.go.seconds(tango.now_ms, 5, 0, 500);
+    tango.go.seconds(5, 0, 500);
     REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Ground);
-    tango.go.long_touch(tango.now_ms);
+    tango.go.long_touch();
     tango.bravo.health.own_transponder_fields =
         "\"own_transponder\":" + std::to_string(kHeardAddress);
     tango.run_for(2500);
     REQUIRE(comms::address_of(tango.go.state().own_transponder) == kHeardAddress);
-    if (tango.go.product.screen().noticing()) tango.go.tap(tango.now_ms);
+    if (tango.go.product.screen().noticing()) tango.go.tap();
 
     uint32_t& now_ms = tango.now_ms;
     open_menu(tango.go, now_ms);
@@ -89,15 +89,15 @@ TEST_CASE("menu: an aircraft address typed against the transponder Bravo names s
 TEST_CASE("menu: an aircraft address of FFFFFF typed on the glass stores nothing") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::AircraftAddress);
-    change(rig, now_ms);
+    rig.now_ms = 100;
+    open_menu(rig, rig.now_ms);
+    focus_on(rig, rig.now_ms, go::MenuRow::AircraftAddress);
+    change(rig, rig.now_ms);
     REQUIRE(rig.product.screen().editor().editing());
-    CHECK_FALSE(glass_reads(rig, now_ms, "BRAVO HEARS"));
+    CHECK_FALSE(glass_reads(rig, rig.now_ms, "BRAVO HEARS"));
 
-    type_aircraft_address(rig, now_ms, "FFFFFF");
+    type_aircraft_address(rig, rig.now_ms, "FFFFFF");
     CHECK_FALSE(rig.product.screen().editor().editing());
-    run_past_the_write_settle(rig, now_ms);
+    run_past_the_write_settle(rig, rig.now_ms);
     CHECK(rig.settings().aircraft_address == go::kAircraftAddressUnset);
 }

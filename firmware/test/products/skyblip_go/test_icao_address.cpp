@@ -158,8 +158,7 @@ TEST_CASE(
     Rig rig(platform::host::Platform::kFullyFitted, std::nullopt);
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().aircraft_address = kAircraftAddress;
-    uint32_t now_ms = 0;
-    rig.seconds(now_ms, 20, 0, 300);
+    rig.seconds(20, 0, 300);
 
     CHECK_FALSE(rig.state().activation.activated());
     CHECK_FALSE(settings::on_air(rig.state().activation.address(), kAircraftAddress).address);
@@ -174,9 +173,9 @@ TEST_CASE("product: status names the address on air, the aircraft address once i
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().aircraft_address = kAircraftAddress;
-    uint32_t now_ms = 100;
-    rig.show(now_ms, go::Page::Status);
-    rig.run(now_ms, now_ms + 4000);
+    rig.now_ms = 100;
+    rig.show(go::Page::Status);
+    rig.run(rig.now_ms, rig.now_ms + 4000);
     CHECK(reads_in(rig.product.screen().framebuffer(), "3C6586", 0, 0, go::kGlassWidth,
                    go::kGlassHeight, 2));
     CHECK_FALSE(reads_in(rig.product.screen().framebuffer(), "005AFE", 0, 0, go::kGlassWidth,

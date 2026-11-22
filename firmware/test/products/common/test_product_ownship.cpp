@@ -305,23 +305,23 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
 TEST_CASE("product: vertical speed is measured across the 49.7-day wrap") {
     Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0u - 500u;  // half a second short of the wrap
+    rig.now_ms = 0u - 500u;  // half a second short of the wrap
 
-    rig.push_barometer(100000, now_ms);
-    rig.run_span(now_ms, 0);
+    rig.push_barometer(100000, rig.now_ms);
+    rig.run_span(0);
     CHECK(rig.product.ownship().barometer_active());
 
     // +10 m over the second that straddles zero.
-    const uint32_t after = now_ms + 950u;
+    const uint32_t after = rig.now_ms + 950u;
     rig.push_barometer(101000, after);
-    now_ms = after;
-    rig.run_span(now_ms, 0);
+    rig.now_ms = after;
+    rig.run_span(0);
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
 
     // And a sample inside the window is still refused after the wrap, rather than
     // being taken as a 49-day interval that reads as no climb at all.
-    rig.push_barometer(199000, now_ms);
-    rig.run_span(now_ms, 0);
+    rig.push_barometer(199000, rig.now_ms);
+    rig.run_span(0);
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
 }
 
@@ -399,8 +399,8 @@ TEST_CASE("product: with no fix the bus says how far the receiver has got") {
 TEST_CASE("product: a receiver restating its last fixed second does not wind the clock back") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 1000;
-    rig.seconds(now_ms, 3, 0, 500);
+    rig.now_ms = 1000;
+    rig.seconds(3, 0, 500);
     const uint32_t anchored = rig.state().clock.utc_s;
     REQUIRE(anchored == kBaseUtcS + 2);
 
@@ -409,7 +409,7 @@ TEST_CASE("product: a receiver restating its last fixed second does not wind the
     solving.utc_s = anchored;
     solving.sentences = ++rig.fix_updates;
     rig.product.bus().gnss.push(solving);
-    rig.run(now_ms, now_ms + 950);
+    rig.run(rig.now_ms, rig.now_ms + 950);
 
     CHECK(rig.state().clock.utc_s == anchored + 1);
 }

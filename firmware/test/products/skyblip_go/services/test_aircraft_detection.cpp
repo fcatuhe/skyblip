@@ -59,10 +59,10 @@ bool glass_reads(Rig& rig, const char* text, int scale) {
 void paired_on_the_radar(Tango& tango, bool fixed = true) {
     tango.pair_and_store();
     if (fixed) {
-        tango.go.seconds(tango.now_ms, 5, 0, 500);
+        tango.go.seconds(5, 0, 500);
         REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Ground);
     }
-    tango.go.long_touch(tango.now_ms);
+    tango.go.long_touch();
     REQUIRE(tango.go.product.screen().page() == go::Page::Radar);
     REQUIRE_FALSE(tango.go.product.screen().noticing());
 }
@@ -77,11 +77,10 @@ TEST_CASE("aircraft detection: a transponder Bravo hears is proposed once, and a
     tango.run_for(2500);
     REQUIRE(tango.go.product.screen().noticing());
     CHECK(tango.go.product.screen().notice() == go::ScreenService::Notice::NewAircraft);
-    tango.go.run(tango.now_ms, tango.now_ms + 4000);
-    tango.now_ms += 4000;
+    tango.go.run_for(4000);
     CHECK(glass_reads(tango.go, "F-JABC", go::kCallsignScale));
 
-    tango.go.press(tango.now_ms);
+    tango.go.press();
     tango.run_for(500);
     CHECK_FALSE(tango.go.product.screen().noticing());
     CHECK(tango.go.settings().aircraft_address == kHeardAddress);
@@ -104,7 +103,7 @@ TEST_CASE("aircraft detection: a pad on the notice closes it and stores nothing"
     tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
     tango.run_for(2500);
     REQUIRE(tango.go.product.screen().noticing());
-    tango.go.tap(tango.now_ms);
+    tango.go.tap();
     CHECK_FALSE(tango.go.product.screen().noticing());
     CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
 }
@@ -136,7 +135,7 @@ TEST_CASE("aircraft detection: the AIRCRAFT menu reads what Bravo hears, and a p
     paired_on_the_radar(tango);
     tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
     tango.run_for(2500);
-    tango.go.tap(tango.now_ms);
+    tango.go.tap();
     REQUIRE_FALSE(tango.go.product.screen().noticing());
 
     uint32_t& now_ms = tango.now_ms;
@@ -177,7 +176,7 @@ TEST_CASE("aircraft detection: a transponder first heard while taxiing is propos
     Tango tango;
     paired_on_the_radar(tango);
     tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
-    tango.go.seconds(tango.now_ms, 3, 6000, 500);
+    tango.go.seconds(3, 6000, 500);
     REQUIRE(tango.go.state().flight.rolling);
     REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Ground);
     CHECK(tango.go.product.screen().noticing());
@@ -237,7 +236,7 @@ TEST_CASE("aircraft detection: a press before the notice is read stores nothing"
     tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
     for (int i = 0; i < 60 && !tango.go.product.screen().noticing(); i++) tango.run_for(50);
     REQUIRE(tango.go.product.screen().noticing());
-    tango.go.press(tango.now_ms);
+    tango.go.press();
     CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
     CHECK(tango.go.product.screen().noticing());
 }
@@ -266,7 +265,7 @@ TEST_CASE("aircraft detection: an A7 transponder proposes a light rotorcraft, ne
     tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress, category);
     tango.run_for(2500);
     REQUIRE(tango.go.product.screen().noticing());
-    tango.go.press(tango.now_ms);
+    tango.go.press();
     tango.run_for(500);
     CHECK(tango.go.settings().aircraft_type == 3);
 }

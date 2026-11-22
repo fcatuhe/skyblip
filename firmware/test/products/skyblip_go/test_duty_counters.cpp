@@ -58,18 +58,15 @@ struct RefusingExecutor {
 TEST_CASE("duty: a presented frame counts a partial refresh and a still glass counts none") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 3000, kPassMs);
-    now_ms += 3000;
+    rig.run_for(3000, kPassMs);
     const uint32_t presented = rig.state().duty.panel_partial_refreshes;
     CHECK(presented > 0);
 
-    rig.run(now_ms, now_ms + 5000, kPassMs);
-    now_ms += 5000;
+    rig.run_for(5000, kPassMs);
     CHECK(rig.state().duty.panel_partial_refreshes == presented);
 
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 2000, kPassMs);
+    rig.tap();
+    rig.run(rig.now_ms, rig.now_ms + 2000, kPassMs);
     CHECK(rig.state().duty.panel_partial_refreshes > presented);
 }
 
@@ -77,17 +74,14 @@ TEST_CASE("duty: a presented frame counts a partial refresh and a still glass co
 TEST_CASE("duty: the parked frame is the only full refresh a page swap or a present pays for") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 2000, kPassMs);
-    now_ms += 2000;
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 3000, kPassMs);
-    now_ms += 3000;
+    rig.run_for(2000, kPassMs);
+    rig.tap();
+    rig.run_for(3000, kPassMs);
     CHECK(rig.state().duty.panel_full_refreshes == 0);
 
     const uint32_t partials = rig.state().duty.panel_partial_refreshes;
     rig.product.screen().park_for_off();
-    rig.run(now_ms, now_ms + 3000, kPassMs);
+    rig.run(rig.now_ms, rig.now_ms + 3000, kPassMs);
     CHECK(rig.state().duty.panel_full_refreshes == 1);
     CHECK(rig.state().duty.panel_partial_refreshes == partials);
 }
@@ -97,15 +91,13 @@ TEST_CASE("duty: an install or a recovery parks through black, never on a full r
     for (int recovery = 0; recovery < 2; recovery++) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        uint32_t now_ms = 0;
-        rig.run(now_ms, now_ms + 2000, kPassMs);
-        now_ms += 2000;
+        rig.run_for(2000, kPassMs);
         const uint32_t partials = rig.state().duty.panel_partial_refreshes;
         if (recovery)
             rig.product.screen().park_for_recovery(ports::RecoveryPath::Rebooted);
         else
             rig.product.screen().park_for_install();
-        rig.run(now_ms, now_ms + 3000, kPassMs);
+        rig.run(rig.now_ms, rig.now_ms + 3000, kPassMs);
         CHECK(rig.state().duty.panel_full_refreshes == 0);
         // the black, then the frame over it
         CHECK(rig.state().duty.panel_partial_refreshes == partials + 2);
@@ -115,20 +107,17 @@ TEST_CASE("duty: an install or a recovery parks through black, never on a full r
 TEST_CASE("duty: the backlight counter runs while the backlight is lit and stops with it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 2000, kPassMs);
-    now_ms += 2000;
+    rig.run_for(2000, kPassMs);
     CHECK(rig.state().duty.backlight_ms == 0);
 
     rig.product.screen().set_backlight(true);
-    rig.run(now_ms, now_ms + 3000, kPassMs);
-    now_ms += 3000;
+    rig.run_for(3000, kPassMs);
     const uint32_t lit_ms = rig.state().duty.backlight_ms;
     CHECK(lit_ms >= 3000 - kPassMs);
     CHECK(lit_ms <= 3000 + kPassMs);
 
     rig.product.screen().set_backlight(false);
-    rig.run(now_ms, now_ms + 2000, kPassMs);
+    rig.run(rig.now_ms, rig.now_ms + 2000, kPassMs);
     CHECK(rig.state().duty.backlight_ms <= lit_ms + kPassMs);
 }
 
@@ -217,20 +206,17 @@ TEST_CASE("duty: the annunciator counter runs while it sounds and stands still w
 TEST_CASE("duty: the BLE counter runs while a central is connected and stops when it goes") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 2000, kPassMs);
-    now_ms += 2000;
+    rig.run_for(2000, kPassMs);
     CHECK(rig.state().duty.ble_connected_ms == 0);
 
     rig.raise_link();
-    rig.run(now_ms, now_ms + 3000, kPassMs);
-    now_ms += 3000;
+    rig.run_for(3000, kPassMs);
     REQUIRE(rig.link_up());
     const uint32_t connected_ms = rig.state().duty.ble_connected_ms;
     CHECK(connected_ms >= 3000 - 2 * kPassMs);
     CHECK(connected_ms <= 3000 + 2 * kPassMs);
 
     rig.drop_link();
-    rig.run(now_ms, now_ms + 3000, kPassMs);
+    rig.run(rig.now_ms, rig.now_ms + 3000, kPassMs);
     CHECK(rig.state().duty.ble_connected_ms <= connected_ms + 2 * kPassMs);
 }

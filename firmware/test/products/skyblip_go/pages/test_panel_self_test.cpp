@@ -83,8 +83,8 @@ TEST_CASE("product: the self-test page carries what the probes found, not what w
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    open_menu(rig, now_ms);
+    rig.now_ms = 100;
+    open_menu(rig, rig.now_ms);
 
     const go::SelfTestPart* barometer = nullptr;
     const go::SelfTestPart* haptic = nullptr;
@@ -132,8 +132,8 @@ TEST_CASE("product: every row on the self-test page names its part, inside the w
 TEST_CASE("product: the parts this firmware never drives are named on the bus row") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    open_menu(rig, now_ms);
+    rig.now_ms = 100;
+    open_menu(rig, rig.now_ms);
 
     CHECK(reads_at(rig.self_test_page(), go::kSelfTestLeftX,
                    go::self_test_row_y(go::kSelfTestPartCount), "I2C IMU RTC HAPTIC BARO"));

@@ -51,14 +51,14 @@ TEST_CASE("capture: a flights session claims a diagnostics sector, and the captu
             sector < count - 40 ? store::SectorOwner::Flights : store::SectorOwner::Diagnostics,
             sector + 1, sector < count - 40 ? 4000 : 9000);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    arm_over_the_link(rig, now_ms);
-    taxi(rig, now_ms, 5);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
+    arm_over_the_link(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 5);
     const uint32_t captured = rig.product.capture().records_written();
     REQUIRE(captured > 0);
 
-    fly(rig, now_ms, 30);
+    fly(rig, rig.now_ms, 30);
     CHECK(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().records_written() > 0);
     CHECK(rig.product.flight_log().records_dropped() == 0);
@@ -78,12 +78,12 @@ TEST_CASE("capture: the capture takes flights sectors down to the floor and no f
         label_sector(rig.platform.log_flash(), sector, store::SectorOwner::Flights, sector + 1,
                      4000 + sector / 4);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 2);
-    arm_over_the_link(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 2);
+    arm_over_the_link(rig, rig.now_ms);
     CHECK(rig.state().capture.evicted_flights > 0);
 
-    feed(rig, now_ms, flight::kLogSlotsPerSector * 6);
+    feed(rig, rig.now_ms, flight::kLogSlotsPerSector * 6);
     CHECK(rig.product.capture().capturing());
     CHECK(rig.product.capture().sectors_owned() >= 5);
 

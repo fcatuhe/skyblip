@@ -64,8 +64,7 @@ void hear_callsign(Rig& rig, uint32_t address, uint8_t address_mapping_table,
 TEST_CASE("radio verdicts: a burst heard before own-ship has a fix is a wait, not a failure") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
     REQUIRE_FALSE(rig.state().own.fix_valid);
 
     model::AircraftObservation observation = target(rig.state().own);
@@ -75,7 +74,7 @@ TEST_CASE("radio verdicts: a burst heard before own-ship has a fix is a wait, no
     REQUIRE(simulator::alptas_encode(frame, observation, kBaseUtcS) == Status::Ok);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Unattempted);
 }
@@ -84,8 +83,7 @@ TEST_CASE("radio verdicts: a burst heard before own-ship has a fix is a wait, no
 TEST_CASE("radio verdicts: a message type this firmware does not implement says so") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
@@ -95,7 +93,7 @@ TEST_CASE("radio verdicts: a message type this firmware does not implement says 
     alptas::set_crc(frame);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
 }
@@ -103,15 +101,14 @@ TEST_CASE("radio verdicts: a message type this firmware does not implement says 
 TEST_CASE("radio verdicts: a frame the plausibility gate refuses is still a decode failure") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
     REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s + 100) == Status::Ok);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Undecoded);
 }
@@ -120,14 +117,13 @@ TEST_CASE("radio verdicts: a frame the plausibility gate refuses is still a deco
 TEST_CASE("radio verdicts: an ADS-L payload type we do not implement is a dialect, not a failure") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     adsl::Packet packet = adsl_from_target(rig.state().own);
     packet.payload_type = 66;
     hear_adsl(rig, packet);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
     CHECK(rig.state().air.rx_type == 1);
@@ -137,15 +133,14 @@ TEST_CASE("radio verdicts: an ADS-L payload type we do not implement is a dialec
 TEST_CASE("radio verdicts: an ADS-L Traffic frame carrying no position is a decode failure") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     adsl::Packet packet = adsl_from_target(rig.state().own);
     REQUIRE(packet.has_altitude());
     packet.set_position_invalid();
     hear_adsl(rig, packet);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Undecoded);
     CHECK(rig.state().air.rx_type == 0);
@@ -155,15 +150,14 @@ TEST_CASE("radio verdicts: an ADS-L Traffic frame carrying no position is a deco
 TEST_CASE("radio verdicts: the frame we can read is read, and names its aircraft") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
     REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Received);
 }
@@ -171,12 +165,11 @@ TEST_CASE("radio verdicts: the frame we can read is read, and names its aircraft
 TEST_CASE("radio verdicts: a registration frame names its sender and is not a target") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     const uint32_t tracked = static_cast<uint32_t>(rig.state().traffic.count());
 
     hear_callsign(rig, 0xC5D804, 58, "D-KXYZ");
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Named);
     CHECK(rig.state().air.rx_named == 1);
@@ -197,8 +190,7 @@ TEST_CASE("radio verdicts: a registration frame names its sender and is not a ta
 TEST_CASE("radio counters: a burst nothing was attempted on leaves rx_bad where it was") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
     REQUIRE_FALSE(rig.state().own.fix_valid);
 
     model::AircraftObservation observation = target(rig.state().own);
@@ -208,7 +200,7 @@ TEST_CASE("radio counters: a burst nothing was attempted on leaves rx_bad where 
     REQUIRE(simulator::alptas_encode(frame, observation, kBaseUtcS) == Status::Ok);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(rig.state().air.rx_wait == 1);
     CHECK(rig.state().air.rx_bad == 0);
@@ -218,8 +210,7 @@ TEST_CASE("radio counters: a burst nothing was attempted on leaves rx_bad where 
 TEST_CASE("radio counters: a dialect we do not read is counted apart from a frame we refused") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     const model::Ownship& own = rig.state().own;
@@ -229,7 +220,7 @@ TEST_CASE("radio counters: a dialect we do not read is counted apart from a fram
     alptas::set_crc(version6_frame);
 
     hear_alptas(rig, version6_frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(rig.state().air.rx_type == 1);
     CHECK(rig.state().air.rx_wait == 0);
@@ -239,7 +230,7 @@ TEST_CASE("radio counters: a dialect we do not read is counted apart from a fram
     REQUIRE(simulator::alptas_encode(stale, target(own), own.utc_s + 100) == Status::Ok);
 
     hear_alptas(rig, stale);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(rig.state().air.rx_bad == bad_before + 1);
     CHECK(rig.state().air.rx_type == 1);
@@ -249,15 +240,14 @@ TEST_CASE("radio counters: a dialect we do not read is counted apart from a fram
 TEST_CASE("radio counters: a burst of ours that never completed is not a bad reception") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 2);
+    fly(rig, rig.now_ms, 2);
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     events::RfEvent event{};
     event.type = events::RfEventType::Missed;
     event.band = model::Band::M;
     rig.product.bus().rf.push(event);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(rig.state().air.tx_lost == 1);
     CHECK(rig.state().air.rx_bad == bad_before);
@@ -268,8 +258,7 @@ TEST_CASE("radio counters: a burst of ours that never completed is not a bad rec
 TEST_CASE("radio verdicts: a frame keyed on another second says whose second it wanted") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     const model::Ownship& own = rig.state().own;
@@ -277,7 +266,7 @@ TEST_CASE("radio verdicts: a frame keyed on another second says whose second it 
     REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s + 18) == Status::Ok);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
@@ -292,15 +281,14 @@ TEST_CASE("radio verdicts: a frame keyed on another second says whose second it 
 TEST_CASE("radio verdicts: a frame we refuse past its CRC still names the aircraft that sent it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
 
     const model::Ownship& own = rig.state().own;
     uint8_t frame[alptas::kFrameBytes];
     REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s + 18) == Status::Ok);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
@@ -313,8 +301,7 @@ TEST_CASE("radio verdicts: a frame we refuse past its CRC still names the aircra
 TEST_CASE("radio verdicts: a burst that names neither system is not a decode failure") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     const model::Ownship& own = rig.state().own;
@@ -322,7 +309,7 @@ TEST_CASE("radio verdicts: a burst that names neither system is not a decode fai
     REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
     // Shares the chips the detector matched on and nothing after them.
     hear_m_band(rig, 0xF5F3656Cu, frame, alptas::kFrameBytes);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
@@ -336,8 +323,7 @@ TEST_CASE("radio verdicts: a burst that names neither system is not a decode fai
 TEST_CASE("radio verdicts: a burst the air damaged is corrected, not counted as broken") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     const model::Ownship& own = rig.state().own;
@@ -345,7 +331,7 @@ TEST_CASE("radio verdicts: a burst the air damaged is corrected, not counted as 
     REQUIRE(simulator::alptas_encode(frame, target(own), own.utc_s) == Status::Ok);
 
     hear_alptas(rig, frame, 18);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(heard_verdict(rig) == radio::Verdict::Received);
     CHECK(rig.state().air.rx_bad == bad_before);
@@ -356,8 +342,7 @@ TEST_CASE("radio verdicts: a burst the air damaged is corrected, not counted as 
 TEST_CASE("radio verdicts: a no-track sender is drawn but its address stays off the radio log") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
+    fly(rig, rig.now_ms, 3);
 
     const model::Ownship& own = rig.state().own;
     model::AircraftObservation observation = target(own);
@@ -366,7 +351,7 @@ TEST_CASE("radio verdicts: a no-track sender is drawn but its address stays off 
     REQUIRE(simulator::alptas_encode(frame, observation, own.utc_s) == Status::Ok);
 
     hear_alptas(rig, frame);
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);

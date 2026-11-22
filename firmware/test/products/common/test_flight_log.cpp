@@ -20,9 +20,8 @@ TEST_CASE("flight log: a device parked on the ground writes nothing at all") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     const uint32_t erases_at_boot = rig.platform.log_flash().erases;
-    uint32_t now_ms = 0;
 
-    taxi(rig, now_ms, 120);
+    taxi(rig, rig.now_ms, 120);
 
     CHECK_FALSE(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().records_written() == 0);
@@ -34,12 +33,11 @@ TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the groun
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
 
-    taxi(rig, now_ms, 40);
+    taxi(rig, rig.now_ms, 40);
     REQUIRE_FALSE(rig.product.flight_log().recording());
 
-    fly(rig, now_ms, 120);
+    fly(rig, rig.now_ms, 120);
     CHECK(rig.product.flight_log().recording());
     // The session is named for a sample taken before core/flight would commit
     // to the takeoff, so the ground roll is in the file.
@@ -48,7 +46,7 @@ TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the groun
     // Two minutes at a record a second, plus the pre-takeoff ring.
     CHECK(airborne_records >= 120);
 
-    taxi(rig, now_ms, 40);
+    taxi(rig, rig.now_ms, 40);
     CHECK_FALSE(rig.product.flight_log().recording());
     const uint32_t after_landing = rig.product.flight_log().records_written();
     // core/flight needs ten seconds of stillness before it will call it a
@@ -58,7 +56,7 @@ TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the groun
 
     // And then nothing: the ring goes back to being a holding pen, and nothing
     // the writer owed was lost on the way.
-    taxi(rig, now_ms, 60);
+    taxi(rig, rig.now_ms, 60);
     CHECK(rig.product.flight_log().records_written() == after_landing);
     CHECK(rig.product.flight_log().records_dropped() == 0);
     CHECK(rig.product.flight_log().sessions_on_flash() == 1);
@@ -69,20 +67,19 @@ TEST_CASE("flight log: a paraglider soaring at walking pace is logged, and its l
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().aircraft_type = 7;
-    uint32_t now_ms = 0;
 
-    taxi(rig, now_ms, 30);
+    taxi(rig, rig.now_ms, 30);
     REQUIRE_FALSE(rig.product.flight_log().recording());
 
-    rig.seconds(now_ms, 300, 5000, 1200);
+    rig.seconds(300, 5000, 1200);
     CHECK(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().records_written() >= 300000 / flight::kLogRecordPeriodMs);
 
-    taxi(rig, now_ms, flight::kLogStillHoldMs / 1000 + 5);
+    taxi(rig, rig.now_ms, flight::kLogStillHoldMs / 1000 + 5);
     CHECK_FALSE(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().sessions_on_flash() == 1);
     const uint32_t landed = rig.product.flight_log().records_written();
-    taxi(rig, now_ms, 60);
+    taxi(rig, rig.now_ms, 60);
     CHECK(rig.product.flight_log().records_written() == landed);
 }
 
@@ -90,10 +87,9 @@ TEST_CASE("flight log: the sector behind the one being filled is erased before i
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     const uint32_t erases_at_boot = rig.platform.log_flash().erases;
-    uint32_t now_ms = 0;
 
-    taxi(rig, now_ms, 20);
-    fly(rig, now_ms, 60);
+    taxi(rig, rig.now_ms, 20);
+    fly(rig, rig.now_ms, 60);
     REQUIRE(rig.product.flight_log().recording());
 
     // One erase for the sector the records go into, one for the spare behind it.

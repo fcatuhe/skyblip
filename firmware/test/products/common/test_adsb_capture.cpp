@@ -166,12 +166,12 @@ TEST_CASE("adsb capture: DF17 frames folded, recorded, drained to flash and read
     using namespace skyblip::adsb_receiver;
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
-    arm(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm(rig, rig.now_ms);
 
     Bravo bravo;
-    const uint32_t at_ms = now_ms;
+    const uint32_t at_ms = rig.now_ms;
     REQUIRE(
         bravo.hear(adsb::ground_velocity(kAddress, kNoCapability, 0, 80, 0, -275), at_ms - 1200));
     REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 2), at_ms - 1100));
@@ -187,7 +187,7 @@ TEST_CASE("adsb capture: DF17 frames folded, recorded, drained to flash and read
 
     Writer writer{rig.product.bus(), rig.state(), rig.product.diagnostics()};
     REQUIRE(writer.capture.record(bravo.heard, at_ms));
-    stop(rig, now_ms);
+    stop(rig, rig.now_ms);
 
     const std::vector<diagnostics::Record> records = captured(rig);
     REQUIRE(count_of(records, diagnostics::Type::Adsb) == 1);

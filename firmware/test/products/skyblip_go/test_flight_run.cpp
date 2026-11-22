@@ -107,12 +107,11 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
 TEST_CASE("flight run: records the pair every 30 s, and its boot names the profile") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
-    arm_flight_run(rig, now_ms);
-    rig.run(now_ms, now_ms + 65000);
-    now_ms += 65000;
-    stop(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_flight_run(rig, rig.now_ms);
+    rig.run_for(65000);
+    stop(rig, rig.now_ms);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Power) == 2);
@@ -130,11 +129,11 @@ TEST_CASE("flight run: records the pair every 30 s, and its boot names the profi
 TEST_CASE("flight run: the radar flies, the flight log writes nothing, the gates stay grounded") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
     REQUIRE(rig.product.screen().page() == go::Page::Radar);
-    arm_flight_run(rig, now_ms);
-    taxi(rig, now_ms, 65);
+    arm_flight_run(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 65);
 
     CHECK(rig.state().flight.running);
     CHECK(rig.state().flight.seconds >= 60);
@@ -174,14 +173,14 @@ TEST_CASE("flight run: the panel refreshes as a flown one does, and a parked one
 TEST_CASE("flight run: a stop lands the glass, and leaves no flight time behind") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 3);
-    arm_flight_run(rig, now_ms);
-    taxi(rig, now_ms, 65);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 3);
+    arm_flight_run(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 65);
     REQUIRE(rig.state().flight.running);
 
-    stop(rig, now_ms);
-    taxi(rig, now_ms, 2);
+    stop(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 2);
     CHECK_FALSE(rig.state().flight.running);
     CHECK_FALSE(rig.state().flight.time_valid);
     CHECK(rig.state().flight.seconds == 0);
@@ -194,10 +193,10 @@ TEST_CASE("flight run: a power run and a full capture leave the glass on the gro
          {diagnostics::Profile::Full, diagnostics::Profile::PowerRun}) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        uint32_t now_ms = 100;
-        taxi(rig, now_ms, 3);
-        arm(rig, now_ms, profile);
-        taxi(rig, now_ms, 5);
+        rig.now_ms = 100;
+        taxi(rig, rig.now_ms, 3);
+        arm(rig, rig.now_ms, profile);
+        taxi(rig, rig.now_ms, 5);
         CHECK_FALSE(rig.state().flight.running);
         CHECK(reads_in(glass(rig), "GROUND", 40, 120, 160, 160, 2));
     }

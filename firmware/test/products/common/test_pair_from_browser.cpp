@@ -163,7 +163,7 @@ TEST_CASE("pair from a browser: the press that allows an untrusted browser's pai
     REQUIRE(config.pending() == common::Pending::Pair);
     CHECK(config.prompt_trusts_browser());
 
-    pairing.pair.go.press(pairing.pair.now_ms);
+    pairing.pair.go.press();
     pairing.pair.run_for(2000);
     CHECK(pairing.go.heard(acknowledgement(true, "pair")));
     CHECK(config.trusted_browsers().count() == 1);
@@ -198,7 +198,7 @@ TEST_CASE("pair from a browser: the pad leaves the search, and the browser hears
     pairing.pair.air.set_in_range(false);
     pairing.go.say(kPairBravo);
     pairing.pair.run_for(1000);
-    pairing.pair.go.tap(pairing.pair.now_ms);
+    pairing.pair.go.tap();
     pairing.pair.run_for(300);
     CHECK(pairing.go.heard().back() == acknowledgement(false, "cancelled"));
     CHECK_FALSE(pairing.pair.service().seeking());

@@ -47,17 +47,16 @@ TEST_CASE("product: a running device with no fix winks blue, and green once it h
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::NoFix);
-    REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
+    REQUIRE(step_until_lit(rig, rig.now_ms, 3500) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Colour::Blue);
 
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
-    settle(rig, now_ms, 500);
+    settle(rig, rig.now_ms, 500);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
-    REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
+    REQUIRE(step_until_lit(rig, rig.now_ms, 3500) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Colour::Green);
 }
 
@@ -115,16 +114,15 @@ TEST_CASE("product: a critical cell blinks the lamp red" * doctest::test_suite("
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
 
     // Below kCriticalMv and above the cutoff, so the device warns and keeps flying.
     rig.platform.battery().divider_mv = power::kCriticalMv - 100;
-    settle(rig, now_ms, 5000);
+    settle(rig, rig.now_ms, 5000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
-    REQUIRE(step_until_lit(rig, now_ms, 1000) > 0);
+    REQUIRE(step_until_lit(rig, rig.now_ms, 1000) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Colour::Red);
 }
 
@@ -133,15 +131,14 @@ TEST_CASE("product: a cell past the knee winks red at the rate a healthy one win
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
 
     rig.platform.battery().divider_mv = power::kLowMv - 50;
-    settle(rig, now_ms, 5000);
+    settle(rig, rig.now_ms, 5000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Low);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Low);
-    REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
+    REQUIRE(step_until_lit(rig, rig.now_ms, 3500) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Colour::Red);
 
     const indication::Indication& low = indication::indication_for(indication::Condition::Low);
@@ -151,7 +148,7 @@ TEST_CASE("product: a cell past the knee winks red at the rate a healthy one win
 
     // And the warning still outranks it, at its own rate.
     rig.platform.battery().divider_mv = power::kCriticalMv - 100;
-    settle(rig, now_ms, 5000);
+    settle(rig, rig.now_ms, 5000);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
 }
 
@@ -162,8 +159,7 @@ TEST_CASE("product: a divider that reads nothing does not blink like a flat cell
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     rig.platform.battery().divider_mv = 200;
-    uint32_t now_ms = 0;
-    settle(rig, now_ms, 8000);
+    settle(rig, rig.now_ms, 8000);
 
     CHECK(rig.state().power.level == power::PowerLevel::Unknown);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
@@ -174,15 +170,14 @@ TEST_CASE("product: a cable in leaves the lamp saying what the charger cannot") 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     rig.platform.battery().external_power = true;
     rig.platform.battery().divider_mv = 4000;
-    settle(rig, now_ms, 5000);
+    settle(rig, rig.now_ms, 5000);
     REQUIRE(rig.state().power.battery.charging);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
-    REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
+    REQUIRE(step_until_lit(rig, rig.now_ms, 3500) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Colour::Green);
 }
 
@@ -190,14 +185,13 @@ TEST_CASE("product: a low cell on the cable is not low, and the cutoff monitor i
     // A charger holds the terminal above the cell, so core/power refuses to read it.
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.platform.battery().divider_mv = power::kCriticalMv - 200;
-    settle(rig, now_ms, 6000);
+    settle(rig, rig.now_ms, 6000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
 
     rig.platform.battery().external_power = true;
-    settle(rig, now_ms, 5000);
+    settle(rig, rig.now_ms, 5000);
     CHECK(rig.state().power.level == power::PowerLevel::Normal);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::NoFix);
 }
@@ -206,21 +200,20 @@ TEST_CASE(
     "product: a device on its way down signs off, then darkens the lamp and lets go of the pins") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
-    REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
+    settle(rig, rig.now_ms);
+    REQUIRE(step_until_lit(rig, rig.now_ms, 3500) > 0);
 
     // The same request a long press makes. From here the service loop stops
     // running, so whatever the lamp was doing is whatever it would go on doing
     // until the rails drop - and these LEDs are active-low, so "off" is a pin
     // driven high into a rail that is about to collapse.
-    rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
-    const uint32_t first_pulse_ms = now_ms + indication::kSignOff.lead_ms + 100;
-    rig.run(now_ms, first_pulse_ms);
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, rig.now_ms);
+    const uint32_t first_pulse_ms = rig.now_ms + indication::kSignOff.lead_ms + 100;
+    rig.run(rig.now_ms, first_pulse_ms);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK(lamp_of(rig).lamp() == indication::Colour::Red);
 
-    const uint32_t signed_off_ms = now_ms + indication::length_ms(indication::kSignOff) + 100;
+    const uint32_t signed_off_ms = rig.now_ms + indication::length_ms(indication::kSignOff) + 100;
     rig.run(first_pulse_ms + 50, signed_off_ms);
     CHECK_FALSE(lamp_of(rig).lit());
     CHECK(lamp_of(rig).parked());
@@ -255,11 +248,10 @@ TEST_CASE("product: an alarm on off or visual still signs off in the hand, and s
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
         rig.settings().alarm = alarm;
-        uint32_t now_ms = 0;
-        settle(rig, now_ms);
+        settle(rig, rig.now_ms);
 
-        rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
-        rig.run(now_ms, now_ms + indication::length_ms(indication::kSignOff) + 100, 10);
+        rig.product.shutdown().request(power::ShutdownReason::LongPress, rig.now_ms);
+        rig.run(rig.now_ms, rig.now_ms + indication::length_ms(indication::kSignOff) + 100, 10);
         CHECK(rig.platform.annunciator().motor_starts() == 3);
         CHECK(rig.platform.annunciator().tone_commands() == 0);
         CHECK(lamp_of(rig).parked());
@@ -274,12 +266,11 @@ TEST_CASE(
         Rig rig;
         rig.platform.system_power().causes = causes;
         REQUIRE(rig.setup() == Status::Ok);
-        uint32_t now_ms = 0;
-        settle(rig, now_ms, 1000);
+        settle(rig, rig.now_ms, 1000);
         CHECK(rig.platform.annunciator().motor_starts() == 0);
 
-        rig.product.shutdown().request(power::ShutdownReason::Install, now_ms);
-        rig.run(now_ms, now_ms + 200, 10);
+        rig.product.shutdown().request(power::ShutdownReason::Install, rig.now_ms);
+        rig.run(rig.now_ms, rig.now_ms + 200, 10);
         CHECK(rig.platform.annunciator().motor_starts() == 0);
         CHECK(lamp_of(rig).parked());
     }
@@ -297,8 +288,7 @@ TEST_CASE("product: a unit with no status LED flies and lights nothing") {
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Indicator));
 
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms, 10000);
+    settle(rig, rig.now_ms, 10000);
 
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
     // The board's lamp was never attached, so nothing reached it at all.
@@ -315,11 +305,10 @@ TEST_CASE("product: switching the alarm off silences the buzzer and does not dar
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().alarm = go::Alarm::Off;
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+    settle(rig, rig.now_ms);
 
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
-    REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
+    REQUIRE(step_until_lit(rig, rig.now_ms, 3500) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Colour::Green);
     CHECK_FALSE(rig.product.alarm().sounding());
 }

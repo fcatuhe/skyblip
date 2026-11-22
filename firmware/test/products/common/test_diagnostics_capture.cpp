@@ -90,8 +90,8 @@ Capture offload_capture(Rig& rig, uint32_t& now_ms, uint32_t session) {
 TEST_CASE("capture: the dump's capture group prices every capture, then names the one that runs") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
 
     comms::Diagnostics price{};
     rig.product.capture().describe(price);
@@ -104,10 +104,10 @@ TEST_CASE("capture: the dump's capture group prices every capture, then names th
     CHECK(rig.product.capture().keeps_s(diagnostics::Profile::FlightRun) ==
           price.capture_keeps_power_run_s);
 
-    arm_over_the_link(rig, now_ms, "power_run");
+    arm_over_the_link(rig, rig.now_ms, "power_run");
     CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
     CHECK(rig.product.capture().capturing());
-    taxi(rig, now_ms, 5);
+    taxi(rig, rig.now_ms, 5);
     comms::Diagnostics running{};
     rig.product.capture().describe(running);
     CHECK(running.capture_armed);
@@ -119,15 +119,13 @@ TEST_CASE("capture: the dump's capture group prices every capture, then names th
 TEST_CASE("capture: a tap of the pad refuses the capture a page asked for") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
     rig.send("{\"command\":\"capture\",\"profile\":\"full\"}");
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    rig.run_for(3000);
     REQUIRE(rig.product.config_link().config().pending() == common::Pending::Capture);
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 2000);
-    now_ms += 2000;
+    rig.tap();
+    rig.run_for(2000);
     CHECK_FALSE(rig.product.diagnostics().armed());
     CHECK_FALSE(rig.product.capture().capturing());
 }
@@ -136,35 +134,36 @@ TEST_CASE("capture: what an armed device recorded comes back through the offload
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    arm_over_the_link(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
+    arm_over_the_link(rig, rig.now_ms);
     REQUIRE(rig.product.diagnostics().armed());
     const uint32_t session = rig.product.capture().session_id();
     CHECK(session >= kBaseUtcS);
 
-    taxi(rig, now_ms, 30);
+    taxi(rig, rig.now_ms, 30);
     CHECK(rig.product.capture().records_written() > 10);
     CHECK(rig.product.capture().sectors_owned() * flight::kLogSlotsPerSector >=
           rig.product.capture().records_written());
     CHECK(rig.product.capture().stopped() == bus::CaptureStop::None);
 
-    stop_over_the_link(rig, now_ms);
+    stop_over_the_link(rig, rig.now_ms);
     CHECK_FALSE(rig.product.diagnostics().armed());
     CHECK_FALSE(rig.product.capture().capturing());
     const uint32_t written = rig.product.capture().records_written();
 
-    const std::string count = ask(rig, now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
+    const std::string count =
+        ask(rig, rig.now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
     CHECK(field(count, "log") == "diagnostics");
     CHECK(field(count, "sessions") == "1");
 
     const std::string listed =
-        ask(rig, now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\",\"index\":0}");
+        ask(rig, rig.now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\",\"index\":0}");
     CHECK(field(listed, "session") == std::to_string(session));
     CHECK(field(listed, "records") == std::to_string(written));
     CHECK(field(listed, "closed") == "true");
 
-    const Capture walk = offload_capture(rig, now_ms, session);
+    const Capture walk = offload_capture(rig, rig.now_ms, session);
     CHECK(walk.decoded);
     CHECK(walk.ends_session);
     CHECK(walk.records == written);
@@ -176,12 +175,12 @@ TEST_CASE(
     "end") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    arm_over_the_link(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
+    arm_over_the_link(rig, rig.now_ms);
     const uint32_t session = rig.product.capture().session_id();
-    feed(rig, now_ms, 60);
-    stop_over_the_link(rig, now_ms);
+    feed(rig, rig.now_ms, 60);
+    stop_over_the_link(rig, rig.now_ms);
     const uint32_t written = rig.product.capture().records_written();
     REQUIRE(written > 40);
 
@@ -196,8 +195,7 @@ TEST_CASE(
                   session);
     rig.platform.link().clear();
     rig.send_log(command);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
 
     int chunks = 0;
     uint32_t records = 0;
@@ -216,33 +214,33 @@ TEST_CASE(
 TEST_CASE("capture: both stores are offloaded in one session, each under its own selector") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    arm_over_the_link(rig, now_ms);
-    taxi(rig, now_ms, 10);
-    fly(rig, now_ms, 60);
-    taxi(rig, now_ms, 40);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
+    arm_over_the_link(rig, rig.now_ms);
+    taxi(rig, rig.now_ms, 10);
+    fly(rig, rig.now_ms, 60);
+    taxi(rig, rig.now_ms, 40);
     const uint32_t flight = rig.product.flight_log().session_id();
     const uint32_t capture = rig.product.capture().session_id();
     REQUIRE(flight != capture);
 
-    const std::string flights = ask(rig, now_ms, "{\"command\":\"list\"}");
+    const std::string flights = ask(rig, rig.now_ms, "{\"command\":\"list\"}");
     CHECK(field(flights, "log") == "");
     CHECK(field(flights, "sessions") == "1");
 
     const std::string diagnostics =
-        ask(rig, now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
+        ask(rig, rig.now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
     CHECK(field(diagnostics, "log") == "diagnostics");
     CHECK(field(diagnostics, "sessions") == "1");
 
     char command[128];
     std::snprintf(command, sizeof(command), "{\"command\":\"read\",\"session\":%u,\"from\":0}",
                   flight);
-    const std::string flight_chunk = ask(rig, now_ms, command);
+    const std::string flight_chunk = ask(rig, rig.now_ms, command);
     CHECK(field(flight_chunk, "log") == "");
     CHECK(field(flight_chunk, "session") == std::to_string(flight));
 
-    const Capture walk = offload_capture(rig, now_ms, capture);
+    const Capture walk = offload_capture(rig, rig.now_ms, capture);
     CHECK(walk.decoded);
     CHECK(walk.ends_session);
     CHECK(walk.records > 0);
@@ -284,9 +282,9 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
 TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    arm_over_the_link(rig, now_ms);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
+    arm_over_the_link(rig, rig.now_ms);
     const uint32_t session = rig.product.capture().session_id();
 
     uint32_t refused = 0;
@@ -296,10 +294,10 @@ TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
     CHECK(refused > 0);
     CHECK(rig.product.capture().records_dropped() == refused);
 
-    taxi(rig, now_ms, 5);
-    stop_over_the_link(rig, now_ms);
+    taxi(rig, rig.now_ms, 5);
+    stop_over_the_link(rig, rig.now_ms);
 
-    const Capture walk = offload_capture(rig, now_ms, session);
+    const Capture walk = offload_capture(rig, rig.now_ms, session);
     CHECK(walk.decoded);
     CHECK(walk.gaps == 1);
 }
@@ -356,12 +354,11 @@ TEST_CASE("capture: a device with no partition refuses a capture as no_storage")
         ~static_cast<uint32_t>(ports::Capability::Storage));
     Rig rig{kNoStorage};
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
+    rig.now_ms = 100;
+    taxi(rig, rig.now_ms, 5);
 
     rig.send("{\"command\":\"capture\",\"profile\":\"full\"}");
-    rig.run(now_ms, now_ms + 1000);
-    now_ms += 1000;
+    rig.run_for(1000);
     CHECK_FALSE(rig.state().capture.available);
     std::string reply;
     for (const auto& frame : rig.platform.link().sent)

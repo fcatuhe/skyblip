@@ -75,7 +75,7 @@ struct Flight {
     Rig& go() { return tango.go; }
     bus::State& state() { return tango.go.state(); }
 
-    void fly(uint32_t seconds) { go().seconds(tango.now_ms, seconds, kSpeedMmS, kAltitudeMslM); }
+    void fly(uint32_t seconds) { go().seconds(seconds, kSpeedMmS, kAltitudeMslM); }
 
     const traffic::Target* target() {
         const int slot = state().traffic.find(adsl::kAddressTableIcao, kTarget);
@@ -91,9 +91,9 @@ struct Flight {
    private:
     void begin(bool paired, bool live_receiver = false) {
         tango.bravo.health.aircraft_address_set = true;
-        if (live_receiver) REQUIRE(go().bring_receiver_up(tango.now_ms));
+        if (live_receiver) REQUIRE(go().bring_receiver_up());
         if (paired) tango.pair();
-        go().long_touch(tango.now_ms);
+        go().long_touch();
         REQUIRE(go().product.screen().page() == go::Page::Radar);
         go().raise_link(1);
         const uint32_t fly_from_ms = kFlyFromMs + (live_receiver ? kLiveReceiverDelayMs : 0);

@@ -110,7 +110,7 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
     CHECK(flight.state().bravo == comms::BravoState::Live);
     CHECK(go::marks_bravo_live(flight.glass()));
 
-    flight.go().tap(flight.tango.now_ms);
+    flight.go().tap();
     REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
     CHECK(flight.reads("B DLH4AB", go::kNearbyScale));
@@ -124,7 +124,7 @@ TEST_CASE("bravo traffic: nearby's Go and Bravo rows read their health and their
         "\"gnss_stage\":\"fixed\",\"satellites\":9";
     flight.fly(gnss::kFirstFixSettleMs / 1000 + 2);
     REQUIRE(flight.state().transmit.transmits());
-    flight.go().tap(flight.tango.now_ms);
+    flight.go().tap();
     REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
 
@@ -142,7 +142,7 @@ TEST_CASE("bravo traffic: nearby's Bravo row reads NO LINK and no cell once the 
         "\"battery_percent\":64,\"charging\":false,\"power_level\":\"normal\","
         "\"gnss_stage\":\"fixed\",\"satellites\":9";
     flight.fly(gnss::kFirstFixSettleMs / 1000 + 2);
-    flight.go().tap(flight.tango.now_ms);
+    flight.go().tap();
     REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
 
@@ -164,7 +164,7 @@ TEST_CASE("bravo traffic: BRAVO LOG lists each frame Bravo forwards, under what 
         "\"firmware\":\"0.4.1+1702\",\"battery_percent\":80,\"charging\":false,"
         "\"power_level\":\"normal\",\"frame_rate_hz\":412";
     flight.fly(3);
-    flight.go().show(flight.tango.now_ms, go::Page::BravoLog);
+    flight.go().show(go::Page::BravoLog);
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
     REQUIRE(flight.go().product.screen().page() == go::Page::BravoLog);
     CHECK(flight.reads("BRAVO 3F2A"));
@@ -231,7 +231,7 @@ TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are lost, and 
     CHECK(go::corner_reads(flight.glass(), "MOVE OUT", false));
     CHECK(flight.tones.size() == 1);
 
-    flight.go().show(flight.tango.now_ms, go::Page::SelfTest);
+    flight.go().show(go::Page::SelfTest);
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
     CHECK(reads_in(flight.glass(), "BRAVO 3F2A", 0, go::kSelfTestFirstRowY, go::kGlassWidth,
                    go::kGlassHeight));
@@ -291,13 +291,13 @@ TEST_CASE(
     "bravo traffic: a dropped pin forgets Bravo's UTC and the taxi, so the next Bravo waits") {
     Flight flight;
     flight.fly(3);
-    flight.go().seconds(flight.tango.now_ms, 3, 0, kAltitudeMslM);
+    flight.go().seconds(3, 0, kAltitudeMslM);
     REQUIRE(flight.state().bravo == comms::BravoState::Live);
     SUBCASE("unpaired on the Go") {
-        flight.go().show(flight.tango.now_ms, go::Page::Bravo);
-        flight.go().press(flight.tango.now_ms);
+        flight.go().show(go::Page::Bravo);
+        flight.go().press();
         REQUIRE(flight.go().product.screen().bravo_page().unpairing());
-        flight.go().press(flight.tango.now_ms);
+        flight.go().press();
         flight.tango.run_for(5000);
     }
     SUBCASE("forgotten by Bravo") {
@@ -305,7 +305,7 @@ TEST_CASE(
         flight.tango.run_for(go::BravoService::kAnswerCeilingMs + 2000);
         flight.tango.bravo.health.paired = true;
         REQUIRE(flight.go().product.screen().notice() == go::ScreenService::Notice::BravoForgot);
-        flight.go().tap(flight.tango.now_ms);
+        flight.go().tap();
         REQUIRE_FALSE(flight.go().product.screen().noticing());
     }
     REQUIRE_FALSE(go::paired(flight.go().settings()));
@@ -341,7 +341,7 @@ TEST_CASE("bravo traffic: the flight log records the Bravo lost in flight, and b
     flight.tango.air.set_in_range(true);
     flight.fly(5);
     REQUIRE(flight.state().bravo == comms::BravoState::Live);
-    flight.go().seconds(flight.tango.now_ms, 40, 0, kAltitudeMslM);
+    flight.go().seconds(40, 0, kAltitudeMslM);
     REQUIRE_FALSE(flight.go().product.flight_log().recording());
 
     const std::vector<flight::LogEvent> logged = bravo_records(flight.go());
@@ -408,12 +408,12 @@ TEST_CASE("bravo traffic: a paired Go waits for its Bravo after boot, and loses 
     CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
     rebooted.run(go::BravoService::kBootSettleMs, 3 * go::BravoService::kBootSettleMs);
     CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
-    uint32_t now_ms = 3 * go::BravoService::kBootSettleMs + 50;
-    rebooted.seconds(now_ms, 3, 0, kAltitudeMslM);
+    rebooted.now_ms = 3 * go::BravoService::kBootSettleMs + 50;
+    rebooted.seconds(3, 0, kAltitudeMslM);
     CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
-    rebooted.seconds(now_ms, 2, 5000, kAltitudeMslM);
+    rebooted.seconds(2, 5000, kAltitudeMslM);
     CHECK(rebooted.state().bravo == comms::BravoState::LinkDown);
-    rebooted.seconds(now_ms, 3, 0, kAltitudeMslM);
+    rebooted.seconds(3, 0, kAltitudeMslM);
     CHECK(rebooted.state().bravo == comms::BravoState::LinkDown);
 }
 
@@ -428,10 +428,9 @@ TEST_CASE("bravo traffic: rolling counts only from the boot settle on") {
     Rig rebooted;
     REQUIRE(rebooted.platform.key_value().write("settings", blob, bytes) == Status::Ok);
     REQUIRE(rebooted.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rebooted.seconds(now_ms, go::BravoService::kBootSettleMs / 1000 - 2, 5000, kAltitudeMslM);
+    rebooted.seconds(go::BravoService::kBootSettleMs / 1000 - 2, 5000, kAltitudeMslM);
     CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
-    rebooted.seconds(now_ms, 4, 5000, kAltitudeMslM);
+    rebooted.seconds(4, 5000, kAltitudeMslM);
     CHECK(rebooted.state().bravo == comms::BravoState::LinkDown);
 }
 

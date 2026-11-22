@@ -19,7 +19,7 @@ struct PairedProducts {
     Rig go;
     BravoRig bravo{};
     PairedLink air{bravo.platform.link(), go.platform.central()};
-    uint32_t now_ms{100};
+    uint32_t& now_ms{go.now_ms};
     // Every frame the Go wrote, in order, whatever the air did with it.
     std::vector<std::string> go_wrote{};
 
@@ -65,14 +65,11 @@ struct PairedProducts {
     go::BravoService& service() { return go.product.bravo(); }
     bravo::PeerService& peer() { return bravo.product.peer(); }
 
-    void run_for(uint32_t span_ms) {
-        go.run(now_ms, now_ms + span_ms);
-        now_ms += span_ms + 50;
-    }
+    void run_for(uint32_t span_ms) { go.run_for(span_ms); }
 
     // The pilot opens the BRAVO page on the Go, where it scans.
     void open_page() {
-        go.show(now_ms, go::Page::Bravo);
+        go.show(go::Page::Bravo);
         run_for(300);
     }
 
@@ -80,8 +77,8 @@ struct PairedProducts {
     void ask() {
         open_page();
         REQUIRE(service().found_count() == 1);
-        go.press(now_ms);
-        go.press(now_ms);
+        go.press();
+        go.press();
         run_for(2000);
     }
 
@@ -110,6 +107,7 @@ struct PairedProducts {
 
    private:
     void start() {
+        go.now_ms = 100;
         REQUIRE(go.setup() == Status::Ok);
         REQUIRE(bravo.setup() == Status::Ok);
         go.world = [this](uint32_t at_ms) {

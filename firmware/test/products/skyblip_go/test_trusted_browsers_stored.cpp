@@ -74,26 +74,23 @@ TEST_CASE("product: a browser a press trusted is still trusted after a restart")
 TEST_CASE("product: a forget the flash refused is written again once the flash takes it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    prove(rig, now_ms);
-    say(rig, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    prove(rig, rig.now_ms);
+    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
     config(rig).confirm();
-    rig.run(now_ms, now_ms + 10000);
-    now_ms += 10000;
+    rig.run_for(10000);
     const uint32_t writes = rig.platform.key_value().writes();
 
     rig.platform.key_value().refuse_writes = true;
-    prove(rig, now_ms);
+    prove(rig, rig.now_ms);
     const crypto::Ed25519::PublicKey key = crypto::Ed25519::public_key_of(kBrowserSeed);
-    say(rig, now_ms,
+    say(rig, rig.now_ms,
         "{\"command\":\"forget_browser\",\"id\":\"" + hex_text(ConstByteSpan(key.data(), 8)) +
             "\"}");
-    rig.run(now_ms, now_ms + 10000);
-    now_ms += 10000;
+    rig.run_for(10000);
     CHECK(rig.platform.key_value().writes() == writes);
 
     rig.platform.key_value().refuse_writes = false;
-    rig.run(now_ms, now_ms + 10000);
+    rig.run(rig.now_ms, rig.now_ms + 10000);
     uint8_t blob[comms::TrustedBrowsers::kBlobBytes];
     size_t bytes = 0;
     REQUIRE(rig.platform.key_value().read("browsers", blob, sizeof(blob), bytes) == Status::Ok);

@@ -53,8 +53,7 @@ TEST_CASE("diagnostics: the collector reads the device, subsystem by subsystem")
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0;
-    fly(rig, collector, now_ms, 12);
+    fly(rig, collector, rig.now_ms, 12);
     const comms::Diagnostics& read = snapshot(rig);
 
     CHECK(read.gnss_baud == 9600);  // parts::L76k::kFactoryBaudRate, unless autobaud moved
@@ -86,12 +85,11 @@ TEST_CASE("diagnostics: the faults nobody could see reach the snapshot") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0;
-    pass(rig, collector, now_ms, 1000);
+    pass(rig, collector, rig.now_ms, 1000);
 
     rig.platform.system_power().supply_warning = true;
     rig.platform.battery().divider_mv = 900;
-    pass(rig, collector, now_ms, 12000);
+    pass(rig, collector, rig.now_ms, 12000);
 
     CHECK(snapshot(rig).supply_warnings == 1);
     CHECK(snapshot(rig).battery_implausible > 0);
@@ -101,14 +99,13 @@ TEST_CASE("diagnostics: the air's four outcomes leave the collector as four numb
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0;
-    pass(rig, collector, now_ms, 1000);
+    pass(rig, collector, rig.now_ms, 1000);
 
     rig.state().air.rx_bad = 4;
     rig.state().air.rx_wait = 58;
     rig.state().air.rx_type = 19;
     rig.state().air.tx_lost = 2;
-    pass(rig, collector, now_ms, 1100);
+    pass(rig, collector, rig.now_ms, 1100);
 
     CHECK(snapshot(rig).rx_bad == 4);
     CHECK(snapshot(rig).rx_wait == 58);
@@ -121,18 +118,17 @@ TEST_CASE("diagnostics: one refresh every second, and the link answers from it")
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0;
 
-    pass(rig, collector, now_ms, 0);
+    pass(rig, collector, rig.now_ms, 0);
     const uint32_t refreshes = snapshot(rig).refreshes;
     CHECK(refreshes == 1);
 
-    pass(rig, collector, now_ms, 5000);
+    pass(rig, collector, rig.now_ms, 5000);
     CHECK(snapshot(rig).refreshes >= refreshes + 5);
 
     rig.raise_link();
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, now_ms, 200);
+    pass(rig, collector, rig.now_ms, 200);
     CHECK(has(config_frames(rig), "\"group\":\"radio\""));
 }
 
@@ -142,14 +138,13 @@ TEST_CASE("diagnostics: the link answers what the collector and the config servi
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0;
     rig.platform.battery().divider_mv = 3812;
-    fly(rig, collector, now_ms, 4);
+    fly(rig, collector, rig.now_ms, 4);
     rig.raise_link();
     rig.platform.link().clear();
-    pass(rig, collector, now_ms, 1000);
+    pass(rig, collector, rig.now_ms, 1000);
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, now_ms, 200);
+    pass(rig, collector, rig.now_ms, 200);
 
     const std::string frames = config_frames(rig);
     REQUIRE_FALSE(frames.empty());
@@ -164,20 +159,19 @@ TEST_CASE("diagnostics: the dump names the requirement unmet now, status the one
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0;
-    fly(rig, collector, now_ms, 4);
+    fly(rig, collector, rig.now_ms, 4);
     rig.raise_link();
     rig.platform.link().clear();
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, now_ms, 200);
+    pass(rig, collector, rig.now_ms, 200);
     CHECK(has(config_frames(rig), "\"no_tx\":\"gnss\""));
     rig.send("{\"command\":\"status\"}");
-    pass(rig, collector, now_ms, 200);
+    pass(rig, collector, rig.now_ms, 200);
     CHECK_FALSE(has(rig.last_on(events::Endpoint::Config), "no_tx"));
 
-    fly(rig, collector, now_ms, timing::TransmitGate::kVerdictSettleMs / 1000 + 1);
+    fly(rig, collector, rig.now_ms, timing::TransmitGate::kVerdictSettleMs / 1000 + 1);
     rig.send("{\"command\":\"status\"}");
-    pass(rig, collector, now_ms, 200);
+    pass(rig, collector, rig.now_ms, 200);
     CHECK(has(rig.last_on(events::Endpoint::Config), "\"no_tx\":\"gnss\""));
 }
 
@@ -186,18 +180,17 @@ TEST_CASE("diagnostics: the next link reads why the last one dropped") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0;
-    fly(rig, collector, now_ms, 2);
+    fly(rig, collector, rig.now_ms, 2);
     rig.raise_link(1);
-    pass(rig, collector, now_ms, 100);
+    pass(rig, collector, rig.now_ms, 100);
     constexpr uint8_t kSupervisionTimeout = 0x08;
     rig.drop_link(1, kSupervisionTimeout);
-    pass(rig, collector, now_ms, 100);
+    pass(rig, collector, rig.now_ms, 100);
     rig.raise_link(2);
     rig.platform.link().clear();
-    pass(rig, collector, now_ms, 1000);
+    pass(rig, collector, rig.now_ms, 1000);
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, now_ms, 200);
+    pass(rig, collector, rig.now_ms, 200);
 
     CHECK(snapshot(rig).link_drop_reason == kSupervisionTimeout);
     CHECK(has(config_frames(rig), "\"link_drop_reason\":8"));
@@ -220,13 +213,13 @@ TEST_CASE("diagnostics: the cadence and the uptime survive the 49.7-day wrap") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    uint32_t now_ms = 0xFFFFFF00u;  // 256 ms short of the wrap
+    rig.now_ms = 0xFFFFFF00u;  // 256 ms short of the wrap
 
-    pass_across_wrap(rig, collector, now_ms, 0);
+    pass_across_wrap(rig, collector, rig.now_ms, 0);
     CHECK(snapshot(rig).uptime_s == 4294967u);
 
     const uint32_t refreshes_before = snapshot(rig).refreshes;
-    pass_across_wrap(rig, collector, now_ms, 20000);
+    pass_across_wrap(rig, collector, rig.now_ms, 20000);
     CHECK(snapshot(rig).refreshes >= refreshes_before + 20);
     CHECK(snapshot(rig).uptime_s < 60u);
 }

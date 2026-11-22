@@ -18,7 +18,8 @@ struct Tango {
     BravoStub bravo;
     Rig go;
     PairedLink air{bravo.link(), go.platform.central()};
-    uint32_t now_ms{100};
+    // INFO: fc 20nov26 the Go's clock under its old name, which test/adsl/test_payloads.cpp reads
+    uint32_t& now_ms{go.now_ms};
 
     explicit Tango(std::vector<BravoStub::Recorded> recording = {}) : bravo(std::move(recording)) {
         start();
@@ -31,22 +32,19 @@ struct Tango {
 
     go::BravoService& service() { return go.product.bravo(); }
 
-    void run_for(uint32_t span_ms) {
-        go.run(now_ms, now_ms + span_ms);
-        now_ms += span_ms + 50;
-    }
+    void run_for(uint32_t span_ms) { go.run_for(span_ms); }
 
     void open_page() {
-        go.show(now_ms, go::Page::Bravo);
+        go.show(go::Page::Bravo);
         run_for(300);
     }
 
     void pair() {
         open_page();
         REQUIRE(service().found_count() == 1);
-        go.press(now_ms);
+        go.press();
         REQUIRE(go.product.screen().bravo_page().confirming());
-        go.press(now_ms);
+        go.press();
         run_for(2000);
     }
 
@@ -58,6 +56,7 @@ struct Tango {
 
    private:
     void start() {
+        go.now_ms = 100;
         REQUIRE(go.setup() == Status::Ok);
         go.world = [this](uint32_t at_ms) {
             bravo.run_pass(at_ms);

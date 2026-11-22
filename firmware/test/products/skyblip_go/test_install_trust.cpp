@@ -63,9 +63,7 @@ TEST_CASE("product: the browser whose record the .uf2 carried changes the settin
     Rig rig;
     rig.platform.dfu().running_slot = installed_slot();
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.run(now_ms, now_ms + 10000);
-    now_ms += 10000;
+    rig.run_for(10000);
     REQUIRE(config(rig).trusted_browsers().count() == 1);
     CHECK(std::string(config(rig).trusted_browsers().at(0).label) == "Chrome on macOS");
     CHECK(stored_browsers(rig) == 1);
@@ -73,11 +71,11 @@ TEST_CASE("product: the browser whose record the .uf2 carried changes the settin
     CHECK(rig.platform.dfu().running_slot[InstalledSlot::kPage] == 0xFF);
 
     rig.platform.random().queue(kNonce);
-    say(rig, now_ms, "{\"command\":\"browser_challenge\"}");
-    say(rig, now_ms, trust_browser());
+    say(rig, rig.now_ms, "{\"command\":\"browser_challenge\"}");
+    say(rig, rig.now_ms, trust_browser());
     CHECK(rig.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"trusted\"}");
-    say(rig, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
     CHECK(config(rig).pending() == common::Pending::None);
     CHECK(rig.settings().units == go::Units::Metric);
 }

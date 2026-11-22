@@ -65,8 +65,8 @@ TEST_CASE("bravo pairing: the BRAVO page scans, lists the tag, and pairs on two 
     CHECK(pair.go.platform.central().scan_duty()->window_us ==
           go::BravoService::kPairingScanWindowUs);
 
-    pair.go.press(pair.now_ms);
-    pair.go.press(pair.now_ms);
+    pair.go.press();
+    pair.go.press();
     pair.run_for(2000);
     pair.press_bravo();
     pair.run_for(2000);
@@ -99,14 +99,14 @@ TEST_CASE("bravo pairing: the pin survives a reboot, and the Go reconnects to it
         pair.bravo.step();
         pair.air.pump();
     };
-    uint32_t now_ms = pair.now_ms;
-    rebooted.run(now_ms, now_ms + 2000);
-    now_ms += 2050;
+    rebooted.now_ms = pair.now_ms;
+    rebooted.run(rebooted.now_ms, rebooted.now_ms + 2000);
+    rebooted.now_ms += 2050;
     CHECK(rebooted.product.bravo().link() == go::BravoLink::Down);
 
     // Bravo holds its half until its supervision timeout, and then the Go comes back.
     pair.air.drop();
-    rebooted.run(now_ms, now_ms + 3000);
+    rebooted.run(rebooted.now_ms, rebooted.now_ms + 3000);
     CHECK(rebooted.product.bravo().link() == go::BravoLink::Up);
     CHECK(rebooted.platform.central().scans == 0);
     CHECK(rebooted.platform.central().connect_duty().window_us ==
@@ -135,12 +135,12 @@ TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees th
           doctest::test_suite("main")) {
     PairedProducts pair;
     pair.pair_and_store();
-    pair.go.show(pair.now_ms, go::Page::Bravo);
-    pair.go.press(pair.now_ms);
+    pair.go.show(go::Page::Bravo);
+    pair.go.press();
     REQUIRE(pair.go.product.screen().bravo_page().unpairing());
-    pair.go.press(pair.now_ms);
+    pair.go.press();
     pair.run_for(5000);
-    pair.go.tap(pair.now_ms);
+    pair.go.tap();
     pair.run_for(500);
 
     CHECK_FALSE(go::paired(pair.go.settings()));
@@ -160,9 +160,9 @@ TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees th
 TEST_CASE("bravo pairing: unpairing lists the Bravos in range, and the next press pairs one") {
     PairedProducts pair;
     pair.pair_and_store();
-    pair.go.show(pair.now_ms, go::Page::Bravo);
-    pair.go.press(pair.now_ms);
-    pair.go.press(pair.now_ms);
+    pair.go.show(go::Page::Bravo);
+    pair.go.press();
+    pair.go.press();
     pair.run_for(5000);
     CHECK(pair.go.product.screen().page() == go::Page::Bravo);
     CHECK(pair.service().step() == go::BravoStep::Scanning);
@@ -170,8 +170,8 @@ TEST_CASE("bravo pairing: unpairing lists the Bravos in range, and the next pres
     for (uint16_t phone = 1; phone <= 3; phone++) pair.go.raise_link(phone);
     CHECK(pair.go.platform.link().links() == 2);
 
-    pair.go.press(pair.now_ms);
-    pair.go.press(pair.now_ms);
+    pair.go.press();
+    pair.go.press();
     pair.run_for(2000);
     pair.press_bravo();
     pair.run_for(2000);
@@ -230,7 +230,7 @@ TEST_CASE("bravo pairing: the pad cancels a pairing under way and goes back to t
     pair.ask();
     REQUIRE(pair.service().step() == go::BravoStep::Waiting);
 
-    pair.go.tap(pair.now_ms);
+    pair.go.tap();
     pair.run_for(300);
     CHECK(pair.service().step() == go::BravoStep::Scanning);
     CHECK_FALSE(go::paired(pair.go.settings()));
@@ -241,7 +241,7 @@ TEST_CASE("bravo pairing: leaving the page stops the scan and frees the phone sl
     PairedProducts pair;
     pair.open_page();
     REQUIRE(pair.go.platform.central().scanning());
-    pair.go.long_touch(pair.now_ms);
+    pair.go.long_touch();
     CHECK(pair.go.product.screen().page() == go::Page::Radar);
     CHECK_FALSE(pair.go.platform.central().scanning());
     CHECK(pair.go.platform.link().admits_phone());

@@ -18,16 +18,15 @@ using namespace skyblip::settings_writes;
 TEST_CASE("flash window: a change is held, not written, while the cell is critical") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.platform.battery().divider_mv = 3400;
     // The board samples the cell once a second and the monitor acts on the third
     // consecutive reading, so a low cell takes four seconds to become a decision.
-    rig.seconds(now_ms, 5, /*speed_mm_s=*/0, 0);
+    rig.seconds(5, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
     const uint32_t before = writes(rig);
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, now_ms, now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
+    step_until(rig, rig.now_ms, rig.now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
     CHECK(writes(rig) == before);
     // Refused, counted once, and never handed to the placement policy - a pending
     // change is one the bound would eventually force onto flash, which is the
@@ -40,7 +39,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
     // The cable arrives. The terminal is held above the cell, core/power reports
     // Normal, and the change a pilot made is still there to write.
     rig.platform.battery().external_power = true;
-    rig.seconds(now_ms, 3, /*speed_mm_s=*/0, 0);
+    rig.seconds(3, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
     CHECK_FALSE(rig.product.config_link().holding_for_power());
     CHECK(writes(rig) - before == 1);
@@ -61,20 +60,19 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
 TEST_CASE("flash window: a cell at its cutoff powers off without touching the settings") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.platform.battery().divider_mv = 3400;
-    rig.seconds(now_ms, 5, /*speed_mm_s=*/0, 0);
+    rig.seconds(5, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     const uint32_t before = writes(rig);
 
     // A change made on a cell that is already warning: held, never written.
     change_alarm(rig, go::Alarm::Soft);
-    rig.seconds(now_ms, 2, /*speed_mm_s=*/0, 0);
+    rig.seconds(2, /*speed_mm_s=*/0, 0);
     REQUIRE(writes(rig) == before);
 
     // And now the cell reaches its cutoff, which is the flush this refuses.
     rig.platform.battery().divider_mv = 3100;
-    rig.seconds(now_ms, 5, /*speed_mm_s=*/0, 0);
+    rig.seconds(5, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     REQUIRE(rig.product.shutdown().phase() != power::ShutdownPhase::Running);
     CHECK(writes(rig) == before);
@@ -88,18 +86,17 @@ TEST_CASE("flash window: a cell at its cutoff powers off without touching the se
 TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms);
-    step_until(rig, now_ms, now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
+    fly(rig, rig.now_ms);
+    step_until(rig, rig.now_ms, rig.now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
     REQUIRE(rig.state().rf.plan.tx_allowed);
     const uint32_t before = writes(rig);
 
     change_alarm(rig, go::Alarm::Soft);
-    step_one(rig, now_ms);
+    step_one(rig, rig.now_ms);
     REQUIRE(writes(rig) == before);
 
-    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, now_ms);
-    step_one(rig, now_ms);
+    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, rig.now_ms);
+    step_one(rig, rig.now_ms);
     CHECK(writes(rig) - before == 1);
     CHECK(rig.product.config_link().refused_writes() == 0);
 }
@@ -110,21 +107,20 @@ TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
 TEST_CASE("flash window: a fired power-failure comparator stops settings writes") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    stand_on_the_ground(rig, now_ms);
+    stand_on_the_ground(rig, rig.now_ms);
     REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
 
     const uint32_t before = writes(rig);
     rig.platform.system_power().supply_warning = true;
-    step_one(rig, now_ms);
+    step_one(rig, rig.now_ms);
     CHECK(rig.product.power().cutoff_monitor().supply_warned());
     CHECK(rig.product.power().supply_warnings() == 1);
     // Read and cleared, so one warning is one warning however many passes run.
-    step_until(rig, now_ms, now_ms + 200);
+    step_until(rig, rig.now_ms, rig.now_ms + 200);
     CHECK(rig.product.power().supply_warnings() == 1);
 
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, now_ms, now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
+    step_until(rig, rig.now_ms, rig.now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
     CHECK(writes(rig) == before);
     // Latching: a rail that came back up does not make it un-happen.
     CHECK_FALSE(rig.product.power().cutoff_monitor().may_write(power::DurableWrite::Settings));

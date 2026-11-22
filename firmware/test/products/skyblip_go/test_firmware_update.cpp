@@ -94,17 +94,14 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    open_upload_window(rig, rig.now_ms);
+    rig.run_for(3000);
     CHECK(reads_heading(rig.platform.chips().epd.framebuffer(), go::kReceivingTitle,
                         go::Heading::Interrupt));
     CHECK(rig.platform.dfu().triggered == 0);
 
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    land_upload(rig, rig.now_ms);
+    rig.run_for(200);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Install);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK(rig.product.board().rf().sleeps() == 1);
@@ -115,7 +112,7 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     CHECK(rig.platform.dfu().triggered == 0);
     CHECK_FALSE(attempt_recorded(rig));
 
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    rig.run(rig.now_ms, rig.now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     CHECK(reads_heading(rig.platform.chips().epd.framebuffer(), go::kInstallingTitle,
                         go::Heading::Interrupt));
     CHECK(rig.platform.dfu().triggered == 1);
@@ -134,22 +131,19 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
 TEST_CASE("product: with no watchdog running a recovery paints the bootloader page, then reboots") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    on_ground(rig, now_ms);
+    on_ground(rig, rig.now_ms);
 
     rig.send("{\"command\":\"recovery\"}");
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     REQUIRE(config(rig).pending() == common::Pending::Recovery);
 
     config(rig).confirm();
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
     CHECK(rig.product.board().rf().sleeps() == 1);
     CHECK(rig.platform.dfu().recoveries == 0);
 
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    rig.run(rig.now_ms, rig.now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
     CHECK(reads_heading(glass, go::kRecoveryTitle, go::Heading::Interrupt));
     CHECK_FALSE(has_button_key(glass));
@@ -161,20 +155,17 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     REQUIRE(rig.platform.watchdog().arm() == Status::Ok);
-    uint32_t now_ms = 0;
-    on_ground(rig, now_ms);
+    on_ground(rig, rig.now_ms);
 
     rig.send("{\"command\":\"recovery\"}");
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     config(rig).confirm();
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(rig.platform.dfu().recoveries == 0);
 
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    rig.run(rig.now_ms, rig.now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
     CHECK(reads_heading(glass, go::kRecoveryTitle, go::Heading::Interrupt));
     CHECK(reads_button_key(glass, go::kRecoveryStartVerb));
@@ -186,24 +177,22 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
 TEST_CASE("product: the SMP hook's gate opens on the pass after the window is confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
+    open_upload_window(rig, rig.now_ms);
     REQUIRE(config(rig).upload_allowed());
     CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
 
-    pass(rig, now_ms);
+    pass(rig, rig.now_ms);
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
 TEST_CASE("product: a take-off leaves the SMP hook's gate open once the window is confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    pass(rig, now_ms);
+    open_upload_window(rig, rig.now_ms);
+    pass(rig, rig.now_ms);
     REQUIRE(rig.platform.dfu().upload_allowed_published);
 
-    climb_until_the_link_sees_it(rig, now_ms);
+    climb_until_the_link_sees_it(rig, rig.now_ms);
     REQUIRE(config(rig).flight_state() == flight::FlightState::Airborne);
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
@@ -214,27 +203,23 @@ TEST_CASE(
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    open_upload_window(rig, rig.now_ms);
+    rig.run_for(3000);
     REQUIRE(config(rig).receiving_firmware());
 
-    rig.press(now_ms);
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    rig.press();
+    rig.run_for(3000);
     REQUIRE(config(rig).receiving_firmware());
 
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    rig.tap();
+    rig.run_for(3000);
     CHECK_FALSE(config(rig).receiving_firmware());
     CHECK(rig.last_on(events::Endpoint::Config).find("cancelled") != std::string::npos);
     CHECK_FALSE(reads_heading(rig.platform.chips().epd.framebuffer(), go::kReceivingTitle,
                               go::Heading::Interrupt));
 
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + 200);
+    land_upload(rig, rig.now_ms);
+    rig.run(rig.now_ms, rig.now_ms + 200);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.platform.dfu().triggered == 0);
 }
@@ -243,15 +228,13 @@ TEST_CASE("product: an upload that lands on a critical cell is refused and nothi
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
+    open_upload_window(rig, rig.now_ms);
     rig.platform.battery().divider_mv = 3400;
-    rig.run(now_ms, now_ms + 8000);
-    now_ms += 8000;
+    rig.run_for(8000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + 200);
+    land_upload(rig, rig.now_ms);
+    rig.run(rig.now_ms, rig.now_ms + 200);
     CHECK(rig.last_on(events::Endpoint::Config).find("low_power") != std::string::npos);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.platform.dfu().triggered == 0);
@@ -293,14 +276,12 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
     before.platform.dfu().staged_hash_valid = true;
     before.platform.dfu().staged_image_hash = kFull;
     REQUIRE(before.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    on_ground(before, now_ms);
+    on_ground(before, before.now_ms);
     before.send("{\"command\":\"dfu\",\"version\":\"0.1.0+12\"}");
-    before.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    before.run_for(200);
     config(before).confirm();
-    land_upload(before, now_ms);
-    before.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
+    land_upload(before, before.now_ms);
+    before.run(before.now_ms, before.now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
     REQUIRE(before.platform.dfu().triggered == 1);
 
     Rebooted after(before, kRunning, /*confirmed=*/true, kRunning);
@@ -367,9 +348,8 @@ TEST_CASE("product: an image staged before a restart is not installed by the nex
     after.rig.platform.dfu().staged_version_valid = true;
     after.rig.platform.dfu().staged_image_version = kStaged;
     REQUIRE(after.rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(after.rig, now_ms);
-    after.rig.run(now_ms, now_ms + 2000);
+    open_upload_window(after.rig, before.now_ms);
+    after.rig.run(before.now_ms, before.now_ms + 2000);
     CHECK(config(after.rig).receiving_firmware());
     CHECK(after.rig.platform.dfu().triggered == 0);
 }
@@ -419,10 +399,9 @@ TEST_CASE("product: a development bootloader installs a release over a developme
     sign(rig, 0x21, 0x88);
     trust(rig, {0x21, 0x88});
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    open_upload_window(rig, rig.now_ms);
+    land_upload(rig, rig.now_ms);
+    rig.run(rig.now_ms, rig.now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     CHECK(rig.platform.dfu().triggered == 1);
 }
 
@@ -432,10 +411,9 @@ TEST_CASE("product: a development bootloader takes a development image back over
     sign(rig, 0x88, 0x21);
     trust(rig, {0x21, 0x88});
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    open_upload_window(rig, rig.now_ms);
+    land_upload(rig, rig.now_ms);
+    rig.run(rig.now_ms, rig.now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     CHECK(rig.platform.dfu().triggered == 1);
 }
 
@@ -539,9 +517,8 @@ TEST_CASE("product: a set on an image older than its settings never writes over 
     REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
             Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
 
-    set_callsign_over_the_link(rig, now_ms, "F-JABC");
+    set_callsign_over_the_link(rig, rig.now_ms, "F-JABC");
     CHECK(std::string(rig.settings().callsign) == "F-JABC");
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 
@@ -587,9 +564,8 @@ TEST_CASE("product: a sector that lost a bit is written over, not kept as a newe
             Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.config_link().settings_fallback() == settings::Fallback::Defaults);
-    uint32_t now_ms = 0;
 
-    set_callsign_over_the_link(rig, now_ms, "F-JABC");
+    set_callsign_over_the_link(rig, rig.now_ms, "F-JABC");
     uint8_t blob[64];
     size_t count = 0;
     REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
@@ -603,8 +579,7 @@ TEST_CASE("product: a revert puts back the settings the pilot had when the swap 
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    set_callsign_over_the_link(before, now_ms, "D-KXYZ");
+    set_callsign_over_the_link(before, before.now_ms, "D-KXYZ");
     install_and_swap(before);
     REQUIRE(before.platform.dfu().triggered == 1);
 

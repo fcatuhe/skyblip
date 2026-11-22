@@ -49,11 +49,10 @@ bool reads_trust(Rig& rig) {
 TEST_CASE("product: a prompt from a browser that proved a key says the press trusts it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.platform.random().queue(kNonce);
-    say(rig, now_ms, "{\"command\":\"browser_challenge\"}");
-    say(rig, now_ms, trust_browser());
-    say(rig, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    say(rig, rig.now_ms, "{\"command\":\"browser_challenge\"}");
+    say(rig, rig.now_ms, trust_browser());
+    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
     REQUIRE(rig.product.config_link().config().pending() == common::Pending::Set);
     CHECK(reads_trust(rig));
 }
@@ -61,8 +60,7 @@ TEST_CASE("product: a prompt from a browser that proved a key says the press tru
 TEST_CASE("product: a prompt from a browser with no proven key says nothing of trust") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    say(rig, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
     REQUIRE(rig.product.config_link().config().pending() == common::Pending::Set);
     CHECK_FALSE(reads_trust(rig));
 }
