@@ -9,12 +9,11 @@
 #include "protocols/common/crc.h"
 #include "test/support/log_event_read.h"
 #include "test/support/log_record_write.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 
 namespace {
-
-constexpr uint32_t kBaseUtcS = 1785628800;  // 2026-08-02T00:00:00Z
 
 flight::LogStatus cell(uint16_t cell_mv, uint8_t level, uint8_t tracked) {
     flight::LogStatus status{};

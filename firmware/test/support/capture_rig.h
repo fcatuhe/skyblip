@@ -49,7 +49,7 @@ inline uint32_t feed(Rig& rig, uint32_t& now_ms, uint32_t records) {
     uint32_t pushed = 0;
     while (pushed < records && rig.product.capture().capturing()) {
         for (int i = 0; i < diagnostics::Recorder::kMaxRecords && pushed < records; i++)
-            if (rig.product.diagnostics().record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
+            if (rig.product.diagnostics().record(bench_record(kBaseUtcS + pushed))) pushed++;
         rig.run(now_ms, now_ms + 50);
         now_ms += 50;
     }

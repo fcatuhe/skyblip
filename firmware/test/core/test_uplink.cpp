@@ -6,12 +6,13 @@
 #include "core/protocol/adsl_uplink.h"
 #include "core/timing/slot.h"
 #include "doctest/doctest.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 using namespace skyblip::protocol;
 
 namespace {
-constexpr uint32_t kUtcS = 1785628800;
+constexpr uint32_t kUtcS = kBaseUtcS;
 
 model::AircraftObservation make_target(uint32_t address) {
     model::AircraftObservation observation{};

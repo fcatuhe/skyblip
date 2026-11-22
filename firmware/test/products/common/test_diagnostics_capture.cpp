@@ -141,7 +141,7 @@ TEST_CASE("capture: what an armed device recorded comes back through the offload
     arm_over_the_link(rig, now_ms);
     REQUIRE(rig.product.diagnostics().armed());
     const uint32_t session = rig.product.capture().session_id();
-    CHECK(session >= Rig::kBaseUtcS);
+    CHECK(session >= kBaseUtcS);
 
     taxi(rig, now_ms, 30);
     CHECK(rig.product.capture().records_written() > 10);
@@ -291,8 +291,7 @@ TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
 
     uint32_t refused = 0;
     for (int i = 0; i < diagnostics::Recorder::kMaxRecords * 2; i++)
-        if (!rig.product.diagnostics().record(
-                bench_record(Rig::kBaseUtcS + static_cast<uint32_t>(i))))
+        if (!rig.product.diagnostics().record(bench_record(kBaseUtcS + static_cast<uint32_t>(i))))
             refused++;
     CHECK(refused > 0);
     CHECK(rig.product.capture().records_dropped() == refused);
@@ -321,7 +320,7 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
         rig.product.run_pass(now_ms);
         now_ms += 10;
     }
-    for (int i = 0; i < 20; i++) rig.product.diagnostics().record(bench_record(Rig::kBaseUtcS + i));
+    for (int i = 0; i < 20; i++) rig.product.diagnostics().record(bench_record(kBaseUtcS + i));
     rig.platform.clock().set_milliseconds(now_ms);
     rig.product.run_pass(now_ms);
     now_ms += 10;

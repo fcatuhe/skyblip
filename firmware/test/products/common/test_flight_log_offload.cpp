@@ -292,7 +292,7 @@ TEST_CASE(
 // A session entry is 21 bytes once it holds 256 records, one past what an unexchanged MTU carries.
 TEST_CASE("flight log: a reply wider than the asking link carries is answered small_mtu, counted") {
     Rig rig;
-    const uint32_t session = Rig::kBaseUtcS - 7200;
+    const uint32_t session = kBaseUtcS - 7200;
     const uint32_t slots = flight::kLogSlotsPerSector;
     label_sector(rig, 0, store::SectorOwner::Flights, 1, session);
     write_records(rig, 0, session, session, slots, false);
@@ -363,7 +363,7 @@ TEST_CASE("flight log: eight chunks over a link that takes four at a time arrive
 // The flights ring stops being contiguous the moment the other ring takes a sector out of it.
 TEST_CASE("flight log: a session whose middle sector went to diagnostics still reads back whole") {
     Rig rig;
-    const uint32_t session = Rig::kBaseUtcS - 7200;
+    const uint32_t session = kBaseUtcS - 7200;
     const uint32_t slots = flight::kLogSlotsPerSector;
     const uint32_t tail = 5;
     const uint32_t last = platform::host::FlashRegion::kSectorCount - 1;

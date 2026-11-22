@@ -7,13 +7,14 @@
 #include "doctest/doctest.h"
 #include "test/support/log_transfer.h"
 #include "test/support/store_rig.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 
 namespace {
 
 constexpr uint32_t kCaptureSession = 9000;
-constexpr uint32_t kFirstAtS = 1785628800;
+constexpr uint32_t kFirstAtS = kBaseUtcS;
 constexpr store::SectorOwner kDiagnostics = store::SectorOwner::Diagnostics;
 
 struct Chunk {

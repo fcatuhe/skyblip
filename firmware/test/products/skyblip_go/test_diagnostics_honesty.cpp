@@ -7,6 +7,7 @@
 #include "products/skyblip_go/services/traffic.h"
 #include "test/support/diagnostics_read.h"
 #include "test/support/screen_rig.h"
+#include "test/support/timed_fix.h"
 
 namespace {
 
@@ -68,7 +69,6 @@ struct ServiceRig {
         ownship.tick(now_ms);
     }
 
-    static constexpr uint32_t kBaseUtcS = 1785628800;
     uint32_t updates{0};
 };
 
@@ -103,7 +103,7 @@ TEST_CASE(
     "diagnostics burst: a second the anchored clock dated is never recorded as boot-relative") {
     ServiceRig rig;
     rig.state.clock.pps_locked = true;
-    rig.state.clock.utc_s = ServiceRig::kBaseUtcS;
+    rig.state.clock.utc_s = kBaseUtcS;
     rig.state.own.utc_valid = false;
     rig.clock.set_microseconds(4000000);
 
@@ -117,7 +117,7 @@ TEST_CASE(
     radio::Entry burst{};
     REQUIRE(last_of(drained(rig.recorder), burst));
     CHECK(burst.verdict == radio::Verdict::BadCrc);
-    CHECK(burst.at_s == ServiceRig::kBaseUtcS);
+    CHECK(burst.at_s == kBaseUtcS);
     CHECK(burst.utc_dated);
 }
 

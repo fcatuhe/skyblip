@@ -14,16 +14,13 @@
 #include "test/support/adsb_frames.h"
 #include "test/support/config_frame.h"
 #include "test/support/lr2021_rig.h"
+#include "test/support/timed_fix.h"
 
 namespace skyblip {
 
 using Bravo = bravo::Product<platform::host::MeshtrackerX1>;
 
 struct BravoRig {
-    // 2026-08-02T00:00:00Z, as the Go's rig dates its fixes.
-    static constexpr uint32_t kBaseUtcS = 1785628800;
-    static constexpr int32_t kLatitude1e7 = 485000000;
-    static constexpr int32_t kLongitude1e7 = 85000000;
 
     platform::host::MeshtrackerX1 platform;
     // INFO: fc 12nov26 the board probes its parts as it is built, so a case changes a model before
@@ -69,22 +66,10 @@ struct BravoRig {
 
     // A solution as the AG3335 driver publishes one, on the ground where the case puts it.
     void push_fix(int32_t speed_mm_s = 0) {
-        gnss::GnssSolution solution{};
-        solution.fix_valid = true;
-        solution.utc_valid = true;
-        solution.utc_s = kBaseUtcS + utc_offset_s;
-        solution.latitude_1e7 = kLatitude1e7;
-        solution.longitude_1e7 = kLongitude1e7;
-        solution.altitude_msl_mm = kOwnAltitudeMm;
-        solution.altitude_hae_mm = solution.altitude_msl_mm + gnss::kDefaultGeoidSeparationMm;
-        solution.geoid_measured = true;
-        solution.speed_mm_s = speed_mm_s;
-        solution.track_cdeg = 0;
-        solution.satellites = 10;
-        solution.hdop_e2 = 100;
-        solution.vdop_e2 = 150;
-        solution.sentences = ++fix_updates;
-        product.bus().gnss.push(solution);
+        product.bus().gnss.push(timed_fix({.utc_offset_s = utc_offset_s,
+                                           .sentences = ++fix_updates,
+                                           .altitude_msl_mm = kOwnAltitudeMm,
+                                           .speed_mm_s = speed_mm_s}));
     }
 
     void blind_fix() {
@@ -126,8 +111,8 @@ struct BravoRig {
 
     // The two halves of a position the assembly needs, north of the rig's own fix.
     void hear_aircraft(uint32_t address, double north_m, int32_t altitude_ft = kAltitudeFt) {
-        const double latitude = kLatitude1e7 / 1e7 + north_m / 111320.0;
-        const double longitude = kLongitude1e7 / 1e7;
+        const double latitude = kFixLatitude1e7 / 1e7 + north_m / 111320.0;
+        const double longitude = kFixLongitude1e7 / 1e7;
         hear(adsb::airborne_position(address, 0, latitude, longitude, false, altitude_ft));
         hear(adsb::airborne_position(address, 0, latitude, longitude, true, altitude_ft));
     }

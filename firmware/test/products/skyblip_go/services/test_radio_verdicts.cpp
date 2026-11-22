@@ -72,7 +72,7 @@ TEST_CASE("radio verdicts: a burst heard before own-ship has a fix is a wait, no
     observation.latitude_1e7 = 481234567;
     observation.longitude_1e7 = 87654321;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(simulator::alptas_encode(frame, observation, Rig::kBaseUtcS) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, observation, kBaseUtcS) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);
@@ -205,7 +205,7 @@ TEST_CASE("radio counters: a burst nothing was attempted on leaves rx_bad where 
     observation.latitude_1e7 = 481234567;
     observation.longitude_1e7 = 87654321;
     uint8_t frame[alptas::kFrameBytes];
-    REQUIRE(simulator::alptas_encode(frame, observation, Rig::kBaseUtcS) == Status::Ok);
+    REQUIRE(simulator::alptas_encode(frame, observation, kBaseUtcS) == Status::Ok);
 
     hear_alptas(rig, frame);
     settle(rig, now_ms);

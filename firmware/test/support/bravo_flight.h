@@ -14,6 +14,7 @@
 #include "products/skyblip_go/glass.h"
 #include "test/support/glass_text.h"
 #include "test/support/tango.h"
+#include "test/support/timed_fix.h"
 
 namespace skyblip {
 
@@ -24,7 +25,7 @@ constexpr int32_t kAltitudeHaeM = kAltitudeMslM + gnss::kDefaultGeoidSeparationM
 constexpr uint32_t kTarget = 0x4459A9;
 
 // INFO: fc 12nov26 the second the rig's k-th fix names, and its edge (Rig::push_timed_fix)
-inline uint32_t utc_of(uint32_t second) { return Rig::kBaseUtcS + second; }
+inline uint32_t utc_of(uint32_t second) { return kBaseUtcS + second; }
 inline uint32_t edge_ms_of(uint32_t second) { return kFlyFromMs + 1000 * second; }
 
 inline int32_t latitude_north_of_own(uint32_t second, int32_t north_m) {

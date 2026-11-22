@@ -9,6 +9,7 @@
 #include "doctest/doctest.h"
 #include "test/support/nmea_checksum.h"
 #include "test/support/nmea_traffic.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 using namespace skyblip::protocol;
@@ -78,7 +79,7 @@ TEST_CASE("nmea: PFLAA fits 82 characters at its types' widest, without callsign
 // The terminating NUL needs a byte too, so a sentence of n characters needs a buffer of n + 1.
 TEST_CASE("nmea: every formatter writes nothing into a buffer too small for its sentence") {
     auto own = own_at(481000000, 81000000, 1000);
-    own.utc_s = 1785628800u;
+    own.utc_s = kBaseUtcS;
     const auto target = widest(model::Source::Adsb, 481100000, 81100000);
     Lk8Ex1 reading{};
     reading.battery_valid = true;

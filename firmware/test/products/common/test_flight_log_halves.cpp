@@ -49,8 +49,7 @@ TEST_CASE(
         for (uint32_t half = 0; half < 2; half++) {
             if (half == 0 && second % 10 == 7) continue;
             solve(rig, second, half, kFlyingMmS, updates);
-            if (half == 0)
-                whole_latitude_1e7[Rig::kBaseUtcS + second] = rig.state().own.latitude_1e7;
+            if (half == 0) whole_latitude_1e7[kBaseUtcS + second] = rig.state().own.latitude_1e7;
             const uint32_t landed_ms = second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs;
             rig.run(landed_ms + 50, landed_ms + kHalfSecondFeedMs - 50);
         }

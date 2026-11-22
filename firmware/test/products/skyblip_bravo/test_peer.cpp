@@ -22,8 +22,8 @@ constexpr uint32_t kStepMs = 10;
 constexpr events::BluetoothAddress kStranger{1, {0x01, 0x02, 0x03, 0x04, 0x05, 0xC6}};
 
 struct GoPosition {
-    int32_t latitude_1e7{BravoRig::kLatitude1e7};
-    int32_t longitude_1e7{BravoRig::kLongitude1e7};
+    int32_t latitude_1e7{kFixLatitude1e7};
+    int32_t longitude_1e7{kFixLongitude1e7};
     uint32_t position_age_ms{200};
     uint32_t altitude_hae_age_ms{200};
     bool pressure_altitude_valid{true};
@@ -54,7 +54,7 @@ struct Served {
         }
     }
 
-    uint32_t utc_s() const { return BravoRig::kBaseUtcS + rig.utc_offset_s; }
+    uint32_t utc_s() const { return kBaseUtcS + rig.utc_offset_s; }
 
     void push_time_only() {
         gnss::GnssSolution solution{};
@@ -182,7 +182,7 @@ TEST_CASE(
 
 TEST_CASE("bravo peer: a Go Bravo has not pinned hears so, and is never the reference") {
     Served served(false);
-    const GoPosition far{BravoRig::kLatitude1e7 + 5000000};
+    const GoPosition far{kFixLatitude1e7 + 5000000};
     served.seconds(3, true, &far);
     REQUIRE_FALSE(served.sent("health").empty());
     for (const std::string& health : served.sent("health"))
@@ -207,7 +207,7 @@ TEST_CASE("bravo peer: without a fix but with UTC, Bravo takes its Go's fresh po
     CHECK(field(observed[0], "sequence") == "0");
     CHECK(field(observed[0], "latitude_1e7") != "");
     CHECK(field(observed[0], "pressure_altitude_ft") == std::to_string(BravoRig::kAltitudeFt));
-    CHECK(std::stoul(field(observed[0], "at_s")) >= BravoRig::kBaseUtcS);
+    CHECK(std::stoul(field(observed[0], "at_s")) >= kBaseUtcS);
     CHECK(field(served.last_health(), "last_sequence") == "0");
     CHECK(served.rig.count_of("$PFLAA") == 0);
 }
@@ -459,8 +459,8 @@ TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtere
     Served served;
     const auto cockpit_second = [&served](uint32_t aircraft_address) {
         constexpr int8_t kCockpitDbm = -12;
-        const double latitude = BravoRig::kLatitude1e7 / 1e7;
-        const double longitude = BravoRig::kLongitude1e7 / 1e7;
+        const double latitude = kFixLatitude1e7 / 1e7;
+        const double longitude = kFixLongitude1e7 / 1e7;
         served.rig.hear(adsb::identification(kAircraft, 0, 4, 1, "FJABC"), kCockpitDbm);
         for (const bool odd : {false, true, false, true})
             served.rig.hear(adsb::airborne_position(kAircraft, 0, latitude, longitude, odd, 1500),

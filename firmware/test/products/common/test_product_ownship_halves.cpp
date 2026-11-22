@@ -10,7 +10,6 @@
 using namespace skyblip;
 
 namespace {
-constexpr uint32_t kBaseUtcS = Rig::kBaseUtcS;
 constexpr uint32_t kHalfMs = kHalfSecondFeedMs;
 constexpr uint32_t kLatencyMs = kFeedLatencyMs;
 }  // namespace

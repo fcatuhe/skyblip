@@ -8,12 +8,13 @@
 #include "products/common/services/record_store.h"
 #include "test/support/log_record_write.h"
 #include "test/support/store_rig.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kFlightSession = 1785628800;
+constexpr uint32_t kFlightSession = kBaseUtcS;
 constexpr uint32_t kCaptureSession = 9000;
 constexpr int kClaimCostMs =
     static_cast<int>(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs);

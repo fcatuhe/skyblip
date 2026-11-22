@@ -8,6 +8,7 @@
 #include "test/support/paired_link.h"
 #include "test/support/paired_products.h"
 #include "test/support/registry_frames.h"
+#include "test/support/timed_fix.h"
 
 using namespace skyblip;
 
@@ -45,21 +46,9 @@ struct Flight {
 
     // The Go's receiver where Bravo's is, both flying north at the same speed.
     void push_go_fix() {
-        gnss::GnssSolution solution{};
-        solution.fix_valid = true;
-        solution.utc_valid = true;
-        solution.utc_s = Rig::kBaseUtcS + pair.go.utc_offset_s;
-        solution.latitude_1e7 = BravoRig::kLatitude1e7;
-        solution.longitude_1e7 = BravoRig::kLongitude1e7;
-        solution.altitude_msl_mm = 0;
-        solution.altitude_hae_mm = gnss::kDefaultGeoidSeparationMm;
-        solution.geoid_measured = true;
-        solution.speed_mm_s = kSpeedMmS;
-        solution.satellites = 10;
-        solution.hdop_e2 = 100;
-        solution.vdop_e2 = 150;
-        solution.sentences = ++pair.go.fix_updates;
-        pair.go.product.bus().gnss.push(solution);
+        pair.go.product.bus().gnss.push(timed_fix({.utc_offset_s = pair.go.utc_offset_s,
+                                                   .sentences = ++pair.go.fix_updates,
+                                                   .speed_mm_s = kSpeedMmS}));
     }
 
     void push_fixes() {

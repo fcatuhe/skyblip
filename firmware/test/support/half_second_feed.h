@@ -28,7 +28,7 @@ inline void deliver(Rig& rig, const Solution& delivered, uint32_t& updates) {
     gnss::GnssSolution solution{};
     solution.fix_valid = delivered.fix_valid;
     solution.utc_valid = true;
-    solution.utc_s = Rig::kBaseUtcS + delivered.second + delivered.stamped_ahead_s;
+    solution.utc_s = kBaseUtcS + delivered.second + delivered.stamped_ahead_s;
     solution.utc_ms = static_cast<uint16_t>(delivered.utc_ms);
     solution.latitude_1e7 = 485000000 + static_cast<int32_t>(updates) * 100;
     solution.longitude_1e7 = 85000000;

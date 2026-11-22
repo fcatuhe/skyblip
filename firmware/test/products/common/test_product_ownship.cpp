@@ -379,7 +379,7 @@ TEST_CASE("product: with no fix the bus says how far the receiver has got") {
     // A date is read off a satellite, so it is the first evidence of one.
     gnss::GnssSolution dated{};
     dated.utc_valid = true;
-    dated.utc_s = Rig::kBaseUtcS;
+    dated.utc_s = kBaseUtcS;
     rig.product.bus().gnss.push(dated);
     rig.run(250, 300);
     CHECK(rig.state().gnss.stage == gnss::Stage::Solving);
@@ -402,7 +402,7 @@ TEST_CASE("product: a receiver restating its last fixed second does not wind the
     uint32_t now_ms = 1000;
     rig.seconds(now_ms, 3, 0, 500);
     const uint32_t anchored = rig.state().clock.utc_s;
-    REQUIRE(anchored == Rig::kBaseUtcS + 2);
+    REQUIRE(anchored == kBaseUtcS + 2);
 
     gnss::GnssSolution solving{};
     solving.utc_valid = true;
@@ -421,12 +421,12 @@ TEST_CASE("product: before any fix, the first dated sentence anchors the clock")
 
     gnss::GnssSolution dated{};
     dated.utc_valid = true;
-    dated.utc_s = Rig::kBaseUtcS;
+    dated.utc_s = kBaseUtcS;
     dated.sentences = ++rig.fix_updates;
     rig.product.bus().gnss.push(dated);
     rig.run(1000, 1950);
 
-    CHECK(rig.state().clock.utc_s == Rig::kBaseUtcS);
+    CHECK(rig.state().clock.utc_s == kBaseUtcS);
 }
 
 // A target that sends only a pressure altitude is compared with ours (#193), so ours must not
