@@ -21,7 +21,7 @@ class Untested(unittest.TestCase):
             self.write(header, "")
         self.write("simulator/frontends/browser.cpp", "")
         self.write("test/core/test_nmea.cpp", '#include "core/gnss/nmea.h"\n')
-        self.write("test/products/pages/test_radar.cpp", '#include "products/skyblip_go/pages/radar.h"\n')
+        self.write("test/products/skyblip_go/pages/pages/test_radar.cpp", '#include "products/skyblip_go/pages/radar.h"\n')
         self.write("protocols/adsl/test/test_packet.cpp", '#include "protocols/adsl/packet.h"\n')
 
     def tearDown(self):

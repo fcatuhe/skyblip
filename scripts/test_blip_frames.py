@@ -100,7 +100,7 @@ class Registry(unittest.TestCase):
         self.assertEqual(encoded.hex(), "a900050102" "02f4031864" "04f40502" "06f4" "0805" "0c06")
         self.assertEqual(frames.decode_frame(encoded), frame)
 
-    # The same bytes firmware/test/products/test_peer_frames.cpp pins, which a Go and a Bravo will speak.
+    # The same bytes firmware/test/products/common/test_peer_frames.cpp pins, which a Go and a Bravo will speak.
     def test_the_peer_frames_at_their_widest_are_these_bytes(self):
         for frame, pinned in PEER_FRAMES_AT_THEIR_WIDEST:
             with self.subTest(command=frame["command"]):

@@ -9,7 +9,7 @@
 // refused out loud - never handed down and hoped for.
 //
 // A link model and scripted frames, no device: the product's own two ends of the
-// range are walked in test/products/test_flight_log.cpp.
+// range are walked in test/products/common/test_flight_log.cpp.
 #include <cstdint>
 #include <cstdio>
 #include <cstring>

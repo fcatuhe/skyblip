@@ -41,12 +41,14 @@ AREAS = {
     "ports": "ports - the roles a product needs filled",
     "hardware": "hardware - one folder per part, driver against model",
     "boards": "boards - one assembly, its parts probed on both platforms",
+    "runtime": "runtime - the loop every service is written against",
     "products": "products - a SKU end to end, and the committed scenarios",
     "pages": "pages - the Go's glass, one page at a time, from a snapshot to pixels",
     "bravo": "bravo - skyBlip Bravo, the ADS-B receiver, end to end",
+    "simulator": "simulator - the world the host build flies in",
 }
 
-PRODUCT_AREAS = {"pages": "pages", "skyblip_bravo": "bravo"}
+PRODUCT_AREAS = {"skyblip_go/pages": "pages", "skyblip_bravo": "bravo"}
 
 Case = namedtuple("Case", "path line name suite")
 MARKER = "<!-- Written by scripts/behavior_index.py, which owns this file. -->"
@@ -316,7 +318,7 @@ def area_of(path):
     if parts[0] == "protocols":
         return "/".join(parts[:2] + parts[3:-1])
     if parts[1:2] == ["products"] and len(parts) > 3:
-        return PRODUCT_AREAS.get(parts[2], "products")
+        return PRODUCT_AREAS.get("/".join(parts[2:-1]), "products")
     return parts[1] if len(parts) > 2 else ""
 
 

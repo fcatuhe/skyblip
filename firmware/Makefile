@@ -57,7 +57,7 @@ VENDOR_SRC := $(wildcard vendor/monocypher/*.c)
 VENDOR_OBJ := $(patsubst %.c,$(BUILD)/%.o,$(VENDOR_SRC))
 
 # Tests mirror the tree in test/, never beside the code they test, except each protocol stack's own.
-TEST_SRC := $(filter-out test/fuzz/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp)) \
+TEST_SRC := $(filter-out test/fuzz/% test/twister/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp test/*/*/*/*.cpp)) \
             $(wildcard protocols/*/test/*.cpp protocols/*/test/*/*.cpp)
 
 # One harness per file, each linked against every host source as the suite is.
