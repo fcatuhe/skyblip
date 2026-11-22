@@ -1,5 +1,7 @@
 #include "core/flight/log_record.h"
 
+#include <cstring>
+
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
 #include "core/store/sector.h"
@@ -16,6 +18,8 @@ constexpr uint32_t kTimeOffsetCeilingS = 0xFFFF;
 constexpr uint16_t kHdopTenthsCeiling = 255;
 constexpr uint16_t kTrackMask = 0x01FF;
 constexpr uint32_t kChecksummedBytes = kLogRecordBytes - 2;
+constexpr uint32_t kFixBodyOffset = 2;
+static_assert(kFixBodyOffset + kLogFixBodyBytes == kChecksummedBytes);
 
 constexpr uint8_t kStatusFlagBatteryValid = 1u << 0;
 constexpr uint8_t kStatusFlagCharging = 1u << 1;
@@ -105,19 +109,24 @@ LogRecord log_record_from(const model::Ownship& own) {
     return record;
 }
 
-void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* out) {
-    put_offset(out + 0, record.utc_s, base_utc_s);
-    wire::put_uint32(out + 2, static_cast<uint32_t>(record.latitude_1e7));
-    wire::put_uint32(out + 6, static_cast<uint32_t>(record.longitude_1e7));
-    wire::put_uint16(out + 10, static_cast<uint16_t>(clamp_int16(record.altitude_msl_m)));
+void seal_log_fix(const uint8_t* body, uint32_t utc_s, uint32_t base_utc_s, uint8_t* out) {
+    std::memcpy(out + kFixBodyOffset, body, kLogFixBodyBytes);
+    put_offset(out, utc_s, base_utc_s);
+    seal(out);
+}
+
+void encode_log_fix_body(const LogRecord& record, uint8_t* body) {
+    wire::put_uint32(body + 0, static_cast<uint32_t>(record.latitude_1e7));
+    wire::put_uint32(body + 4, static_cast<uint32_t>(record.longitude_1e7));
+    wire::put_uint16(body + 8, static_cast<uint16_t>(clamp_int16(record.altitude_msl_m)));
     // INFO: fc 20nov26 EGM96 runs -107 m to +85 m, so the geoid separation fits one signed byte
-    out[12] = static_cast<uint8_t>(clamp_int8(record.altitude_hae_m - record.altitude_msl_m));
-    wire::put_uint16(out + 13, record.speed_q);
-    wire::put_uint16(out + 15, record.track_c9 & kTrackMask);
-    wire::put_uint16(out + 17, static_cast<uint16_t>(record.climb_e8));
-    out[19] = record.satellites;
+    body[10] = static_cast<uint8_t>(clamp_int8(record.altitude_hae_m - record.altitude_msl_m));
+    wire::put_uint16(body + 11, record.speed_q);
+    wire::put_uint16(body + 13, record.track_c9 & kTrackMask);
+    wire::put_uint16(body + 15, static_cast<uint16_t>(record.climb_e8));
+    body[17] = record.satellites;
     const uint32_t tenths = (record.hdop_e2 + 5u) / 10u;
-    out[20] = static_cast<uint8_t>(tenths > kHdopTenthsCeiling ? kHdopTenthsCeiling : tenths);
+    body[18] = static_cast<uint8_t>(tenths > kHdopTenthsCeiling ? kHdopTenthsCeiling : tenths);
 
     uint8_t flags = 0;
     if (record.fix_valid) flags |= kLogFlagFixValid;
@@ -128,8 +137,7 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* ou
     if (record.session_end) flags |= kLogFlagSessionEnd;
     flags |= static_cast<uint8_t>((record.flight_state & kLogFlagFlightStateMask)
                                   << kLogFlagFlightStateShift);
-    out[21] = flags;
-    seal(out);
+    body[19] = flags;
 }
 
 bool log_slot_erased(const uint8_t* raw, uint32_t bytes) { return store::erased(raw, bytes); }

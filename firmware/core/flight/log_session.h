@@ -29,7 +29,7 @@ class LogSession {
 
     int queued() const { return count_; }
     // INFO: fc 20nov26 on the ground the ring is a holding pen, overwritten and never written out
-    bool peek(LogRecord& out);
+    bool peek(uint32_t base_utc_s, uint8_t* out);
     void commit();
 
     uint32_t dropped() const { return dropped_; }
@@ -37,10 +37,15 @@ class LogSession {
     void reset();
 
    private:
+    struct Held {
+        uint32_t utc_s;
+        uint8_t body[kLogFixBodyBytes];
+    };
+
     void push(const LogRecord& record);
     bool flying(const model::Ownship& own, bool rolling, uint32_t now_ms);
 
-    LogRecord ring_[kLogPreTakeoffRecords]{};
+    Held ring_[kLogPreTakeoffRecords]{};
     int head_{0};
     int count_{0};
     int to_flush_{0};

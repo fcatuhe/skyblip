@@ -6,6 +6,7 @@
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "products/common/services/record_store.h"
+#include "test/support/log_record_write.h"
 #include "test/support/store_rig.h"
 
 using namespace skyblip;

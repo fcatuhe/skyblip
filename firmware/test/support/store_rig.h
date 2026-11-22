@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 
+#include "boards/lilygo/t_echo_plus/log_flash.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/random.h"
@@ -26,7 +27,8 @@ struct StoreRig {
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
-    common::RecordPool pool{context, go::book_flash_in_dwell};
+    store::SectorSlots<boards::t_echo_plus::kLogSectors> log_sectors{};
+    common::RecordPool pool{context, go::book_flash_in_dwell, log_sectors.table()};
     common::RecordStore flights{pool, store::SectorOwner::Flights};
     common::RecordStore capture{pool, store::SectorOwner::Diagnostics};
 

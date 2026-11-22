@@ -71,7 +71,7 @@ The factory UF2 bootloader stays. It chain-loads MCUboot from the application or
 | `storage_partition` | 0xEA000 | 0xA000 | The bootloader's `DFU_APP_DATA_RESERVED`, so no `.uf2` reaches it. |
 | `uf2_boot_partition` | 0xF4000 | 0xC000 | The factory bootloader, its MBR parameters and its settings. |
 | `slot1_partition`, on the NOR | 0x0 | 0xB5000 | The secondary slot, the same size as slot0, as on the Go. |
-| `log_partition`, on the NOR | 0xB5000 | 0x200000 | The flights and the capture, 512 sectors of 4 KB, which is `store::kMaxPoolSectors`. The NOR's last 5.3 MiB are unused. |
+| `log_partition`, on the NOR | 0xB5000 | 0x200000 | The flights and the capture, 512 sectors of 4 KB, `kLogSectors` in `log_flash.h`. The NOR's last 5.3 MiB are unused. |
 
 `USER_FLASH_END` is `BOOTLOADER_REGION_START - DFU_APP_DATA_RESERVED` = 0xF4000 - 10 * 4096 = 0xEA000 in the factory bootloader (`uf2cfg.h:25-26`, `Makefile:139`, `linker/nrf52840.ld:14`), and the unit's `CURRENT.UF2` covers 0x1000..0xEA000 and nothing above (`factory/README.md`). SoftRF finds the string `MeshTracker-X1` in the bootloader region at 0xF4000 (`nRF52.cpp:771-879`), which agrees on where the bootloader sits. #169's SWD session reads that address from `UICR`. Another unit may ship another bootloader: Meshtastic-Android's `maintenance_uf2.json` lists the Board-IDs `nRF52840-MeshTracker-X1-v1`, which our unit reports, and `nRF52840-MeshTracker-X1`. `scripts/mkuf2.py` holds every `.uf2` to this window, and `scripts/test_mkuf2.py` reads the window back from this devicetree.
 

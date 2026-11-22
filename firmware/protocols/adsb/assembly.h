@@ -100,14 +100,21 @@ class Assembly {
     uint32_t implausible() const { return implausible_; }
 
    private:
+    // INFO: fc 21nov26 no decoded value passes Gillham's 126,700 ft, so 24 bits hold it beside the
+    // flag
     struct Timed {
-        int32_t value{0};
+        constexpr Timed() : value(0), valid(0) {}
+        constexpr Timed(int32_t field_value, uint32_t field_at_ms)
+            : value(field_value), valid(1), at_ms(field_at_ms) {}
+        int32_t value : 24;
+        uint32_t valid : 1;
         uint32_t at_ms{0};
-        bool valid{false};
     };
 
+    // INFO: fc 21nov26 no odd flag: the member it sits in, even or odd, already says which half
     struct CprHalf {
-        Cpr cpr;
+        uint32_t latitude_cpr{0};
+        uint32_t longitude_cpr{0};
         uint32_t at_ms{0};
         CprFormat format{CprFormat::Airborne};
         bool slow{false};
@@ -166,7 +173,9 @@ class Assembly {
     void fold_position(Aircraft& aircraft, CprFormat format, const Cpr& cpr, bool slow,
                        uint32_t at_ms, const Receipt& received, const Reception& reception,
                        const Reference& reference);
-    static bool confirm(Aircraft& aircraft, const CprHalf& newest, const CprPosition& local);
+    static bool confirm(Aircraft& aircraft, const Cpr& cpr, const CprHalf& newest,
+                        const CprPosition& local);
+    static Cpr cpr_of(const CprHalf& half, bool odd);
     static void fold_velocity(Aircraft& aircraft, const Velocity& velocity, uint32_t at_ms);
     static void fold_surface_motion(Aircraft& aircraft, const SurfacePosition& surface,
                                     uint32_t at_ms);

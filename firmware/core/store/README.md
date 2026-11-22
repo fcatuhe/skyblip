@@ -36,9 +36,9 @@ The session-start bit tells a whole session from what is left once the ring recy
 
 One counter per ring would lose the order in which the two rings claimed.
 
-The allocator keeps every sector's owner, sequence and session id in RAM. `session_run()` walks a ring in write order, one run of a session's back-to-back sectors at a time. `session_sector()` gives the nth sector of a session, counted from the oldest it still holds. The other ring claims in between, so neither may be arithmetic on a first sector. `recycled_sectors()` counts the sectors each ring has recycled since boot from the front of the session it last took one from (`../comms/README.md`, A record keeps its index while the ring rotates).
+The allocator keeps every sector's owner, sequence and session id in RAM, in a `SectorSlots` table the product sizes to its board's partition: `kLogSectors` in the board's `log_flash.h`, which a `static_assert` holds to the devicetree. A sector costs 9 bytes, because the session-start flag rides in the top bit of the owner's byte. `session_run()` walks a ring in write order, one run of a session's back-to-back sectors at a time. `session_sector()` gives the nth sector of a session, counted from the oldest it still holds. The other ring claims in between, so neither may be arithmetic on a first sector. `recycled_sectors()` counts the sectors each ring has recycled since boot from the front of the session it last took one from (`../comms/README.md`, A record keeps its index while the ring rotates).
 
-Both run on the service loop that arms the radio, so neither may scan the pool once per sector. A scan visits all 330 sectors on the T-Echo, at about 1.4 us a sector. A run costs three scans. `session_sector()` bisects on sequence: the nth sector is at least n above the session's lowest, and at least as far below its highest as the session has sectors after it.
+Both run on the service loop that arms the radio, so neither may scan the pool once per sector. A scan visits all 298 sectors on the T-Echo, at about 1.4 us a sector. A run costs three scans. `session_sector()` bisects on sequence: the nth sector is at least n above the session's lowest, and at least as far below its highest as the session has sectors after it.
 
 ## The claim
 

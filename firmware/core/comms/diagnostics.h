@@ -149,18 +149,25 @@ class DiagnosticsReport {
     enum class Kind : uint8_t { Unsigned, Integer, Boolean, Text, UnsignedArray };
     enum class Array : uint8_t { AdsbRssi, AdsbFormats };
 
+    // INFO: fc 21nov26 every value fits 32 bits and every key a byte, so a field is 8 bytes on
+    // silicon
     struct Field {
-        uint32_t key;
-        const char* text;
-        int64_t value;
+        uint8_t key;
         Kind kind;
         Group group;
+        union {
+            uint32_t value;
+            int32_t integer;
+            const char* text;
+        };
     };
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_capture(const Diagnostics& diagnostics);
-    void add(Group group, uint32_t key, Kind kind, int64_t value, const char* text = nullptr);
-    void add_array(Group group, uint32_t key, Array array);
+    Field* add(Group group, uint8_t key, Kind kind, uint32_t value);
+    void add_integer(Group group, uint8_t key, int32_t value);
+    void add_text(Group group, uint8_t key, const char* text);
+    void add_array(Group group, uint8_t key, Array array);
     const uint32_t* values_of(const Field& field, int& count) const;
     int field_bytes(const Field& field) const;
 

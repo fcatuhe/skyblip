@@ -12,12 +12,14 @@ void LogSession::push(const LogRecord& record) {
         if (open_ || closing_) dropped_++;
         if (to_flush_ > 0) to_flush_--;
     }
-    ring_[(head_ + count_) % kLogPreTakeoffRecords] = record;
+    Held& held = ring_[(head_ + count_) % kLogPreTakeoffRecords];
+    held.utc_s = record.utc_s;
+    encode_log_fix_body(record, held.body);
     count_++;
 }
 
 // INFO: fc 20sep26 a closed session yields what it held at the landing, never a later ground sample
-bool LogSession::peek(LogRecord& out) {
+bool LogSession::peek(uint32_t base_utc_s, uint8_t* out) {
     if (!open_ && to_flush_ == 0) {
         closing_ = false;
         return false;
@@ -26,7 +28,7 @@ bool LogSession::peek(LogRecord& out) {
         closing_ = false;
         return false;
     }
-    out = ring_[head_];
+    seal_log_fix(ring_[head_].body, ring_[head_].utc_s, base_utc_s, out);
     return true;
 }
 

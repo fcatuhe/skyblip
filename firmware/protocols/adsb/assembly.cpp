@@ -100,7 +100,7 @@ bool Assembly::fold(const Message& message, uint32_t at_ms, const Receipt& recei
             break;
         case Kind::SurfacePosition: {
             const SurfacePosition& surface = message.surface_position;
-            aircraft->air_ground = {state_code(AirGround::Ground), at_ms, true};
+            aircraft->air_ground = {state_code(AirGround::Ground), at_ms};
             fold_surface_motion(*aircraft, surface, at_ms);
             const bool slow =
                 surface.speed_mkt.valid && surface.speed_mkt.value < kSlowSurfaceSpeedCeilingMkt;
@@ -110,17 +110,17 @@ bool Assembly::fold(const Message& message, uint32_t at_ms, const Receipt& recei
         }
         case Kind::AirbornePosition: {
             const AirbornePosition& airborne = message.airborne_position;
-            aircraft->air_ground = {state_code(AirGround::Airborne), at_ms, true};
+            aircraft->air_ground = {state_code(AirGround::Airborne), at_ms};
             if (airborne.pressure_altitude_valid)
-                aircraft->pressure_altitude_ft = {airborne.pressure_altitude_ft, at_ms, true};
+                aircraft->pressure_altitude_ft = {airborne.pressure_altitude_ft, at_ms};
             if (airborne.gnss_height_valid)
-                aircraft->gnss_height_ft = {airborne.gnss_height_ft, at_ms, true};
+                aircraft->gnss_height_ft = {airborne.gnss_height_ft, at_ms};
             fold_position(*aircraft, CprFormat::Airborne, airborne.cpr, false, at_ms, received,
                           reception, reference);
             break;
         }
         case Kind::Velocity:
-            aircraft->air_ground = {state_code(AirGround::Airborne), at_ms, true};
+            aircraft->air_ground = {state_code(AirGround::Airborne), at_ms};
             fold_velocity(*aircraft, message.velocity, at_ms);
             break;
         case Kind::OperationalStatus: {
@@ -140,9 +140,9 @@ bool Assembly::fold(const Message& message, uint32_t at_ms, const Receipt& recei
                             message.kind == Kind::AirbornePosition ||
                             message.kind == Kind::Velocity;
     if (!says_where && message.capability == kGroundCapability)
-        aircraft->air_ground = {state_code(AirGround::Ground), at_ms, true};
+        aircraft->air_ground = {state_code(AirGround::Ground), at_ms};
     if (!says_where && message.capability == kAirborneCapability)
-        aircraft->air_ground = {state_code(AirGround::Airborne), at_ms, true};
+        aircraft->air_ground = {state_code(AirGround::Airborne), at_ms};
     observe(*aircraft, out);
     return true;
 }
@@ -210,7 +210,7 @@ void Assembly::fold_position(Aircraft& aircraft, CprFormat format, const Cpr& cp
                              uint32_t at_ms, const Receipt& received, const Reception& reception,
                              const Reference& reference) {
     CprHalf& half = cpr.odd ? aircraft.odd : aircraft.even;
-    half = CprHalf{cpr, at_ms, format, slow, true};
+    half = CprHalf{cpr.latitude_cpr, cpr.longitude_cpr, at_ms, format, slow, true};
     aircraft.range_current = false;
     const CprHalf& other = cpr.odd ? aircraft.even : aircraft.odd;
 
@@ -229,7 +229,7 @@ void Assembly::fold_position(Aircraft& aircraft, CprFormat format, const Cpr& cp
             implausible_++;
             return;
         }
-        if (!aircraft.confirmed && !confirm(aircraft, half, local)) {
+        if (!aircraft.confirmed && !confirm(aircraft, cpr, half, local)) {
             implausible_++;
             aircraft.position_valid = false;
             return;
@@ -246,7 +246,7 @@ void Assembly::fold_position(Aircraft& aircraft, CprFormat format, const Cpr& cp
     if (!pairs(half, other)) return;
     if (format == CprFormat::Surface && !reference.valid) return;
     CprPosition decoded;
-    if (!cpr_global(format, cpr, other.cpr, reference.position, decoded)) return;
+    if (!cpr_global(format, cpr, cpr_of(other, !cpr.odd), reference.position, decoded)) return;
     if (reference.valid && distance_m(reference.position, decoded) > kAdsbRangeCeilingM) {
         implausible_++;
         aircraft.even.held = false;
@@ -259,12 +259,13 @@ void Assembly::fold_position(Aircraft& aircraft, CprFormat format, const Cpr& cp
     aircraft.odd.founding = true;
 }
 
-bool Assembly::confirm(Aircraft& aircraft, const CprHalf& newest, const CprPosition& local) {
-    const CprHalf& other = newest.cpr.odd ? aircraft.even : aircraft.odd;
+bool Assembly::confirm(Aircraft& aircraft, const Cpr& cpr, const CprHalf& newest,
+                       const CprPosition& local) {
+    const CprHalf& other = cpr.odd ? aircraft.even : aircraft.odd;
     const bool independent = pairs(newest, other) && !other.founding;
     CprPosition global;
     if (!independent ||
-        !cpr_global(newest.format, newest.cpr, other.cpr, aircraft.position, global))
+        !cpr_global(newest.format, cpr, cpr_of(other, !cpr.odd), aircraft.position, global))
         return true;
     aircraft.confirmed = agrees(global, local, newest.format);
     return aircraft.confirmed;
@@ -280,11 +281,11 @@ void Assembly::fold_velocity(Aircraft& aircraft, const Velocity& velocity, uint3
         aircraft.motion_at_ms = at_ms;
     }
     if (velocity.climb_fpm.valid) {
-        aircraft.climb_fpm = {velocity.climb_fpm.value, at_ms, true};
+        aircraft.climb_fpm = {velocity.climb_fpm.value, at_ms};
         aircraft.climb_source = velocity.climb_source;
     }
     if (velocity.gnss_minus_pressure_ft.valid && !velocity.gnss_minus_pressure_ft.saturated)
-        aircraft.height_difference_ft = {velocity.gnss_minus_pressure_ft.value, at_ms, true};
+        aircraft.height_difference_ft = {velocity.gnss_minus_pressure_ft.value, at_ms};
 }
 
 void Assembly::fold_surface_motion(Aircraft& aircraft, const SurfacePosition& surface,
@@ -364,6 +365,10 @@ void Assembly::observe(const Aircraft& aircraft, Track& out) {
     out.gva_valid = aircraft.gva_valid;
 }
 
+Cpr Assembly::cpr_of(const CprHalf& half, bool odd) {
+    return Cpr{odd, half.latitude_cpr, half.longitude_cpr};
+}
+
 bool Assembly::pairs(const CprHalf& newest, const CprHalf& other) {
     return other.held && other.format == newest.format &&
            apart_ms(newest.at_ms, other.at_ms) <=
@@ -427,7 +432,7 @@ int32_t Assembly::range_now(const Aircraft& aircraft, const Reference& reference
         (!aircraft.even.held || elapsed_ms(aircraft.odd.at_ms, aircraft.even.at_ms) > 0);
     const CprHalf& newest = odd_newest ? aircraft.odd : aircraft.even;
     if (!newest.held) return kUnknownRangeM;
-    return tentative_range_m(newest.format, newest.cpr, reference);
+    return tentative_range_m(newest.format, cpr_of(newest, odd_newest), reference);
 }
 
 int32_t Assembly::range_of(const Message& message, const Reference& reference) {

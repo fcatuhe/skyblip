@@ -22,8 +22,11 @@ constexpr uint32_t kAdsbDesignAircraft = 100;
 constexpr uint32_t kAdsbSquittersPerAircraftE1 = 62;
 // TODO: fc 11nov26 a drain window chosen and not yet measured, until the #169 bench reads the drops
 constexpr uint32_t kAdsbQueueDrainWindowMs = 100;
-constexpr int kAdsbQueueFrames = static_cast<int>(
-    kAdsbDesignAircraft * kAdsbSquittersPerAircraftE1 * kAdsbQueueDrainWindowMs / 10000);
+constexpr int kAdsbLoadFrames = static_cast<int>(kAdsbDesignAircraft * kAdsbSquittersPerAircraftE1 *
+                                                 kAdsbQueueDrainWindowMs / 10000);
+// INFO: fc 21nov26 bus::Queue masks its index, so the queue takes the power of two above the load
+constexpr int kAdsbQueueFrames = 64;
+static_assert(kAdsbQueueFrames >= kAdsbLoadFrames && kAdsbQueueFrames < 2 * kAdsbLoadFrames);
 
 }  // namespace skyblip::events
 

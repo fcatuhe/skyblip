@@ -49,10 +49,12 @@ TEST_CASE("adsb receiver: the frame rate is the last whole second, and a silent 
     CHECK(statistics.frames == 3);
 }
 
-// 100 aircraft at DO-260B's average of 6.2 squitters a second, over 100 ms, is 62 frames.
+// 100 aircraft at DO-260B's average of 6.2 squitters a second, over 100 ms, is 62 frames, and the
+// queue takes the power of two above it.
 TEST_CASE("adsb receiver: the queue holds the average load over the drain window") {
     CHECK(events::kAdsbDesignAircraft == adsb::Assembly::kMaxAircraft);
-    CHECK(events::kAdsbQueueFrames == 62);
+    CHECK(events::kAdsbLoadFrames == 62);
+    CHECK(events::kAdsbQueueFrames == 64);
     bus::AdsbQueue queue;
     events::AdsbFrame frame{};
     for (int i = 0; i < events::kAdsbQueueFrames; i++) CHECK(queue.push(frame));

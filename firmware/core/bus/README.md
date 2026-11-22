@@ -1,6 +1,6 @@
 # core/bus
 
-`bus.h` holds what happened. Each queue has one producer and one consumer, and its owner drains it to exhaustion. An event nobody popped is lost and counted in `Queue::dropped`. `bus::Bus` holds the queues both products drain, and `bus::GoBus` adds the Go's radio, central and IMU queues, so Bravo holds no slot for parts it does not have. Producers push straight onto their queue and wake the loop.
+`bus.h` holds what happened. Each queue has one producer and one consumer, and its owner drains it to exhaustion. An event nobody popped is lost and counted in `Queue::dropped`. A queue holds a power of two of slots and fills every one: its head and tail are free-running 16-bit counters, masked into the slots, so it needs no spare slot to tell full from empty. `bus::Bus` holds the queues both products drain, and `bus::GoBus` adds the Go's radio, central and IMU queues, so Bravo holds no slot for parts it does not have. Producers push straight onto their queue and wake the loop.
 
 `state.h` holds what is true now: a blackboard every service can read, with no history. Each field has exactly one writer. The compiler does not enforce it, so the table below does, and a second writer in it is a bug. A group holds one subject, so it may list a writer for each of its parts.
 

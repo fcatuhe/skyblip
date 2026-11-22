@@ -2,6 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_PRODUCT_H
 
 #include "boards/seeed/meshtracker_x1/board.h"
+#include "boards/seeed/meshtracker_x1/log_flash.h"
 #include "core/indication/lamp.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "products/common/services/alarm.h"
@@ -154,7 +155,8 @@ class Product {
     Board board_;
     ports::Roles roles_{board_.roles()};
     runtime::Context context_{roles_, bus_, state_, diagnostics_};
-    common::RecordPool pool_{context_, book_flash_beside_adsb};
+    store::SectorSlots<boards::meshtracker_x1::kLogSectors> log_sectors_{};
+    common::RecordPool pool_{context_, book_flash_beside_adsb, log_sectors_.table()};
     common::RecordStore flights_store_{pool_, store::SectorOwner::Flights};
     common::RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};
     CaptureSettings capture_settings_{settings_};

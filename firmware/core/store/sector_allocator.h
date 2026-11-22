@@ -7,8 +7,6 @@
 
 namespace skyblip::store {
 
-constexpr uint32_t kMaxPoolSectors = 512;
-
 // INFO: fc 15oct26 170 slots at a record a second is 2.8 min a sector, 128 of 298 for six hours
 constexpr uint32_t kFlightsFloorHours = 6;
 
@@ -32,8 +30,27 @@ struct Claim {
     bool session_start{false};
 };
 
+struct SectorTable {
+    uint32_t* sequence;
+    uint32_t* session_id;
+    uint8_t* label;
+    uint32_t capacity;
+};
+
+// INFO: fc 21nov26 the product holds one sized for its board's partition, a table entry per sector
+template <uint32_t Sectors>
+struct SectorSlots {
+    uint32_t sequences[Sectors]{};
+    uint32_t session_ids[Sectors]{};
+    uint8_t labels[Sectors]{};
+
+    SectorTable table() { return SectorTable{sequences, session_ids, labels, Sectors}; }
+};
+
 class SectorAllocator {
    public:
+    explicit SectorAllocator(SectorTable table) : table_(table) {}
+
     bool configure(uint32_t sector_count, uint32_t floor_sectors);
     void reset();
 
@@ -87,7 +104,7 @@ class SectorAllocator {
     bool next_free(uint32_t& sector) const;
     bool evictable(SectorOwner owner, uint32_t& sector) const;
     bool reserved(uint32_t sector) const;
-    void take(uint32_t sector, SectorOwner owner, uint32_t session_id);
+    void take(uint32_t sector, SectorOwner owner, uint32_t session_id, bool session_start);
     void note_taken(uint32_t sector);
     void note_recycled(SectorOwner owner, uint32_t session_id);
     bool owns_session(SectorOwner owner, uint32_t session_id) const;
@@ -95,11 +112,9 @@ class SectorAllocator {
     bool lowest_above(const Match& match, uint32_t above, uint32_t& sector,
                       uint32_t& sequence) const;
     bool matches(const Match& match, uint32_t sector) const;
+    uint8_t code_of(uint32_t sector) const;
 
-    uint32_t sequence_of_[kMaxPoolSectors]{};
-    uint32_t session_id_of_[kMaxPoolSectors]{};
-    uint8_t owner_of_[kMaxPoolSectors]{};
-    bool session_start_[kMaxPoolSectors]{};
+    const SectorTable table_;
     uint32_t lost_sectors_[2]{};
     Recycled recycled_[2]{};
     Spare spares_[2]{};

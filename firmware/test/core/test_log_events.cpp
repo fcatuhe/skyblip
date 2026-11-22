@@ -8,6 +8,7 @@
 #include "doctest/doctest.h"
 #include "protocols/common/crc.h"
 #include "test/support/log_event_read.h"
+#include "test/support/log_record_write.h"
 
 using namespace skyblip;
 

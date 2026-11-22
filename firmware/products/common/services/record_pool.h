@@ -18,8 +18,8 @@ using FlashWindow = bool (*)(runtime::Context& context, uint32_t pass_ms, uint32
 
 class RecordPool {
    public:
-    RecordPool(runtime::Context& context, FlashWindow flash_window)
-        : context_(context), flash_window_(flash_window) {}
+    RecordPool(runtime::Context& context, FlashWindow flash_window, store::SectorTable sectors)
+        : context_(context), flash_window_(flash_window), allocator_(sectors) {}
 
     bool open();
     bool available() const { return available_; }
@@ -64,7 +64,7 @@ class RecordPool {
 
     runtime::Context& context_;
     const FlashWindow flash_window_;
-    store::SectorAllocator allocator_{};
+    store::SectorAllocator allocator_;
     uint32_t sector_bytes_{0};
     uint32_t sector_count_{0};
     uint32_t slots_per_sector_{0};

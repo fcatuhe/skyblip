@@ -36,7 +36,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
     if (system) {
         add(Group::System, link::diagnostics_key::kUptimeS, Kind::Unsigned, diagnostics.uptime_s);
         add(Group::System, link::diagnostics_key::kReset, Kind::Unsigned,
-            static_cast<int64_t>(diagnostics.reset));
+            static_cast<uint32_t>(diagnostics.reset));
         add(Group::System, link::diagnostics_key::kLinkDrops, Kind::Unsigned,
             diagnostics.link_drops);
         add(Group::System, link::diagnostics_key::kLinkDropReason, Kind::Unsigned,
@@ -44,7 +44,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
     }
 
     if (radio) {
-        add(Group::Radio, link::diagnostics_key::kNoiseDbm, Kind::Integer, diagnostics.noise_dbm);
+        add_integer(Group::Radio, link::diagnostics_key::kNoiseDbm, diagnostics.noise_dbm);
         add(Group::Radio, link::diagnostics_key::kDutyPermille, Kind::Unsigned,
             diagnostics.duty_permille);
         add(Group::Radio, link::diagnostics_key::kRxOk, Kind::Unsigned, diagnostics.rx_ok);
@@ -91,7 +91,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.tx_redrawn_for_fix);
         if (diagnostics.no_tx != timing::NoTx::None)
             add(Group::Radio, link::diagnostics_key::kNoTx, Kind::Unsigned,
-                static_cast<int64_t>(diagnostics.no_tx));
+                static_cast<uint32_t>(diagnostics.no_tx));
     }
 
     if (traffic) {
@@ -112,7 +112,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         // INFO: fc 20nov26 a receiver silently at another rate looks fitted, the top support case
         add(Group::Gnss, link::diagnostics_key::kBaud, Kind::Unsigned, diagnostics.gnss_baud);
         add(Group::Gnss, link::diagnostics_key::kConfig, Kind::Unsigned,
-            static_cast<int64_t>(diagnostics.gnss_config));
+            static_cast<uint32_t>(diagnostics.gnss_config));
         add(Group::Gnss, link::diagnostics_key::kRaises, Kind::Unsigned, diagnostics.gnss_raises);
         add(Group::Gnss, link::diagnostics_key::kRaiseFallbacks, Kind::Unsigned,
             diagnostics.gnss_raise_fallbacks);
@@ -124,10 +124,9 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.gnss_overruns);
         add(Group::Gnss, link::diagnostics_key::kIdentified, Kind::Boolean,
             diagnostics.gnss_identified ? 1 : 0);
-        add(Group::Gnss, link::diagnostics_key::kFirmware, Kind::Text, 0,
-            diagnostics.gnss_firmware);
+        add_text(Group::Gnss, link::diagnostics_key::kFirmware, diagnostics.gnss_firmware);
         add(Group::Gnss, link::diagnostics_key::kReject, Kind::Unsigned,
-            static_cast<int64_t>(diagnostics.gnss_reject));
+            static_cast<uint32_t>(diagnostics.gnss_reject));
         add(Group::Gnss, link::diagnostics_key::kRejected, Kind::Unsigned,
             diagnostics.gnss_rejected);
         // INFO: fc 20nov26 absent rather than zero, since 0 m is what a perfect residual reports
@@ -149,18 +148,18 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Power, link::diagnostics_key::kCharging, Kind::Boolean,
             diagnostics.battery.charging ? 1 : 0);
         add(Group::Power, link::diagnostics_key::kPowerLevel, Kind::Unsigned,
-            static_cast<int64_t>(diagnostics.power_level));
+            static_cast<uint32_t>(diagnostics.power_level));
         add(Group::Power, link::diagnostics_key::kSupplyWarnings, Kind::Unsigned,
             diagnostics.supply_warnings);
         add(Group::Power, link::diagnostics_key::kImplausible, Kind::Unsigned,
             diagnostics.battery_implausible);
         // INFO: fc 20nov26 no reading is no key, as 0.0 C is a plausible hangar morning
         if (diagnostics.die_valid)
-            add(Group::Power, link::diagnostics_key::kDieTemperatureC, Kind::Integer,
-                whole_celsius(diagnostics.die_dc));
+            add_integer(Group::Power, link::diagnostics_key::kDieTemperatureC,
+                        whole_celsius(diagnostics.die_dc));
         if (diagnostics.charge != power::ChargeCondition::Unknown)
             add(Group::Power, link::diagnostics_key::kCharge, Kind::Unsigned,
-                static_cast<int64_t>(diagnostics.charge));
+                static_cast<uint32_t>(diagnostics.charge));
         add(Group::Power, link::diagnostics_key::kChargeWarnings, Kind::Unsigned,
             diagnostics.charge_warnings);
     }
@@ -205,7 +204,7 @@ void DiagnosticsReport::add_capture(const Diagnostics& diagnostics) {
     add(Group::Capture, key::kArmed, Kind::Boolean, diagnostics.capture_armed);
     if (diagnostics.capture_armed)
         add(Group::Capture, key::kProfile, Kind::Unsigned,
-            static_cast<int64_t>(diagnostics.capture_profile));
+            static_cast<uint32_t>(diagnostics.capture_profile));
     add(Group::Capture, key::kSession, Kind::Unsigned, diagnostics.capture_session);
     add(Group::Capture, key::kRecords, Kind::Unsigned, diagnostics.capture_records);
     add(Group::Capture, key::kRecordsDropped, Kind::Unsigned, diagnostics.capture_dropped);
@@ -228,14 +227,28 @@ const char* capture_profile_word(CaptureProfile profile) {
     return "STOP";
 }
 
-void DiagnosticsReport::add(Group group, uint32_t key, Kind kind, int64_t value, const char* text) {
-    if (count_ >= kMaxFields) return;
-    fields_[count_++] = Field{key, text, value, kind, group};
+DiagnosticsReport::Field* DiagnosticsReport::add(Group group, uint8_t key, Kind kind,
+                                                 uint32_t value) {
+    if (count_ >= kMaxFields) return nullptr;
+    Field& field = fields_[count_++];
+    field.key = key;
+    field.kind = kind;
+    field.group = group;
+    field.value = value;
+    return &field;
+}
+
+void DiagnosticsReport::add_integer(Group group, uint8_t key, int32_t value) {
+    if (Field* field = add(group, key, Kind::Integer, 0)) field->integer = value;
+}
+
+void DiagnosticsReport::add_text(Group group, uint8_t key, const char* text) {
+    if (Field* field = add(group, key, Kind::Text, 0)) field->text = text;
 }
 
 // INFO: fc 18nov26 a field names its array, not its address, so a copied report reads its own
-void DiagnosticsReport::add_array(Group group, uint32_t key, Array array) {
-    add(group, key, Kind::UnsignedArray, static_cast<int64_t>(array));
+void DiagnosticsReport::add_array(Group group, uint8_t key, Array array) {
+    add(group, key, Kind::UnsignedArray, static_cast<uint32_t>(array));
 }
 
 const uint32_t* DiagnosticsReport::values_of(const Field& field, int& count) const {
@@ -249,9 +262,8 @@ const uint32_t* DiagnosticsReport::values_of(const Field& field, int& count) con
 
 int DiagnosticsReport::field_bytes(const Field& field) const {
     switch (field.kind) {
-        case Kind::Unsigned:
-            return cbor::unsigned_entry_bytes(field.key, static_cast<uint64_t>(field.value));
-        case Kind::Integer: return cbor::integer_entry_bytes(field.key, field.value);
+        case Kind::Unsigned: return cbor::unsigned_entry_bytes(field.key, field.value);
+        case Kind::Integer: return cbor::integer_entry_bytes(field.key, field.integer);
         case Kind::Boolean: return cbor::boolean_entry_bytes(field.key);
         case Kind::Text: return cbor::text_entry_bytes(field.key, field.text);
         case Kind::UnsignedArray: {
@@ -303,10 +315,8 @@ int DiagnosticsReport::next_frame(int payload_bytes, uint8_t* out, int capacity)
     for (int i = 0; i < packed; i++) {
         const Field& field = fields_[at_ + i];
         switch (field.kind) {
-            case Kind::Unsigned:
-                writer.add_unsigned(field.key, static_cast<uint64_t>(field.value));
-                break;
-            case Kind::Integer: writer.add_integer(field.key, field.value); break;
+            case Kind::Unsigned: writer.add_unsigned(field.key, field.value); break;
+            case Kind::Integer: writer.add_integer(field.key, field.integer); break;
             case Kind::Boolean: writer.add_boolean(field.key, field.value != 0); break;
             case Kind::Text: writer.add_text(field.key, field.text); break;
             case Kind::UnsignedArray: {
