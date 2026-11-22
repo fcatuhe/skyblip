@@ -1,6 +1,7 @@
 // What the device sensed: a fix, a PPS edge, a burst, the barometer, the hub, the cell, a thumb.
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/diagnostics_round_trip.h"
 
 using namespace skyblip;

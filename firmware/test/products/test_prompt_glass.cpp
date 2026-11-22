@@ -2,8 +2,8 @@
 #include <cstring>
 #include <string>
 
-#include "core/comms/config.h"
 #include "doctest/doctest.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/frame.h"
@@ -18,9 +18,9 @@ bool same(const go::Glass& a, const go::Glass& b) {
     return std::memcmp(a.data(), b.data(), go::Glass::kBytes) == 0;
 }
 
-go::Glass confirm(comms::Pending pending, const char* detail, uint32_t seconds) {
+go::Glass confirm(common::Pending pending, const char* detail, uint32_t seconds) {
     go::ConfirmSnapshot snapshot;
-    snapshot.title = comms::pending_title(pending);
+    snapshot.title = common::pending_title(pending);
     snapshot.detail = detail;
     snapshot.seconds_left = seconds;
     go::Glass glass;
@@ -36,13 +36,13 @@ TEST_CASE("prompt glass: a set reads its changes against the unit's settings, as
     REQUIRE(simulator::draw_prompt(
         glass, "set", "{\"command\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":\"metric\"}",
         "{\"command\":\"set\",\"callsign\":\"F-JABC\",\"units\":\"nautical\"}", 27));
-    CHECK(same(glass, confirm(comms::Pending::Set, "CALLSIGN F-JXYZ\nUNITS METRIC", 27)));
+    CHECK(same(glass, confirm(common::Pending::Set, "CALLSIGN F-JXYZ\nUNITS METRIC", 27)));
 
     // A key the unit already holds is no change, and is not listed.
     REQUIRE(simulator::draw_prompt(
         glass, "set", "{\"command\":\"set\",\"callsign\":\"F-JABC\",\"units\":\"metric\"}",
         "{\"command\":\"set\",\"callsign\":\"F-JABC\",\"units\":\"nautical\"}", 27));
-    CHECK(same(glass, confirm(comms::Pending::Set, "UNITS METRIC", 27)));
+    CHECK(same(glass, confirm(common::Pending::Set, "UNITS METRIC", 27)));
 }
 
 // A plain Go paired with a Bravo confirms soft and loud as its ALARM row reads them.
@@ -52,20 +52,20 @@ TEST_CASE("prompt glass: a paired plain Go's soft and loud read BRAVO SOFT and B
     const char* settings = "{\"command\":\"set\",\"alarm\":\"visual\"}";
     REQUIRE(simulator::draw_prompt(glass, "set", set, settings, 27, nullptr, 0,
                                    simulator::PromptUnit{false, true}));
-    CHECK(same(glass, confirm(comms::Pending::Set, "ALARM BRAVO SOFT", 27)));
+    CHECK(same(glass, confirm(common::Pending::Set, "ALARM BRAVO SOFT", 27)));
     REQUIRE(simulator::draw_prompt(glass, "set", set, settings, 27));
-    CHECK(same(glass, confirm(comms::Pending::Set, "ALARM SOFT", 27)));
+    CHECK(same(glass, confirm(common::Pending::Set, "ALARM SOFT", 27)));
 }
 
 TEST_CASE("prompt glass: a dfu names the version the phone sends, as the Go does") {
     go::Glass glass;
     REQUIRE(simulator::draw_prompt(glass, "dfu", "0.2.0+15", "", 30));
-    char detail[comms::kPromptDetailBytes];
+    char detail[common::kPromptDetailBytes];
     ports::ImageVersion version;
     version.minor = 2;
     version.build = 15;
-    comms::format_dfu_detail(detail, sizeof(detail), version);
-    CHECK(same(glass, confirm(comms::Pending::Dfu, detail, 30)));
+    common::format_dfu_detail(detail, sizeof(detail), version);
+    CHECK(same(glass, confirm(common::Pending::Dfu, detail, 30)));
     CHECK(reads_heading(glass, "FIRMWARE", go::Heading::Interrupt));
 }
 
@@ -73,9 +73,10 @@ TEST_CASE(
     "prompt glass: a capture names the profile asked and the flights it erases, as the Go does") {
     go::Glass glass;
     REQUIRE(simulator::draw_prompt(glass, "capture", "power_run:3", "", 30));
-    CHECK(same(glass, confirm(comms::Pending::Capture, "START A POWER RUN, ERASES 3 FLIGHTS", 30)));
+    CHECK(
+        same(glass, confirm(common::Pending::Capture, "START A POWER RUN, ERASES 3 FLIGHTS", 30)));
     REQUIRE(simulator::draw_prompt(glass, "capture", "stop:0", "", 30));
-    CHECK(same(glass, confirm(comms::Pending::Capture, "STOP THE CAPTURE", 30)));
+    CHECK(same(glass, confirm(common::Pending::Capture, "STOP THE CAPTURE", 30)));
     CHECK_FALSE(simulator::draw_prompt(glass, "capture", "launch:3", "", 30));
     CHECK_FALSE(simulator::draw_prompt(glass, "capture", "full:many", "", 30));
 }
@@ -83,7 +84,7 @@ TEST_CASE(
 TEST_CASE("prompt glass: a pair names the Bravo by the tag the page sends, as the Go does") {
     go::Glass glass;
     REQUIRE(simulator::draw_prompt(glass, "pair", "3F2A", "", 30));
-    CHECK(same(glass, confirm(comms::Pending::Pair, "PAIR WITH BRAVO 3F2A", 30)));
+    CHECK(same(glass, confirm(common::Pending::Pair, "PAIR WITH BRAVO 3F2A", 30)));
     CHECK(reads_heading(glass, "PAIR BRAVO", go::Heading::Interrupt));
     CHECK_FALSE(simulator::draw_prompt(glass, "pair", "3f2a", "", 30));
     CHECK_FALSE(simulator::draw_prompt(glass, "pair", "3F2", "", 30));
@@ -93,16 +94,18 @@ TEST_CASE("prompt glass: a pair names the Bravo by the tag the page sends, as th
 TEST_CASE("prompt glass: every other prompt is the Go's title and detail for it") {
     const struct {
         const char* name;
-        comms::Pending pending;
-    } prompts[] = {
-        {"recovery", comms::Pending::Recovery},  {"power_off", comms::Pending::PowerOff},
-        {"erase_log", comms::Pending::EraseLog}, {"gnss_cold_start", comms::Pending::GnssColdStart},
-        {"register", comms::Pending::Register},  {"capture", comms::Pending::Capture}};
+        common::Pending pending;
+    } prompts[] = {{"recovery", common::Pending::Recovery},
+                   {"power_off", common::Pending::PowerOff},
+                   {"erase_log", common::Pending::EraseLog},
+                   {"gnss_cold_start", common::Pending::GnssColdStart},
+                   {"register", common::Pending::Register},
+                   {"capture", common::Pending::Capture}};
     for (const auto& prompt : prompts) {
         CAPTURE(prompt.name);
         go::Glass glass;
         REQUIRE(simulator::draw_prompt(glass, prompt.name, "", "", 12));
-        CHECK(same(glass, confirm(prompt.pending, comms::pending_detail(prompt.pending), 12)));
+        CHECK(same(glass, confirm(prompt.pending, common::pending_detail(prompt.pending), 12)));
     }
 }
 

@@ -24,9 +24,6 @@ class CallsignTable {
     uint32_t heard_s(uint8_t address_mapping_table, uint32_t address) const;
     void age_out(uint32_t now_s, uint32_t forget_s = kCallsignForgetS);
 
-    int count() const;
-    void clear();
-
    private:
     struct Entry {
         uint32_t address{0};

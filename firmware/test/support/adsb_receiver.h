@@ -8,10 +8,10 @@
 #include "core/events/stamp.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/adsb_observation.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "protocols/adsb/assembly.h"
 #include "protocols/adsb/message.h"
+#include "simulator/world/hex.h"
 #include "test/support/adsb_frames.h"
 
 namespace skyblip::adsb_receiver {

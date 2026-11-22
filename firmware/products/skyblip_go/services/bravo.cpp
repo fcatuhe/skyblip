@@ -38,7 +38,7 @@ link::Reason verdict_of(BravoRefusal refusal) {
 }  // namespace
 
 Status BravoService::setup() {
-    config_.serve_pairing(comms::PairingSide::Go);
+    config_.serve_pairing(common::PairingSide::Go);
     const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
     if (!epoch) return Status::Down;
     boot_epoch_ = *epoch;

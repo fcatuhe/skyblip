@@ -4,6 +4,7 @@
 
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
+#include "test/support/diagnostics_read.h"
 
 namespace skyblip {
 

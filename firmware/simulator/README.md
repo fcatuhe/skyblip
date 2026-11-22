@@ -47,6 +47,12 @@ The world does not model:
 - **DF18:** Bravo receives DF17 only (`protocols/adsb/README.md`);
 - **aircraft status, target state and operational status,** TC 28, 29 and 31, so Bravo never learns an aircraft's ADS-B version or GVA.
 
+## ALP-TAS Out
+
+`world/alptas_out.h` builds the ALP-TAS frame an aircraft sends. skyBlip only receives ALP-TAS, so the encoder lives in the world, not in `core/protocol`. It sends the accuracy codes SoftRF's `latest_encode` sends, and the host suite and `test/fuzz/fuzz_air.cpp` build their frames with it too.
+
+`world/hex.h` reads and writes the hex the link text prints and the test vectors carry. No device prints hex.
+
 ## Scenarios
 
 A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, that the browser and the suite both load, so a bug found in flight becomes a committed fixture. `scripts/simulator_scenarios.rb` bundles every file for the browser.

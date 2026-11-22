@@ -14,8 +14,8 @@ namespace {
 constexpr int16_t kCaretClimbE8 = 20;
 constexpr int32_t kLevelM = 60;
 constexpr int32_t kLeaderSeconds = 60;
-constexpr uint32_t kLeaderStepMs = 5000;
-constexpr int kStepsPerMinute = static_cast<int>((kLeaderSeconds * 1000) / kLeaderStepMs);
+constexpr int32_t kLeaderStepS = 5;
+constexpr int kStepsPerMinute = kLeaderSeconds / kLeaderStepS;
 constexpr int kMinLeaderPx = 3;
 constexpr int kOwnNoseAhead = ui::kSkyshipRowsToNose + 1;
 constexpr int kMinuteClearPx = kOwnNoseAhead + kMinLeaderPx;
@@ -184,7 +184,7 @@ struct DashPen {
 void own_vector(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track_angle16) {
     if (snapshot.speed_mm_s <= 0) return;
     flight::Arc arc(motion_of(snapshot.speed_mm_s, snapshot.track_cdeg, snapshot.turn_cdps, true),
-                    kLeaderStepMs);
+                    kLeaderStepS);
     DashPen pen{canvas};
     const int ring = ring_radius(snapshot.plot);
     const int ball_clear = ring - kRingWidth - kMinuteBallRadius;
@@ -213,7 +213,7 @@ Leader leader_of(const RadarSnapshot& snapshot, const RadarTarget& target, int16
     if (target.speed_mm_s <= 0) return {0, 0, false};
     flight::Arc arc(
         motion_of(target.speed_mm_s, target.track_cdeg, target.turn_cdps, target.turn_valid),
-        kLeaderStepMs);
+        kLeaderStepS);
     HeadingUp end{0, 0};
     for (int step = 0; step < kStepsPerMinute; step++)
         end = on_glass_at(arc.advance(), snapshot, track_angle16);
@@ -246,7 +246,7 @@ void draw_leader(ui::Canvas& canvas, const RadarSnapshot& snapshot, const RadarT
     if (!leader.valid) return;
     flight::Arc arc(
         motion_of(target.speed_mm_s, target.track_cdeg, target.turn_cdps, target.turn_valid),
-        kLeaderStepMs);
+        kLeaderStepS);
     int from_x = glass_x_of(plotted.right), from_y = glass_y_of(plotted.ahead);
     for (int step = 0; step < kStepsPerMinute; step++) {
         const HeadingUp at = on_glass_at(arc.advance(), snapshot, track_angle16);

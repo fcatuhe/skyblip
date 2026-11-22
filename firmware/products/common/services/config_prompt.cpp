@@ -1,8 +1,8 @@
-#include "core/comms/config.h"
 #include "core/dfu/update.h"
 #include "core/util/format.h"
+#include "products/common/services/config_service.h"
 
-namespace skyblip::comms {
+namespace skyblip::common {
 
 const char* pending_title(Pending pending) {
     switch (pending) {
@@ -37,11 +37,11 @@ const char* pending_detail(Pending pending) {
 }
 
 // INFO: fc 15nov26 three rows of sixteen at double height, so the profile and the price each fit
-int format_capture_detail(char* out, CaptureProfile profile, uint32_t evicts_flights) {
-    if (profile == CaptureProfile::Stop) return format_string(out, "STOP THE CAPTURE");
+int format_capture_detail(char* out, comms::CaptureProfile profile, uint32_t evicts_flights) {
+    if (profile == comms::CaptureProfile::Stop) return format_string(out, "STOP THE CAPTURE");
     int written = format_string(out, "START A ");
-    written += format_string(out + written, capture_profile_word(profile));
-    if (profile == CaptureProfile::Full) written += format_string(out + written, " CAPTURE");
+    written += format_string(out + written, comms::capture_profile_word(profile));
+    if (profile == comms::CaptureProfile::Full) written += format_string(out + written, " CAPTURE");
     if (evicts_flights == 0) return written;
     written += format_string(out + written, ", ERASES ");
     written += format_unsigned(out + written, evicts_flights);
@@ -184,7 +184,7 @@ void ConfigService::confirm() {
     } else if (pending_ == Pending::EraseLog) {
         pending_ = Pending::None;
         confirmed_ = Action::EraseLog;
-        log_erase_peer_ = claim_.peer();
+        log_erase_peer_ = channel_.claim().peer();
         acknowledge(true, link::Reason::EraseLog);
     } else if (pending_ == Pending::GnssColdStart) {
         pending_ = Pending::None;
@@ -205,4 +205,4 @@ void ConfigService::cancel() {
     acknowledge(false, link::Reason::Cancelled);
 }
 
-}  // namespace skyblip::comms
+}  // namespace skyblip::common

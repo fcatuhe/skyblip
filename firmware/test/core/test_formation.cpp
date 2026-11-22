@@ -67,7 +67,6 @@ TEST_CASE("formation: a wingman holding station is flying with us after the stea
         report = tracker.observe(own, target_at(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::Together);
-    CHECK(tracker.together(6, 0x424242));
     CHECK(tracker.members() == 1);
 }
 
@@ -95,13 +94,12 @@ TEST_CASE("formation: a member drifting away is parting, and it takes two fixes"
     // One bad solution does not break a formation.
     CHECK(tracker.observe(own, target_at(own, -60, -400, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::Together);
-    CHECK(tracker.together(6, 0x424242));
+    CHECK(tracker.members() == 1);
 
     now_ms += 1000;
     own = flying(40, 90, now_ms);
     CHECK(tracker.observe(own, target_at(own, -60, -700, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::Parting);
-    CHECK_FALSE(tracker.together(6, 0x424242));
     CHECK(tracker.members() == 0);
 
     now_ms += 1000;
@@ -116,7 +114,7 @@ TEST_CASE("formation: a member peeling off at any speed parts once and stays par
         CAPTURE(speed_mps);
         Tracker tracker;
         uint32_t now_ms = fly_on_station(tracker);
-        REQUIRE(tracker.together(6, 0x424242));
+        REQUIRE(tracker.members() == 1);
 
         int breaks = 0;
         int rejoins = 0;
@@ -152,7 +150,7 @@ TEST_CASE("formation: a pair that parts is two aircraft again once it leaves the
     const model::Ownship own = flying(40, 90, now_ms);
     CHECK(tracker.observe(own, target_at(own, -60, -1600, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::None);
-    CHECK_FALSE(tracker.together(6, 0x424242));
+    CHECK(tracker.members() == 0);
 }
 
 TEST_CASE("formation: a parted neighbour that comes back to its station rejoins") {
@@ -162,7 +160,7 @@ TEST_CASE("formation: a parted neighbour that comes back to its station rejoins"
         const model::Ownship own = flying(40, 90, now_ms);
         tracker.observe(own, target_at(own, -60, -300 - 200 * i, 10, 40, 90, now_ms), {}, now_ms);
     }
-    REQUIRE_FALSE(tracker.together(6, 0x424242));
+    REQUIRE(tracker.members() == 0);
 
     Report report{};
     for (const uint32_t until = now_ms + kTogetherHoldMs + 1000; now_ms <= until; now_ms += 1000) {
@@ -195,7 +193,7 @@ TEST_CASE("formation: one fix of closure is noise, two release the member and re
           doctest::test_suite("main")) {
     Tracker tracker;
     uint32_t now_ms = fly_on_station(tracker) + 1000;
-    REQUIRE(tracker.together(6, 0x424242));
+    REQUIRE(tracker.members() == 1);
 
     // On station, but 4 m/s faster from behind: 3.6 m/s of it on the line of sight.
     model::Ownship own = flying(40, 90, now_ms);
@@ -217,12 +215,12 @@ TEST_CASE("formation: one fix of closure is noise, two release the member and re
 TEST_CASE("formation: a break is counted in receptions, not in passes of the loop") {
     Tracker tracker;
     const uint32_t now_ms = fly_on_station(tracker) + 1000;
-    REQUIRE(tracker.together(6, 0x424242));
+    REQUIRE(tracker.members() == 1);
 
     const model::Ownship own = flying(40, 90, now_ms);
     const model::AircraftObservation bad = target_at(own, -60, -400, 10, 40, 90, now_ms);
     for (uint32_t pass = 0; pass < 100; pass++) tracker.observe(own, bad, {}, now_ms + pass * 10);
-    CHECK(tracker.together(6, 0x424242));
+    CHECK(tracker.members() == 1);
 }
 
 TEST_CASE("formation: two gliders on one thermal circle are flying together") {
@@ -255,7 +253,6 @@ TEST_CASE("formation: a target nobody has heard from is forgotten, membership an
     const uint32_t lease_ms = traffic::kAirborneTargetForgetS * 1000;
     tracker.forget_stale(1000 + kTogetherHoldMs + 1000 + lease_ms + 1);
     CHECK(tracker.members() == 0);
-    CHECK_FALSE(tracker.together(6, 0x424242));
 }
 
 // The anchor was own-ship until the first drifting fix, so a target inside the box never moved.
@@ -321,7 +318,6 @@ TEST_CASE("formation: a member that reports itself on the ground leaves at once"
     landed.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     CHECK(tracker.observe(own, landed, {}, now_ms).state == State::None);
     CHECK(tracker.members() == 0);
-    CHECK_FALSE(tracker.together(6, 0x424242));
 }
 
 namespace {
@@ -362,7 +358,6 @@ TEST_CASE("formation: a formation ends when own-ship lands") {
 
     tracker.observe_own(parked_at(now_ms), now_ms);
     CHECK(tracker.members() == 0);
-    CHECK_FALSE(tracker.together(6, 0x424242));
 }
 
 // Every takeoff as a pair re-formed it through an advisory, because a fresh slot is traffic.

@@ -15,7 +15,6 @@ namespace skyblip::flight {
 namespace {
 
 constexpr int64_t kMicrometresPerMetre = 1000000;
-constexpr int64_t kMicrometresPerMillimetre = 1000;
 // INFO: fc 20nov26 near 88 degrees of latitude easting stops scaling, far north of any flight
 constexpr int64_t kLatitudeCosineFloor = 512;
 
@@ -56,9 +55,7 @@ Prediction carry(const Carried& motion, int32_t elapsed_ms) {
         static_cast<uint16_t>(to_angle16(CentiDegrees(motion.track_cdeg)) + turn_angle / 2));
 
     const int64_t scale = wire::kTrigOne * wire::kMicrometresPerE7;
-    const int64_t travel = wire::divide_rounded<int64_t>(
-        static_cast<int64_t>(motion.speed_mm_s) * elapsed_ms * kMicrometresPerMillimetre,
-        kMillisecondsPerSecond);
+    const int64_t travel = static_cast<int64_t>(motion.speed_mm_s) * elapsed_ms;
     out.latitude_1e7 = motion.latitude_1e7 + static_cast<int32_t>(wire::divide_rounded(
                                                  travel * wire::cosine(heading), scale));
     const int64_t east = wire::divide_rounded(travel * wire::sine(heading), scale);

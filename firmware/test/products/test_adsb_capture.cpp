@@ -5,12 +5,12 @@
 
 #include "core/diagnostics/payload.h"
 #include "core/units/units.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "products/common/services/adsb_capture.h"
+#include "simulator/world/hex.h"
 #include "test/support/adsb_frames.h"
 #include "test/support/adsb_receiver.h"
 #include "test/support/diagnostics_corpus.h"

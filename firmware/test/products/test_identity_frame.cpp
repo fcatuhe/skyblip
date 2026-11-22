@@ -2,7 +2,6 @@
 #include <optional>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/comms/identity_link.h"
 #include "core/dfu/update.h"
 #include "core/identity/unit.h"
@@ -11,6 +10,7 @@
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/watchdog.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/bravo_rig.h"
 #include "test/support/config_frame.h"
@@ -31,7 +31,7 @@ struct Desk {
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
-    comms::ConfigService config{link, store, &dfu};
+    common::ConfigService config{link, store, &dfu};
     Identity port{std::nullopt};
     platform::host::Random random;
     identity::Unit unit{port, random};
@@ -90,7 +90,7 @@ TEST_CASE("identity: the unit names its product, variant, firmware, chip and tag
         desk.ask() ==
         "{\"command\":\"identity\",\"product\":\"go\",\"variant\":\"standard\",\"version\":\"0."
         "3.0+1234\",\"release\":true,\"device_id\":\"8f3a1c2e9b7d4f60\",\"bluetooth_tag\":16170}");
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
 }
 
 TEST_CASE("identity: the product and the variant are the ones the product hands the service") {
@@ -132,7 +132,7 @@ TEST_CASE("identity: a product that hands the config service no identity answers
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
-    comms::ConfigService config{link, store, &dfu};
+    common::ConfigService config{link, store, &dfu};
     link.declare_payload_bytes(kChromePayloadBytes);
     link.raise_link(1);
     config.on_rx(config_frame(kAsk));

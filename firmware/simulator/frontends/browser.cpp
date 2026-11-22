@@ -180,7 +180,7 @@ KEEPALIVE int simulator_uplink_stale() {
     return static_cast<int>(go_unit().product().state().air.uplink_stale);
 }
 KEEPALIVE int simulator_prompt() {
-    return go_unit().product().screen().prompt() != comms::Pending::None ? 1 : 0;
+    return go_unit().product().screen().prompt() != common::Pending::None ? 1 : 0;
 }
 KEEPALIVE int simulator_send_config(const char* json) {
     return go_unit().world().send_config(json) ? 1 : 0;

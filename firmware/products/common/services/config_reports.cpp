@@ -1,17 +1,16 @@
 #include <algorithm>
 
-#include "core/comms/config.h"
-#include "core/comms/timing_report.h"
 #include "core/dfu/image.h"
 #include "core/util/cbor.h"
 #include "core/util/span.h"
 #include "ports/link.h"
+#include "products/common/services/config_service.h"
 #include "protocols/adsb/registration.h"
 #include "protocols/adsb/version.h"
 #include "protocols/adsl/version.h"
 #include "protocols/alptas/version.h"
 
-namespace skyblip::comms {
+namespace skyblip::common {
 
 namespace {
 constexpr int kFlashFrameBytes = 64;
@@ -23,15 +22,15 @@ static_assert(link::identity_bytes::kDeviceId == identity::kDeviceIdBytes,
               "the identity frame carries the whole DEVICEID");
 
 struct StackVersion {
-    RadioProtocol protocol;
+    comms::RadioProtocol protocol;
     uint32_t key;
     const char* version;
 };
 
 constexpr StackVersion kStackVersions[] = {
-    {RadioProtocol::Adsb, link::protocols_key::kAdsbVersion, adsb::kVersion},
-    {RadioProtocol::Adsl, link::protocols_key::kAdslVersion, adsl::kVersion},
-    {RadioProtocol::Alptas, link::protocols_key::kAlptasVersion, alptas::kVersion},
+    {comms::RadioProtocol::Adsb, link::protocols_key::kAdsbVersion, adsb::kVersion},
+    {comms::RadioProtocol::Adsl, link::protocols_key::kAdslVersion, adsl::kVersion},
+    {comms::RadioProtocol::Alptas, link::protocols_key::kAlptasVersion, alptas::kVersion},
 };
 }  // namespace
 
@@ -46,9 +45,10 @@ int ConfigService::format_status(uint8_t* out, int capacity) {
     writer.add_boolean(link::status_key::kCharging, battery.charging);
     writer.add_code(link::status_key::kPowerLevel, diagnostics_.power_level);
     writer.add_boolean(link::status_key::kWentDarkFlat, went_dark_flat_);
-    if (bravo_ != BravoState::Unpaired) writer.add_code(link::status_key::kBravo, bravo_);
-    const OwnTransponderHeard heard = own_transponder_.value_or(OwnTransponderHeard{});
-    char registration[kPeerCallsignBytes]{};
+    if (bravo_ != comms::BravoState::Unpaired) writer.add_code(link::status_key::kBravo, bravo_);
+    const comms::OwnTransponderHeard heard =
+        own_transponder_.value_or(comms::OwnTransponderHeard{});
+    char registration[comms::kPeerCallsignBytes]{};
     adsb::registration(registration, sizeof(registration), heard.callsign, heard.address);
     if (own_transponder_) writer.add_unsigned(link::status_key::kOwnTransponder, heard.address);
     if (registration[0] != 0)
@@ -60,7 +60,7 @@ int ConfigService::format_status(uint8_t* out, int capacity) {
 }
 
 void ConfigService::send_status() {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
+    uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     const int bytes = format_status(frame, static_cast<int>(sizeof(frame)));
     if (bytes == 0) {
         diagnostics_.link_drops++;
@@ -71,7 +71,7 @@ void ConfigService::send_status() {
 }
 
 void ConfigService::send_defaults() {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
+    uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Defaults);
     store_.write_default_fields(writer);
@@ -85,14 +85,14 @@ void ConfigService::send_defaults() {
 
 // INFO: fc 18sep26 Nobody asked for this one, so every app subscribed to it gets it.
 void ConfigService::push_status() {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
+    uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     const int bytes = format_status(frame, static_cast<int>(sizeof(frame)));
     if (bytes == 0) {
         diagnostics_.link_drops++;
         status_push_due_ = false;
         return;
     }
-    status_push_due_ = broadcast(frame, bytes) == Status::WouldBlock;
+    status_push_due_ = channel_.broadcast(frame, bytes) == Status::WouldBlock;
 }
 
 // INFO: fc 04aug26 several frames, all or none, because trimming a histogram destroys its evidence
@@ -101,7 +101,7 @@ void ConfigService::send_timing() {
         acknowledge(false, link::Reason::NoStatistics);
         return;
     }
-    start_report(timing_report_, kTimingFrameBytes, *timing_statistics_);
+    channel_.start_timing(*timing_statistics_);
 }
 
 void ConfigService::send_flash() {
@@ -124,12 +124,12 @@ void ConfigService::send_flash() {
 }
 
 void ConfigService::send_radio() {
-    start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics_,
-                 link::Command::Radio, DiagnosticsReport::Group::Radio);
+    channel_.start_diagnostics(diagnostics_, link::Command::Radio,
+                               comms::DiagnosticsReport::Group::Radio);
 }
 
 void ConfigService::send_update() {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
+    uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     const int bytes = format_update(frame, static_cast<int>(sizeof(frame)));
     if (bytes == 0) {
         diagnostics_.link_drops++;
@@ -139,7 +139,7 @@ void ConfigService::send_update() {
 }
 
 void ConfigService::send_install_report() {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
+    uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::InstallReport);
     if (install_report_ != nullptr) {
@@ -163,7 +163,7 @@ void ConfigService::send_install_report() {
 }
 
 void ConfigService::send_protocols() {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
+    uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Protocols);
     for (const StackVersion& stack : kStackVersions)
@@ -178,7 +178,7 @@ void ConfigService::send_identity() {
         return;
     }
     const identity::Unit& unit = identity_->unit();
-    uint8_t frame[IdentityLink::kIdentityFrameBytes];
+    uint8_t frame[comms::IdentityLink::kIdentityFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Identity);
     writer.add_code(link::identity_key::kProduct, product_);
@@ -196,19 +196,19 @@ void ConfigService::send_identity() {
     (void)reply(frame, bytes);
 }
 
-bool ConfigService::carries(RadioProtocol protocol) const {
+bool ConfigService::carries(comms::RadioProtocol protocol) const {
     return std::any_of(radio_protocols_.begin(), radio_protocols_.end(),
-                       [protocol](RadioProtocol carried) { return carried == protocol; });
+                       [protocol](comms::RadioProtocol carried) { return carried == protocol; });
 }
 
 void ConfigService::push_update(const events::Peer& peer) {
-    uint8_t frame[kSmallestSupportedPayloadBytes];
+    uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     const int bytes = format_update(frame, static_cast<int>(sizeof(frame)));
     if (bytes == 0) {
         diagnostics_.link_drops++;
         return;
     }
-    (void)deliver(peer, frame, bytes);
+    (void)channel_.deliver(peer, frame, bytes);
 }
 
 int ConfigService::format_update(uint8_t* out, int capacity) {
@@ -254,58 +254,7 @@ void ConfigService::send_diagnostics() {
         acknowledge(false, link::Reason::NoStatistics);
         return;
     }
-    start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics_,
-                 link::Command::Diagnostics);
+    channel_.start_diagnostics(diagnostics_, link::Command::Diagnostics);
 }
 
-template <class Report, class... Arguments>
-void ConfigService::start_report(std::optional<Report>& report, int frame_bytes,
-                                 const Arguments&... arguments) {
-    report_payload_bytes_ = payload_bytes_to(claim_.holder());
-    report_frame_bytes_ = frame_bytes;
-    if (!report.emplace(arguments...).fits(report_payload_bytes_)) {
-        diagnostics_.link_drops++;
-        report.reset();
-        refuse_too_wide();
-        return;
-    }
-    continue_report(report);
-}
-
-// INFO: fc 25sep26 a frame held for the link still counts as sent, so the next one follows it
-template <class Report>
-void ConfigService::continue_report(std::optional<Report>& report) {
-    uint8_t frame[kHeldFrameBytes];
-    while (report && held_bytes_ == 0) {
-        const int bytes = report->next_frame(report_payload_bytes_, frame, report_frame_bytes_);
-        if (bytes <= 0) {
-            diagnostics_.link_drops++;
-            report.reset();
-            return;
-        }
-        const Status sent = reply(frame, bytes);
-        if (report->exhausted() || (sent != Status::Ok && sent != Status::WouldBlock))
-            report.reset();
-    }
-}
-
-void ConfigService::resume_replies(uint32_t now_ms) {
-    now_ms_ = now_ms;
-    if (held_bytes_ > 0) {
-        const Status sent =
-            link_.send_to(held_for_, events::Endpoint::Config,
-                          ConstByteSpan(held_frame_, static_cast<size_t>(held_bytes_)));
-        if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyWaitCeilingMs)
-            return;
-        held_bytes_ = 0;
-        if (!is_ok(sent)) {
-            diagnostics_.link_drops++;
-            drop_replies();
-            return;
-        }
-    }
-    continue_report(diagnostics_report_);
-    continue_report(timing_report_);
-}
-
-}  // namespace skyblip::comms
+}  // namespace skyblip::common

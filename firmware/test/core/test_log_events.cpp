@@ -7,6 +7,7 @@
 #include "core/flight/log_record.h"
 #include "doctest/doctest.h"
 #include "protocols/common/crc.h"
+#include "test/support/log_event_read.h"
 
 using namespace skyblip;
 

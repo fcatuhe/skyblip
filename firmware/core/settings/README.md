@@ -12,7 +12,7 @@ Before activation a unit has no address, so `AirAddress` is an optional, not a n
 
 The address is not a setting: the serial is the unlock code's, and the table and the prefix are constants. `go::Settings` has no field for them, and `apply_json` ignores a patch naming `address` or `address_mapping_table`. The `get` reply reports `address` once there is one and `address_mapping_table` always. Both stay the unit's own while an ICAO address goes on air, because the serial names the unit: its Bluetooth name, skyblip.eu's fleet and the self-test page all read it.
 
-`blob.h` is a version byte, a payload and a CRC32 over both. `sealed()` checks that CRC over whatever length was stored, so a product tells a layout written by a later image from a torn sector without knowing either layout. The fields, defaults and refusals belong to the product, in `products/skyblip_go/settings.{h,cpp}`, so two products keep different settings on one framing. The companion link's side is `core/comms/config_store.h`.
+`blob.h` is a version byte, a payload and a CRC32 over both. `sealed()` checks that CRC over whatever length was stored, so a product tells a layout written by a later image from a torn sector without knowing either layout. The fields, defaults and refusals belong to the product, in `products/skyblip_go/settings.{h,cpp}`, so two products keep different settings on one framing. The companion link's side is `products/common/settings_store.h`.
 
 ## The ICAO address
 

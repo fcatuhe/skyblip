@@ -8,14 +8,11 @@ namespace skyblip::flight {
 constexpr uint32_t kIsaSeaLevelPa = 101325;
 constexpr int16_t kIsaSeaLevelDeciCelsius = 150;
 
-int16_t isa_temperature_dc(int32_t altitude_mm);
-
 int32_t pressure_to_altitude_mm(uint32_t pressure_mpa);
 int32_t pressure_to_altitude_cm(uint32_t pressure_pa);
 
 // INFO: fc 20nov26 bisects the forward table, so a modelled barometer cannot drift from the curve
 uint32_t altitude_mm_to_pressure_mpa(int32_t altitude_mm);
-uint32_t altitude_cm_to_pressure_pa(int32_t altitude_cm);
 
 // INFO: fc 20nov26 shorter and the sensor noise is the rate, longer and the rate is history
 constexpr uint32_t kClimbWindowFloorMs = 500;
@@ -23,7 +20,6 @@ constexpr uint32_t kClimbWindowCeilingMs = 10000;
 
 bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
                               uint32_t elapsed_ms, int32_t& out_mm_s);
-int16_t climb_e8_from_mm_s(int32_t climb_mm_s);
 
 }  // namespace skyblip::flight
 

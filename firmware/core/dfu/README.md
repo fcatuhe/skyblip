@@ -1,6 +1,6 @@
 # core/dfu
 
-What the firmware decides about an update image: how it reads MCUboot's header and TLVs (`image.h`), the record a unit writes before a swap and what the next boot makes of it (`update.h`), what the unit writes down about its last install (`install_report.h`), which SMP commands a phone may send (`smp_policy.h`), and which product an image is for (`product_check.h`). The Zephyr side is `hardware/platform/zephyr/dfu.h` and `mcumgr_hooks.cpp`, and the product rules for a whole update are in `core/comms/config.cpp`.
+What the firmware decides about an update image: how it reads MCUboot's header and TLVs (`image.h`), the record a unit writes before a swap and what the next boot makes of it (`update.h`), what the unit writes down about its last install (`install_report.h`), which SMP commands a phone may send (`smp_policy.h`), and which product an image is for (`product_check.h`). The Zephyr side is `hardware/platform/zephyr/dfu.h` and `mcumgr_hooks.cpp`, and the product rules for a whole update are in `products/common/services/config_service.cpp`.
 
 ## One product's images only
 

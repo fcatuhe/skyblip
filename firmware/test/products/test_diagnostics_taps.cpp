@@ -10,6 +10,7 @@
 #include "products/common/services/power.h"
 #include "products/skyblip_go/services/screen.h"
 #include "test/support/diagnostics_corpus.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/diagnostics_taps.h"
 #include "test/support/product_rig.h"
 

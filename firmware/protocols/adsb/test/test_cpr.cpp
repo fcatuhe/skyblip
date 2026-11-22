@@ -212,3 +212,18 @@ TEST_CASE("adsb cpr: a single frame that decodes past a pole is no position") {
     CHECK(adsb::cpr_local(adsb::CprFormat::Airborne, polar, at(84.0, 0.0), position));
     CHECK(position.latitude_1e7 <= 900000000);
 }
+
+// The zone index runs from -60 to 59 at the ends of the 17-bit fields, and its modulo wraps both
+// ends.
+TEST_CASE("adsb cpr: fields at both ends of their range decode one step beside the origin") {
+    const adsb::Cpr top_even{false, 131071, 131071}, bottom_odd{true, 0, 0};
+    adsb::CprPosition position;
+    REQUIRE(adsb::cpr_global(adsb::CprFormat::Airborne, top_even, bottom_odd, {}, position));
+    CHECK(position.latitude_1e7 == -458);
+    CHECK(position.longitude_1e7 == -466);
+
+    const adsb::Cpr bottom_even{false, 0, 0}, top_odd{true, 131071, 131071};
+    REQUIRE(adsb::cpr_global(adsb::CprFormat::Airborne, top_odd, bottom_even, {}, position));
+    CHECK(position.latitude_1e7 == -466);
+    CHECK(position.longitude_1e7 == -474);
+}

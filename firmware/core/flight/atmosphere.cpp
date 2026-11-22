@@ -1,8 +1,5 @@
 #include "core/flight/atmosphere.h"
 
-#include <algorithm>
-
-#include "core/units/units.h"
 #include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
@@ -35,9 +32,6 @@ constexpr int kTableEntries = static_cast<int>(sizeof(kAltitudeCm) / sizeof(kAlt
 constexpr uint32_t kTableHighestPa =
     kTableLowestPa + static_cast<uint32_t>(kTableEntries - 1) * kStepPa;
 
-constexpr int64_t kIsaLapseDeciCelsiusPerKilometre = 65;
-constexpr int64_t kMillimetresPerKilometre = 1000000;
-
 constexpr uint32_t kMillipascalsPerPascal = 1000;
 constexpr uint32_t kTableLowestMpa = kTableLowestPa * kMillipascalsPerPascal;
 constexpr uint32_t kTableHighestMpa = kTableHighestPa * kMillipascalsPerPascal;
@@ -61,13 +55,6 @@ int32_t pressure_to_altitude_mm(uint32_t pressure_mpa) {
            static_cast<int32_t>(wire::divide_rounded<int64_t>(span * fraction, kStepMpa));
 }
 
-int16_t isa_temperature_dc(int32_t altitude_mm) {
-    const int64_t drop = wire::divide_rounded<int64_t>(
-        static_cast<int64_t>(altitude_mm) * kIsaLapseDeciCelsiusPerKilometre,
-        kMillimetresPerKilometre);
-    return static_cast<int16_t>(kIsaSeaLevelDeciCelsius - drop);
-}
-
 int32_t pressure_to_altitude_cm(uint32_t pressure_pa) {
     if (pressure_pa >= kTableHighestPa) return kAltitudeCm[kTableEntries - 1];
     return wire::divide_rounded(pressure_to_altitude_mm(pressure_pa * kMillipascalsPerPascal), 10);
@@ -88,11 +75,6 @@ uint32_t altitude_mm_to_pressure_mpa(int32_t altitude_mm) {
     return high;
 }
 
-uint32_t altitude_cm_to_pressure_pa(int32_t altitude_cm) {
-    return (altitude_mm_to_pressure_mpa(altitude_cm * 10) + kMillipascalsPerPascal / 2) /
-           kMillipascalsPerPascal;
-}
-
 bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
                               uint32_t elapsed_ms, int32_t& out_mm_s) {
     if (elapsed_ms < kClimbWindowFloorMs || elapsed_ms > kClimbWindowCeilingMs) return false;
@@ -101,10 +83,6 @@ bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
     out_mm_s = static_cast<int32_t>(
         wire::divide_rounded<int64_t>(climbed_mm * 1000, static_cast<int64_t>(elapsed_ms)));
     return true;
-}
-
-int16_t climb_e8_from_mm_s(int32_t climb_mm_s) {
-    return to_climb_e8(MillimetresPerSecond(climb_mm_s)).value;
 }
 
 }  // namespace skyblip::flight

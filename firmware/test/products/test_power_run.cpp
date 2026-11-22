@@ -8,6 +8,7 @@
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
 #include "test/support/diagnostics_corpus.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;

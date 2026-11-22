@@ -2,18 +2,18 @@
 #include <cstring>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/comms/identity_link.h"
 #include "core/comms/link_registry.h"
 #include "core/identity/unit.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings_store.h"
+#include "simulator/world/hex.h"
 #include "test/support/config_frame.h"
 
 using namespace skyblip;
@@ -48,7 +48,7 @@ struct Desk {
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
-    comms::ConfigService config{link, store, &dfu};
+    common::ConfigService config{link, store, &dfu};
     Identity port{std::nullopt};
     platform::host::Random random;
     identity::Unit unit{port, random};
@@ -102,7 +102,7 @@ struct Desk {
     void enroll(const crypto::Ed25519::Seed& seed) {
         REQUIRE(connect_as(seed) == kUntrusted);
         say(kSet);
-        REQUIRE(config.pending() == comms::Pending::Set);
+        REQUIRE(config.pending() == common::Pending::Set);
         config.confirm();
         reconnect();
     }
@@ -115,7 +115,7 @@ TEST_CASE("trusted browsers: a set a press confirms trusts the browser that prov
     Desk desk;
     CHECK(desk.connect_as(kBrowserSeed) == kUntrusted);
     desk.say(kSet);
-    REQUIRE(desk.config.pending() == comms::Pending::Set);
+    REQUIRE(desk.config.pending() == common::Pending::Set);
     desk.config.confirm();
     CHECK(desk.config.browsers_dirty());
     REQUIRE(desk.config.trusted_browsers().count() == 1);
@@ -125,7 +125,7 @@ TEST_CASE("trusted browsers: a set a press confirms trusts the browser that prov
     CHECK(desk.connect_as(kBrowserSeed) == kTrusted);
     CHECK(desk.say("{\"command\":\"set\",\"units\":\"nautical\"}") ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
     CHECK(desk.settings.units == go::Units::Nautical);
 }
 
@@ -135,7 +135,7 @@ TEST_CASE(
     Desk desk;
     REQUIRE(desk.connect_as(kBrowserSeed) == kUntrusted);
     desk.say(kDfu);
-    REQUIRE(desk.config.pending() == comms::Pending::Dfu);
+    REQUIRE(desk.config.pending() == common::Pending::Dfu);
     desk.config.confirm();
     REQUIRE(desk.config.trusted_browsers().count() == 1);
 
@@ -143,7 +143,7 @@ TEST_CASE(
     REQUIRE(desk.connect_as(kBrowserSeed) == kTrusted);
     CHECK(desk.say(kDfu) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"dfu\"}");
-    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.config.pending() == common::Pending::None);
     CHECK(desk.config.upload_allowed());
 }
 
@@ -168,7 +168,7 @@ TEST_CASE("trusted browsers: trust ends with the link that proved it") {
     desk.reconnect();
 
     desk.say(kSet);
-    CHECK(desk.config.pending() == comms::Pending::Set);
+    CHECK(desk.config.pending() == common::Pending::Set);
 }
 
 TEST_CASE("trusted browsers: a proof needs a live nonce, spends it, and must verify") {
@@ -205,11 +205,11 @@ TEST_CASE("trusted browsers: one press, an expiry and a confirmed recovery trust
     REQUIRE(desk.connect_as(kBrowserSeed) == kUntrusted);
     desk.config.tick(0);
     desk.say(kSet);
-    desk.config.tick(comms::kPromptCeilingMs);
-    REQUIRE(desk.config.pending() == comms::Pending::None);
+    desk.config.tick(common::kPromptCeilingMs);
+    REQUIRE(desk.config.pending() == common::Pending::None);
 
     desk.say("{\"command\":\"recovery\"}");
-    REQUIRE(desk.config.pending() == comms::Pending::Recovery);
+    REQUIRE(desk.config.pending() == common::Pending::Recovery);
     desk.config.confirm();
 
     CHECK(desk.config.trusted_browsers().count() == 0);
@@ -258,7 +258,7 @@ TEST_CASE(
     CHECK(desk.config.trusted_browsers().count() == 0);
     CHECK(desk.say("{\"command\":\"browsers\",\"index\":0}") == kUntrusted);
     desk.say(kSet);
-    CHECK(desk.config.pending() == comms::Pending::Set);
+    CHECK(desk.config.pending() == common::Pending::Set);
 }
 
 TEST_CASE("trusted browsers: each frame is as wide as the registry says at its widest") {

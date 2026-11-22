@@ -17,21 +17,6 @@ Record record_of(const Boot& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Boot& out) {
-    if (record.type != Type::Boot) return false;
-    out = Boot{};
-    out.capabilities = wire::get_uint32(record.payload + 0);
-    out.firmware_build = wire::get_uint32(record.payload + 4);
-    out.firmware_revision = wire::get_uint16(record.payload + 8);
-    out.firmware_major = record.payload[10];
-    out.firmware_minor = record.payload[11];
-    out.reset = static_cast<power::ResetReason>(record.payload[12]);
-    out.image_state = static_cast<dfu::ImageState>(record.payload[13]);
-    out.profile = static_cast<Profile>(record.payload[14]);
-    out.profile_recorded = record.flagged(kBootFlagProfileRecorded);
-    return true;
-}
-
 Record record_of(const Config& value, const Instant& at) {
     Record record = framed(Type::Config, at);
     wire::put_uint32(record.payload + 0, value.address);
@@ -47,24 +32,6 @@ Record record_of(const Config& value, const Instant& at) {
     set_flag(record.flags, kConfigFlagMetric, value.metric);
     set_flag(record.flags, kConfigFlagBatteryTrimManual, value.battery_trim_manual);
     return record;
-}
-
-bool read(const Record& record, Config& out) {
-    if (record.type != Type::Config) return false;
-    out = Config{};
-    out.address = wire::get_uint32(record.payload + 0);
-    out.battery_offset_mv = wire::get_int16(record.payload + 4);
-    out.frequency_trim_e1_ppm = wire::get_int16(record.payload + 6);
-    out.aircraft_type = record.payload[8];
-    out.address_mapping_table = record.payload[9];
-    out.settings_version = record.payload[11];
-    out.tx_power_dbm = get_int8(record.payload + 12);
-    out.pa_rated_dbm = get_int8(record.payload + 13);
-    out.alarm_setting = record.payload[14];
-    out.alarm_setting_recorded = record.flagged(kConfigFlagAlarmSettingRecorded);
-    out.metric = record.flagged(kConfigFlagMetric);
-    out.battery_trim_manual = record.flagged(kConfigFlagBatteryTrimManual);
-    return true;
 }
 
 Record record_of(const Dwell& value, const Instant& at) {
@@ -86,26 +53,6 @@ Record record_of(const Dwell& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Dwell& out) {
-    if (record.type != Type::Dwell) return false;
-    out = Dwell{};
-    out.frequency_hz = wire::get_uint32(record.payload + 0);
-    out.start_ms = wire::get_uint16(record.payload + 4);
-    out.end_ms = wire::get_uint16(record.payload + 6);
-    out.phase_ms = wire::get_uint16(record.payload + 8);
-    out.duty_permille = wire::get_uint16(record.payload + 10);
-    out.state = static_cast<timing::SlotState>(record.payload[12]);
-    out.band = static_cast<model::Band>(record.payload[13]);
-    out.refusal = static_cast<Refusal>(record.payload[14]);
-    out.noise_dbm = get_int8(record.payload + 15);
-    out.tx_allowed = record.flagged(kDwellFlagTxAllowed);
-    out.own_tx_dwell = record.flagged(kDwellFlagOwnTxDwell);
-    out.listen_only = record.flagged(kDwellFlagListenOnly);
-    out.armed = record.flagged(kDwellFlagArmed);
-    out.burst_armed = record.flagged(kDwellFlagBurstArmed);
-    return true;
-}
-
 Record record_of(const Flight& value, const Instant& at) {
     Record record = framed(Type::Flight, at);
     wire::put_int32(record.payload + 0, value.speed_mm_s);
@@ -120,23 +67,6 @@ Record record_of(const Flight& value, const Instant& at) {
     set_flag(record.flags, kFlightFlagClimbValid, value.climb_valid);
     set_flag(record.flags, kFlightFlagTxSettled, value.tx_settled);
     return record;
-}
-
-bool read(const Record& record, Flight& out) {
-    if (record.type != Type::Flight) return false;
-    out = Flight{};
-    out.speed_mm_s = wire::get_int32(record.payload + 0);
-    out.climb_mm_s = wire::get_int32(record.payload + 4);
-    out.altitude_msl_m = wire::get_int16(record.payload + 8);
-    out.hdop_e2 = wire::get_uint16(record.payload + 10);
-    out.vdop_e2 = wire::get_uint16(record.payload + 12);
-    out.declared = static_cast<flight::FlightState>(record.payload[14]);
-    out.confirmed = static_cast<flight::FlightState>(record.payload[15]);
-    out.fix_valid = record.flagged(kFlightFlagFixValid);
-    out.rolling = record.flagged(kFlightFlagRolling);
-    out.climb_valid = record.flagged(kFlightFlagClimbValid);
-    out.tx_settled = record.flagged(kFlightFlagTxSettled);
-    return true;
 }
 
 Record record_of(const Traffic& value, const Instant& at) {
@@ -159,26 +89,6 @@ Record record_of(const Traffic& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Traffic& out) {
-    if (record.type != Type::Traffic) return false;
-    out = Traffic{};
-    out.address = wire::get_uint32(record.payload + 0);
-    out.distance_m = wire::get_uint16(record.payload + 4);
-    out.bearing_deg = wire::get_uint16(record.payload + 6);
-    out.relative_altitude_m = wire::get_int16(record.payload + 8);
-    out.closing_mps = wire::get_int16(record.payload + 10);
-    out.alarm = static_cast<traffic::Level>(record.payload[12]);
-    out.source = static_cast<model::Source>(record.payload[13]);
-    out.rssi_dbm = get_int8(record.payload + 14);
-    out.tracked = record.payload[15];
-    out.assessed = record.flagged(kTrafficFlagAssessed);
-    out.dismissed = record.flagged(kTrafficFlagDismissed);
-    out.in_formation = record.flagged(kTrafficFlagInFormation);
-    out.position_valid = record.flagged(kTrafficFlagPositionValid);
-    out.relative_altitude_valid = record.flagged(kTrafficFlagRelativeAltitudeValid);
-    return true;
-}
-
 Record record_of(const Write& value, const Instant& at) {
     Record record = framed(Type::Write, at);
     wire::put_uint32(record.payload + 0, value.waited_ms);
@@ -190,20 +100,6 @@ Record record_of(const Write& value, const Instant& at) {
     record.payload[13] = static_cast<uint8_t>(value.kind);
     set_flag(record.flags, kWriteFlagPending, value.pending);
     return record;
-}
-
-bool read(const Record& record, Write& out) {
-    if (record.type != Type::Write) return false;
-    out = Write{};
-    out.waited_ms = wire::get_uint32(record.payload + 0);
-    out.phase_ms = wire::get_uint16(record.payload + 4);
-    out.requests = wire::get_uint16(record.payload + 6);
-    out.writes = wire::get_uint16(record.payload + 8);
-    out.forced = wire::get_uint16(record.payload + 10);
-    out.placement = static_cast<timing::DurableWriteVerdict>(record.payload[12]);
-    out.kind = static_cast<power::DurableWrite>(record.payload[13]);
-    out.pending = record.flagged(kWriteFlagPending);
-    return true;
 }
 
 Record record_of(const Screen& value, const Instant& at) {
@@ -221,22 +117,6 @@ Record record_of(const Screen& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Screen& out) {
-    if (record.type != Type::Screen) return false;
-    out = Screen{};
-    out.since_page_shown_ms = wire::get_uint32(record.payload + 0);
-    out.page = record.payload[4];
-    out.mode = record.payload[5];
-    out.prompt = record.payload[6];
-    out.alarm = static_cast<traffic::Level>(record.payload[7]);
-    out.render_us = wire::get_uint32(record.payload + 8);
-    out.present_us = wire::get_uint32(record.payload + 12);
-    out.backlight = record.flagged(kScreenFlagBacklight);
-    out.powered = record.flagged(kScreenFlagPowered);
-    out.holding = record.flagged(kScreenFlagHolding);
-    return true;
-}
-
 Record record_of(const Loop& value, const Instant& at) {
     Record record = framed(Type::Loop, at);
     wire::put_uint16(record.payload + 0, value.passes);
@@ -250,20 +130,6 @@ Record record_of(const Loop& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Loop& out) {
-    if (record.type != Type::Loop) return false;
-    out = Loop{};
-    out.passes = wire::get_uint16(record.payload + 0);
-    out.busy_ms = wire::get_uint16(record.payload + 2);
-    out.worst_pass_us = wire::get_uint32(record.payload + 4);
-    out.worst_pass_phase_ms = wire::get_uint16(record.payload + 8);
-    out.worst_gap_ms = wire::get_uint16(record.payload + 10);
-    out.worst_gap_phase_ms = wire::get_uint16(record.payload + 12);
-    out.worst_service = static_cast<LoopService>(record.payload[14]);
-    out.worst_tick_ms = record.payload[15];
-    return true;
-}
-
 Record record_of(const Gap& value, const Instant& at) {
     Record record = framed(Type::Gap, at);
     wire::put_uint32(record.payload + 0, value.dropped);
@@ -273,29 +139,11 @@ Record record_of(const Gap& value, const Instant& at) {
     return record;
 }
 
-bool read(const Record& record, Gap& out) {
-    if (record.type != Type::Gap) return false;
-    out = Gap{};
-    out.dropped = wire::get_uint32(record.payload + 0);
-    out.span_ms = wire::get_uint32(record.payload + 4);
-    out.total = wire::get_uint32(record.payload + 8);
-    out.capacity = wire::get_uint16(record.payload + 12);
-    return true;
-}
-
 Record record_of(const End& value, const Instant& at) {
     Record record = framed(Type::End, at);
     wire::put_uint32(record.payload + 0, value.records);
     wire::put_uint32(record.payload + 4, value.dropped);
     return record;
-}
-
-bool read(const Record& record, End& out) {
-    if (record.type != Type::End) return false;
-    out = End{};
-    out.records = wire::get_uint32(record.payload + 0);
-    out.dropped = wire::get_uint32(record.payload + 4);
-    return true;
 }
 
 Record record_of(const Duty& value, const Instant& at) {
@@ -309,19 +157,6 @@ Record record_of(const Duty& value, const Instant& at) {
     wire::put_uint16(record.payload + 10, static_cast<uint16_t>(value.ble_connected_ms));
     wire::put_uint16(record.payload + 12, static_cast<uint16_t>(value.annunciator_ms));
     return record;
-}
-
-bool read(const Record& record, Duty& out) {
-    if (record.type != Type::Duty) return false;
-    out = Duty{};
-    out.panel_partial_refreshes = wire::get_uint16(record.payload + 0);
-    out.panel_full_refreshes = wire::get_uint16(record.payload + 2);
-    out.backlight_ms = wire::get_uint16(record.payload + 4);
-    out.rx_armed_ms = wire::get_uint16(record.payload + 6);
-    out.tx_keyed_ms = wire::get_uint16(record.payload + 8);
-    out.ble_connected_ms = wire::get_uint16(record.payload + 10);
-    out.annunciator_ms = wire::get_uint16(record.payload + 12);
-    return true;
 }
 
 }  // namespace skyblip::diagnostics

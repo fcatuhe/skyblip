@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_CORE_UTIL_HEX_H
-#define SKYBLIP_CORE_UTIL_HEX_H
+#ifndef SKYBLIP_SIMULATOR_WORLD_HEX_H
+#define SKYBLIP_SIMULATOR_WORLD_HEX_H
 
 #include <cstddef>
 

@@ -5,6 +5,7 @@
 #include "core/timing/slot.h"
 #include "products/common/services/ownship.h"
 #include "products/skyblip_go/services/traffic.h"
+#include "test/support/diagnostics_read.h"
 #include "test/support/screen_rig.h"
 
 namespace {

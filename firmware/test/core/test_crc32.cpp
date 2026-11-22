@@ -2,10 +2,10 @@
 #include <cstdint>
 #include <cstring>
 
-#include "core/fec/crc.h"
+#include "core/util/crc32.h"
 #include "doctest/doctest.h"
 
-using namespace skyblip::fec;
+using namespace skyblip;
 
 TEST_CASE("crc: crc32 known/stability") {
     const uint8_t message[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};

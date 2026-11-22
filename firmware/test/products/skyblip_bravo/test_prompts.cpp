@@ -42,7 +42,7 @@ TEST_CASE("bravo: a set from a phone blinks the prompt and one press stores it" 
     rig.seconds_with_fix(2);
     rig.send("{\"command\":\"set\",\"alarm\":\"visual\"}");
     rig.run_for(1000);
-    REQUIRE(rig.product.button().prompt() == comms::Pending::Set);
+    REQUIRE(rig.product.button().prompt() == common::Pending::Set);
     CHECK(rig.lamp() == indication::Condition::Prompt);
     CHECK(rig.product.settings().alarm == bravo::Alarm::Loud);
 
@@ -58,10 +58,10 @@ TEST_CASE("bravo: a prompt nobody answers expires, and nothing changes") {
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
     rig.send("{\"command\":\"set\",\"aircraft_address\":3958150}");
-    rig.run_for(comms::kPromptCeilingMs + 1000);
+    rig.run_for(common::kPromptCeilingMs + 1000);
     CHECK(refused_with(rig.last_on(events::Endpoint::Config), "expired"));
     CHECK(rig.product.settings().aircraft_address == bravo::kAircraftAddressUnset);
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
 }
 
 TEST_CASE("bravo: presses made before the prompt stood are never spent on it" *
@@ -73,7 +73,7 @@ TEST_CASE("bravo: presses made before the prompt stood are never spent on it" *
     rig.step();
     rig.press();
     CHECK_FALSE(rig.product.shutdown().going_down());
-    CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
+    CHECK(rig.product.button().prompt() == common::Pending::PowerOff);
 }
 
 // The Go refuses a prompt in flight only, so a Bravo with no fix since boot can still be updated.
@@ -99,7 +99,7 @@ TEST_CASE("bravo: in flight a prompt is refused before it stands" * doctest::tes
     rig.send("{\"command\":\"recovery\"}");
     rig.run_for(200);
     CHECK(refused_with(rig.last_on(events::Endpoint::Config), "in_flight"));
-    CHECK(rig.product.button().prompt() == comms::Pending::None);
+    CHECK(rig.product.button().prompt() == common::Pending::None);
 }
 
 TEST_CASE("bravo: in flight an advisory flickers the lamp and sounds, and one press dismisses it" *
@@ -207,12 +207,12 @@ TEST_CASE("bravo: a replaced prompt cannot spend a hold begun on the one it repl
     rig.send("{\"command\":\"set\",\"alarm\":\"visual\"}");
     rig.run_for(800);
     REQUIRE(rig.product.config_link().config().claim_holder() == 2);
-    REQUIRE(rig.product.button().prompt() == comms::Pending::Set);
+    REQUIRE(rig.product.button().prompt() == common::Pending::Set);
     rig.platform.set_button_down(false);
     rig.run_for(100);
     rig.press();
     rig.run_for(200);
-    CHECK(rig.product.button().prompt() == comms::Pending::Set);
+    CHECK(rig.product.button().prompt() == common::Pending::Set);
     CHECK(rig.product.settings().alarm == bravo::Alarm::Loud);
 }
 
@@ -231,7 +231,7 @@ TEST_CASE("bravo: a press that began before the gesture armed is never spent on 
     rig.press();
     rig.run_for(200);
     CHECK_FALSE(rig.product.shutdown().going_down());
-    CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
+    CHECK(rig.product.button().prompt() == common::Pending::PowerOff);
 }
 
 // GPT's re-review of #245: the button was never up a whole window before the accepting press.
@@ -248,7 +248,7 @@ TEST_CASE(
     rig.run_for(50);
     rig.press();
     CHECK_FALSE(rig.product.shutdown().going_down());
-    CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
+    CHECK(rig.product.button().prompt() == common::Pending::PowerOff);
 
     rig.run_for(700);
     rig.press();

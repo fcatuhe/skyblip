@@ -171,7 +171,7 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
         heard_ms = now_ms;
     }
     tracker.dismiss();
-    REQUIRE(wingmen.together(6, 0x314159));
+    REQUIRE(wingmen.members() == 1);
     REQUIRE(tracker.dismissed());
 
     const uint32_t heard_s = wingman.received.at_s;
@@ -181,14 +181,14 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
     wingmen.forget_stale(heard_ms + lease_ms);
     CHECK(table.find(6, 0x314159) >= 0);
     CHECK(tracker.dismissed());
-    CHECK(wingmen.together(6, 0x314159));
+    CHECK(wingmen.members() == 1);
 
     table.age_out(heard_s + forget_s(wingman) + 1);
     tracker.forget_stale(heard_ms + lease_ms + 1);
     wingmen.forget_stale(heard_ms + lease_ms + 1);
     CHECK(table.find(6, 0x314159) == -1);
     CHECK_FALSE(tracker.dismissed());
-    CHECK_FALSE(wingmen.together(6, 0x314159));
+    CHECK(wingmen.members() == 0);
 }
 
 // A relay names ten aircraft a frame, and a burst of them evicted one flying a kilometre away.
@@ -253,11 +253,6 @@ TEST_CASE("traffic: a slot handed to a new aircraft keeps nothing of the last on
     aged.age_out(100 + kAirborneTargetForgetS + 1);
     REQUIRE(aged.count() == 0);
     CHECK(fresh(aged, aged.update(observation(0x2, 6, 120), 120)));
-
-    TrafficTable cleared;
-    standing(cleared, cleared.update(observation(0x1, 6, 100), 100));
-    cleared.clear();
-    CHECK(fresh(cleared, cleared.update(observation(0x2, 6, 100), 100)));
 }
 
 // Nearest-first eviction refused an airborne arrival beyond a full apron of parked aircraft.

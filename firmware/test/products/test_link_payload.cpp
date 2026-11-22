@@ -15,7 +15,6 @@
 #include <cstring>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/comms/log_link.h"
 #include "core/comms/timing_report.h"
 #include "core/events/link.h"
@@ -23,12 +22,14 @@
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
 #include "ports/null.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
 
 using namespace skyblip;
 using namespace skyblip::comms;
+using namespace skyblip::common;
 
 namespace {
 

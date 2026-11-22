@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/bravo.h"
+#include "simulator/world/hex.h"
 #include "test/support/config_frame.h"
 #include "test/support/paired_products.h"
 
@@ -45,7 +45,7 @@ std::string trust_browser() {
 struct Page {
     platform::host::Link& link;
     platform::host::Random& random;
-    comms::ConfigService& config;
+    common::ConfigService& config;
     uint16_t session;
 
     void connect() { link.raise_link(session, {1, {0x01, 0x02, 0x03, 0x04, 0x05, 0xC6}}); }
@@ -159,8 +159,8 @@ TEST_CASE("pair from a browser: the press that allows an untrusted browser's pai
     CHECK(pairing.go.heard().back() == acknowledgement(false, "untrusted"));
     pairing.go.say(kPairBravo);
     pairing.pair.run_for(3000);
-    comms::ConfigService& config = pairing.go.config;
-    REQUIRE(config.pending() == comms::Pending::Pair);
+    common::ConfigService& config = pairing.go.config;
+    REQUIRE(config.pending() == common::Pending::Pair);
     CHECK(config.prompt_trusts_browser());
 
     pairing.pair.go.press(pairing.pair.now_ms);

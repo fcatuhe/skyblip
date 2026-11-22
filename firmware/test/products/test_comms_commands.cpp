@@ -4,11 +4,11 @@
 #include <initializer_list>
 #include <string>
 
-#include "core/comms/config.h"
 #include "core/events/link.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
 #include "ports/dfu.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
@@ -16,6 +16,7 @@
 
 using namespace skyblip;
 using namespace skyblip::comms;
+using namespace skyblip::common;
 
 namespace {
 struct SpyDfu : ports::Dfu {
@@ -128,7 +129,7 @@ TEST_CASE("comms: an upload that lands whole latches the install with no second 
     dfu.finished = true;
     config.tick(200);
     CHECK(config.pending() == Pending::None);
-    CHECK(taken(config) == comms::Action::Install);
+    CHECK(taken(config) == common::Action::Install);
     CHECK_FALSE(config.receiving_firmware());
     CHECK(dfu.triggered == 0);
     CHECK(link_text(link.last().bytes).find("\"acknowledge\":true,\"reason\":\"install\"") !=
@@ -258,7 +259,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     REQUIRE(config.pending() == Pending::PowerOff);
     config.confirm();
-    CHECK(taken(config) == comms::Action::PowerOff);
+    CHECK(taken(config) == common::Action::PowerOff);
 }
 
 TEST_CASE("comms: the update question names the image state and the versions of the attempt") {
@@ -331,7 +332,7 @@ TEST_CASE("comms: recovery routed through confirmation, latched and never entere
     CHECK(config.pending() == Pending::Recovery);
     CHECK_FALSE(taken(config));
     config.confirm();
-    CHECK(taken(config) == comms::Action::Recovery);
+    CHECK(taken(config) == common::Action::Recovery);
     CHECK(dfu.recovery == 0);
     CHECK(link_text(link.last().bytes).find("\"reason\":\"recovery\"") != std::string::npos);
     CHECK_FALSE(taken(config));
@@ -369,7 +370,7 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
 
     config.confirm();
     CHECK(config.pending() == Pending::None);
-    CHECK(taken(config) == comms::Action::PowerOff);
+    CHECK(taken(config) == common::Action::PowerOff);
     CHECK(link_text(link.last().bytes).find("\"acknowledge\":true") != std::string::npos);
     CHECK_FALSE(taken(config));
 }

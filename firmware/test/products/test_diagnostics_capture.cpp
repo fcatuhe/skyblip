@@ -124,7 +124,7 @@ TEST_CASE("capture: a tap of the pad refuses the capture a page asked for") {
     rig.send("{\"command\":\"capture\",\"profile\":\"full\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Capture);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Capture);
     rig.tap(now_ms);
     rig.run(now_ms, now_ms + 2000);
     now_ms += 2000;

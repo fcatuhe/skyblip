@@ -2,9 +2,9 @@
 #include <string>
 
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/confirm.h"
+#include "simulator/world/hex.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 
@@ -54,7 +54,7 @@ TEST_CASE("product: a prompt from a browser that proved a key says the press tru
     say(rig, now_ms, "{\"command\":\"browser_challenge\"}");
     say(rig, now_ms, trust_browser());
     say(rig, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Set);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Set);
     CHECK(reads_trust(rig));
 }
 
@@ -63,6 +63,6 @@ TEST_CASE("product: a prompt from a browser with no proven key says nothing of t
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     say(rig, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
-    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Set);
+    REQUIRE(rig.product.config_link().config().pending() == common::Pending::Set);
     CHECK_FALSE(reads_trust(rig));
 }

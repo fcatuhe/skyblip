@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "core/comms/install_trust.h"
-#include "core/fec/crc.h"
-#include "core/util/hex.h"
+#include "core/util/crc32.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/platform.h"
 #include "hardware/platform/host/watchdog.h"
+#include "simulator/world/hex.h"
 #include "simulator/world/json.h"
 
 using namespace skyblip;
@@ -57,7 +57,7 @@ class Vectors {
 };
 
 void reseal(std::vector<uint8_t>& record) {
-    const uint32_t crc = fec::crc32(record.data(), 73);
+    const uint32_t crc = crc32(record.data(), 73);
     for (int i = 0; i < 4; i++)
         record[73 + static_cast<size_t>(i)] = static_cast<uint8_t>(crc >> (8 * i));
 }

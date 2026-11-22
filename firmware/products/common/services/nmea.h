@@ -1,10 +1,10 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_NMEA_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_NMEA_H
 
-#include "core/comms/config.h"
 #include "core/events/link.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/table.h"
+#include "products/common/services/config_service.h"
 #include "runtime/service.h"
 
 namespace skyblip::common {
@@ -43,7 +43,7 @@ class NmeaService : public runtime::Service {
     static constexpr int kMaxPassSentences = 5 + kTargetsPerPass;
     static constexpr int kPassBytes = kMaxPassSentences * kSentenceBytes;
 
-    NmeaService(runtime::Context& context, const comms::ConfigService& config)
+    NmeaService(runtime::Context& context, const ConfigService& config)
         : runtime::Service(context), config_(config) {}
 
     Status setup() override;
@@ -70,7 +70,7 @@ class NmeaService : public runtime::Service {
         int cursor;
     };
 
-    const comms::ConfigService& config_;
+    const ConfigService& config_;
     char pass_[kPassBytes]{};
     char sentence_[kSentenceBytes]{};
     Resume resumes_[kTargetsPerPass]{};

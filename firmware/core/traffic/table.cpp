@@ -232,10 +232,6 @@ int TrafficTable::count_of(model::Source source) const {
     return count;
 }
 
-void TrafficTable::clear() {
-    for (auto& slot : slots_) release(slot);
-}
-
 void TrafficTable::release(Target& target) {
     target.used = false;
     target.turn = TargetTurn{};

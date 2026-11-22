@@ -35,7 +35,7 @@ The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpol
 | what `parts::Spa06` compensates to (DS 4.6.1, Q16) | 1/65536 Pa | 0.001 mm |
 | `pressure_to_altitude_mm` | 1 mPa | 0.008 mm |
 | table interpolation against the closed form | | under 25 cm, a bias, not jitter |
-| `climb_e8_from_mm_s`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
+| `to_climb_e8`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
 
 A whole pascal would add 17 ft/min of invented rate over a one-second window. The rate is measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`).
 
@@ -94,11 +94,11 @@ The peaks reset when the flight timer starts, so they are this flight's.
 
 `extrapolate` and `arc` are the same model over two horizons, and stay two functions. `extrapolate` carries own-ship and a neighbour to one instant for the alarm and the radar, where every 100 ms at 50 m/s is 5 m of error in a separation. `kExtrapolationCeilingMs` is a little over a second, because a neighbour reports once a second and an ALP-TAS frame leaves up to 1.2 s after its fix. Past it the last fix stands where it was, never at an invented position. Own Traffic is never carried: it goes on air as the receiver solved it (`core/protocol/README.md`). `arc` draws the radar's leader line, runs to a minute, and owes the radio nothing.
 
-The model is OGN's (nrf52-ogn-tracker `src/ogn.h:1735-1790`): constant ground speed on a constant turn rate, the turn applied half before the step and half after, which keeps a circling aircraft on its arc instead of on the tangent. `Arc::advance()` walks the path, two sine lookups per aircraft per minute. Position is in millimetres and rotations are rounded, because a truncated Q14 rotation applied thirty times loses a metre a step.
+The model is OGN's (nrf52-ogn-tracker `src/ogn.h:1735-1790`): constant ground speed on a constant turn rate, the turn applied half before the step and half after, which keeps a circling aircraft on its arc instead of on the tangent. `Arc::advance()` walks the path, two sine lookups per aircraft per minute. A step is whole seconds and the position is `int32_t` millimetres, so a step takes no 64-bit division. That range holds the fastest speed an observation carries, 16,384 m/s, for two minutes. Rotations are rounded, because a truncated Q14 rotation applied thirty times loses a metre a step.
 
-ADS-L carries no turn rate, so `motion_of(observation, ...)` takes the rate `core/traffic` estimated from the target's track history, and flies straight with no estimate yet.
+ADS-L carries no turn rate, so the radar page (`products/skyblip_go/pages/radar_traffic.cpp`) flies a target on the rate `core/traffic` estimated from its track history, and straight with no estimate yet. The arc is flat: the radar draws no climb.
 
-`kTurnCeilingDps` is 30. A differentiated 1 Hz track produces tens of degrees per second out of a bad fix, and no aircraft this device rides in holds that rate for the length of the projection. The clamp is applied where a motion is built, so nothing downstream has to remember it.
+`kTurnCeilingDps` is 30. A differentiated 1 Hz track produces tens of degrees per second out of a bad fix, and no aircraft this device rides in holds that rate for the length of the projection. `Arc` applies the clamp when it is built, so no caller has to remember it.
 
 ## state
 
@@ -164,7 +164,7 @@ The bus carries `state`'s answer as the ADS-L G.1.2 code in `own.flight_state`. 
 
 A record is 24 bytes and a sector holds 170 of them behind a 16-byte label. The label, and which sector a ring gets next, belong to [`core/store`](../store/README.md). Every field is written one at a time, little-endian, so the host reader sees no hidden padding. The device never writes IGC: the host converts the records.
 
-Byte 16 tells a fix from an event. A fix carries its track's high bit there, so the byte is 0 or 1. An event sets the top bit and names its kind in the other seven. Bytes 0-1 and 22-23 are the same in both, so recovery, the torn-tail check and the offload never ask which a slot holds. `decode_log_record` answers `Unsupported` for an event and `decode_log_event` for a fix, and a kind a later build adds is refused. A kind is retired, never renumbered, because a flight outlives the firmware that wrote it.
+Byte 16 tells a fix from an event. A fix carries its track's high bit there, so the byte is 0 or 1. An event sets the top bit and names its kind in the other seven. Bytes 0-1 and 22-23 are the same in both, so recovery, the torn-tail check and the offload never ask which a slot holds. `decode_log_record` answers `Unsupported` for an event, and the host suite's `decode_log_event` (`test/support/log_event_read.h`) answers it for a fix. A kind a later build adds is refused. A kind is retired, never renumbered, because a flight outlives the firmware that wrote it.
 
 | Byte | Fix | Status | Alarm, encounter |
 |---|---|---|---|

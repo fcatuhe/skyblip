@@ -419,28 +419,6 @@ Record record_of(const Switch& value, const Instant& at);
 Record record_of(const Loop& value, const Instant& at);
 Record record_of(const Adsb& value, const Instant& at);
 
-bool read(const Record& record, Boot& out);
-bool read(const Record& record, Config& out);
-bool read(const Record& record, Gnss& out);
-bool read(const Record& record, Pps& out);
-bool read(const Record& record, radio::Entry& out);
-bool read(const Record& record, Dwell& out);
-bool read(const Record& record, Flight& out);
-bool read(const Record& record, Power& out);
-bool read(const Record& record, Barometer& out);
-bool read(const Record& record, Motion& out);
-bool read(const Record& record, Contact& out);
-bool read(const Record& record, Link& out);
-bool read(const Record& record, Traffic& out);
-bool read(const Record& record, Write& out);
-bool read(const Record& record, Screen& out);
-bool read(const Record& record, Gap& out);
-bool read(const Record& record, End& out);
-bool read(const Record& record, Duty& out);
-bool read(const Record& record, Switch& out);
-bool read(const Record& record, Loop& out);
-bool read(const Record& record, Adsb& out);
-
 }  // namespace skyblip::diagnostics
 
 #endif

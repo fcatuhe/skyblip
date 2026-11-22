@@ -3,8 +3,8 @@
 #include <algorithm>
 
 #include "core/events/input.h"
-#include "core/fec/crc.h"
 #include "core/power/cutoff.h"
+#include "core/util/crc32.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/parked.h"
 #include "products/skyblip_go/pages/recovery.h"
@@ -24,9 +24,9 @@ bool second_due(const diagnostics::Instant& at, uint32_t now_ms, uint32_t last_m
 
 // INFO: cf 02aug26 a standing prompt takes the pad and the button both, so nothing pages or opens
 void ScreenService::handle_input(uint32_t now_ms) {
-    const comms::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
-                                       ? config_.pending()
-                                       : comms::Pending::None;
+    const common::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
+                                        ? config_.pending()
+                                        : common::Pending::None;
     const uint32_t staged = config_.prompts_staged();
     if (pending != prompt_ || staged != prompts_staged_) {
         prompt_ = pending;
@@ -274,7 +274,7 @@ void ScreenService::close_prompt(bool accepted) {
         config_.confirm();
     else
         config_.cancel();
-    prompt_ = comms::Pending::None;
+    prompt_ = common::Pending::None;
     answer_.disarm();
     prompt_on_glass_ = false;
     change_screen();
@@ -329,7 +329,7 @@ void ScreenService::tick(uint32_t now_ms) {
     render(now_ms);
     render_us_ = microseconds_since(render_began_us);
 
-    const uint32_t frame_crc = fec::crc32(framebuffer_.data(), Glass::kBytes);
+    const uint32_t frame_crc = crc32(framebuffer_.data(), Glass::kBytes);
     const bool changed =
         !presented_once_ || change_ == Change::Wiped || frame_crc != presented_crc_;
     if (!changed) return;

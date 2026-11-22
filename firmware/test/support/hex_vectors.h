@@ -1,23 +1,21 @@
-#ifndef SKYBLIP_TEST_SUPPORT_LINK_VECTORS_H
-#define SKYBLIP_TEST_SUPPORT_LINK_VECTORS_H
+#ifndef SKYBLIP_TEST_SUPPORT_HEX_VECTORS_H
+#define SKYBLIP_TEST_SUPPORT_HEX_VECTORS_H
 
 #include <cstdint>
 #include <cstdio>
 #include <string>
 #include <vector>
 
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 
 namespace skyblip {
 
-class LinkVectors {
+class HexVectors {
    public:
-    static constexpr const char* kPath = "../schemas/link.v1.vectors.json";
-
-    LinkVectors() {
-        std::FILE* file = std::fopen(kPath, "rb");
-        REQUIRE_MESSAGE(file != nullptr, "cannot open ", kPath);
+    explicit HexVectors(const char* path) {
+        std::FILE* file = std::fopen(path, "rb");
+        REQUIRE_MESSAGE(file != nullptr, "cannot open ", path);
         char chunk[512];
         size_t count = 0;
         while ((count = std::fread(chunk, 1, sizeof(chunk), file)) > 0) text_.append(chunk, count);

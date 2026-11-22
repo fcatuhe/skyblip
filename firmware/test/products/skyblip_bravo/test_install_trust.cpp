@@ -2,8 +2,8 @@
 #include <string>
 
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 #include "test/support/bravo_rig.h"
 #include "test/support/install_trust.h"
 
@@ -47,7 +47,7 @@ TEST_CASE(
         InstalledSlot::record(crypto::Ed25519::public_key_of(kBrowserSeed), "Firefox"));
     REQUIRE(rig.setup() == Status::Ok);
     rig.run_for(10000);
-    comms::ConfigService& config = rig.product.config_link().config();
+    common::ConfigService& config = rig.product.config_link().config();
     REQUIRE(config.trusted_browsers().count() == 1);
     CHECK(rig.platform.dfu().page_erases == 1);
 
@@ -55,6 +55,6 @@ TEST_CASE(
     say(rig, "{\"command\":\"browser_challenge\"}");
     CHECK(say(rig, trust_browser()).find("\"trusted\"") != std::string::npos);
     say(rig, "{\"command\":\"set\",\"alarm\":\"soft\"}");
-    CHECK(config.pending() == comms::Pending::None);
+    CHECK(config.pending() == common::Pending::None);
     CHECK(rig.product.settings().alarm == bravo::Alarm::Soft);
 }

@@ -20,6 +20,7 @@
 #include "protocols/adsl/reed_solomon.h"
 #include "protocols/adsl/uplink.h"
 #include "protocols/adsl_edge/registration.h"
+#include "simulator/world/alptas_out.h"
 
 using namespace skyblip;
 
@@ -65,8 +66,8 @@ void encode_alptas(FuzzedDataProvider& in, const Receiver& receiver, uint8_t* fr
     observation.position_valid = true;
     const int32_t keyed_off_s =
         in.ConsumeIntegralInRange<int32_t>(-alptas::kKeyWindowS, alptas::kKeyWindowS);
-    (void)protocol::alptas_encode(frame, observation,
-                                  receiver.utc_s + static_cast<uint32_t>(keyed_off_s));
+    (void)simulator::alptas_encode(frame, observation,
+                                   receiver.utc_s + static_cast<uint32_t>(keyed_off_s));
 }
 
 // One M-band transmitter, then the chips past the shared sync window the radio consumed.

@@ -11,7 +11,8 @@ The services more than one product runs, and the vocabulary they read. Why they 
 - `FlightLogService` writes the flights ring: a takeoff opens a session and a landing closes it. It also drains `bus.log_rx` and answers the Log endpoint for both rings.
 - `CaptureService` drains `diagnostics::Recorder` into the diagnostics ring while a capture is armed.
 - `AdsbCapture` is not a service. While a capture is armed it writes a `diagnostics::Adsb` record per ADS-B observation, at most once per aircraft each `kRecordPeriodMs` and `kBudgetCeilingRecords` in any second. Bravo's `AdsbService` calls `record()` after `protocol::adsb_fold`, and the Go after each `peer` observation, both before the traffic table (`../../core/diagnostics/README.md`, "The ADS-B record").
-- `ConfigLinkService` is the companion link's device side: it answers `config`, `set` and the other config commands through `comms::ConfigService`, loads and persists the product's settings, names the unit on the air and takes a running image off probation.
+- `ConfigLinkService` is the companion link's device side: it answers `config`, `set` and the other config commands through `ConfigService` (`services/config_service.h`), loads and persists the product's settings, names the unit on the air and takes a running image off probation.
+- `ConfigService` is not a service. It is the product policy of the config endpoint, owned by `ConfigLinkService`: which commands a product answers, the prompts, the flight gate, the upload window, pairing, captures, activation and trusted browsers. It sends through `comms::ConfigChannel`, which holds the claim and the replies (`../../core/comms/README.md`). `config_service.cpp` holds the dispatch, the settings and the update. `config_prompt.cpp`, `config_reports.cpp`, `config_identity.cpp`, `config_browser.cpp`, `config_pair.cpp` and `config_capture.cpp` each hold one group of commands.
 
 No file here includes `products/<product>/*`. A service gets what it needs from a product at construction.
 
@@ -67,7 +68,7 @@ Below the low-battery warning the settings sector is not touched, because NVS ga
 
 ### Prompts and the press that answers them
 
-A link prompt is confirmed on the device through `comms::ConfigService` (`config_link().config()`): `ScreenService` shows it on the Go's glass and `ButtonService` on Bravo's lamp (`../skyblip_bravo/README.md`). The link never shows or answers a prompt.
+A link prompt is confirmed on the device through `ConfigService` (`config_link().config()`): `ScreenService` shows it on the Go's glass and `ButtonService` on Bravo's lamp (`../skyblip_bravo/README.md`). The link never shows or answers a prompt.
 
 Both products answer with `PromptAnswer` (`prompt_answer.h`). One press allows, the Go's pad refuses, and thirty seconds expire a prompt on either. The press is the security boundary: BLE pairing is off, so nothing proves the phone is the pilot's, and physical presence stands in for it. `PromptAnswer` arms only once the prompt is readable and the button has been up for `kAnswerSettleMs` since its last release and since the prompt arrived. A down that began at or before the arm instant disarms it, dated by the board's debounce edge (`events::ContactEvent::at_ms`), so a button already held when a phone asks cannot answer with its release (#176, #245). A prompt replaced by one of the same kind disarms it too, because the product calls `ask()` on every change. Bravo's pairing press arms through the same `PromptAnswer` with its own arm instant (`settled()`, `went_down_after()`).
 

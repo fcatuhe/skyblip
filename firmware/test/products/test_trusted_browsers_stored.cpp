@@ -2,8 +2,8 @@
 #include <string>
 
 #include "core/comms/link_registry.h"
-#include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "simulator/world/hex.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -32,7 +32,7 @@ std::string trust_browser() {
            "\",\"label\":\"Chrome on Android\"}";
 }
 
-comms::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
+common::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
 
 void say(Rig& rig, uint32_t& now_ms, const std::string& json) {
     rig.send(json.c_str());
@@ -54,7 +54,7 @@ TEST_CASE("product: a browser a press trusted is still trusted after a restart")
     uint32_t now_ms = 0;
     prove(before, now_ms);
     say(before, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
-    REQUIRE(config(before).pending() == comms::Pending::Set);
+    REQUIRE(config(before).pending() == common::Pending::Set);
     config(before).confirm();
     before.run(now_ms, now_ms + 10000);
 
@@ -67,7 +67,7 @@ TEST_CASE("product: a browser a press trusted is still trusted after a restart")
     CHECK(after.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"trusted\"}");
     say(after, now_ms, "{\"command\":\"set\",\"units\":\"nautical\"}");
-    CHECK(config(after).pending() == comms::Pending::None);
+    CHECK(config(after).pending() == common::Pending::None);
     CHECK(after.settings().units == go::Units::Nautical);
 }
 

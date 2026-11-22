@@ -4,17 +4,17 @@
 #include <cstdint>
 #include <optional>
 
-#include "core/comms/config.h"
 #include "core/identity/activation.h"
 #include "ports/capabilities.h"
 #include "products/common/alarm.h"
+#include "products/common/services/config_service.h"
 #include "products/common/settings_store.h"
 #include "products/skyblip_go/pages/settings_changes.h"
 #include "products/skyblip_go/settings.h"
 
 namespace skyblip::go {
 
-static_assert(comms::kPromptDetailBytes >= kSettingsChangesBytes, "the prompt holds every row");
+static_assert(common::kPromptDetailBytes >= kSettingsChangesBytes, "the prompt holds every row");
 
 class SettingsStore : public common::SettingsStore {
    public:

@@ -3,10 +3,10 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "core/comms/config.h"
 #include "core/dfu/update.h"
 #include "core/util/cbor.h"
 #include "core/util/format.h"
+#include "products/common/services/config_service.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/settings_changes.h"
 #include "products/skyblip_go/settings.h"
@@ -18,23 +18,23 @@ namespace {
 
 struct Named {
     const char* name;
-    comms::Pending pending;
+    common::Pending pending;
 };
 
-constexpr Named kPrompts[] = {{"set", comms::Pending::Set},
-                              {"dfu", comms::Pending::Dfu},
-                              {"recovery", comms::Pending::Recovery},
-                              {"power_off", comms::Pending::PowerOff},
-                              {"erase_log", comms::Pending::EraseLog},
-                              {"gnss_cold_start", comms::Pending::GnssColdStart},
-                              {"register", comms::Pending::Register},
-                              {"capture", comms::Pending::Capture},
-                              {"pair", comms::Pending::Pair}};
+constexpr Named kPrompts[] = {{"set", common::Pending::Set},
+                              {"dfu", common::Pending::Dfu},
+                              {"recovery", common::Pending::Recovery},
+                              {"power_off", common::Pending::PowerOff},
+                              {"erase_log", common::Pending::EraseLog},
+                              {"gnss_cold_start", common::Pending::GnssColdStart},
+                              {"register", common::Pending::Register},
+                              {"capture", common::Pending::Capture},
+                              {"pair", common::Pending::Pair}};
 
-comms::Pending pending_named(const char* name) {
+common::Pending pending_named(const char* name) {
     for (const Named& named : kPrompts)
         if (std::strcmp(named.name, name) == 0) return named.pending;
-    return comms::Pending::None;
+    return common::Pending::None;
 }
 
 constexpr int kFrameBytes = 512;
@@ -60,7 +60,7 @@ bool capture_detail(const char* argument, char* out) {
         char* end = nullptr;
         const unsigned long evicts = std::strtoul(colon + 1, &end, 10);
         if (end == colon + 1 || *end != 0) return false;
-        out[comms::format_capture_detail(out, each.profile, static_cast<uint32_t>(evicts))] = 0;
+        out[common::format_capture_detail(out, each.profile, static_cast<uint32_t>(evicts))] = 0;
         return true;
     }
     return false;
@@ -78,7 +78,7 @@ bool pair_detail(const char* argument, char* out) {
         if (!decimal && !letter) return false;
         tag = static_cast<uint16_t>(tag << 4 | (decimal ? digit - '0' : digit - 'A' + 10));
     }
-    (void)comms::format_pair_detail(out, tag);
+    (void)common::format_pair_detail(out, tag);
     return true;
 }
 
@@ -135,24 +135,24 @@ void say(char* out, int capacity, const char* title, const char* detail, uint32_
 
 bool draw_prompt(go::Glass& glass, const char* prompt, const char* argument, const char* settings,
                  uint32_t seconds_left, char* words, int words_capacity, PromptUnit unit) {
-    const comms::Pending pending = pending_named(prompt);
-    if (pending == comms::Pending::None) return false;
-    char detail[comms::kPromptDetailBytes]{};
-    if (pending == comms::Pending::Set) {
+    const common::Pending pending = pending_named(prompt);
+    if (pending == common::Pending::None) return false;
+    char detail[common::kPromptDetailBytes]{};
+    if (pending == common::Pending::Set) {
         if (!settings_detail(argument, settings, unit, detail, sizeof(detail))) return false;
-    } else if (pending == comms::Pending::Dfu) {
+    } else if (pending == common::Pending::Dfu) {
         ports::ImageVersion version;
         if (!dfu::parse_version(argument, version)) return false;
-        (void)comms::format_dfu_detail(detail, sizeof(detail), version);
-    } else if (pending == comms::Pending::Capture && argument[0] != 0) {
+        (void)common::format_dfu_detail(detail, sizeof(detail), version);
+    } else if (pending == common::Pending::Capture && argument[0] != 0) {
         if (!capture_detail(argument, detail)) return false;
-    } else if (pending == comms::Pending::Pair) {
+    } else if (pending == common::Pending::Pair) {
         if (!pair_detail(argument, detail)) return false;
     } else {
-        std::strncpy(detail, comms::pending_detail(pending), sizeof(detail) - 1);
+        std::strncpy(detail, common::pending_detail(pending), sizeof(detail) - 1);
     }
     go::ConfirmSnapshot snapshot;
-    snapshot.title = comms::pending_title(pending);
+    snapshot.title = common::pending_title(pending);
     snapshot.detail = detail;
     snapshot.seconds_left = seconds_left;
     go::draw_confirm(glass, snapshot);
