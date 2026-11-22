@@ -1,6 +1,6 @@
 # the Bluetooth link
 
-What `link.cpp` and `central.cpp` put on the air, and why those UUIDs.
+What the link and `central.cpp` put on the air, and why those UUIDs. The link is three files over `link_state.h`: `link_gatt.cpp` holds the GATT table and the writes, `link_advertising.cpp` the advert and the scan response, and `link.cpp` the connections, their sessions and the notifications.
 
 ## Three services, because an EFB and our own app want different things
 
