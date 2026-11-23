@@ -17,7 +17,7 @@ F.2.3 says the ICAO address "shall be configurable and entered by the user of th
 
 ## 2. G.1.2: Undefined on the ground for a craft that can fly at low ground speed
 
-G.1.2 says "The 'Undefined' value shall be used if no reasonable decision is possible by the ADS-L device". The Go decides the flight state from ground speed. A glider or a paraglider soaring a ridge into wind, a slow ultralight, a balloon or a hovering helicopter can fly at little or no ground speed, so for those G.1.3 categories the Go cannot tell a landing from flight. It sends Undefined instead of On ground for categories 3 to 13 and 15 to 17, and so keeps G.1.16's 1 Hz rate rather than dropping to 0.1 Hz (`firmware/core/flight/state.cpp`, `announced_state()`). We ask whether this is the use of Undefined the clause intends.
+G.1.2 says "The 'Undefined' value shall be used if no reasonable decision is possible by the ADS-L device". The Go decides the flight state from ground speed. A glider or a paraglider soaring a ridge into wind, a slow ultralight, a balloon or a hovering helicopter can fly at little or no ground speed, so for those G.1.3 categories the Go cannot tell a landing from flight. It sends Undefined instead of On ground for categories 3 to 13 and 15 to 17, and for 0, where no category was set, and so keeps G.1.16's 1 Hz rate rather than dropping to 0.1 Hz (`firmware/core/flight/state.cpp`, `announced_state()`). We ask whether this is the use of Undefined the clause intends.
 
 ## 3. C.5 and F.2.1: payload 66 outside the direct slot
 

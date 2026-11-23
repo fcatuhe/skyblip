@@ -5,7 +5,7 @@ slug: gps
 description: "Wie skyBlip Go GPS-Positionsfixes prüft, auf stabile Werte wartet, die Zeit per PPS bestimmt und anhand der Geschwindigkeit über Grund den Flug erkennt."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-23"
 ---
 
 <section>
@@ -109,7 +109,7 @@ updated_on: "2026-11-20"
   <p class="lede">Die Flugzeituhr zählt die Zeit in der Luft seit dem Einschalten, nicht seit dem letzten Start. Sie hält bei einer Landung an und läuft beim nächsten Start weiter. Aufsetzen und Durchstarten setzt die Summe also nicht zurück. Eine fälschlich erkannte Landung kostet nur die Sekunden im Bodenzustand.</p>
 
   <h3 id="no-roll">Wenn die Geschwindigkeit über Grund nicht ausreicht.</h3>
-  <p class="lede">Ein Gleitschirm fliegt mit etwa 10&nbsp;m/s durch die Luft und erreicht bei 5&nbsp;m/s Gegenwind nur 5&nbsp;m/s über Grund. Er kann den ganzen Flug unter der Startschwelle bleiben. Dasselbe gilt für Hängegleiter am Hang und für Ballone. Für diese Typen sendet Go statt des Bodenzustands den nicht definierten ADS-L-Status. ADS-L sendet ihn mit voller Rate und meldet das Luftfahrzeug nie als abgestellt. Die Erkennung über die Geschwindigkeit meldet dadurch keinen Flug. Für das Flugprotokoll gilt eine eigene Regel: Es beginnt bei Bewegung und endet nach zwei Minuten Stillstand.</p>
+  <p class="lede">Ein Gleitschirm fliegt mit etwa 10&nbsp;m/s durch die Luft und erreicht bei 5&nbsp;m/s Gegenwind nur 5&nbsp;m/s über Grund. Er kann den ganzen Flug unter der Startschwelle bleiben. Dasselbe gilt für Segelflugzeuge und Hängegleiter am Hang, für langsame Ultraleichtflugzeuge und für Ballone. Für diese Typen sendet Go statt des Bodenzustands den nicht definierten ADS-L-Status. ADS-L sendet ihn mit voller Rate und meldet das Luftfahrzeug nie als abgestellt. Die Erkennung über die Geschwindigkeit meldet dadurch keinen Flug. Für das Flugprotokoll gilt eine eigene Regel: Es beginnt bei Bewegung und endet nach zwei Minuten Stillstand.</p>
   <p class="lede">Früher diente die barometrische Steigrate dazu, solche Flüge zu erkennen. Böen, Druckänderungen und Messspitzen bei Aussetzern des Barometers meldeten aber falsche Starts beim Warten vor dem Hangar. Die Geschwindigkeit über Grund vermeidet das, kann Flüge bei geringer Geschwindigkeit über Grund aber übersehen. Der nicht definierte Sendestatus und die eigene Aufzeichnungsregel fangen das ab, ohne barometrisches Steigen als Flugnachweis zu werten.</p>
 
   <ul class="points">
