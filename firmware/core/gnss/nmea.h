@@ -8,8 +8,8 @@
 
 namespace skyblip::gnss {
 
-// INFO: fc 20nov26 many receivers omit GGA's geoid separation or send 0, so we assume 46 m, EGM96
-// over central Europe
+// INFO: fc 22nov26 some receivers omit GGA's geoid separation, so we assume 46 m, EGM96 over
+// central Europe
 constexpr int32_t kDefaultGeoidSeparationMm = 46000;
 
 // INFO: fc 20nov26 a GGA cut short still checksums, so moshe-braner's 40-byte floor refuses it

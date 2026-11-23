@@ -227,10 +227,8 @@ TEST_CASE("gnss: GGA carries MSL and ellipsoidal height as separate values" *
     CHECK(solution.altitude_hae_mm == 592300);  // 545.4 + 46.9, the value ADS-L wants
 }
 
-// Some receivers omit field 11 entirely and some always answer "0.0,M": OGN
-// carries a manual override with a 40 m default (oss/nrf52-ogn-tracker
-// src/main.h:38, src/gps.cpp:526-529) and SoftRF special-cases the always-zero
-// chipsets (oss/SoftRF-lyusupov .../src/driver/GNSS.cpp:1681-1684). We fall back
+// Some receivers omit field 11 entirely: OGN carries a manual override with a 40 m
+// default (oss/nrf52-ogn-tracker src/main.h:38, src/gps.cpp:526-529). We fall back
 // to a named regional constant and flag that the separation was assumed, so a
 // wrong altitude is attributable rather than silent.
 TEST_CASE("gnss: a receiver that omits the geoid separation falls back and says so") {
@@ -243,13 +241,15 @@ TEST_CASE("gnss: a receiver that omits the geoid separation falls back and says 
     CHECK(parser.solution().altitude_hae_mm == 545400 + kDefaultGeoidSeparationMm);
 }
 
-TEST_CASE("gnss: a receiver stuck at 0.0 separation falls back too") {
+// A receiver with no geoid model writes 0.0 and an ellipsoidal field 9, as SoftRF reads it
+// (oss/SoftRF .../src/protocol/data/NMEA.cpp:690-695), so 46 m more would overstate the height.
+TEST_CASE("gnss: a 0.0 geoid separation is measured, so field 9 is the ellipsoidal height") {
     NmeaParser parser;
     const char* zero = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,0.0,M,,*7C";
     REQUIRE(parser.parse_line(zero, static_cast<int>(strlen(zero))));
-    CHECK_FALSE(parser.solution().geoid_measured);
-    CHECK(parser.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
-    CHECK(parser.solution().altitude_hae_mm == 545400 + kDefaultGeoidSeparationMm);
+    CHECK(parser.solution().geoid_measured);
+    CHECK(parser.solution().geoid_separation_mm == 0);
+    CHECK(parser.solution().altitude_hae_mm == 545400);
 }
 
 // GGA field 8. Without it every integrity and accuracy field we transmit is a

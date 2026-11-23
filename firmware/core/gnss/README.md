@@ -6,6 +6,8 @@ A receiver produces solutions on its own cadence, two a second on the Go, whethe
 
 GSA field 2 says whether the receiver solved for height: 1 no fix, 2 without height, 3 with. One GSA comes per constellation, back to back, and one outside the solution may say 1, so the parser takes the best mode of the run, from every GSA, with DOPs or without. VDOP comes from a GSA that carries a PDOP, and is zero unless the run said 3D, because the L76K documents a VDOP up to 99.0 and never an empty one, so a 2D GSA may still print it. The L76K sends GSA once a second at 2 Hz, so `FixValidity::expire_fix_mode` clears the mode and VDOP of a solution published over `kGsaMaxAgeMs`, 1.5 s, after the last GSA. A Traffic burst sends the altitude only with that VDOP, since ADS-L G.1.7 marks it invalid without a 3D fix.
 
+GGA field 11 is the geoid separation, which turns field 9's height above sea level into the ellipsoidal height G.1.7 sends. A 0.0 counts as measured: the geoid is level with the ellipsoid there, or the receiver has no geoid model and field 9 is already ellipsoidal, as SoftRF reads it (`src/protocol/data/NMEA.cpp:690-695`). An empty field falls back on `kDefaultGeoidSeparationMm`, 46 m over central Europe, and clears `geoid_measured`, so G.1.15 claims no vertical accuracy.
+
 Both receivers share the parser. Bravo's AG3335 sends NMEA 4.10 on the `GN` talker (`../../hardware/parts/ag3335/README.md`). Its GSA names Galileo as system 3, which `system_of_gsa_id` does not know, so a Galileo satellite in use matches any constellation with the same id. Only the satellites page reads that, and Bravo has none. Its GGA without a fix is 37 bytes, under `kGgaLengthFloorBytes`, so its no-fix reason reads `NO GGA`.
 
 ## How far a receiver with no fix has got
