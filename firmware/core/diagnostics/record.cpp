@@ -5,34 +5,6 @@
 
 namespace skyblip::diagnostics {
 
-const char* type_name(Type type) {
-    switch (type) {
-        case Type::None: return "none";
-        case Type::Boot: return "boot";
-        case Type::Config: return "config";
-        case Type::Gnss: return "gnss";
-        case Type::Pps: return "pps";
-        case Type::Burst: return "burst";
-        case Type::Dwell: return "dwell";
-        case Type::Flight: return "flight";
-        case Type::Power: return "power";
-        case Type::Barometer: return "barometer";
-        case Type::Motion: return "motion";
-        case Type::Contact: return "contact";
-        case Type::Link: return "link";
-        case Type::Traffic: return "traffic";
-        case Type::Write: return "write";
-        case Type::Screen: return "screen";
-        case Type::Gap: return "gap";
-        case Type::End: return "end";
-        case Type::Duty: return "duty";
-        case Type::Switch: return "switch";
-        case Type::Loop: return "loop";
-        case Type::Adsb: return "adsb";
-    }
-    return "?";
-}
-
 Instant instant_of(const events::Stamp& stamp, bool utc_dated) {
     Instant at{};
     at.at_s = stamp.at_s;
