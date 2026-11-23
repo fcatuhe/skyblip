@@ -71,8 +71,9 @@ FlightState FlightMonitor::update(const FlightSample& sample, uint32_t now_ms) {
     // INFO: fc 22nov26 a fix with no speed shows neither a takeoff nor a landing
     if (!sample.speed_valid) {
         previous_speed_valid_ = false;
-        return state_;
+        return now_ms - speed_at_ms_ > kSpeedMaxAgeMs ? FlightState::Unknown : state_;
     }
+    speed_at_ms_ = now_ms;
     update_rolling(sample.speed_mm_s);
 
     const int32_t previous_speed_mm_s = last_speed_mm_s_;

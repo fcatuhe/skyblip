@@ -114,7 +114,7 @@ The receiver solves four times a second, and own-ship hands the monitor only the
 | rolling | ground speed >= 1.5 m/s, on the ground | `kRollingSpeedMmS` | the word TAXI rather than GROUND |
 | between | keep the state you had | | |
 
-A fix whose receiver reported no speed is no evidence either way. The state stays as it was, and the landing hold restarts on the next speed (`FlightSample::speed_valid`).
+A fix whose receiver reported no speed is no evidence either way. The state stays as it was, and the landing hold restarts on the next speed (`FlightSample::speed_valid`). After `kSpeedMaxAgeMs`, one landing hold with no speed, the monitor answers `Unknown`, G.1.2's Undefined, and keeps the state underneath for when the speed returns.
 
 There is no altitude, vertical rate or barometer in the rule, so it rests on one number the receiver solves on every fix. An MSL altitude rule would read airborne while parked at Samedan (1707 m) or Leadville (3026 m).
 

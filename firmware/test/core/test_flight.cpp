@@ -224,18 +224,22 @@ TEST_CASE("flight: no fix is not a landing") {
 }
 
 // An empty RMC speed read as 0 m/s, which landed an aircraft in flight on one solution.
-TEST_CASE("flight: a fix with no ground speed keeps the state it had, landing hold included") {
+TEST_CASE(
+    "flight: a fix with no ground speed keeps its state for a landing hold, then is unknown") {
     Stream sky;
     CHECK(sky.unmoving(5) == FlightState::Unknown);
     REQUIRE(sky.hold(3, 30.0) == FlightState::Airborne);
 
-    CHECK(sky.unmoving(30) == FlightState::Airborne);
+    CHECK(sky.unmoving(10) == FlightState::Airborne);
+    CHECK(sky.unmoving(1) == FlightState::Unknown);
+    CHECK(sky.state() == FlightState::Airborne);
     CHECK(sky.hold(9, 4.0) == FlightState::Airborne);
     CHECK(sky.unmoving(1) == FlightState::Airborne);
     CHECK(sky.hold(9, 4.0) == FlightState::Airborne);
 
     REQUIRE(sky.hold(1, 0.0) == FlightState::Ground);
-    CHECK(sky.unmoving(30) == FlightState::Ground);
+    CHECK(sky.unmoving(10) == FlightState::Ground);
+    CHECK(sky.unmoving(20) == FlightState::Unknown);
 }
 
 // The jerk gate compares two consecutive solutions, so an outage must not arm it.
