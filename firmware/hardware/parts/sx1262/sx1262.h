@@ -33,6 +33,9 @@ struct RadioConfig {
     const uint8_t* sync{nullptr};
     uint8_t sync_bits{0};
     uint8_t payload_bytes{0};
+    const uint8_t* tx_sync{nullptr};
+    uint8_t tx_sync_bits{0};
+    uint16_t tx_preamble_chips{0};
     // INFO: fc 20nov26 a field trim for an off reference, positive upwards, clamped by trimmed_hz()
     int16_t frequency_correction_e1_ppm{0};
 };
@@ -107,7 +110,7 @@ class Sx1262 {
     Status check_device_errors();
     void clear_device_errors();
     void configure_frame(const RadioConfig& config);
-    void write_packet_parameters(uint8_t payload_bytes);
+    void write_packet_parameters(uint8_t payload_bytes, uint16_t preamble_chips, uint8_t sync_bits);
     uint32_t tx_timeout_ticks(uint8_t bytes) const;
     void recover_tx();
     Status reinitialise();
@@ -126,6 +129,7 @@ class Sx1262 {
     bool configured_{false};
     bool tuned_{false};
     uint8_t packet_bytes_{0};
+    bool tx_framing_{false};
     uint8_t staged_bytes_{0};
     uint32_t since_rx_ms_{0};
     uint32_t reinitialisations_{0};
@@ -295,6 +299,7 @@ constexpr uint32_t kResetLowUs = 100;
 constexpr uint32_t kSleepSettleUs = 500;
 // INFO: fc 20nov26 ADS-L §C.2 sends 16 preamble chips, and the detector needs 8 of them
 constexpr uint16_t kPreambleChips = 16;
+constexpr uint8_t kSyncWordBitsCeiling = 64;
 constexpr uint8_t kPreambleDetect8Chips = 0x04;
 constexpr uint8_t kAddressFilteringOff = 0x00;
 constexpr uint8_t kFixedLength = 0x00;

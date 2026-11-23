@@ -27,14 +27,14 @@ TEST_CASE("sx1262: what was written to the buffer is what goes on air") {
     uint8_t out[8] = {0};
     uint8_t bytes = 0;
     REQUIRE(chip.take_tx(out, bytes));
-    CHECK(bytes == sizeof(frame));
-    CHECK(out[0] == 0x72);
-    CHECK(out[4] == 0x55);
+    CHECK(bytes == 2 + sizeof(frame));
+    CHECK(out[0] == 0x55);
+    CHECK(out[1] == 0x55);
+    CHECK(std::memcmp(out + 2, frame, sizeof(frame)) == 0);
     CHECK_FALSE(chip.take_tx(out, bytes));
 }
 
-// What a peer's detector matches is the window the part inserts, not one the dwell wrote itself.
-TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then the buffer" *
+TEST_CASE("sx1262: what goes on air is the preamble, sync window and buffer" *
           doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
@@ -58,8 +58,8 @@ TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then th
     uint8_t expected[protocol::kTxChipBytes] = {0};
     const size_t expected_bytes =
         wire::manchester_frame(adsl::kSyncWord, payload, sizeof(payload), expected);
-    CHECK(bytes == expected_bytes);
-    CHECK(std::memcmp(on_air, expected, expected_bytes) == 0);
+    CHECK(bytes == 2 + expected_bytes);
+    CHECK(std::memcmp(on_air + 2, expected, expected_bytes) == 0);
 }
 
 // The dwell hands the radio a sync window and a length. Without them programmed
@@ -228,9 +228,7 @@ TEST_CASE("sx1262: a burst carrying a sync word the dwell is not armed for is no
     CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::None);
 }
 
-// Bench, 28sep26: fixed length was the receive length, so every burst carried four stale bytes
-// and 0.32 ms of air it did not need.
-TEST_CASE("sx1262: a burst goes on air at its own length, and the receiver reads its own again") {
+TEST_CASE("sx1262: the shorter receive sync and receive length return after transmission") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
@@ -239,18 +237,30 @@ TEST_CASE("sx1262: a burst goes on air at its own length, and the receiver reads
     config.sync_bits = protocol::kSharedSyncBits;
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
+    const uint8_t tx_sync[]{0x55, 0x55, 0x99, 0x95, 0xA6, 0x9A, 0x65};
+    config.tx_sync = tx_sync;
+    config.tx_sync_bits = sizeof(tx_sync) * 8;
+    config.tx_preamble_chips = 8;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
-    const uint8_t burst[protocol::kSyncTailChipBytes + 2 * adsl::kFrameBytes] = {0x55};
+    const uint8_t burst[2 + 2 * adsl::kFrameBytes] = {0xAA};
     REQUIRE(radio.transmit(burst, sizeof(burst)) == Status::Ok);
     uint8_t on_air[64] = {0};
     uint8_t bytes = 0;
     REQUIRE(chip.take_tx(on_air, bytes));
-    CHECK(bytes == protocol::kSyncWindowChipBytes + sizeof(burst));
+    CHECK(bytes == 58);
+    CHECK(radio.air_us(sizeof(burst)) == 4640);
 
     chip.signal_tx_done();
+    REQUIRE(radio.poll(on_air, sizeof(on_air)).type == RadioEventType::TxDone);
     REQUIRE(radio.start_receive() == Status::Ok);
     CHECK(chip.receiving);
+    CHECK(chip.sync_bits == 16);
+    CHECK(chip.sync[0] == 0x55);
+    CHECK(chip.sync[1] == 0x99);
     CHECK(chip.payload_bytes == protocol::kRxChipBytes);
+    const uint8_t short_preamble_peer[]{0x01, 0x55, 0x99, 0x95, 0xA6, 0x9A, 0x65};
+    CHECK(chip.receive_air(short_preamble_peer, sizeof(short_preamble_peer)));
     CHECK(chip.faults == 0);
 }

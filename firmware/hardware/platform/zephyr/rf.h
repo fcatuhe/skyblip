@@ -235,6 +235,9 @@ class Rf : public ports::Rf {
         config.sync = plan.sync;
         config.sync_bits = plan.sync_bits;
         config.payload_bytes = plan.rx_bytes;
+        config.tx_sync = plan.tx_sync;
+        config.tx_sync_bits = plan.tx_sync_bits;
+        config.tx_preamble_chips = plan.tx_preamble_chips;
         return config;
     }
 
@@ -280,10 +283,15 @@ class Rf : public ports::Rf {
     // INFO: fc 28sep26 staged, so the instant costs one SetTx | 14nov26 none past the dead time
     bool key(const ports::RfBurst& burst, const Assessment& assessment) {
         tx_at_us_ = burst.at_us;
-        (void)radio_.stage_tx(burst.chips, burst.bytes);
+        if (radio_.stage_tx(burst.chips, burst.bytes) != Status::Ok ||
+            radio_.wait_ready() != Status::Ok) {
+            (void)radio_.start_receive();
+            return false;
+        }
         staged_at_us_ = clock_.microseconds();
         while (clock_.microseconds() < burst.at_us) k_busy_wait(1);
-        if (!burst.forced && !within_dead_time(assessment, clock_.microseconds())) {
+        if (!burst.forced &&
+            !within_dead_time(assessment, clock_.microseconds() + kTxStartupAllowanceUs)) {
             (void)radio_.start_receive();
             return false;
         }

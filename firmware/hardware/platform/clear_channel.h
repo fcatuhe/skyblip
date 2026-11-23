@@ -16,14 +16,16 @@ namespace skyblip::platform {
 constexpr int32_t kCcaThresholdCentiDbm = timing::cca_threshold_centi_dbm(
     parts::sx1262::kAntennaGainCentiDbd, parts::sx1262::kFeedLossCentiDb);
 
-// INFO: fc 03oct26 build 892 staged 0.42-0.66 ms past the stage point: 700 left 40 us spare
-constexpr uint64_t kTxStageLeadUs = 700;
+// INFO: fc 22nov26 build 892 staged in up to 660 us without the extra sync register write
+constexpr uint64_t kTxStageLeadUs = 800;
+// INFO: fc 22nov26 allow for SetTx, synthesizer wake and the configured 200 us PA ramp
+constexpr uint64_t kTxStartupAllowanceUs = 350;
 // TODO: fc 14nov26 a guess at the CCA reads' overrun, until a bench capture times them on nRF52
 constexpr uint64_t kCcaOverrunUs = 300;
 // INFO: fc 14nov26 the CCA's window, then staging, so it listens on the dwell's channel in RX
 constexpr uint64_t kCcaLeadUs = kTxStageLeadUs + timing::PoliteAccess::kCcaWindowUs + kCcaOverrunUs;
 static_assert(kCcaLeadUs <= timing::PoliteAccess::kCcaLeadUs &&
-                  kCcaLeadUs - timing::PoliteAccess::kCcaWindowUs <
+                  kCcaLeadUs - timing::PoliteAccess::kCcaWindowUs + kTxStartupAllowanceUs <
                       timing::PoliteAccess::kDeadTimeCeilingUs,
               "the assessment starts inside the dwell and ends inside the declared dead time");
 

@@ -39,8 +39,9 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
     const uint8_t bytes = outgoing_.data_bytes();
     outgoing_.scramble(bytes);
     outgoing_.set_crc(bytes);
-    return static_cast<uint8_t>(
-        protocol::m_band_payload(adsl::sync_word(bytes), outgoing_.data, bytes, chips));
+    wire::manchester_encode(&bytes, 1, chips);
+    wire::manchester_encode(outgoing_.data, bytes, chips + 2);
+    return static_cast<uint8_t>(2 + 2 * bytes);
 }
 
 // INFO: fc 13nov26 G.2.6 leaves an unknown capability unset: ADS-B counts while Bravo is live

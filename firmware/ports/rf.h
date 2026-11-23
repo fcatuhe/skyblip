@@ -19,6 +19,9 @@ struct RfPlan {
     const uint8_t* sync{nullptr};
     uint8_t sync_bits{0};
     uint8_t rx_bytes{0};
+    const uint8_t* tx_sync{nullptr};
+    uint8_t tx_sync_bits{0};
+    uint16_t tx_preamble_chips{0};
     // INFO: fc 20nov26 modulation differs by band (SRD-860 §C.2, §C.4), and 0 keeps the last
     uint32_t bitrate{0};
     uint32_t deviation_hz{0};
