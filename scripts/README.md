@@ -6,12 +6,14 @@ This directory holds the host tooling. The Python scripts run on the standard li
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| `blip_diagnostics_layout.py` | the diagnostics decoder tables `diagnostics_layout.py` generates. Never edit it by hand |
 | [`blip_ndjson.py`](blip_ndjson.py) | the NDJSON a fetch writes and `decode` reads: the session notes, the torn tail and the summary |
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
 | [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the press's verdict |
 | [`blip_fetch.py`](blip_fetch.py) | `blip.py fetch`: offload a store to NDJSON, resuming where a dead fetch stopped |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec, with the names `schemas/link.v1.json` gives its numbers |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`. The C++ opens with `// clang-format off`, so the generator alone decides its layout |
+| [`diagnostics_layout.py`](diagnostics_layout.py) | write the C++ header, the C++ mirrors test and the Python and JavaScript decoder tables generated from `schemas/diagnostics_layout.v1.json` |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build a board's drag-and-drop install image, refusing to write outside its factory bootloader window |
@@ -148,7 +150,7 @@ A third unit at the top of TXACC would sit 2 dB higher, and whether the assertio
 
 ## The decoders
 
-`blip_records.py` holds one table per record type, a tuple of `(name, codec)` pairs where a codec is a closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Add a record type as one entry in `DIAGNOSTICS_TYPES`, and a field as one pair. The tables match `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp` byte for byte, and take their names from `schemas/diagnostics_log.v1.schema.json`. `test_blip.py` holds them to the schema, and to the bytes the firmware writes in `schemas/diagnostics_log.v1.vectors.json`.
+`schemas/diagnostics_layout.v1.json` is the one place a diagnostics record is laid out: each type's code, and each field's offset or flag bit, its kind and its enum. To add a record type or a field, add it there, run `python3 scripts/diagnostics_layout.py`, then write it in the type's `record_of()` (`firmware/core/diagnostics/`) and describe it in `schemas/diagnostics_log.v1.schema.json`, the decoded view. Add the type's record to `schemas/diagnostics_log.v1.vectors.json` too. The generator writes `blip_diagnostics_layout.py`, which `blip_records.py` turns into `DIAGNOSTICS_TYPES`, one `(name, codec)` pair per field. `check_diagnostics_layout.py` fails when a generated file is stale or the schema disagrees with the layout, and `test_blip.py` holds the decoders to the bytes the firmware writes in the vectors. The flight log tables in `blip_records.py` are still written by hand, and match `firmware/core/flight/log_record.cpp` byte for byte.
 
 ```python
 import blip_ndjson as ndjson
