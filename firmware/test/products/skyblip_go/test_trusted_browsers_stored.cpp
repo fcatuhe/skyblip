@@ -34,16 +34,15 @@ std::string trust_browser() {
 
 common::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
 
-void say(Rig& rig, uint32_t& now_ms, const std::string& json) {
+void say(Rig& rig, const std::string& json) {
     rig.send(json.c_str());
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
 }
 
-void prove(Rig& rig, uint32_t& now_ms) {
+void prove(Rig& rig) {
     rig.platform.random().queue(kNonce);
-    say(rig, now_ms, "{\"command\":\"browser_challenge\"}");
-    say(rig, now_ms, trust_browser());
+    say(rig, "{\"command\":\"browser_challenge\"}");
+    say(rig, trust_browser());
 }
 
 }  // namespace
@@ -51,22 +50,20 @@ void prove(Rig& rig, uint32_t& now_ms) {
 TEST_CASE("product: a browser a press trusted is still trusted after a restart") {
     Rig before;
     REQUIRE(before.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    prove(before, now_ms);
-    say(before, now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    prove(before);
+    say(before, "{\"command\":\"set\",\"units\":\"metric\"}");
     REQUIRE(config(before).pending() == common::Pending::Set);
     config(before).confirm();
-    before.run(now_ms, now_ms + 10000);
+    before.run_for(10000);
 
     Rig after;
     after.platform.key_value() = before.platform.key_value();
     REQUIRE(after.setup() == Status::Ok);
-    now_ms = 0;
     REQUIRE(config(after).trusted_browsers().count() == 1);
-    prove(after, now_ms);
+    prove(after);
     CHECK(after.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"trusted\"}");
-    say(after, now_ms, "{\"command\":\"set\",\"units\":\"nautical\"}");
+    say(after, "{\"command\":\"set\",\"units\":\"nautical\"}");
     CHECK(config(after).pending() == common::Pending::None);
     CHECK(after.settings().units == go::Units::Nautical);
 }
@@ -74,18 +71,17 @@ TEST_CASE("product: a browser a press trusted is still trusted after a restart")
 TEST_CASE("product: a forget the flash refused is written again once the flash takes it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    prove(rig, rig.now_ms);
-    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    prove(rig);
+    say(rig, "{\"command\":\"set\",\"units\":\"metric\"}");
     config(rig).confirm();
     rig.run_for(10000);
     const uint32_t writes = rig.platform.key_value().writes();
 
     rig.platform.key_value().refuse_writes = true;
-    prove(rig, rig.now_ms);
+    prove(rig);
     const crypto::Ed25519::PublicKey key = crypto::Ed25519::public_key_of(kBrowserSeed);
-    say(rig, rig.now_ms,
-        "{\"command\":\"forget_browser\",\"id\":\"" + hex_text(ConstByteSpan(key.data(), 8)) +
-            "\"}");
+    say(rig, "{\"command\":\"forget_browser\",\"id\":\"" + hex_text(ConstByteSpan(key.data(), 8)) +
+                 "\"}");
     rig.run_for(10000);
     CHECK(rig.platform.key_value().writes() == writes);
 

@@ -47,7 +47,6 @@ std::string unlock_command(long serial, const std::string& signature) {
 struct Bench {
     Rig rig;
     ActivationVectors vectors;
-    uint32_t now_ms{0};
 
     explicit Bench(ports::Capabilities fitted = platform::host::Platform::kFullyFitted)
         : rig(fitted, std::nullopt) {
@@ -62,8 +61,8 @@ struct Bench {
     }
 
     void pass(uint32_t for_ms) {
-        rig.run(now_ms, now_ms + for_ms);
-        now_ms += for_ms + 50;
+        rig.run_for(for_ms);
+        rig.now_ms += 50;
     }
 
     std::string say(const std::string& json) {
@@ -104,7 +103,7 @@ struct Bench {
     std::string accept() {
         read_the_prompt();
         const size_t before = rig.platform.link().sent.size();
-        rig.press(now_ms);
+        rig.press();
         pass(500);
         return answer_since(before);
     }
@@ -125,7 +124,7 @@ TEST_CASE("activation: a unit with no serial arms neither receiver nor transmitt
           doctest::test_suite("main")) {
     Bench bench;
     bench.boot();
-    bench.rig.seconds(bench.now_ms, 20, 0, 300);
+    bench.rig.seconds(20, 0, 300);
     CHECK_FALSE(bench.activation().activated());
     CHECK(bench.rig.product.radio().arm_count() == 0);
     CHECK(bench.rig.product.radio().armed_mode() == ports::RfMode::Idle);
@@ -227,7 +226,7 @@ TEST_CASE("activation: a tap of the pad cancels the registration, thirty seconds
         bench.register_with_vectors();
         bench.read_the_prompt();
         const size_t before = bench.rig.platform.link().sent.size();
-        bench.rig.tap(bench.now_ms);
+        bench.rig.tap();
         bench.pass(1000);
         CHECK(bench.answer_since(before) == refusal("cancelled"));
     }
@@ -441,9 +440,9 @@ TEST_CASE(
     Bench bench;
     bench.boot();
     const go::Settings before = bench.rig.settings();
-    bench.rig.tap(bench.now_ms);
-    bench.rig.press(bench.now_ms);
-    bench.rig.long_touch(bench.now_ms);
+    bench.rig.tap();
+    bench.rig.press();
+    bench.rig.long_touch();
     bench.pass(1000);
     CHECK(bench.rig.product.screen().mode() == go::Mode::Page);
     CHECK(bench.rig.product.screen().page() == go::Page::Radar);
@@ -466,7 +465,7 @@ TEST_CASE("activation: the self-test page shows the serial an unlock gave, witho
     REQUIRE(bench.unlock_with_vectors() ==
             "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
-    bench.rig.show(bench.now_ms, go::Page::SelfTest);
+    bench.rig.show(go::Page::SelfTest);
     bench.pass(2000);
     REQUIRE(bench.rig.product.screen().page() == go::Page::SelfTest);
     CHECK(
@@ -486,7 +485,7 @@ struct QueuedUnlock {
             Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
         bench.boot();
         REQUIRE(bench.activation().serial == Identity::kSerial);
-        bench.rig.seconds(bench.now_ms, 20, 0, 300);
+        bench.rig.seconds(20, 0, 300);
         REQUIRE(bench.rig.product.config_link().config().flight_state() ==
                 flight::FlightState::Ground);
 
@@ -520,7 +519,7 @@ struct QueuedUnlock {
 TEST_CASE(
     "activation: an activated unit on the ground answers an unlock once the write is placed") {
     QueuedUnlock queue;
-    queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
+    queue.bench.rig.seconds(4, 0, 300);
     CHECK(queue.bench.answer_since(queue.before) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     CHECK(queue.bench.rig.platform.identity().writes == 1);
@@ -534,7 +533,7 @@ TEST_CASE(
         Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
     bench.boot();
     REQUIRE(bench.activation().serial == Identity::kSerial);
-    bench.rig.seconds(bench.now_ms, 20, 0, 300);
+    bench.rig.seconds(20, 0, 300);
 
     const identity::Nonce nonce{4, 2};
     bench.rig.platform.random().queue(nonce);
@@ -555,7 +554,7 @@ TEST_CASE(
 TEST_CASE("activation: a supply warning before the write window drops the unlock as low_power") {
     QueuedUnlock queue;
     queue.bench.rig.platform.system_power().supply_warning = true;
-    queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
+    queue.bench.rig.seconds(4, 0, 300);
     CHECK(queue.bench.answer_since(queue.before) == refusal("low_power"));
     CHECK(queue.bench.rig.platform.identity().writes == 0);
     CHECK(queue.bench.activation().serial == Identity::kSerial);
@@ -570,7 +569,7 @@ TEST_CASE(
     queue.bench.pass(100);
     queue.bench.rig.raise_link(sender + 1);
     queue.bench.say("{\"command\":\"get\"}");
-    queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
+    queue.bench.rig.seconds(4, 0, 300);
     CHECK(queue.unlock_answers() == 0);
     CHECK(queue.bench.rig.platform.identity().writes == 0);
     CHECK(queue.bench.activation().serial == Identity::kSerial);

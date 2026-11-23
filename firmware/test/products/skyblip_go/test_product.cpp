@@ -367,11 +367,11 @@ TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider
 
 namespace {
 
-std::string status_of(Rig& rig, uint32_t& now_ms) {
+std::string status_of(Rig& rig) {
     rig.platform.link().clear();
     rig.send("{\"command\":\"status\"}");
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 250;
+    rig.run(rig.now_ms, rig.now_ms + 200);
+    rig.now_ms += 250;
     return rig.last_on(events::Endpoint::Config);
 }
 
@@ -429,7 +429,7 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     rig.run(rig.now_ms, rig.now_ms + common::PowerService::kDieStaleMs);
     rig.now_ms += common::PowerService::kDieStaleMs + 50;
     CHECK_FALSE(rig.product.state().power.die_valid);
-    CHECK(status_of(rig, rig.now_ms).find("die_temperature_c") == std::string::npos);
+    CHECK(status_of(rig).find("die_temperature_c") == std::string::npos);
 }
 
 // The research prohibits charging in the 72.4 C soak; nothing here could see it.
@@ -479,7 +479,7 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
     rig.run(rig.now_ms, rig.now_ms + 30000);
     rig.now_ms += 30050;
     CHECK_FALSE(rig.product.state().power.die_valid);
-    CHECK(status_of(rig, rig.now_ms).find("die_temperature_c") == std::string::npos);
+    CHECK(status_of(rig).find("die_temperature_c") == std::string::npos);
 }
 
 // J. The range gate refuses a reception whose claimed position is further away

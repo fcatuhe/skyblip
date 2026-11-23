@@ -60,7 +60,7 @@ TEST_CASE("diagnostics power: the cell is recorded on the cadence it is sampled 
     Rig rig;
     rig.now_ms = 100;
     const int seconds = 8;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, seconds);
 
     CHECK(count_of(records, diagnostics::Type::Power) >= seconds - 1);
     CHECK(count_of(records, diagnostics::Type::Power) <= seconds + 1);
@@ -76,12 +76,12 @@ TEST_CASE("diagnostics power: the knee is recorded on both sides of it, as the l
     rig.now_ms = 100;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 4);
+    taxi(rig, 3);
+    arm(rig);
+    taxi(rig, 4);
     rig.platform.battery().divider_mv = 3550;
-    taxi(rig, rig.now_ms, 6);
-    stop(rig, rig.now_ms);
+    taxi(rig, 6);
+    stop(rig);
 
     const std::vector<diagnostics::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 8);
@@ -98,18 +98,18 @@ TEST_CASE("diagnostics power: the reading the median threw out rides beside it, 
     rig.now_ms = 100;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 4);
+    taxi(rig, 3);
+    arm(rig);
+    taxi(rig, 4);
     rig.platform.battery().divider_mv = 3737;
-    taxi(rig, rig.now_ms, 1);
+    taxi(rig, 1);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     rig.platform.battery().divider_mv = 3500;
-    taxi(rig, rig.now_ms, 1);
+    taxi(rig, 1);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, rig.now_ms, 3);
-    stop(rig, rig.now_ms);
+    taxi(rig, 3);
+    stop(rig);
 
     bool dip_seen = false, sag_seen = false;
     for (const diagnostics::Power& power : every_power_record(captured(rig))) {
@@ -130,12 +130,12 @@ TEST_CASE(
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().external_power = true;
     rig.platform.battery().divider_mv = 4812;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 4);
+    taxi(rig, 3);
+    arm(rig);
+    taxi(rig, 4);
     rig.platform.battery().fitted = false;
-    taxi(rig, rig.now_ms, 3);
-    stop(rig, rig.now_ms);
+    taxi(rig, 3);
+    stop(rig);
 
     const std::vector<diagnostics::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 6);
@@ -156,7 +156,7 @@ TEST_CASE("diagnostics duty: a duty record rides a power pass, on a slower caden
     Rig rig;
     rig.now_ms = 100;
     const int seconds = 22;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, seconds);
 
     CHECK(count_of(records, diagnostics::Type::Power) >= seconds - 1);
     const int duty = count_of(records, diagnostics::Type::Duty);
@@ -170,10 +170,10 @@ TEST_CASE("diagnostics duty: a power run writes the pair every 30 s and lists no
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms, diagnostics::Profile::PowerRun);
+    taxi(rig, 3);
+    arm(rig, diagnostics::Profile::PowerRun);
     rig.run_for(95000);
-    stop(rig, rig.now_ms);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     // pairs land about 30, 60 and 90 s after arming, and the pilot's stop at 95 s writes none
@@ -193,13 +193,13 @@ TEST_CASE(
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     rig.raise_link();
     rig.product.screen().set_backlight(true);
-    arm(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 12);
+    arm(rig);
+    taxi(rig, 12);
     const bus::DutyState published = rig.state().duty;
-    stop(rig, rig.now_ms);
+    stop(rig);
 
     diagnostics::Duty duty{};
     REQUIRE(last_of(captured(rig), duty));

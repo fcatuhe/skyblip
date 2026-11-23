@@ -11,7 +11,7 @@ using namespace skyblip;
 TEST_CASE("product: neither a Go's update frame nor a Bravo's names a product") {
     Rig go;
     REQUIRE(go.setup() == Status::Ok);
-    on_ground(go, go.now_ms);
+    on_ground(go);
     go.send("{\"command\":\"update\"}");
     go.run(go.now_ms, go.now_ms + 200);
     const std::string go_frame = go.last_on(events::Endpoint::Config);
