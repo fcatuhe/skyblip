@@ -55,7 +55,7 @@ class RadioService : public runtime::Service {
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
-    static constexpr uint64_t kAirTimeUs = uint64_t{timing::Transmitter::kAirTimeMs} * 1000;
+    static constexpr uint64_t kKeyToDoneUs = uint64_t{timing::kKeyToDoneMs} * 1000;
 
     enum class Role : uint8_t { Current, Next };
     using Payload = timing::Transmitter::Payload;
@@ -175,6 +175,7 @@ class RadioService : public runtime::Service {
     bool fix_too_old_at(uint64_t tx_at_us) const;
     void await_fix(uint32_t utc_s);
     bool silenced(uint64_t tx_at_us) const;
+    static uint64_t forced_end_us(uint64_t forced_at_us);
     void silence_after(uint64_t forced_at_us);
     void record_switch(const ports::RfSwitch& change, uint32_t now_ms);
     static diagnostics::SwitchKind kind_of(const ports::RfSwitch& change);

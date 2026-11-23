@@ -44,7 +44,7 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
     adsl::ChannelAttempt attempt{};
     attempt.at_us = busy_at_us;
     attempt.first_us = contention.first_us;
-    if (forced_us_) attempt.forced_end_us = *forced_us_ + kAirTimeUs;
+    if (forced_us_) attempt.forced_end_us = forced_end_us(*forced_us_);
     attempt.earliest_us = context_.roles.clock.microseconds() + timing::PoliteAccess::kCcaLeadUs;
     attempt.last_us = at_us(dwell.origin_us, timing::Transmitter::last_instant(payload, slot));
     attempt.may_force = !airborne;
@@ -152,7 +152,12 @@ void RadioService::log_access(radio::Verdict verdict, const Armed& dwell, Payloa
 
 bool RadioService::silenced(uint64_t tx_at_us) const {
     return forced_us_ && tx_at_us > *forced_us_ &&
-           tx_at_us < *forced_us_ + kAirTimeUs + adsl::kSilenceAfterForceUs;
+           tx_at_us < forced_end_us(*forced_us_) + adsl::kSilenceAfterForceUs;
+}
+
+// INFO: fc 22nov26 §D.3's silence runs from the latest the forced burst can end on air
+uint64_t RadioService::forced_end_us(uint64_t forced_at_us) {
+    return forced_at_us + ports::RfBurst::kKeyLatenessCeilingUs + kKeyToDoneUs;
 }
 
 // INFO: fc 14nov26 §D.3's silence after a force reaches bursts already handed to the executor

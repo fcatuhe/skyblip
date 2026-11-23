@@ -345,7 +345,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRadioAnswerMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | three dwells and readings a second, so nine missed is a radio not answering |
 | `kRadioRefusalSamples` | 2 | samples | Samples | one refused dwell is a transient, a second inside the age a fault |
-| `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
+| `kKeyToDoneUs` | `uint64_t{timing::kKeyToDoneMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
 | `kLockedRedrawWindowStartMs` | 600 | milliseconds | Window | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
