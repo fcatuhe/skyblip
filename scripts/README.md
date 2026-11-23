@@ -150,7 +150,7 @@ A third unit at the top of TXACC would sit 2 dB higher, and whether the assertio
 
 ## The decoders
 
-`blip_records.py` holds one table per record type, a tuple of `(name, codec)` pairs where a codec is a closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Add a record type as one entry in `DIAGNOSTICS_TYPES`, and a field as one pair. The tables match `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp` byte for byte, and take their names from `schemas/diagnostics_log.v1.schema.json`. `test_blip.py` holds them to the schema, and to the bytes the firmware writes in `schemas/diagnostics_log.v1.vectors.json`.
+`schemas/diagnostics_layout.v1.json` is the one place a diagnostics record is laid out: each type's code, and each field's offset or flag bit, its kind and its enum. To add a record type or a field, add it there, run `python3 scripts/diagnostics_layout.py`, then write it in the type's `record_of()` (`firmware/core/diagnostics/`) and describe it in `schemas/diagnostics_log.v1.schema.json`, the decoded view. Add the type's record to `schemas/diagnostics_log.v1.vectors.json` too. The generator writes `blip_diagnostics_layout.py`, which `blip_records.py` turns into `DIAGNOSTICS_TYPES`, one `(name, codec)` pair per field. `check_diagnostics_layout.py` fails when a generated file is stale or the schema disagrees with the layout, and `test_blip.py` holds the decoders to the bytes the firmware writes in the vectors. The flight log tables in `blip_records.py` are still written by hand, and match `firmware/core/flight/log_record.cpp` byte for byte.
 
 ```python
 import blip_ndjson as ndjson
