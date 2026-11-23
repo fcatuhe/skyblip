@@ -16,6 +16,7 @@ using namespace skyblip;
 namespace {
 
 constexpr uint8_t kParaglider = 7;  // ADS-L G.1.3
+constexpr uint8_t kLightAircraft = 1;
 
 flight::LogRecord sample_record() {
     flight::LogRecord record{};
@@ -52,6 +53,7 @@ model::Ownship flying(uint32_t utc_s, int32_t speed_mm_s) {
     own.satellites = 10;
     own.hdop_e2 = 100;
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
+    own.aircraft_category = kLightAircraft;
     return own;
 }
 

@@ -12,6 +12,7 @@ int32_t derated(int32_t evidence, uint16_t hdop_e2) {
 }
 
 enum class G13Category : uint8_t {
+    Unset = 0,
     LightRotorcraft = 3,
     Glider = 4,
     LighterThanAir = 5,
@@ -92,8 +93,9 @@ FlightState FlightMonitor::update(const FlightSample& sample, uint32_t now_ms) {
     return state_;
 }
 
-bool flies_at_no_ground_speed(uint8_t aircraft_category) {
+bool flies_at_low_ground_speed(uint8_t aircraft_category) {
     switch (static_cast<G13Category>(aircraft_category)) {
+        case G13Category::Unset:
         case G13Category::LightRotorcraft:
         case G13Category::Glider:
         case G13Category::LighterThanAir:
@@ -113,7 +115,7 @@ bool flies_at_no_ground_speed(uint8_t aircraft_category) {
 }
 
 uint8_t announced_state(uint8_t code, uint8_t aircraft_category) {
-    if (state_from(code) == FlightState::Ground && flies_at_no_ground_speed(aircraft_category))
+    if (state_from(code) == FlightState::Ground && flies_at_low_ground_speed(aircraft_category))
         return static_cast<uint8_t>(FlightState::Unknown);
     return code;
 }
