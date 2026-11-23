@@ -223,25 +223,3 @@ TEST_CASE("fix validity: the staleness bound spans the 49.7-day wrap") {
     CHECK(burst.validity.check(4000u) == FixReject::None);
     CHECK(burst.validity.rejected() == 0);  // nothing above ever called check()
 }
-
-// G.1.7 sends no altitude without a 3D fix, and a GSA that stopped coming used to vouch for ever.
-TEST_CASE("fix validity: a fix mode lasts 1.5 s past its GSA and no longer") {
-    Burst burst;
-    GnssSolution unheard = burst.parser.solution();
-    unheard.fix_mode = kFixMode3D;
-    unheard.vdop_e2 = 210;
-    burst.validity.expire_fix_mode(unheard, 0);
-    CHECK(unheard.fix_mode == 0);
-    CHECK(unheard.vdop_e2 == 0);
-
-    burst.feed("$GNGSA,A,3,04,05,,09,12,,,24,,,,,2.50,1.25,2.10,1*0E", 1000);
-    GnssSolution held = burst.parser.solution();
-    burst.validity.expire_fix_mode(held, 1000 + kGsaMaxAgeMs);
-    CHECK(held.fix_mode == kFixMode3D);
-    CHECK(held.vdop_e2 == 210);
-
-    GnssSolution expired = burst.parser.solution();
-    burst.validity.expire_fix_mode(expired, 1001 + kGsaMaxAgeMs);
-    CHECK(expired.fix_mode == 0);
-    CHECK(expired.vdop_e2 == 0);
-}

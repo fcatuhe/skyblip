@@ -18,8 +18,8 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     bool fix_valid{true};
     uint8_t satellites{9};
     bool emit_geoid_separation{true};
-    // INFO: fc 22nov26 false says 2 in GSA field 2 and still prints a VDOP, as the specification
-    // allows
+    // INFO: fc 22nov26 false says 2 in GSA field 2 and still prints a VDOP, which V1.1 does not
+    // rule out
     bool solves_height{true};
     uint8_t gps_in_view{9};
     uint8_t beidou_in_view{7};

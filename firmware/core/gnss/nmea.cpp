@@ -196,7 +196,7 @@ bool NmeaParser::apply_gsa(const char* fields[], int field_count) {
     if (field_count <= kGsaVdopField) return false;
     const bool opens_set = last_sentence_ != Sentence::Gsa;
     last_sentence_ = Sentence::Gsa;
-    // INFO: fc 18nov26 GSA comes once a second at 2 Hz, so its set replaces the marks, not each GGA
+    // INFO: fc 18nov26 a GSA set replaces the marks, not a GGA, so a burst without one keeps them
     if (solution_marks_stale_) sky_.clear_solution();
     solution_marks_stale_ = false;
     if (opens_set) {
@@ -327,6 +327,10 @@ bool NmeaParser::apply_gga(const char* fields[], int field_count, int bytes) {
     gga_stamp_ms_ = stamp_ms;
     last_sentence_ = Sentence::Gga;
     solution_marks_stale_ = true;
+    // INFO: fc 22nov26 a GGA opens its burst, so only a GSA after it says this solution solved
+    // height
+    solution_.fix_mode = 0;
+    solution_.vdop_e2 = 0;
     solution_.fix_quality = static_cast<uint8_t>(parse_long(fields[6], 2));
     solution_.satellites = static_cast<uint8_t>(parse_long(fields[7], 2));
 

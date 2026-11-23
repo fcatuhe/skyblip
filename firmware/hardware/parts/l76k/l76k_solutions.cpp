@@ -89,7 +89,6 @@ bool L76k::poll(uint32_t now_ms) {
     burst_levels_ = false;
     solution_ = paired;
     solution_.fix_valid = paired_valid && valid;
-    validity_.expire_fix_mode(solution_, now_ms);
     solution_.pps_latency_ms = pps_latency_ms();
     solution_.backlogged = pairs > 1;
     solution_.delivery_ms =

@@ -65,7 +65,7 @@ struct GnssSolution {
     uint16_t delivery_ms{0};
     uint8_t satellites{0};
     uint8_t fix_quality{0};
-    // INFO: fc 22nov26 the best of the last GSA set, cleared once that set is over kGsaMaxAgeMs old
+    // INFO: fc 22nov26 the best of the GSA set after this solution's GGA, 0 when it brought none
     uint8_t fix_mode{0};
     bool altitude_msl_valid{false};
     bool altitude_hae_valid{false};

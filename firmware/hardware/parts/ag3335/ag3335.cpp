@@ -154,7 +154,6 @@ bool Ag3335::poll(uint32_t now_ms) {
 
     solution_ = parser_.solution();
     solution_.fix_valid = valid;
-    validity_.expire_fix_mode(solution_, now_ms);
     solution_.pps_latency_ms = pps_latency_ms();
     return true;
 }

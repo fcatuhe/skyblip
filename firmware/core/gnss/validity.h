@@ -10,9 +10,6 @@ namespace skyblip::gnss {
 // INFO: fc 13sep26 SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 7 bursts at 2 Hz
 constexpr uint32_t kSentenceMaxAgeMs = 3500;
 
-// INFO: fc 22nov26 the L76K sends GSA once a second at 2 Hz, so an older one missed its turn
-constexpr uint32_t kGsaMaxAgeMs = 1500;
-
 // INFO: fc 20nov26 moshe-braner's jump gate (SoftRF.ino:517-523): 16.7 km between two solutions
 constexpr int32_t kLatitudeJumpCeiling1e7 = 1500000;
 constexpr int32_t kLongitudeJumpCeiling1e7 = 2500000;
@@ -40,8 +37,6 @@ class FixValidity {
 
     FixReject check(uint32_t now_ms);
 
-    void expire_fix_mode(GnssSolution& solution, uint32_t now_ms) const;
-
     FixReject last_reject() const { return last_reject_; }
     uint32_t rejected() const { return rejected_; }
 
@@ -50,14 +45,12 @@ class FixValidity {
    private:
     uint32_t rmc_heard_ms_{0};
     uint32_t gga_heard_ms_{0};
-    uint32_t gsa_heard_ms_{0};
     int32_t previous_latitude_1e7_{0};
     int32_t previous_longitude_1e7_{0};
     uint32_t rejected_{0};
     FixReject last_reject_{FixReject::None};
     bool rmc_heard_{false};
     bool gga_heard_{false};
-    bool gsa_heard_{false};
     bool rmc_fix_valid_{false};
     bool gga_fix_valid_{false};
     bool utc_valid_{false};

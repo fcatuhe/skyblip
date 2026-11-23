@@ -282,7 +282,7 @@ TEST_CASE(
     CHECK(observation.position_valid);
 }
 
-// The control for the two below: the same flight, its GSA left as the L76K sends it.
+// The control for the 2D GSA and the missing GSA cases below: the same flight, its GSA left alone.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: a receiver whose GSA says 3D sends its altitude and its GVA") {
     const std::vector<adsl::Packet> packets = flown_from_gsa([](models::L76k&) {}, 1000);
     CHECK(packets.size() >= 8);
@@ -304,14 +304,44 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: a receiver whose GSA says 2D sends the altitude
     }
 }
 
-// GSA comes once a second, and a 3D mode the receiver stopped reporting used to vouch for ever.
-TEST_CASE("ADS-L.4.SRD860.G.1.7: a GSA silent for over a second and a half leaves no altitude") {
+// A 3D mode the receiver stopped reporting used to vouch for every solution after it.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: a solution that came with no GSA sends no altitude") {
     const std::vector<adsl::Packet> packets =
-        flown_from_gsa([](models::L76k& chip) { chip.gsa_every = 0; }, 2000);
+        flown_from_gsa([](models::L76k& chip) { chip.gsa_every = 0; }, 1000);
     CHECK(packets.size() >= 8);
     for (const adsl::Packet& packet : packets) {
         CHECK(altitude_code(packet) == kAltitudeInvalid);
         CHECK(vertical_accuracy_code(packet) == 0);
+    }
+}
+
+// GSA came every other solution, so the one solved between a 3D GSA and a 2D one kept its height.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: the first solution after the receiver loses its height has none") {
+    for (const uint32_t flip_phase_ms : {50u, 250u, 450u, 550u, 750u, 950u}) {
+        CAPTURE(flip_phase_ms);
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(60);
+        uint32_t now_ms = past_settling(simulator);
+        while (now_ms % 1000 != flip_phase_ms)
+            simulator.step(now_ms += simulator::Simulator::kStepMs);
+        models::L76k& chip = simulator.world().gnss();
+        chip.solves_height = false;
+        run_on(simulator, now_ms + simulator::Simulator::kStepMs, 3000);
+        int two_d = 0;
+        for (const simulator::AirRecord& record :
+             records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+            adsl::Packet packet{};
+            REQUIRE(packet_of(record, packet));
+            const models::L76k::Solved* solved = solution_named(chip, packet, record.at_us);
+            REQUIRE(solved != nullptr);
+            if (solved->at_ms <= now_ms) continue;
+            CHECK(altitude_code(packet) == kAltitudeInvalid);
+            CHECK(vertical_accuracy_code(packet) == 0);
+            two_d++;
+        }
+        CHECK(two_d >= 2);
     }
 }
 
