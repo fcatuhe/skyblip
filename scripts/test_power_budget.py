@@ -89,7 +89,7 @@ def boot(at_s, capabilities=FULLY_FITTED, profile=None):
     payload = bytearray(capabilities.to_bytes(4, "little") + bytes(12))
     if profile is None:
         return slot(BOOT, bytes(payload), PHASE_VALID, at_s)
-    payload[14] = records.PROFILE.index(profile)
+    payload[14] = records.ENUMS["profile"].index(profile)
     return slot(BOOT, bytes(payload), PHASE_VALID | PROFILE_RECORDED, at_s)
 
 
