@@ -10,6 +10,7 @@ The readings of ADS-L 4 SRD-860 Issue 2 that the text does not settle, and that 
 | 4 | G.1.1 and G.1.16, a fix measured on a quarter and sent within 500 ms | to ask |
 | 5 | C.2.5, alternation after a burst that did not go out | to ask |
 | 6 | G.1.16 and G.1.17, velocity accuracy with no measured bound | to ask |
+| 7 | G.1.16, the age of a vertical rate | to ask |
 
 ## 1. F.2.3: every payload under the ICAO address
 
@@ -42,3 +43,7 @@ C.2.5 says the sender "shall alternate between these frequencies for every trans
 ## 6. G.1.16 and G.1.17: velocity accuracy with no measured bound
 
 G.1.17 says uncertified devices "shall however not report all quality values as 0. Instead, they shall report their positioning performance dynamically". The Go's receiver reports HDOP and VDOP but no velocity error, so the horizontal and vertical accuracy change with the fix while the velocity accuracy is sent as 0, unknown, which G.1.16's table allows. We ask whether that meets G.1.17.
+
+## 7. G.1.16: the age of a vertical rate
+
+G.1.16 says "No Traffic message shall be sent containing navigation data older than 500 ms". The Go's vertical rate is the difference of two barometric heights a second apart, from a BME280 whose filter delays a step by about 0.75 s (`firmware/hardware/parts/bme280/README.md`). The Go dates the rate by its newest pressure, and sends it only while that pressure is under 500 ms old when the burst ends (`firmware/core/timing/README.md`, The age of a position). Measured by the middle of its second and the filter's delay, the same rate describes the aircraft about 1.25 s before its newest pressure. We ask how a differenced and filtered rate is to be aged: by its newest sample, or by the instant it describes. The second reading would need a shorter difference and less filtering, which roughly doubles the noise of each reading.

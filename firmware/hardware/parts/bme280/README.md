@@ -52,7 +52,7 @@ The derivation, for coefficient c at f conversions a second and raw noise σ. Th
 
 Every conversion is read, although the chip's filter already carries each one into the next. ADS-L G.1.16 sends no navigation data older than 500 ms on air, and the vertical rate is navigation data, so the newest pressure behind a climb must be at most a quarter old, not a second. That costs three more 6-byte result bursts a second, and their status reads, on the 400 kHz bus. The conversions, and so the part's 0.1 mA, are the same as before.
 
-Getting past the trade between lag and noise means turning the chip's filter off, reading all four conversions and running a software Kalman filter in `core/flight`, as XCSoar and OpenVario do. Nobody has measured it here.
+Getting past the trade between lag and noise means turning the chip's filter off and running a software Kalman filter over the four conversions in `core/flight`, as XCSoar and OpenVario do. Nobody has measured it here.
 
 ## Timing
 

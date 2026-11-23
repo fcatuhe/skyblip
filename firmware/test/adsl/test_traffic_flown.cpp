@@ -217,8 +217,10 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst goes on air over 500 ms after
 }
 
 // The vertical rate is navigation data too: read once a second, a climb went on air 1.9 s late.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst carries a vertical rate over 500 ms old" *
-          doctest::test_suite("main")) {
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.16: no Traffic burst's vertical rate has its newest pressure over 500 ms "
+    "old" *
+    doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
