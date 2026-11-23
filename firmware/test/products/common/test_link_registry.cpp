@@ -121,55 +121,55 @@ std::string unlock_signature() {
 
 struct GroundedUnitWithLogs {
     Rig rig;
-    uint32_t now_ms{100};
     uint32_t flight{0};
     uint32_t capture{0};
 
     GroundedUnitWithLogs() {
+        rig.now_ms = 100;
         rig.platform.dfu().running_version_valid = true;
         rig.platform.dfu().running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         REQUIRE(rig.setup() == Status::Ok);
-        taxi(rig, now_ms, 5);
-        arm_over_the_link(rig, now_ms);
+        taxi(rig, 5);
+        arm_over_the_link(rig);
         capture = rig.product.capture().session_id();
-        feed(rig, now_ms, 30);
-        stop_over_the_link(rig, now_ms);
-        taxi(rig, now_ms, 20);
-        fly(rig, now_ms, 80);
-        taxi(rig, now_ms, 40);
+        feed(rig, 30);
+        stop_over_the_link(rig);
+        taxi(rig, 20);
+        fly(rig, 80);
+        taxi(rig, 40);
         flight = rig.product.flight_log().session_id();
         REQUIRE_FALSE(rig.product.capture().capturing());
         REQUIRE_FALSE(rig.product.flight_log().recording());
-        go::DiagnosticsCollector<Go>().step(rig.product, now_ms);
+        go::DiagnosticsCollector<Go>().step(rig.product, rig.now_ms);
     }
 
     void say(events::Endpoint endpoint, const std::string& json) {
         rig.platform.link().push_rx(link_frame(endpoint, 1, json.c_str()));
-        taxi(rig, now_ms, 1);
+        taxi(rig, 1);
     }
     void say(const std::string& json) { say(events::Endpoint::Config, json); }
     void say_on_log(const std::string& json) { say(events::Endpoint::Log, json); }
 
     void confirm() {
-        taxi(rig, now_ms, 3);
-        rig.press(now_ms);
-        taxi(rig, now_ms, 2);
+        taxi(rig, 3);
+        rig.press();
+        taxi(rig, 2);
     }
 
     void cancel() {
-        taxi(rig, now_ms, 3);
-        rig.press(now_ms);
-        taxi(rig, now_ms, 2);
+        taxi(rig, 3);
+        rig.press();
+        taxi(rig, 2);
     }
 
     void reconnect() {
         rig.drop_link(1);
-        taxi(rig, now_ms, 1);
+        taxi(rig, 1);
         rig.raise_link(1);
-        taxi(rig, now_ms, 1);
+        taxi(rig, 1);
     }
 
-    void outwait_prompt() { taxi(rig, now_ms, common::kPromptCeilingMs / 1000 + 1); }
+    void outwait_prompt() { taxi(rig, common::kPromptCeilingMs / 1000 + 1); }
 
     bool answered(size_t before, events::Endpoint endpoint, const std::string& prefix) {
         const auto& sent = rig.platform.link().sent;
@@ -214,12 +214,12 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.confirm();
     unit.say("{\"command\":\"unlock\",\"serial\":" + std::to_string(Identity::kSerial) +
              ",\"signature\":\"" + unlock_signature() + "\"}");
-    taxi(unit.rig, unit.now_ms, 3);
+    taxi(unit.rig, 3);
     unit.say("{\"command\":\"attest\",\"server_nonce\":\"" +
              hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\"}");
     unit.rig.raise_link(2);
     unit.rig.send_from(2, "{\"command\":\"get\"}");
-    taxi(unit.rig, unit.now_ms, 1);
+    taxi(unit.rig, 1);
 
     unit.say_on_log("{\"command\":\"list\"}");
     unit.say_on_log("{\"command\":\"list\",\"index\":0}");
@@ -231,7 +231,7 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.say_on_log("{\"command\":\"erase\",\"log\":\"diagnostics\"}");
     unit.say_on_log("{\"command\":\"erase\"}");
     unit.confirm();
-    taxi(unit.rig, unit.now_ms, 30);
+    taxi(unit.rig, 30);
 }
 
 power::BatteryState cell_off_the_cable() {
@@ -485,13 +485,13 @@ TEST_CASE("link registry: the unit reads every key a host frame may carry, and r
 
         size_t before = unit.rig.platform.link().sent.size();
         unit.say(frame.endpoint, json);
-        taxi(unit.rig, unit.now_ms, 3);
+        taxi(unit.rig, 3);
         CHECK(unit.answered(before, answer->endpoint, answer->reads));
         if (answer->reads.find("\"pending\":true") != std::string::npos) unit.outwait_prompt();
 
         before = unit.rig.platform.link().sent.size();
         unit.rig.platform.link().push_rx(with_a_foreign_key(frame));
-        taxi(unit.rig, unit.now_ms, 3);
+        taxi(unit.rig, 3);
         CHECK(unit.answered(before, frame.endpoint, refusal(frame, *answer)));
     }
 }

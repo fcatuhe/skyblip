@@ -61,18 +61,18 @@ struct Rig {
     // The L76K model brought up to 2 Hz at 115200 by the driver, as on the device, before any
     // fix. From then on the timed fixes a case flies are the model's own, reported through the
     // driver as on the device, so the Go transmits.
-    [[nodiscard]] bool bring_receiver_up(uint32_t& clock_ms) {
+    [[nodiscard]] bool bring_receiver_up() {
         models::L76k& chip = platform.chips().gnss;
         platform.retune_gnss_port(true);
         chip.fix_valid = false;
         receiver_live_ = true;
         for (int step = 0; step < 400 && !product.board().gnss().holds_rate(); step++) {
-            platform.clock().set_milliseconds(clock_ms);
-            pass(clock_ms);
-            if (world) world(clock_ms);
-            clock_ms += 50;
+            platform.clock().set_milliseconds(now_ms);
+            pass(now_ms);
+            if (world) world(now_ms);
+            now_ms += 50;
         }
-        clock_ms = (clock_ms / 1000 + 1) * 1000;
+        now_ms = (now_ms / 1000 + 1) * 1000;
         return product.board().gnss().holds_rate();
     }
 
@@ -171,18 +171,18 @@ struct Rig {
     }
 
     // What the driver publishes once the receiver has gone quiet: not a fix.
-    void blind_second(uint32_t& clock_ms) {
+    void blind_second() {
         gnss::GnssSolution solution{};
         solution.fix_valid = false;
         solution.sentences = ++fix_updates;
         product.bus().gnss.push(solution);
-        run(clock_ms, clock_ms + 950);
-        clock_ms += 1000;
+        run(now_ms, now_ms + 950);
+        now_ms += 1000;
         utc_offset_s++;
     }
 
-    void blind_seconds(uint32_t& clock_ms, uint32_t seconds) {
-        for (uint32_t i = 0; i < seconds; i++) blind_second(clock_ms);
+    void blind_seconds(uint32_t count) {
+        for (uint32_t i = 0; i < count; i++) blind_second();
     }
 
     void seconds(uint32_t& clock_ms, uint32_t seconds, int32_t speed_mm_s, int32_t altitude_msl_m) {
@@ -192,12 +192,12 @@ struct Rig {
     // The same passes, counted instead of bounded: `at_ms <= to_ms` above cannot cross
     // the 49.7-day wrap of ports::Clock::milliseconds(), because that is a comparison of
     // two instants (ports/clock.h). A case that wants the device stepped THROUGH the
-    // wrap advances by an elapsed span instead. Steps clock_ms forward by span + step_ms.
-    void run_span(uint32_t& clock_ms, uint32_t span_ms, uint32_t step_ms = 50) {
+    // wrap advances by an elapsed span instead. Steps now_ms forward by span + step_ms.
+    void run_span(uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
-            platform.clock().set_milliseconds(clock_ms);
-            pass(clock_ms);
-            clock_ms += step_ms;
+            platform.clock().set_milliseconds(now_ms);
+            pass(now_ms);
+            now_ms += step_ms;
         }
     }
 
@@ -216,9 +216,9 @@ struct Rig {
 
     // One second of the world, wherever the counter happens to be: run_span(950)
     // in 50 ms steps is the whole second.
-    void second_across(uint32_t& clock_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
+    void second_across(int32_t speed_mm_s, int32_t altitude_msl_m) {
         push_timed_fix(speed_mm_s, altitude_msl_m);
-        run_span(clock_ms, 950);
+        run_span(950);
         utc_offset_s++;
     }
 
@@ -250,9 +250,7 @@ struct Rig {
     // The three gestures the device answers, as go::ScreenService names them.
     void tap(uint32_t& clock_ms) { touch_pad(clock_ms, 200); }
 
-    void long_touch(uint32_t& clock_ms) {
-        touch_pad(clock_ms, go::Controls::kLongTouchHoldMs + 200);
-    }
+    void long_touch() { touch_pad(now_ms, go::Controls::kLongTouchHoldMs + 200); }
 
     // Reached the way a thumb reaches it: the pad along the walk, then the menu.
     void show(uint32_t& clock_ms, go::Page page) {
@@ -285,26 +283,16 @@ struct Rig {
         clock_ms += 100;
     }
 
-    // The same moves on the rig's own clock.
-    [[nodiscard]] bool bring_receiver_up() { return bring_receiver_up(now_ms); }
+    // INFO: fc 22nov26 sealed test/adsl and a second Go on its pair's clock still pass a clock
     void second(int32_t speed_mm_s, int32_t altitude_msl_m) {
         second(now_ms, speed_mm_s, altitude_msl_m);
     }
-    void blind_second() { blind_second(now_ms); }
-    void blind_seconds(uint32_t count) { blind_seconds(now_ms, count); }
     void seconds(uint32_t count, int32_t speed_mm_s, int32_t altitude_msl_m) {
         seconds(now_ms, count, speed_mm_s, altitude_msl_m);
     }
-    void run_span(uint32_t span_ms) { run_span(now_ms, span_ms); }
-    void second_across(int32_t speed_mm_s, int32_t altitude_msl_m) {
-        second_across(now_ms, speed_mm_s, altitude_msl_m);
-    }
     void press() { press(now_ms); }
-    void settle() { settle(now_ms); }
     void tap() { tap(now_ms); }
-    void long_touch() { long_touch(now_ms); }
     void show(go::Page page) { show(now_ms, page); }
-    void touch_pad(uint32_t held_ms) { touch_pad(now_ms, held_ms); }
 
     bus::State& state() { return product.state(); }
 

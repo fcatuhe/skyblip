@@ -24,15 +24,22 @@ struct HousekeepingRig {
     Status setup() { return product.setup(); }
 
     void run(uint32_t from_ms, uint32_t to_ms, uint32_t step_ms = 50) {
-        for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += step_ms) {
-            platform.clock().set_milliseconds(now_ms);
-            product.run_pass(now_ms);
+        for (uint32_t at_ms = from_ms; at_ms <= to_ms; at_ms += step_ms) {
+            platform.clock().set_milliseconds(at_ms);
+            product.run_pass(at_ms);
         }
+    }
+
+    uint32_t now_ms{0};
+
+    void run_for(uint32_t span_ms) {
+        run(now_ms, now_ms + span_ms);
+        now_ms += span_ms;
     }
 
     // The raw level, held for as long as a thumb would. A long press produces no
     // edges at all, so nothing on the ContactEvent path can see one.
-    void hold_button(uint32_t& now_ms, uint32_t held_ms, bool down = true) {
+    void hold_button(uint32_t held_ms, bool down = true) {
         platform.board_gpio().button_down = down;
         const uint32_t until = now_ms + held_ms;
         for (; now_ms <= until; now_ms += 50) {
@@ -43,19 +50,17 @@ struct HousekeepingRig {
 
     // Held across steps, then released: ui::Button only reports a press once a
     // level has been stable through its debounce window.
-    void press(uint32_t& now_ms) {
-        hold_button(now_ms, 80, /*down=*/true);
-        hold_button(now_ms, 80, /*down=*/false);
+    void press() {
+        hold_button(80, /*down=*/true);
+        hold_button(80, /*down=*/false);
     }
 
     // The pad the pilot pages with. The page lands on the release.
-    void tap(uint32_t& now_ms) {
+    void tap() {
         platform.board_gpio().pad_down = true;
-        run(now_ms, now_ms + 200);
-        now_ms += 200;
+        run_for(200);
         platform.board_gpio().pad_down = false;
-        run(now_ms, now_ms + 100);
-        now_ms += 100;
+        run_for(100);
     }
 
     // One solution from the receiver. core/flight decides what it means and
@@ -71,20 +76,18 @@ struct HousekeepingRig {
         product.bus().gnss.push(solution);
     }
 
-    void on_ground(uint32_t& now_ms) {
+    void on_ground() {
         push_fix(/*speed_mm_s=*/0, /*altitude_msl_m=*/0);
-        run(now_ms, now_ms + 200);
-        now_ms += 200;
+        run_for(200);
     }
 
     // core/flight wants five seconds of motion it believes before it will call
     // a device airborne, and it throws the first sample away as too jerky, so
     // this is a climb-out rather than one hopeful fix.
-    void airborne(uint32_t& now_ms) {
+    void airborne() {
         for (int i = 0; i < 14; i++) {
             push_fix(/*speed_mm_s=*/50000, /*altitude_msl_m=*/1200);
-            run(now_ms, now_ms + 500);
-            now_ms += 500;
+            run_for(500);
         }
     }
 
