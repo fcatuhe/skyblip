@@ -46,18 +46,26 @@ uint8_t RadioService::readable_version_at(uint64_t tx_at_us) const {
 
 // INFO: fc 22nov26 B.5: a close client heard since arming rewrites a position before its CCA
 void RadioService::keep_readable() {
-    const uint64_t floor_us =
-        context_.roles.clock.microseconds() + timing::PoliteAccess::kCcaLeadUs;
+    reread_revision_ = versions_.revision();
     Armed* const dwells[] = {&current_dwell_, next_armed_ ? &next_dwell_ : nullptr};
     for (Armed* dwell : dwells) {
-        if (dwell == nullptr || !dwell->carries(Payload::Position)) continue;
+        if (dwell == nullptr || !dwell->carries(Payload::Position) ||
+            dwell->position_version == adsl::Packet::kProtocolVersionIssue1)
+            continue;
         const uint64_t tx_at_us = dwell->at(Payload::Position);
-        if (tx_at_us < floor_us || dwell->position_version <= readable_version_at(tx_at_us))
+        if (dwell->position_version <= readable_version_at(tx_at_us)) continue;
+        // INFO: fc 22nov26 the clock is read after the reread, so a burst inside the CCA lead stays
+        if (context_.roles.clock.microseconds() + timing::PoliteAccess::kCcaLeadUs > tx_at_us)
             continue;
         if (context_.roles.rf.withdraw(tx_at_us) != Status::Ok) continue;
         dwell->drop(Payload::Position);
-        rearm(*dwell, Payload::Position, tx_at_us, /*forced=*/false);
+        rearm(*dwell, Payload::Position, tx_at_us, forced_us_ && *forced_us_ == tx_at_us);
     }
+}
+
+bool RadioService::carries_position() const {
+    return current_dwell_.carries(Payload::Position) ||
+           (next_armed_ && next_dwell_.carries(Payload::Position));
 }
 
 // INFO: fc 13nov26 G.2.6 leaves an unknown capability unset: ADS-B counts while Bravo is live

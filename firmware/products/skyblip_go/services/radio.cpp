@@ -55,15 +55,11 @@ uint32_t RadioService::due_in_ms(uint32_t /*now_ms*/) const {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Rf) ||
         !context_.state.activation.address())
         return runtime::kServiceRestCeilingMs;
+    if (carries_position() && versions_.revision() != reread_revision_) return 0;
     if (!next_armed_) return runtime::kServicePassCeilingMs;
     const uint64_t now_us = context_.roles.clock.microseconds();
-    uint64_t due_us = next_dwell_.from_us;
-    if (current_dwell_.carries(Payload::Position)) {
-        const uint64_t reread_us = current_dwell_.at(Payload::Position) - kVersionRereadLeadUs;
-        if (reread_us > now_us) due_us = std::min(due_us, reread_us);
-    }
-    if (due_us <= now_us) return 0;
-    const uint64_t until_ms = (due_us - now_us + 999) / 1000;
+    if (next_dwell_.from_us <= now_us) return 0;
+    const uint64_t until_ms = (next_dwell_.from_us - now_us + 999) / 1000;
     return static_cast<uint32_t>(std::min<uint64_t>(until_ms, runtime::kServiceRestCeilingMs));
 }
 

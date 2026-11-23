@@ -256,7 +256,7 @@ struct State {
         uint32_t rx_miskeyed{0};
         uint32_t rx_noise{0};
         uint32_t rx_named{0};
-        // INFO: fc 13nov26 B.5: Status payloads whose Max. Protocol Version a target now holds
+        // INFO: fc 22nov26 B.5: Status payloads read as their senders' Max. Protocol Version
         uint32_t rx_status{0};
         // INFO: fc 13nov26 B.5: seconds a position with an unknown field waited for an Issue 1 one
         uint32_t tx_held_for_b5{0};

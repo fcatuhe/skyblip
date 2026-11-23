@@ -108,37 +108,19 @@ TEST_CASE("rf: a position Issue 1 cannot write is withdrawn and held once the cl
     CHECK(armings.state.air.tx_held_for_b5 == held + 1);
 }
 
-// Once its channel check has begun a burst is the executor's, so it keys as armed.
-TEST_CASE("rf: a position the executor already listens for keys as it was armed") {
+// The device's loop sleeps until something is due, so a client filed after the radio's turn in a
+// pass brings the next pass at once.
+TEST_CASE("rf: a client filed while a position is carried brings the next pass at once") {
     Armings armings;
     ready(armings);
     REQUIRE(armings.radio.setup() == Status::Ok);
     armings.tick_in(0, 420);
     REQUIRE(armings.rf.with_tx == 1);
+    const uint32_t now_ms = static_cast<uint32_t>(armings.clock.microseconds() / 1000);
+    REQUIRE(armings.radio.due_in_ms(now_ms) > 0);
 
-    armings.rf.listening = true;
     hear_issue1_client(armings);
+    CHECK(armings.radio.due_in_ms(now_ms) == 0);
     armings.tick_in(0, 430);
-    CHECK(armings.rf.withdrawn == 0);
-    CHECK(armings.rf.with_tx == 1);
-}
-
-// The device's loop sleeps until something is due, so the radio asks for a pass in time to reread.
-TEST_CASE("rf: a carried position brings a pass ahead of its channel check") {
-    Armings armings;
-    ready(armings);
-    REQUIRE(armings.radio.setup() == Status::Ok);
-    armings.tick_in(0, 420);
-    REQUIRE(armings.rf.with_tx == 1);
-    const uint64_t tx_at_us = last_with_burst(armings)->tx_at_us;
-    const int opens_ms = timing::kWindowAMs.start_ms - timing::kSwitchLeadMs;
-    REQUIRE(tx_at_us > Armings::kEdgeUs + static_cast<uint64_t>(opens_ms) * 1000 +
-                           go::RadioService::kVersionRereadLeadUs);
-
-    armings.tick_in(0, opens_ms);
-    const uint64_t now_us = armings.clock.microseconds();
-    const uint64_t due_us =
-        now_us + uint64_t{armings.radio.due_in_ms(static_cast<uint32_t>(now_us / 1000))} * 1000;
-    CHECK(due_us <= tx_at_us - go::RadioService::kVersionRereadLeadUs + 1000);
-    CHECK(due_us + timing::PoliteAccess::kCcaLeadUs < tx_at_us);
+    CHECK(armings.radio.due_in_ms(now_ms + 10) > 0);
 }

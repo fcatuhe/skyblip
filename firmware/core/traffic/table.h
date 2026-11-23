@@ -62,6 +62,8 @@ class TrafficTable {
     Target* at(int i) { return (i >= 0 && i < kMaxTargets) ? &slots_[i] : nullptr; }
 
     int find(uint8_t address_mapping_table, uint32_t address) const;
+    // INFO: fc 22nov26 an address we transmit under: our serial's, or our aircraft's ICAO address
+    bool own_aircraft(const model::AircraftObservation& observation) const;
 
    private:
     std::array<Target, kMaxTargets> slots_{};
@@ -80,7 +82,6 @@ class TrafficTable {
         uint32_t age_s;
     };
 
-    bool own_aircraft(const model::AircraftObservation& observation) const;
     static bool prefer_new(const model::AircraftObservation& incoming,
                            const model::AircraftObservation& existing);
     static void sample_turn(TargetTurn& turn, const model::AircraftObservation& observation);

@@ -345,7 +345,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRadioAnswerMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | three dwells and readings a second, so nine missed is a radio not answering |
 | `kRadioRefusalSamples` | 2 | samples | Samples | one refused dwell is a transient, a second inside the age a fault |
-| `kVersionRereadLeadUs` | `timing::PoliteAccess::kCcaLeadUs + uint64_t{runtime::kServicePassCeilingMs} * 1000` | microseconds | - | B.5: a pass this far ahead of a position still leaves its CCA lead |
 | `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -428,4 +427,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-283 constants over 26 folders.
+282 constants over 26 folders.

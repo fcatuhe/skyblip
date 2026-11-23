@@ -10,6 +10,7 @@ The readings of ADS-L 4 SRD-860 Issue 2 that the text does not settle, and that 
 | 4 | G.1.1 and G.1.16, a fix measured on a quarter and sent within 500 ms | to ask |
 | 5 | C.2.5, alternation after a burst that did not go out | to ask |
 | 6 | G.1.16 and G.1.17, velocity accuracy with no measured bound | to ask |
+| 7 | B.5, clients heard only through a relay | to ask |
 
 ## 1. F.2.3: every payload under the ICAO address
 
@@ -42,3 +43,7 @@ C.2.5 says the sender "shall alternate between these frequencies for every trans
 ## 6. G.1.16 and G.1.17: velocity accuracy with no measured bound
 
 G.1.17 says uncertified devices "shall however not report all quality values as 0. Instead, they shall report their positioning performance dynamically". The Go's receiver reports HDOP and VDOP but no velocity error, so the horizontal and vertical accuracy change with the fix while the velocity accuracy is sent as 0, unknown, which G.1.16's table allows. We ask whether that meets G.1.17.
+
+## 7. B.5: clients heard only through a relay
+
+B.5 says "An ADS-L client with air-to-air connectivity shall keep track of the Max. Protocol Version of other clients" and "When sending a Traffic Payload, the client shall use a protocol version compatible with all other clients" closer than 1 km horizontally and 800 m vertically, or under 800 m vertically and less than 30 s from the closest point of approach. It does not say how the other client was heard. The Go counts only the clients it hears direct: a Traffic or a Status whose F.2 relay flag is set, or a target in a G.3 Traffic Uplink, sets no version (`firmware/core/traffic/README.md`, Which ADS-L version a client reads). We read the clause as covering the clients a device hears itself, since a client heard only through a relay may be out of range of our Traffic too. Counting relayed clients would lower the version more often and never raise it. We ask whether B.5 covers clients heard only through a relay.

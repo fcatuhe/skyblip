@@ -167,7 +167,8 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     observation.at_ms = now_ms - static_cast<uint32_t>(observation.fix_age_ms);
     observation.rssi_dbm = event.rssi_dbm;
     context_.state.traffic.update(observation, utc_s);
-    if (!alptas && !relayed) versions_.hear_traffic(observation, utc_s);
+    if (!alptas && !relayed && !context_.state.traffic.own_aircraft(observation))
+        versions_.hear_traffic(observation, utc_s);
     context_.state.air.rx_ok++;
     log(event, stamp, radio::Verdict::Received, &observation);
 }
@@ -244,14 +245,15 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
     return radio::Verdict::Received;
 }
 
-// INFO: fc 22nov26 B.5: kept whether or not its sender is on the display, unless another relayed it
+// INFO: fc 22nov26 B.5: kept whatever the display shows, unless relayed or our own heard back
 radio::Verdict TrafficService::learn_status(const adsl::Packet& packet, uint32_t utc_s,
                                             model::AircraftObservation& observation) {
     observation.address = packet.address();
     observation.address_mapping_table = packet.address_mapping_table();
     observation.source = model::Source::AdslDirect;
     const std::optional<uint8_t> declared = adsl::status_max_version(packet);
-    if (!declared || packet.is_relay()) return radio::Verdict::Unsupported;
+    if (!declared || packet.is_relay() || context_.state.traffic.own_aircraft(observation))
+        return radio::Verdict::Unsupported;
     versions_.hear_status(observation.address_mapping_table, observation.address, *declared, utc_s);
     return radio::Verdict::Declared;
 }

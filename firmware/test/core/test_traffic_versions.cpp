@@ -3,7 +3,6 @@
 
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
-#include "core/traffic/lease.h"
 #include "core/traffic/versions.h"
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
@@ -22,6 +21,7 @@ model::AircraftObservation client(const model::Ownship& own, uint32_t address, i
     model::AircraftObservation observation =
         target_at(own, north_m, 0, 0, 30, 90, static_cast<uint32_t>(own.fix_at_ms));
     observation.address = address;
+    observation.address_mapping_table = adsl::kAddressTableFlarm;
     observation.adsl_version = version;
     observation.source = model::Source::AdslDirect;
     observation.flight_state = 2;
@@ -36,26 +36,26 @@ TEST_CASE("versions: a Status outlives its sender's position, and lapses three S
     const model::Ownship own = flying(30, 90, 0, kHeardMs);
     VersionTable versions;
     versions.hear_traffic(client(own, 0x111, 300, 0), kHeardS);
-    versions.hear_status(6, 0x111, 1, kHeardS);
+    versions.hear_status(adsl::kAddressTableFlarm, 0x111, 1, kHeardS);
     REQUIRE(versions.readable_version(own, kHeardMs) == 1);
 
-    versions.age_out(kHeardS + kAirborneTargetForgetS + 1);
-    const int index = versions.find(6, 0x111);
+    versions.age_out(kHeardS + 7);
+    const int index = versions.find(adsl::kAddressTableFlarm, 0x111);
     REQUIRE(index >= 0);
     CHECK_FALSE(versions.at(index)->placed);
     CHECK(versions.at(index)->declared);
 
-    const uint32_t back_s = kHeardS + kStatusForgetS - 2;
+    const uint32_t back_s = kHeardS + 58;
     versions.hear_traffic(client(own, 0x111, 300, 0, back_s), back_s);
     CHECK(versions.readable_version(own, kHeardMs) == 1);
-    versions.age_out(kHeardS + kStatusForgetS);
+    versions.age_out(kHeardS + 60);
     CHECK(versions.at(index)->declared);
-    versions.age_out(kHeardS + kStatusForgetS + 1);
+    versions.age_out(kHeardS + 61);
     CHECK_FALSE(versions.at(index)->declared);
     CHECK(versions.at(index)->placed);
     CHECK(versions.readable_version(own, kHeardMs) == 0);
 
-    versions.age_out(back_s + kAirborneTargetForgetS + 1);
+    versions.age_out(back_s + 7);
     CHECK(versions.count() == 0);
 }
 
@@ -70,9 +70,9 @@ TEST_CASE("versions: a full table gives up the far client heard longest ago, nev
 
     const uint32_t now_s = kHeardS + VersionTable::kMaxClients;
     versions.hear_traffic(client(own, 0x200, 25000, 1, now_s), now_s);
-    CHECK(versions.find(6, 0x200) >= 0);
-    CHECK(versions.find(6, 0x101) < 0);
-    CHECK(versions.find(6, 0x100) >= 0);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x200) >= 0);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x101) < 0);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x100) >= 0);
     CHECK(versions.readable_version(own, kHeardMs) == 0);
 }
 
@@ -85,17 +85,25 @@ TEST_CASE("versions: a table of close clients gives one up only for a client rea
         versions.hear_traffic(client(own, 0x100 + i, 300, 1), kHeardS);
 
     versions.hear_traffic(client(own, 0x200, 20000, 0), kHeardS);
-    CHECK(versions.find(6, 0x200) < 0);
-    versions.hear_status(6, 0x201, 0, kHeardS);
-    CHECK(versions.find(6, 0x201) < 0);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x200) < 0);
+    versions.hear_status(adsl::kAddressTableFlarm, 0x201, 0, kHeardS);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x201) < 0);
     CHECK(versions.readable_version(own, kHeardMs) == 1);
 
     versions.hear_traffic(client(own, 0x202, 400, 0), kHeardS);
-    CHECK(versions.find(6, 0x202) >= 0);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x202) >= 0);
     CHECK(versions.count() == VersionTable::kMaxClients);
     CHECK(versions.readable_version(own, kHeardMs) == 0);
 
     versions.hear_traffic(client(own, 0x203, 400, 1), kHeardS);
-    CHECK(versions.find(6, 0x203) < 0);
-    CHECK(versions.find(6, 0x202) >= 0);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x203) < 0);
+    CHECK(versions.find(adsl::kAddressTableFlarm, 0x202) >= 0);
+}
+
+TEST_CASE("versions: a client heard only by its Status is close to nobody") {
+    const model::Ownship own = flying(30, 90, 0, kHeardMs);
+    VersionTable versions;
+    versions.hear_status(adsl::kAddressTableFlarm, 0x111, 0, kHeardS);
+    CHECK(versions.count() == 1);
+    CHECK(versions.readable_version(own, kHeardMs) == adsl::Packet::kMaxProtocolVersion);
 }

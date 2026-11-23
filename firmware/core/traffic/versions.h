@@ -58,6 +58,8 @@ class VersionTable {
 
     int count() const;
     int find(uint8_t address_mapping_table, uint32_t address) const;
+    // INFO: fc 22nov26 moves each time a client is filed, so a reader tells news apart
+    uint32_t revision() const { return revision_; }
     const Client* at(int i) const { return (i >= 0 && i < kMaxClients) ? &clients_[i] : nullptr; }
 
    private:
@@ -75,6 +77,7 @@ class VersionTable {
 
     std::array<Client, kMaxClients> clients_{};
     model::Ownship own_{};
+    uint32_t revision_{0};
 };
 
 }  // namespace skyblip::traffic

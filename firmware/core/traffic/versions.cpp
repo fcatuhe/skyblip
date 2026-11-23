@@ -73,10 +73,12 @@ void VersionTable::hear_status(uint8_t address_mapping_table, uint32_t address, 
 
 void VersionTable::file(const Client& heard, int index, uint32_t now_s) {
     if (index < 0) index = slot_for(heard, now_s);
-    if (index >= 0) clients_[index] = heard;
+    if (index < 0) return;
+    clients_[index] = heard;
+    revision_++;
 }
 
-// INFO: fc 22nov26 B.5: full, it drops the far client heard longest ago, never a close one
+// INFO: fc 22nov26 B.5: a far client goes first, a close one only for a close one reading no more
 int VersionTable::slot_for(const Client& heard, uint32_t now_s) const {
     int victim = -1;
     Weight least{};
