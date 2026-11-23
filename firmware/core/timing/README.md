@@ -59,7 +59,7 @@ EN 300 220-1 5.21.3.2 asks the manufacturer to declare seven parameters. They ar
 | 2) the maximum dead time | 2 ms | at most 5 ms | `kDeadTimeCeilingUs`, enforced by both executors at the key. About 1 to 1.4 ms on the nRF52, not measured on a unit |
 | 3) the method that randomises a retransmission | a hash of the device address and the busy instant | | `Transmitter::deferral_draw()` |
 | 4) the unit of the deferral period | 5 ms, one ADS-L burst | at least the CCA interval | `kDeferralUnitUs` |
-| 5) the minimum and maximum of the random deferral | 15 ms and 250 ms, 3 to 50 units from the busy instant, ADS-L §C.2's interval, cut where the burst's window ends | | `kDeferralFloorUs`, `kDeferralCeilingUs` |
+| 5) the minimum and maximum of the random deferral | 15 ms and 250 ms, 3 to 50 units from the busy instant, ADS-L §C.2's interval, cut where the burst's window ends. The busy instant is the later of the planned instant and the end of the assessment. A position waiting for a fresh fix can wait longer, never less | | `kDeferralFloorUs`, `kDeferralCeilingUs` |
 | 6) Ton max | 5 ms, one 4.64 ms burst | at most 1 s | `kTransmissionCeilingUs` |
 | 7) Toff min on the same frequency | 100 ms | at least 100 ms | `kSameFrequencyOffFloorMs`, which the schedule holds (below) |
 

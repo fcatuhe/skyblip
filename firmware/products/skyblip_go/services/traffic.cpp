@@ -50,7 +50,8 @@ void TrafficService::tick(uint32_t now_ms) {
                 log(event, stamp_for(event, now_ms), radio::Verdict::Transmitted);
                 break;
             case events::RfEventType::Busy:
-                context_.state.rf.note_busy({event.tx_at_us, event.rssi_dbm, event.rssi_valid});
+                context_.state.rf.note_busy(
+                    {event.tx_at_us, event.rssi_dbm, event.rssi_valid, event.at_us});
                 break;
         }
     }

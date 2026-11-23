@@ -13,6 +13,7 @@ root firmware/hardware/platform/zephyr/clock.h
 root firmware/hardware/platform/zephyr/io.h
 root firmware/test/support/simulator_run.h
 root firmware/test/support/m_band_rig.h
+root firmware/test/support/armings_rig.h
 f519edf510ccb07cc76e8339c26659731af9d5babc0478900f9ddd3eb7b75bde  firmware/core/protocol/air.cpp
 a4f0d0684280519dbddb79a79cf3863da4391a6a630f085042740108e1935375  firmware/core/protocol/air.h
 7f4ca179f2d05372a06b52ba9534571478b0de34bfbf6734daea10665dcb3806  firmware/hardware/parts/sx1262/sx1262.cpp
@@ -69,7 +70,7 @@ e480d3d0cf5224ed112bad72b8a23dad14353322bd4e8a7818dbf320fa1e433a  firmware/proto
 0bf3a8c790fd4fbd9ce4b59917c2b5ab1ecc6c3bc442595852b807112181b317  firmware/protocols/common/xxtea.cpp
 8e05b6e3361c36f219c1534ff498d0e6997c1752f58a577288fea4c3d810db99  firmware/protocols/common/xxtea.h
 8db91ed63ed9f2784562fa5842ecbd680fa82f70a0d833d90228f8496f02a616  firmware/test/adsl/README.md
-132da551d105311929a377a07ce82dfc7909ede734857640bbe5a915915ff088  firmware/test/adsl/test_datalink.cpp
+1fa1bb4b8604c4f8620cac3e6b744649649546842da4d5f6523056e649be5e2a  firmware/test/adsl/test_datalink.cpp
 29e74fa3ce61b651f567e4c9f11646780f135e9a644185e9866d38640c24d59c  firmware/test/adsl/test_general.cpp
 19975b8f54268cb8c1f2feae1dee94b7925410b6d3d7659cf73414aa97092506  firmware/test/adsl/test_network.cpp
 cde7c6cbe252ebfc9c57ba59cd002ada7c8e9ec6f92b1278726142a25af0fece  firmware/test/adsl/test_overview.cpp
@@ -83,5 +84,6 @@ d770fbd18737c2912cad151ddfc772682686fc717a498ae32340dafcf0197757  firmware/test/
 b5953c95449f9ca61662dc50caabf3b3e87c243b6a3fd44f407f0fb4fafc9855  firmware/test/en300220/clauses.txt
 9dba7d8ae930576e594765eb9a517ebd6a8c7166833da5d700694b33fe685d7a  firmware/test/en300220/test_part1.cpp
 c3c5bbe56a0c25cbe521afc237258975a517daf8226e4ee385fc44853968c19f  firmware/test/en300220/test_part2.cpp
+614269da464d1e37ce2c7d62e2d7f0a13bf5e152b21940cbff186e5a29f0ea60  firmware/test/support/armings_rig.h
 60af4bab775f470fe3a81c46af822b11133839cc93d78c21143008494dfadf22  firmware/test/support/m_band_rig.h
 39b07cbe239945d080ea7d20eb4ebdff324584022842c1e27cf53e40af656cf8  firmware/test/support/simulator_run.h
