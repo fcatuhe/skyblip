@@ -6,7 +6,7 @@ Every threshold in this tree, 12.0 m/s for a takeoff, 1000 ms for a long touch, 
 
 ## What it decides
 
-`record.h` is the envelope: a 24-byte slot, the type tag, the instant, and the flags every type shares. `payload.h` is one struct per subject, each inside the 16 bytes the envelope leaves, encoded in `payload_sensed.cpp` for what reached the device and `payload_decided.cpp` for what it made of it. `recorder.h` is the RAM ring a capture fills and a writer drains.
+`record.h` is the envelope: a 24-byte slot, the type tag, the instant, and the flags every type shares. `layout.h` holds the type codes, each field's payload offset and flag bit, and the enums this layer declares, all generated from the layout (below). `payload.h` is one struct per subject, each inside the 16 bytes the envelope leaves, encoded in `payload_sensed.cpp` for what reached the device and `payload_decided.cpp` for what it made of it. `recorder.h` is the RAM ring a capture fills and a writer drains.
 
 | Not here | Where |
 |---|---|
@@ -35,7 +35,7 @@ Every field is written and read one at a time, little-endian, as `core/flight/lo
 
 - `at_s` is UTC once the receiver has given a second, and time since boot before that, as `radio::Entry::at_s` is. `kFlagUtcDated` says which.
 - `kFlagPhaseValid` says `into_ms` was measured against a PPS edge. Without it the millisecond field means nothing.
-- Those two bits mean the same on every type. Bits 2 to 7 belong to the type and are named beside it in `payload.h`.
+- Those two bits mean the same on every type. Bits 2 to 7 belong to the type and are named in `layout.h`.
 - A type is retired, never renumbered, because a corpus outlives the firmware that wrote it and a decoder has only the number.
 - Type 0 is not a record, so an all-zero slot decodes as nothing. A slot no writer has reached reads erased (`store::erased`).
 
@@ -44,8 +44,8 @@ Every field is written and read one at a time, little-endian, as `core/flight/lo
 A payload that carries a C++ enum stores one byte of it, so every such enum writes its numbers down (`BadCrc = 6`) and a new member takes the next free number. Inserting a member in the middle of an unnumbered list would silently change what every stored record means. Some of those enums belong to other features (`core/radio/log.h`, `core/timing/`, `core/power/`, the product's `Page` and `Gesture`), and this layer may not move one of their values.
 
 - The numbers fill 0 up to one less than the count, with no holes, because the host decoder reads a byte through a tuple it indexes by.
-- `test/core/diagnostics/test_diagnostics_ordinals.cpp` pins the enums this layer writes, and `test/products/skyblip_go/test_diagnostics_product_codes.cpp` the codes the product owns. Each maps its members through a `switch` with no default, so a new member fails the build.
-- `scripts/test_blip.py` holds every decoder tuple in `scripts/blip_records.py` to the schema enum of the same name. So a new member is an edit to the decoder and to `schemas/diagnostics_log.v1.schema.json` in the same commit.
+- The layout lists every enum a payload stores, with its codes. It declares this layer's own (`Profile`, `Refusal`, `LinkAction`, `SwitchKind`, `LoopService`) in `layout.h`, and mirrors another feature's member by member: the generated `test/core/diagnostics/test_diagnostics_mirrors.cpp` maps each through a `switch` with no default and asserts each code, so a new member fails the build until the layout lists it. `test/products/skyblip_go/test_diagnostics_product_codes.cpp` pins the codes the product owns.
+- `scripts/check_diagnostics_layout.py` holds each enum's names in `schemas/diagnostics_log.v1.schema.json` to the layout's. So a new member is an edit to the layout and to the schema in the same commit.
 - `schemas/diagnostics_log.v1.vectors.json` holds one record of each type as the firmware writes it. `test/core/diagnostics/test_diagnostics_vectors.cpp` pins the encoder to its bytes and `scripts/test_blip.py` pins the decoder to its fields, so a layout that moves on one side fails a test. A new type or field is an edit to the vectors too.
 - `Contact::gesture` is the product's `go::Gesture`, and `Screen`'s page, mode and prompt are `go::Page`, `go::Mode` and `common::Pending`. Each stores that enum's own number, and the schema lists it.
 
@@ -217,6 +217,8 @@ On `runtime::Context`, beside the roles, the bus and the blackboard. It is many-
 
 The pool rotates: a long capture keeps its most recent hours, and the sector ring may recycle a sector of the session being written (`../store/README.md`). The writer then writes a `Gap` naming how many records went with the sector, and writes `Boot` and `Config` again behind it, so a corpus read from the middle still names its build and settings. The `list` reply calls that session truncated.
 
-## The schema
+## The layout and the schema
 
-[`schemas/diagnostics_log.v1.schema.json`](../../../schemas/diagnostics_log.v1.schema.json) is one decoded record per type, so the host decoder and this directory cannot drift. It is not the `diagnostics` frame of `schemas/link.v1.json`, the live status dump the companion link answers with (`core/comms/diagnostics.h`).
+[`schemas/diagnostics_layout.v1.json`](../../../schemas/diagnostics_layout.v1.json) is the one place a record is laid out: each type's code, and each field's offset or flag bit, its kind and its enum. `scripts/diagnostics_layout.py` generates `layout.h`, the mirrors test and the decoder tables of `scripts/blip_records.py` and the console's `diagnostics.js` from it, and `scripts/check_diagnostics_layout.py` fails when one of them is stale. To add a type or a field, add it to the layout and run the generator, write it in `payload.h`, its `record_of()` and `test/support/diagnostics_read.h`, describe it in the schema, and add it to the vectors. A field the firmware stops writing is marked `retired`, so the decoders still read older captures and no new field takes its bytes or bit.
+
+[`schemas/diagnostics_log.v1.schema.json`](../../../schemas/diagnostics_log.v1.schema.json) is the decoded view: one decoded record per type, with what each field means. It stays written by hand, because one property serves every type that has the field and its prose and ranges are no part of the layout. It is not the `diagnostics` frame of `schemas/link.v1.json`, the live status dump the companion link answers with (`core/comms/diagnostics.h`).
