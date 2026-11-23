@@ -69,6 +69,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTurnCeilingDps` | 30 | degrees per second | Ceiling | [README](../firmware/core/flight/README.md) argues it |
 | `kClimbWindowFloorMs` | 500 | milliseconds | Floor | shorter and the sensor noise is the rate, longer and the rate is history |
 | `kClimbWindowCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | [README](../firmware/core/flight/README.md) argues it |
+| `kClimbWindowSlackMs` | 125 | milliseconds | Window | a pass moves a quarter's instant, so a height this short of a window back counts |
 | `kExtrapolationCeilingMs` | 1500 (1.5 s) | milliseconds | Ceiling | past this the last fix stands where it was, never at an invented position |
 | `kLevelFlightMg` | 1000 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kResultantFloorMg` | 200 | thousandths of g | Floor | [README](../firmware/core/flight/README.md) argues it |
@@ -205,7 +206,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
 | `kRetryStepS` | 2 | seconds | - | a burst that missed its second tries the same channel two seconds on |
 | `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | [README](../firmware/core/timing/README.md) argues it |
-| `kFixInHandEarlyMs` | -1000000 | milliseconds | - | a fix in hand before every instant, for a caller that names no arrival |
+| `kNavigationInHandEarlyMs` | -1000000 | milliseconds | - | navigation in hand before every instant, for a caller that names no arrival |
 | `kRedrawLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | a redrawn instant leaves the channel check its listen before it |
 | `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
 | `kNoTxHoldMs` | 10000 (10 s) | milliseconds | Hold | a failure shown only once it lasts, so a short gap never flickers |
@@ -429,4 +430,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-284 constants over 26 folders.
+285 constants over 26 folders.

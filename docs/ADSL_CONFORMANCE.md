@@ -479,8 +479,7 @@ Issue 2 gives the same number to Transmit Rate and Timing, so the cases of both 
   > The host's side of a cold start: three seconds of sentences waiting in the port, drained at once.
 - no Traffic burst goes on air over 500 ms after its solution (`test/adsl/test_traffic_flown.cpp`)
   > Flown with the channel busy one burst in three seconds, and a receiver 200 ms late on the wire.
-- no Traffic burst carries a vertical rate over 500 ms old (`test/adsl/test_traffic_flown.cpp`)
-  > The vertical rate is navigation data too: read once a second, a climb went on air 1.9 s late.
+- no Traffic burst's vertical rate has its newest pressure over 500 ms old (`test/adsl/test_traffic_flown.cpp`)
 - two solutions a second and the redraw put a burst in every second (`test/adsl/test_traffic_flown.cpp`)
   > A receiver left at 1 Hz holds most airborne bursts, its solution too old by the time they fly.
 - an L76K that delivers every solution a second late is refused (`test/adsl/test_traffic_flown.cpp`)
