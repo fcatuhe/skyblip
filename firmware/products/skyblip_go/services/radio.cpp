@@ -255,7 +255,8 @@ void RadioService::count_given_up(uint32_t now_ms) {
         transmitter_.give_up(slot_utc_s(now_ms), full_rate(), settings_.callsign[0] != 0);
 }
 
-// INFO: fc 19nov26 a position seen waiting for its fix is lost once its second ends unarmed
+// INFO: fc 22nov26 a position seen waiting for its fix or climb is lost once its second ends
+// unarmed
 void RadioService::count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us,
                                       uint32_t now_ms) {
     const uint32_t utc_s = slot_utc_s(now_ms);
