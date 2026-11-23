@@ -22,6 +22,12 @@ bool parse(NmeaParser& parser, const std::string& line) {
     return parser.parse_line(line.c_str(), static_cast<int>(line.size()));
 }
 
+std::string rmc_on(const char* stamp, const char* date) {
+    return checksummed(
+        (std::string("GPRMC,") + stamp + ",A,4807.038,N,01131.000,E,022.4,084.4," + date + ",,,A")
+            .c_str());
+}
+
 std::string rmc_at(const char* stamp) {
     return checksummed(
         (std::string("GPRMC,") + stamp + ",A,4807.038,N,01131.000,E,022.4,084.4,230325,,,A")
@@ -134,4 +140,18 @@ TEST_CASE("gnss: a torn GGA that names a time pairs with no RMC") {
     parser.parse_line(torn.c_str(), static_cast<int>(torn.size()));
     REQUIRE(parse(parser, rmc_at("123520.000")));
     CHECK_FALSE(parser.same_epoch());
+}
+
+// 2016 ended on a leap second: 23:59:59 is 1483228799 s since 1970, and 23:59:60 names the
+// midnight.
+TEST_CASE("gnss: a leap second's 23:59:60 is a valid UTC, which the 00:00:00 after it repeats") {
+    NmeaParser parser;
+    REQUIRE(parse(parser, rmc_on("235959.000", "311216")));
+    CHECK(parser.solution().utc_s == 1483228799u);
+    REQUIRE(parse(parser, rmc_on("235960.000", "311216")));
+    CHECK(parser.solution().utc_valid);
+    CHECK(parser.solution().utc_s == 1483228800u);
+    CHECK(parser.solution().utc_ms == 0);
+    REQUIRE(parse(parser, rmc_on("000000.000", "010117")));
+    CHECK(parser.solution().utc_s == 1483228800u);
 }

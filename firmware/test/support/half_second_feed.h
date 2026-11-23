@@ -21,6 +21,7 @@ struct Solution {
     int32_t stamped_ahead_s{0};
     uint16_t delivery_ms{0};
     bool backlogged{false};
+    bool relabeled{false};
 };
 
 // One solution, landing late_ms after the instant it names, its latitude a step per solution.
@@ -41,6 +42,7 @@ inline void deliver(Rig& rig, const Solution& delivered, uint32_t& updates) {
     solution.satellites = 10;
     solution.delivery_ms = delivered.delivery_ms;
     solution.backlogged = delivered.backlogged;
+    solution.relabeled = delivered.relabeled;
     solution.sentences = ++updates;
     rig.product.bus().gnss.push(solution);
     const uint32_t at_ms = delivered.second * 1000 + delivered.utc_ms + delivered.late_ms;

@@ -835,7 +835,8 @@
       {"name": "gnss", "code": 3, "mirrors": "Gnss", "description": "the receiver is not solving at 2 Hz on 115200, or a solution is named off .000 and .500 by more than 10 ms (G.1.1, G.1.16)"},
       {"name": "fix", "code": 4, "mirrors": "Fix", "description": "no valid fix (G.1.16)"},
       {"name": "utc", "code": 5, "mirrors": "Utc", "description": "no valid UTC to date the slot and the Timestamp (C.5, G.1.1)"},
-      {"name": "pps", "code": 6, "mirrors": "Pps", "description": "no PPS edge for longer than the 60 s holdover (C.5, G.1.1)"}
+      {"name": "pps", "code": 6, "mirrors": "Pps", "description": "no PPS edge for longer than the 60 s holdover (C.5, G.1.1)"},
+      {"name": "held", "code": 7, "mirrors": "Held", "description": "every requirement above holds, but the positions owed over more than 5 s were held: their fix too old on air or not dated, or unreadable by a close Issue 1 client (G.1.16, B.5)"}
     ]}
   }
 }

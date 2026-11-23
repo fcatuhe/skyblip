@@ -221,3 +221,21 @@ TEST_CASE("no tx glass: nearby's Go row reads its figures, and TX OFF once the g
     CHECK(reads_in(simulator.panel(), "TX OFF", 0, go::kNearbyUnitY, go::kGlassWidth, row_bottom,
                    go::kNearbyScale));
 }
+
+// Solutions landing 600 ms late date no position, and every one was held under a glass saying nothing.
+TEST_CASE("no tx glass: positions held past 5 s put NO TX HELD on the radar, and Status still goes") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(120);
+    simulator.world().gnss().latency_ms = 600;
+    const uint32_t settled_ms = past_settling(simulator);
+    run_on(simulator, settled_ms, 25000);
+    const timing::TransmitGate& gate = simulator.product().state().transmit;
+    CHECK(gate.transmits());
+    CHECK(gate.unmet() == timing::NoTx::Held);
+    REQUIRE(simulator.product().screen().page() == go::Page::Radar);
+    CHECK(wears_no_tx(simulator, "HELD"));
+    CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypePosition) == 0);
+    CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypeStatus) > 0);
+}

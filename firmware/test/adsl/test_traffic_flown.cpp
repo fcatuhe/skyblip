@@ -57,6 +57,24 @@ int check_every_position(simulator::Simulator& simulator) {
     return checked;
 }
 
+// The positions a flying Go sends in the 15 s from 5 s after its receiver's label steps by step_s.
+int positions_after_label_step(int32_t step_s) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    fly_measured(simulator);
+    uint32_t now_ms = past_settling(simulator);
+    run_on(simulator, now_ms, 10000);
+    now_ms += 10000;
+    while (now_ms % 1000 != 700) simulator.step(now_ms += simulator::Simulator::kStepMs);
+    models::L76k& chip = simulator.world().gnss();
+    chip.utc_seconds_of_day = static_cast<uint32_t>(
+        (static_cast<int32_t>(chip.utc_seconds_of_day) + step_s + 86400) % 86400);
+    run_on(simulator, now_ms + simulator::Simulator::kStepMs, 5000);
+    simulator.world().air().clear();
+    run_on(simulator, now_ms + 5000 + 2 * simulator::Simulator::kStepMs, 15000);
+    return check_every_position(simulator);
+}
+
 }  // namespace
 
 // Each burst carries one solution unextrapolated, known before it left, named within the 10 ms.
@@ -197,4 +215,16 @@ TEST_CASE(
         seconds.push_back(static_cast<uint32_t>(record.at_us / 1000000));
     CHECK(seconds.size() == 20);
     for (size_t i = 1; i < seconds.size(); i++) CHECK(seconds[i] == seconds[i - 1] + 1);
+}
+
+// A leap second's 23:59:60 and the 00:00:00 after it name one second, and the Go fell silent for
+// good.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a receiver that names one second twice is on air again in 5 s") {
+    CHECK(positions_after_label_step(-1) >= 14);
+}
+
+// A cold start may begin with a stale GPS-UTC offset, 18 s in 2026, and step its UTC back when
+// told.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a receiver whose UTC steps back 18 s is on air again in 5 s") {
+    CHECK(positions_after_label_step(-18) >= 14);
 }
