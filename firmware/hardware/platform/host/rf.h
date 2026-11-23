@@ -160,7 +160,7 @@ class Rf : public ports::Rf {
                 if (!listen(burst)) continue;
             }
             if (now_us < burst.at_us) return;
-            // INFO: fc 14nov26 a stale reading needs a new assessment if the burst can still key
+            // INFO: fc 22nov26 a stale reading needs a new assessment if the burst can still key
             if (!burst.forced && !within_dead_time(assessment_, now_us) && !listen(burst)) continue;
             if (transmit(burst)) return;
             miss(burst);

@@ -116,14 +116,8 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
 
 uint64_t RadioService::last_key_us(const Armed& dwell, Payload payload) const {
     const int slot = dwell.frequency_hz == adsl::kMBand1Hz ? 1 : 0;
-    int latest_ms = timing::Transmitter::last_instant(payload, slot);
-    if (payload == Payload::Position) {
-        const int32_t latest_for_fix_ms = timing::Transmitter::kFixMaxAgeMs -
-                                          timing::Transmitter::kFixAgeAllowanceMs -
-                                          fix_lag_ms(dwell.origin_us);
-        latest_ms = std::min(latest_ms, latest_for_fix_ms);
-    }
-    return at_us(dwell.origin_us, latest_ms);
+    return at_us(dwell.origin_us,
+                 timing::Transmitter::last_key(payload, slot, fix_lag_ms(dwell.origin_us)));
 }
 
 bool RadioService::fix_too_old_at(uint64_t tx_at_us) const {

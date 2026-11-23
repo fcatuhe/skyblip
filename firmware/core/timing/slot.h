@@ -28,18 +28,24 @@ constexpr int kSwitchMarginMs = 2;
 // TODO: fc 17nov26 no band change measured, until a unit's timing command reads its worst one
 constexpr int kSwitchRetuneMs = 5;
 constexpr int kSwitchLeadMs = 3;
-// INFO: fc 29sep26 bench worst 5.5 ms from SetTx to TxDone, against 5 ms booked
+// INFO: fc 29sep26 bench worst 5.5 ms from the planned instant to TxDone, against 5 ms booked
 constexpr int kCompletionAllowanceMs = 5;
+// INFO: fc 22nov26 SetTx to TxDone, the frame's 5 ms and 1 ms more: bench worst 5.37 ms, build 863
+constexpr int kKeyToDoneMs = static_cast<int>(adsl::kAirTimeMs) + 1;
 
 constexpr Window dwell_of(Window window) {
     return {window.start_ms - kSwitchLeadMs, window.end_ms + kSwitchMarginMs};
 }
 
-// INFO: fc 17nov26 every burst of ours completes kCompletionAllowanceMs before its window closes
+// INFO: fc 22nov26 a burst keyed on time ends kCompletionAllowanceMs before its window closes
 constexpr int last_instant_ms(Window window, uint32_t air_us) {
     return static_cast<int>((int64_t{window.end_ms} * 1000 - air_us) / 1000) -
            kCompletionAllowanceMs;
 }
+
+constexpr int last_key_ms(int end_ms) { return end_ms - kKeyToDoneMs; }
+static_assert(kKeyToDoneMs < static_cast<int>(adsl::kAirTimeMs) + kCompletionAllowanceMs,
+              "a burst planned on its window's last instant may still key late");
 
 constexpr int kGroundEmitStartMs = kUplinkWindowMs.start_ms;
 // INFO: fc 05aug26 a completion deadline, not a start deadline
@@ -57,7 +63,7 @@ static_assert(switched(kUplinkWindowMs, kWindowAMs) && switched(kWindowAMs, kWin
 constexpr uint32_t kPpsHoldoverMs = 60000;
 // INFO: fc 20nov26 a pulse reads locked this long past its last edge, so one missed edge keeps it
 constexpr uint32_t kPpsLockTailMs = 3000;
-// INFO: fc 20nov26 C.5: the latest instant a burst planned from an edge keys at, window B's close
+// INFO: fc 22nov26 C.5: an edge times the bursts planned from it until window B's dwell closes
 constexpr uint32_t kPpsEdgeMaxAgeMs = static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms);
 
 using model::Band;

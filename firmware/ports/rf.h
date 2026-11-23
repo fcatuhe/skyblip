@@ -38,6 +38,7 @@ struct RfPlan {
 };
 
 struct RfBurst {
+    // INFO: fc 22nov26 the simulator keys up to one 5 ms step late, the bench at most 0.33 ms
     static constexpr uint64_t kKeyLatenessCeilingUs = 5000;
 
     const uint8_t* chips{nullptr};

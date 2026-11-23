@@ -24,6 +24,22 @@ uint16_t chips_of(uint8_t byte) {
     return static_cast<uint16_t>((coded[0] << 8) | coded[1]);
 }
 
+// C.5 ends the Direct slot of second 3 at 1000 ms, and C.2's frame is 464 chips at 100 kchip/s.
+constexpr uint64_t kSecond3SlotEndUs = 4000000;
+constexpr uint64_t kFrameUs = (16 + 64 + 24 * 16) * 10;
+
+// Serial 243's position in second 3 is drawn at 990 ms, window B's last instant.
+void arm_on_last_instant(Pass& pass) {
+    REQUIRE(pass.begin() == Status::Ok);
+    pass.state.activation.serial = 243;
+    pass.state.own.utc_ms = 500;
+    pass.whole_pass(3820000);
+    pass.whole_pass(3830000);
+    pass.whole_pass(3989000);
+    REQUIRE(pass.state.rf.dwell.burst_armed);
+    REQUIRE_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+}
+
 }  // namespace
 
 // The component sets the ceiling, and the conducted power and antenna this product declares meet
@@ -190,18 +206,27 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship's Traffic and Status go out inside the D
     }
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.5: a stalled executor misses a burst past the slot's key deadline") {
-    for (const uint64_t resumed_us : {3991000u, 4001000u}) {
+// The nRF52 clock counts 32768 Hz ticks, so its first reading after 990 ms can be 31 us late.
+TEST_CASE("ADS-L.4.SRD860.C.5: a burst keyed a clock tick past its last instant ends in the slot") {
+    Pass pass;
+    arm_on_last_instant(pass);
+    pass.executor_until(3989999, 1);
+    REQUIRE_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+
+    pass.platform.clock().set_microseconds(3990030);
+    pass.executor_until(3990031, 1);
+    pass.whole_pass(3991000);
+
+    CHECK(pass.first_tx_us == 3990031);
+    CHECK(pass.first_tx_us + kFrameUs <= kSecond3SlotEndUs);
+    CHECK(pass.state.air.tx_lost == 0);
+}
+
+TEST_CASE("ADS-L.4.SRD860.C.5: a stalled executor keys nothing it could not end inside the slot") {
+    for (const uint64_t resumed_us : {kSecond3SlotEndUs - kFrameUs + 1, kSecond3SlotEndUs + 1000}) {
         CAPTURE(resumed_us);
         Pass pass;
-        REQUIRE(pass.begin() == Status::Ok);
-        pass.state.activation.serial = 243;
-        pass.state.own.utc_ms = 500;
-        pass.whole_pass(3820000);
-        pass.whole_pass(3830000);
-        pass.whole_pass(3989000);
-        REQUIRE(pass.state.rf.dwell.burst_armed);
-        REQUIRE_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+        arm_on_last_instant(pass);
 
         pass.whole_pass(resumed_us);
 
