@@ -6,7 +6,7 @@ ADS-L's own rules for a transmitter live in its stack (`protocols/adsl/README.md
 
 ## The transmit gate
 
-The Go transmits ADS-L only while every requirement below holds. `TransmitGate` (`transmit_gate.h`) judges them once a pass, in `RadioService::judge_transmit()` (`../../products/skyblip_go/services/radio_gate.cpp`), before any burst is decided. Every path that sends a burst or says whether one goes, PFLAU's `TX` field, the glass and the link included, reads that one verdict, `bus::State::transmit`. A failed requirement stops only the bursts. The Go keeps receiving, alarming, feeding the EFB and logging.
+The Go transmits ADS-L only while every requirement below holds, the last one aside, which names a failure rather than causing one. `TransmitGate` (`transmit_gate.h`) judges them once a pass, in `RadioService::judge_transmit()` (`../../products/skyblip_go/services/radio_gate.cpp`), before any burst is decided. Every path that sends a burst or says whether one goes, PFLAU's `TX` field, the glass and the link included, reads that one verdict, `bus::State::transmit`. A failed requirement stops only the bursts. The Go keeps receiving, alarming, feeding the EFB and logging.
 
 | Requirement | What holds it | Reason | ADS-L 4 SRD-860 Issue 2 |
 |---|---|---|---|
@@ -16,10 +16,11 @@ The Go transmits ADS-L only while every requirement below holds. `TransmitGate` 
 | a valid fix, settled | `own.fix_valid`, then `own.tx_settled` (`../gnss/README.md`) | `FIX` | G.1.16 |
 | a valid UTC | `own.utc_valid` | `UTC` | C.5, G.1.1 |
 | a fresh PPS edge | `pps_fresh()`: a lock, and an edge less than `kPpsEdgeMaxAgeMs`, 1202 ms, old (below) | `PPS` | C.5 |
+| positions going out | no position owed held for more than `TransmitGate::kPositionsHeldCeilingMs`, 5 s, since one last went on air (`RadioService::hold_position()`) | `HELD` | G.1.16 |
 
 Issue 2 asks for at least 1 Hz (G.1.16, "should"), and checks each burst on its own: no position older than 500 ms on air (G.1.16) and a Timestamp within 10 ms of the solution (G.1.1). The gate asks 2 Hz because at 1 Hz most of the direct slot is over 490 ms past the solution, so most bursts would be held (The age of a position). The barometer is not a requirement: Issue 2 does not ask for one, and the boot self test refuses a unit without it (`../../products/skyblip_go/product.h`, `kRequired`). The settle after the first fix holds the burst but is never a reason, because it is the normal start.
 
-The reason, `NoTx`, is the first requirement unmet in the table's order. On the pass it fails nothing new is armed, and `RadioService::withdraw_carried()` takes back the bursts already handed to the executor. A burst whose channel the executor is already reading keys or is reported busy, and is not armed again. The bursts resume on the first pass every requirement holds.
+The reason, `NoTx`, is the first requirement unmet in the table's order. On the pass it fails nothing new is armed, and `RadioService::withdraw_carried()` takes back the bursts already handed to the executor. A burst whose channel the executor is already reading keys or is reported busy, and is not armed again. The bursts resume on the first pass every requirement holds. `HELD` is the one reason that leaves the gate open: it names positions the Go already holds, for a fix too old on air or not dated, or for a close Issue 1 client B.5 cannot serve, so the bursts keep arming, the next position goes out as soon as it can, and the Status goes on. It exists so the pilot is never told the Go transmits while no position goes out. `on_air()`, the gate open with nothing unmet, is what the status page, nearby's Go row and PFLAU's `TX` field say.
 
 `shown()` is the reason the glass marks with `NO TX` on every page, the link's `status` carries as `no_tx`, and the haptic shakes for once in flight (`../../products/skyblip_go/pages/README.md`, NO TX). It appears only after a failure has lasted `kNoTxHoldMs`, 10 s, so a short gap does not flicker it, and stays until every requirement has held for `kNoTxHoldMs`, so a flapping requirement does not shake the pilot every 10 s. The address and the radio are judged from boot, the rest from `kVerdictSettleMs`, 10 s after the first valid fix. `unmet()`, with no hold, is what the `status` page's `TX OFF` and the diagnostics dump name, because the bench wants the instant.
 

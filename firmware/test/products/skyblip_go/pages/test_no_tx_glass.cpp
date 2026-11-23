@@ -222,8 +222,10 @@ TEST_CASE("no tx glass: nearby's Go row reads its figures, and TX OFF once the g
                    go::kNearbyScale));
 }
 
-// Solutions landing 600 ms late date no position, and every one was held under a glass saying nothing.
-TEST_CASE("no tx glass: positions held past 5 s put NO TX HELD on the radar, and Status still goes") {
+// Solutions landing 600 ms late date no position, and every one was held under a glass saying
+// nothing.
+TEST_CASE(
+    "no tx glass: positions held past 5 s put NO TX HELD on the radar, and Status still goes") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);

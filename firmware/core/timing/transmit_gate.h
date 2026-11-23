@@ -41,7 +41,8 @@ struct Requirements {
     bool settled{false};
     bool utc{false};
     bool pps{false};
-    // INFO: fc 22nov26 no position owed held for over kPositionsHeldCeilingMs, which keeps the gate open
+    // INFO: fc 22nov26 no position owed held for over kPositionsHeldCeilingMs, which keeps the gate
+    // open
     bool positions{false};
 };
 
@@ -59,7 +60,8 @@ class TransmitGate {
 
     // INFO: fc 19nov26 the settle after the first fix holds the burst and is never a reason
     bool transmits() const { return transmits_; }
-    // INFO: fc 22nov26 what the glass, the EFB and the link say: transmitting, and positions going out
+    // INFO: fc 22nov26 what the glass, the EFB and the link say: transmitting, and positions going
+    // out
     bool on_air() const { return transmits_ && unmet_ == NoTx::None; }
     NoTx unmet() const { return unmet_; }
     NoTx shown() const { return shown_; }
