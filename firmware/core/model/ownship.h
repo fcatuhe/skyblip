@@ -13,7 +13,8 @@ struct Ownship {
     int32_t longitude_1e7;
     // INFO: fc 20nov26 HAE, because ADS-L G.1.7 transmits it and every received altitude uses it
     int32_t altitude_hae_mm;
-    // INFO: fc 11nov26 false only for a height dated apart from its position, a paired Go's
+    // INFO: fc 22nov26 false for a height the receiver did not solve, or dated apart from its
+    // position
     bool altitude_hae_valid{true};
     int32_t altitude_msl_mm;
     int32_t pressure_altitude_mm;

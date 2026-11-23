@@ -80,6 +80,18 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour that is neither close nor closing lea
     CHECK(stacked.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
 }
 
+// A 2D fix knows no height, so an Issue 1 client 900 m above may be level with us, and is close.
+TEST_CASE("ADS-L.4.SRD860.B.5: with no height of its own, a Go counts a client overhead as close") {
+    model::Ownship own = flying_own();
+    own.altitude_hae_valid = false;
+    model::AircraftObservation above = neighbour(own, 500, 0);
+    above.altitude_m = 1900;
+    traffic::TrafficTable table;
+    table.set_own_reference(own);
+    REQUIRE(table.update(above, own.utc_s) >= 0);
+    CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+}
+
 // 4 km ahead, closing at 150 m/s head-on: 27 s to CPA, inside B.5's 30.
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour less than 30 s from CPA counts as close") {
     model::Ownship own = flying_own();

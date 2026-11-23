@@ -127,6 +127,20 @@ TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-
     CHECK_FALSE(burst.has_climb());
 }
 
+// B.5's 800 m and the alarm's height window read own height, and took a 2D height as measured.
+TEST_CASE("product: own height is valid only while the receiver solves for it") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_fix(1000, 1);
+    rig.run(1000, 1000);
+    CHECK(rig.state().own.altitude_hae_valid);
+
+    rig.push_2d_fix(1010, 2);
+    rig.run(2000, 2000);
+    CHECK(rig.state().own.fix_valid);
+    CHECK_FALSE(rig.state().own.altitude_hae_valid);
+}
+
 TEST_CASE("product: the glass reads the climb damped, the air reads it as measured") {
     Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
