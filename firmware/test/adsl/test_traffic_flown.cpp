@@ -49,6 +49,43 @@ int check_flown(simulator::Simulator& simulator, const simulator::AirRecord& rec
     return 1;
 }
 
+// G.1.9's nine bits at payload offset 86, read the way B.3 lays a field out: bit 0 first.
+uint32_t climb_code(const adsl::Packet& packet) {
+    constexpr int kOffset = 86;
+    constexpr int kWidth = 9;
+    const uint8_t* payload = packet.payload + 5;
+    uint32_t value = 0;
+    for (int i = 0; i < kWidth; i++)
+        value |= static_cast<uint32_t>((payload[(kOffset + i) / 8] >> ((kOffset + i) % 8)) & 1u)
+                 << i;
+    return value;
+}
+
+constexpr uint32_t kClimbInvalid = 0x1FF;
+constexpr uint32_t kClimbSign = 0x100;
+
+uint32_t fly_to(simulator::Simulator& simulator, uint32_t now_ms, uint32_t until_ms) {
+    run_on(simulator, now_ms + simulator::Simulator::kStepMs,
+           until_ms - now_ms - simulator::Simulator::kStepMs);
+    return until_ms;
+}
+
+// The bursts that ended later than a measurement taken after from_ms could be 500 ms old.
+std::vector<adsl::Packet> ended_after(simulator::Simulator& simulator, uint32_t from_ms,
+                                      uint32_t until_ms) {
+    std::vector<adsl::Packet> packets;
+    for (const simulator::AirRecord& record :
+         records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+        const uint32_t on_air_ms = static_cast<uint32_t>(record.at_us / 1000);
+        if (on_air_ms + adsl::kAirTimeMs <= from_ms + adsl::kFixMaxAgeMs || on_air_ms > until_ms)
+            continue;
+        adsl::Packet packet{};
+        REQUIRE(packet_of(record, packet));
+        packets.push_back(packet);
+    }
+    return packets;
+}
+
 int check_every_position(simulator::Simulator& simulator) {
     int checked = 0;
     for (const simulator::AirRecord& record :
@@ -177,6 +214,57 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst goes on air over 500 ms after
     MESSAGE(busy_at_us.size() << " bursts found the channel busy, " << deferred_flown
                               << " positions flew after their deferral");
     CHECK(deferred_flown > 0);
+}
+
+// The vertical rate is navigation data too: read once a second, a climb went on air 1.9 s late.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst carries a vertical rate over 500 ms old" *
+          doctest::test_suite("main")) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(120);
+    uint32_t now_ms = past_settling(simulator);
+    constexpr int32_t kStepClimbMmS = 20000;
+    constexpr uint32_t kMeasuredAfterStepMs = 50;
+    int checked = 0;
+    for (uint32_t phase_ms = 0; phase_ms < 1000; phase_ms += 125) {
+        CAPTURE(phase_ms);
+        simulator.world().set_climb_mm_s(0);
+        const uint32_t step_ms = (now_ms / 1000 + 3) * 1000 + phase_ms;
+        now_ms = fly_to(simulator, now_ms, step_ms);
+        simulator.world().set_climb_mm_s(kStepClimbMmS);
+        simulator.world().air().clear();
+        now_ms = fly_to(simulator, now_ms, step_ms + 1500);
+        for (const adsl::Packet& packet :
+             ended_after(simulator, step_ms + kMeasuredAfterStepMs, now_ms)) {
+            const uint32_t code = climb_code(packet);
+            CHECK(code != kClimbInvalid);
+            CHECK((code & kClimbSign) == 0);
+            CHECK(code > 0);
+            checked++;
+        }
+    }
+    CHECK(checked >= 8);
+}
+
+// A barometer that went silent left its last climb behind, sent as measured for three seconds.
+TEST_CASE("ADS-L.4.SRD860.G.1.9: a barometer that stops sends the vertical rate as 0x1FF") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(120);
+    simulator.world().set_climb_mm_s(3000);
+    uint32_t now_ms = past_settling(simulator);
+    now_ms = fly_to(simulator, now_ms, now_ms + 2000);
+    REQUIRE(simulator.product().state().own.climb_valid);
+
+    simulator.platform().barometer().fitted = false;
+    const uint32_t lost_ms = now_ms;
+    simulator.world().air().clear();
+    now_ms = fly_to(simulator, now_ms, lost_ms + 2500);
+    const std::vector<adsl::Packet> packets = ended_after(simulator, lost_ms, now_ms);
+    CHECK(packets.size() >= 2);
+    for (const adsl::Packet& packet : packets) CHECK(climb_code(packet) == kClimbInvalid);
 }
 
 // A receiver left at 1 Hz holds most airborne bursts, its solution too old by the time they fly.

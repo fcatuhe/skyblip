@@ -1,5 +1,7 @@
 #include "core/flight/atmosphere.h"
 
+#include <cstdint>
+
 #include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
@@ -83,6 +85,29 @@ bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
     out_mm_s = static_cast<int32_t>(
         wire::divide_rounded<int64_t>(climbed_mm * 1000, static_cast<int64_t>(elapsed_ms)));
     return true;
+}
+
+// INFO: fc 22nov26 the height nearest the window back, since a source's instants jitter by a pass
+bool ClimbWindow::observe(int32_t altitude_mm, uint32_t at_ms, int32_t& out_mm_s) {
+    const Height* then = nullptr;
+    uint32_t then_off_ms = UINT32_MAX;
+    for (int back = 0; back < count_; back++) {
+        const Height& height = heights_[(newest_ - back + kHeights) % kHeights];
+        const uint32_t elapsed_ms = at_ms - height.at_ms;
+        const uint32_t off_ms =
+            elapsed_ms > window_ms_ ? elapsed_ms - window_ms_ : window_ms_ - elapsed_ms;
+        if (off_ms < then_off_ms) {
+            then = &height;
+            then_off_ms = off_ms;
+        }
+    }
+    const bool measured =
+        then != nullptr &&
+        climb_mm_s_from_altitude(altitude_mm, then->altitude_mm, at_ms - then->at_ms, out_mm_s);
+    newest_ = (newest_ + 1) % kHeights;
+    heights_[newest_] = Height{altitude_mm, at_ms};
+    if (count_ < kHeights) count_++;
+    return measured;
 }
 
 }  // namespace skyblip::flight

@@ -233,9 +233,9 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     if (!context_.state.transmit.transmits()) return timing::Transmitter::Attempt{};
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
-    timing::Transmitter::Attempt owed =
-        transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate(), fix_lag_ms(origin_us),
-                             payload, fix_in_hand_ms(origin_us));
+    timing::Transmitter::Attempt owed = transmitter_.attempt(
+        plan, slot_utc_s(now_ms), now_ms, full_rate(), navigation_lag_ms(origin_us), payload,
+        navigation_in_hand_ms(origin_us));
     // INFO: fc 18nov26 a fix no timely fix anchored has no age a position can be judged by
     if (payload == Payload::Position && owed.go && !own.fix_dated) {
         owed.go = false;
@@ -287,14 +287,28 @@ void RadioService::hold_for_fix(uint32_t utc_s) {
 }
 
 // INFO: fc 18nov26 measured from the second the dwell is armed in, negative for a quarter inside it
-int32_t RadioService::fix_lag_ms(int64_t origin_us) const {
+// | 22nov26 G.1.16 ages the fix and an awaited climb alike, so the older of the two is the lag
+int32_t RadioService::navigation_lag_ms(int64_t origin_us) const {
+    const model::Ownship& own = context_.state.own;
     const uint32_t second_ms = static_cast<uint32_t>(at_us(origin_us, 0) / 1000);
-    return static_cast<int32_t>(second_ms - context_.state.own.fix_at_ms);
+    const bool climb_older =
+        climb_awaited() && static_cast<int32_t>(own.climb_at_ms - own.fix_at_ms) < 0;
+    return static_cast<int32_t>(second_ms - (climb_older ? own.climb_at_ms : own.fix_at_ms));
 }
 
-int32_t RadioService::fix_in_hand_ms(int64_t origin_us) const {
+int32_t RadioService::navigation_in_hand_ms(int64_t origin_us) const {
+    const model::Ownship& own = context_.state.own;
     const uint32_t second_ms = static_cast<uint32_t>(at_us(origin_us, 0) / 1000);
-    return static_cast<int32_t>(context_.state.own.fix_in_hand_ms - second_ms);
+    const bool climb_later =
+        climb_awaited() && static_cast<int32_t>(own.climb_in_hand_ms - own.fix_in_hand_ms) > 0;
+    return static_cast<int32_t>((climb_later ? own.climb_in_hand_ms : own.fix_in_hand_ms) -
+                                second_ms);
+}
+
+bool RadioService::climb_awaited() const {
+    const model::Ownship& own = context_.state.own;
+    const uint32_t pass_ms = static_cast<uint32_t>(pass_us_ / 1000);
+    return own.climb_valid && pass_ms - own.climb_in_hand_ms <= kClimbAwaitMaxAgeMs;
 }
 
 void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, uint32_t now_ms,

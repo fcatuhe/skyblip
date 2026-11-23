@@ -21,6 +21,27 @@ constexpr uint32_t kClimbWindowCeilingMs = 10000;
 bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
                               uint32_t elapsed_ms, int32_t& out_mm_s);
 
+// INFO: fc 22nov26 every height gives a climb over the window behind it, so the newest dates it
+class ClimbWindow {
+   public:
+    explicit constexpr ClimbWindow(uint32_t window_ms) : window_ms_(window_ms) {}
+
+    bool observe(int32_t altitude_mm, uint32_t at_ms, int32_t& out_mm_s);
+    void reset() { count_ = 0; }
+
+   private:
+    struct Height {
+        int32_t altitude_mm{0};
+        uint32_t at_ms{0};
+    };
+    static constexpr int kHeights = 8;
+
+    Height heights_[kHeights]{};
+    int newest_{0};
+    int count_{0};
+    uint32_t window_ms_;
+};
+
 }  // namespace skyblip::flight
 
 #endif

@@ -93,6 +93,38 @@ TEST_CASE("product: a barometer that stops answering hands vertical speed back t
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(5000).epsilon(0.05));
 }
 
+// G.1.16 ages the climb as it ages a position, so it carries the instant of its newest height.
+TEST_CASE("product: a climb is dated by its newest height, the conversion or the solution") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_barometer(100000, 500);
+    rig.run(520, 520);
+    rig.push_barometer(100200, 1500);
+    rig.run(1540, 1540);
+    CHECK(rig.state().own.climb_at_ms == 1500);
+
+    rig.push_fix(1000, 1);
+    rig.run(6000, 6000);
+    rig.push_fix(1010, 2);
+    rig.run(8000, 8000);
+    REQUIRE_FALSE(rig.product.ownship().barometer_active());
+    CHECK(rig.state().own.climb_valid);
+    CHECK(rig.state().own.climb_at_ms == rig.state().own.fix_at_ms);
+}
+
+// A barometer that went silent with no fix to fall back on left its last climb valid for good.
+TEST_CASE("product: a climb no source has renewed for three seconds is withdrawn") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_barometer(100000, 500);
+    rig.run(500, 500);
+    rig.push_barometer(100200, 1500);
+    rig.run(1500, 4500);
+    CHECK(rig.state().own.climb_valid);
+    rig.run(4550, 4600);
+    CHECK_FALSE(rig.state().own.climb_valid);
+}
+
 TEST_CASE("product: with neither a fix nor a barometer the climb is not valid") {
     Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
@@ -295,34 +327,23 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
     CHECK(fix.settled(fix.fix_since_ms() + gnss::kRefixSettleMs));
 }
 
-// M. Vertical speed and turn rate are both differences over a window kept on
-// ports::Clock::milliseconds(), and both keep the instant they last sampled at in a
-// uint32_t whose zero is biased away rather than flagged (ownship.cpp: a stamp of
-// zero would mean "no reference yet", and the counter produces exactly one zero
-// per wrap). The windows themselves are unsigned differences, so this is what a
-// climb through the wrap instant looks like: a climb, measured over its window,
-// not a 4.29-billion-millisecond interval that reads as no climb at all.
+// M. A climb across the 49.7-day wrap of ports::Clock::milliseconds() is a climb, not 49 days.
 TEST_CASE("product: vertical speed is measured across the 49.7-day wrap") {
     Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
-    rig.now_ms = 0u - 500u;  // half a second short of the wrap
+    const uint32_t before_ms = 0u - 500u;
+    const auto sample = [&](int32_t altitude_cm, uint32_t at_ms) {
+        rig.push_barometer(altitude_cm, at_ms);
+        rig.now_ms = at_ms;
+        rig.run_span(0);
+    };
 
-    rig.push_barometer(100000, rig.now_ms);
-    rig.run_span(0);
+    sample(100000, before_ms);
     CHECK(rig.product.ownship().barometer_active());
-
-    // +10 m over the second that straddles zero.
-    const uint32_t after = rig.now_ms + 950u;
-    rig.push_barometer(101000, after);
-    rig.now_ms = after;
-    rig.run_span(0);
-    CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
-
-    // And a sample inside the window is still refused after the wrap, rather than
-    // being taken as a 49-day interval that reads as no climb at all.
-    rig.push_barometer(199000, rig.now_ms);
-    rig.run_span(0);
-    CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
+    sample(101000, before_ms + 1000u);
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.01));
+    sample(101500, before_ms + 1250u);
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(12000).epsilon(0.01));
 }
 
 // M. Where the radio believes it is inside the second, across the 49.7-day wrap of

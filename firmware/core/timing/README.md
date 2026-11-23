@@ -75,6 +75,8 @@ The age runs to the instant on air. `Transmitter::attempt()` refuses a position 
 
 A position whose fix arrives, `own.fix_in_hand_ms`, after its drawn instant less `kRedrawLeadMs` is drawn again: `Transmitter::redrawn_in()` draws over the rest of the window, from the fix plus that lead, keyed on the address and the second so units fed by one receiver model do not bunch. A fix after the window's last instant loses the position. `air.tx_redrawn_for_fix` counts redrawn positions and `air.tx_held_for_fix` lost ones.
 
+The vertical rate is navigation data too, dated by its newest height (`own.climb_at_ms`). `RadioService` ages the older of the fix and the climb, so a position waits for a climb fresh at its instant, and is drawn again from it, while the climb's source still delivers: a climb taken within `RadioService::kClimbAwaitMaxAgeMs`. A climb past that would hold every position for a dead barometer, so the position goes without it, and the encoder sends a climb that would be over 490 ms old on air as unknown, 0x1FF.
+
 A position also needs a fix the clock can date, `own.fix_dated`, mapped through an anchor a valid fix set inside its quarter. Until then it is held like a stale one, and its dwell record says `held_for_fix`.
 
 At 2 Hz, on 868.2 MHz, the instants between 490 ms and the `.500` arrival, about a quarter of the window, move to about 590 to 810 ms. On 868.4 MHz every instant is past 830 ms, so none waits. At 1 Hz only positions drawn into the first 40 ms of slot 0 would go out, so a part that will not take 2 Hz is reset and configured again (`../../hardware/parts/l76k/README.md`, Recovery).

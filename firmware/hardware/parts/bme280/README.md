@@ -1,6 +1,6 @@
 # hardware/parts/bme280
 
-The barometer converts four times a second in forced mode behind the part's IIR 4, triggered on the PPS phases 0, 250, 500 and 750 ms and read once a second on a later pass. Consumption matters most, and every way of asking Zephyr's driver for a sample sleeps through the conversion in the service loop.
+The barometer converts four times a second in forced mode behind the part's IIR 4, triggered on the PPS phases 0, 250, 500 and 750 ms, and each conversion is read on a later pass. Consumption matters most, and every way of asking Zephyr's driver for a sample sleeps through the conversion in the service loop.
 
 Its address is disputed: our BOM says 0x76, LilyGO's README and SoftRF say 0x77. `Bme280::kAddressPrimary` and `kAddressAlternate` are both, the devicetree declares both, and the board takes whichever answers.
 
@@ -26,7 +26,7 @@ The compensation uses the datasheet's names in full words:
 
 ## The setting
 
-Forced mode, four conversions a second (`boards::kBarometerConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter advances on every forced conversion, so the three unread conversions of each second feed the published one.
+Forced mode, four conversions a second (`boards::kBarometerConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter advances on every forced conversion, and every conversion is published.
 
 | Figure | Value | Source |
 |---|---|---|
@@ -50,7 +50,7 @@ The derivation, for coefficient c at f conversions a second and raw noise σ. Th
 
 4 / 4 is the owner's pick: it reacts faster than 4 / 8, which reached 75 % of a 1.8 m lift about 2.6 s after it began where 4 / 4 takes 1.2 s, at the cost of noise the page's 10 ft/min step absorbs. About 0.27 Pa of the bench noise is the room's air, which no filter removes without lag. 1 / off reacts no quicker once `IndicatedRate`'s 2 s damping sits on top, at three times the noise. 26 / 16 is the only setting both quicker and quieter, at 6.5 times the current.
 
-Reading the three unpublished conversions buys nothing while the chip's filter is the estimator: their effect is already in the published one. It would cost a status poll per pass and a burst each.
+Every conversion is read, although the chip's filter already carries each one into the next. ADS-L G.1.16 sends no navigation data older than 500 ms on air, and the vertical rate is navigation data, so the newest pressure behind a climb must be at most a quarter old, not a second. That costs three more 6-byte result bursts a second, and their status reads, on the 400 kHz bus. The conversions, and so the part's 0.1 mA, are the same as before.
 
 Getting past the trade between lag and noise means turning the chip's filter off, reading all four conversions and running a software Kalman filter in `core/flight`, as XCSoar and OpenVario do. Nobody has measured it here.
 
@@ -58,11 +58,11 @@ Getting past the trade between lag and noise means turning the chip's filter off
 
 Each trigger is one write of `ctrl_meas`, and the pass returns.
 
-- On PPS lock the board triggers on the PPS-window pass and on the first pass into each later quarter of the second. Without lock, it triggers every 250 ms from the last trigger, and the published one falls on the board's own second.
+- On PPS lock the board triggers on the PPS-window pass and on the first pass into each later quarter of the second. Without lock, it triggers every 250 ms from the last trigger, and the second's first conversion falls on the board's own second.
 - A trigger waits for the previous conversion to be read or given up.
-- Only the edge conversion is read. Each later pass reads three bytes from 0xF3 (status, `ctrl_meas`, config) and bursts 0xF7..0xFC once `measuring` and `im_update` are clear, about 40 ms in, well before the next trigger overwrites the result registers.
-- The sample is dated `kConversionMidpointMs`, 21 ms, after the edge trigger, the same offset from PPS every second.
-- A published conversion not read within `boards::kBarometerConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `barometer_faults()`, as is any trigger the part refused. An unpublished one is deemed done at the same ceiling, unread.
+- Every conversion is read. The loop wakes once the measurement can be done, 38 ms after the trigger, and each pass from then reads three bytes from 0xF3 (status, `ctrl_meas`, config) and bursts 0xF7..0xFC once `measuring` and `im_update` are clear, well before the next trigger overwrites the result registers.
+- Each sample is dated `kConversionMidpointMs`, 21 ms, after its trigger, the same offsets from PPS every second.
+- A conversion not read within `boards::kBarometerConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `barometer_faults()`, as is any trigger the part refused.
 
 ## Recovery
 

@@ -2,6 +2,7 @@
 // independently here in floating point: the shipping code is an integer table,
 // so agreeing with the closed form is a real check, not a restatement.
 #include <cmath>
+#include <initializer_list>
 
 #include "core/flight/atmosphere.h"
 #include "core/units/units.h"
@@ -111,4 +112,34 @@ TEST_CASE("atmosphere: a pascal is centimetres of altitude, so the curve is walk
     // 8.31 cm a pascal at sea level, and the interpolation rounds to the millimetre.
     CHECK(flight::pressure_to_altitude_mm((flight::kIsaSeaLevelPa - 1) * 1000) - sea == 84);
     CHECK(sea - flight::pressure_to_altitude_mm(flight::kIsaSeaLevelPa * 1000 + 1000) == 83);
+}
+
+// Four heights a second: each one gives a climb over the second behind it, never over a quarter.
+TEST_CASE("atmosphere: a climb window slides with every height, a window back from the newest") {
+    flight::ClimbWindow window{1000};
+    int32_t climb_mm_s = 0;
+    CHECK_FALSE(window.observe(0, 0, climb_mm_s));
+    CHECK_FALSE(window.observe(250, 250, climb_mm_s));
+    REQUIRE(window.observe(1000, 500, climb_mm_s));
+    CHECK(climb_mm_s == 2000);
+    for (uint32_t at_ms = 750; at_ms <= 3000; at_ms += 250) {
+        CAPTURE(at_ms);
+        const int32_t climbing_mm = static_cast<int32_t>(at_ms) * 3;
+        REQUIRE(window.observe(1000 + climbing_mm, at_ms, climb_mm_s));
+        if (at_ms >= 2000) CHECK(climb_mm_s == 3000);
+    }
+}
+
+// A pass early or late moves a quarter's instant, and the height nearest a window back is used.
+TEST_CASE("atmosphere: a climb window takes the height nearest a window back, then forgets") {
+    flight::ClimbWindow window{1000};
+    int32_t climb_mm_s = 0;
+    for (const uint32_t at_ms : {0u, 245u, 510u, 755u, 990u}) window.observe(0, at_ms, climb_mm_s);
+    constexpr int32_t kClimbedMm = 1250;
+    constexpr int32_t kBackMs = 1250 - 245;
+    REQUIRE(window.observe(kClimbedMm, 1250, climb_mm_s));
+    CHECK(climb_mm_s == (kClimbedMm * 1000 + kBackMs / 2) / kBackMs);
+
+    window.reset();
+    CHECK_FALSE(window.observe(5000, 1500, climb_mm_s));
 }

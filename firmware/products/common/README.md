@@ -32,7 +32,7 @@ A shared service reads the parts fitted from `context.roles.capabilities`, so a 
 
 ## Own pressure altitude
 
-`OwnshipService::apply_barometer()` turns each barometer sample into a pressure altitude on the standard atmosphere with `flight::pressure_to_altitude_mm`, and derives the barometric climb from it. It publishes `pressure_altitude_mm`, `pressure_altitude_at_ms` and `pressure_altitude_valid` on `Ownship`, and `tick()` clears the flag once no sample has arrived for `kBarometerMaxAgeMs`. The Go publishes it from its BME280 and Bravo from its SPA06. Its only reader is an ADS-B target that sends a pressure altitude and no GNSS height (`../../core/flight/extrapolate.cpp`).
+`OwnshipService::apply_barometer()` turns each barometer sample into a pressure altitude on the standard atmosphere with `flight::pressure_to_altitude_mm`, and derives the barometric climb from it, over the second behind each sample and dated by the sample (`flight::ClimbWindow`). A climb no source renews for `kClimbMaxAgeMs` is withdrawn, so a barometer that dies with no fix to fall back on leaves no climb on the glass or the air. It publishes `pressure_altitude_mm`, `pressure_altitude_at_ms` and `pressure_altitude_valid` on `Ownship`, and `tick()` clears the flag once no sample has arrived for `kBarometerMaxAgeMs`. The Go publishes it from its BME280 and Bravo from its SPA06. Its only reader is an ADS-B target that sends a pressure altitude and no GNSS height (`../../core/flight/extrapolate.cpp`).
 
 ## The NMEA stream
 
