@@ -105,7 +105,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kStampToleranceMs` | 10 | milliseconds | - | G.1.1's 10 ms: a stamp that close to a quarter is that quarter |
 | `kQuarterMs` | 250 | milliseconds | - | - |
 | `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 7 bursts at 2 Hz |
-| `kGsaMaxAgeMs` | 1500 (1.5 s) | milliseconds | MaxAge | the L76K sends GSA once a second at 2 Hz, so an older one missed its turn |
 
 ## [`firmware/core/indication`](../firmware/core/indication/README.md)
 
@@ -427,4 +426,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-282 constants over 26 folders.
+281 constants over 26 folders.
