@@ -77,19 +77,28 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     const System system = system_of(out.data);
     if (system == System::Unknown) return false;
 
+    out.bytes = frame_bytes(system);
+    uint8_t guaranteed_bytes = out.bytes;
     if (system == System::AdslDirect) {
         out.length_heard = out.data[kSyncTailBytes - 1];
-        out.length_doubtful = out.erasures[kSyncTailBytes - 1] != 0;
-        if (!out.length_doubtful && !adsl::Packet::supports_data_bytes(out.length_heard))
+        out.length_erasures = out.erasures[kSyncTailBytes - 1];
+        const bool short_allowed = adsl::length_allows(out.length_heard, out.length_erasures,
+                                                       adsl::Packet::kStatusDataBytes);
+        const bool long_allowed =
+            adsl::length_allows(out.length_heard, out.length_erasures, adsl::Packet::kDataBytes);
+        if (!short_allowed && !long_allowed) {
+            out.bytes = 0;
             return false;
-        out.bytes = out.length_doubtful ? adsl::Packet::kDataBytes : out.length_heard;
-    } else {
-        out.bytes = frame_bytes(system);
+        }
+        out.bytes = long_allowed ? adsl::Packet::kDataBytes : adsl::Packet::kStatusDataBytes;
+        guaranteed_bytes =
+            short_allowed ? adsl::Packet::kStatusDataBytes : adsl::Packet::kDataBytes;
     }
     out.system = system;
     shift_left(out.data, kRxFrameBytes, kSyncTailBits);
     shift_left(out.erasures, kRxFrameBytes, kSyncTailBits);
-    for (uint8_t i = 0; i < out.bytes; i++)
+    // INFO: fc 23nov26 chips beyond the shortest candidate may be noise after the burst ended
+    for (uint8_t i = 0; i < guaranteed_bytes; i++)
         out.bad_chips = static_cast<uint16_t>(out.bad_chips + __builtin_popcount(out.erasures[i]));
     return true;
 }

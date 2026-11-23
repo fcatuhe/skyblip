@@ -223,9 +223,11 @@ static_assert(sizeof(Packet) == Packet::kDataBytes, "Packet is the data the CRC 
 
 wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
                      uint8_t data_bytes = Packet::kDataBytes);
-// INFO: fc 22nov26 a doubtful length can read either known size from kDataBytes buffers
+bool length_allows(uint8_t length_heard, uint8_t length_erasures, uint8_t data_bytes);
+
+// INFO: fc 23nov26 receive may check both codeword sizes, so both buffers need kDataBytes
 wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
-                              bool length_doubtful, Packet& out);
+                              uint8_t length_erasures, Packet& out);
 
 // INFO: fc 20nov26 G.1.1 counts quarters of a 15 s cycle, and the position must be that quarter's
 static constexpr uint32_t kTimestampCycleS = 15;

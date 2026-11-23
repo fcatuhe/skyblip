@@ -33,12 +33,6 @@ constexpr auto kStatusCrcSyndromes =
         return wire::crc24_check(frame, Packet::kStatusDataBytes);
     });
 
-uint8_t nearer_length(uint8_t length_heard) {
-    const int to_status = __builtin_popcount(length_heard ^ Packet::kStatusDataBytes);
-    const int to_traffic = __builtin_popcount(length_heard ^ Packet::kDataBytes);
-    return to_status < to_traffic ? Packet::kStatusDataBytes : Packet::kDataBytes;
-}
-
 // INFO: fc 18nov26 past a 16-byte burst no transmitter is heard, so most of those chips are marked
 constexpr int kTailMarkedCeiling = 16;
 
@@ -160,27 +154,35 @@ wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
     return out.data_bytes() == data_bytes ? wire::Status::Ok : wire::Status::Invalid;
 }
 
-// INFO: fc 22nov26 a clean length names the only codeword the receiver can check
-wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
-                              bool length_doubtful, Packet& out) {
-    if (!length_doubtful) return receive_at(frame, erasures, length_heard, out);
+bool length_allows(uint8_t length_heard, uint8_t length_erasures, uint8_t data_bytes) {
+    constexpr int kLengthErasuresCeiling = 2;
+    return __builtin_popcount(length_erasures) <= kLengthErasuresCeiling &&
+           ((length_heard ^ data_bytes) & ~length_erasures) == 0;
+}
 
-    const uint8_t nearer = nearer_length(length_heard);
-    const uint8_t other =
-        nearer == Packet::kDataBytes ? Packet::kStatusDataBytes : Packet::kDataBytes;
-    Packet at_other;
-    const wire::Status heard = receive_at(frame, erasures, nearer, out);
-    const wire::Status other_heard = receive_at(frame, erasures, other, at_other);
-    if (heard == wire::Status::Ok && other_heard == wire::Status::Ok) {
+wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
+                              uint8_t length_erasures, Packet& out) {
+    const bool short_allowed =
+        length_allows(length_heard, length_erasures, Packet::kStatusDataBytes);
+    const bool long_allowed = length_allows(length_heard, length_erasures, Packet::kDataBytes);
+    if (!short_allowed && !long_allowed) {
         out.reset();
         return wire::Status::Invalid;
     }
-    if (heard == wire::Status::Ok) return heard;
-    if (other_heard == wire::Status::Ok) {
-        out = at_other;
-        return other_heard;
+    if (!short_allowed) return receive_at(frame, erasures, Packet::kDataBytes, out);
+
+    const wire::Status short_result = receive(frame, erasures, out, Packet::kStatusDataBytes);
+    if (!long_allowed) return short_result;
+
+    Packet long_packet;
+    const wire::Status long_result = receive_at(frame, erasures, Packet::kDataBytes, long_packet);
+    if (long_result != wire::Status::Ok) return short_result;
+    if (short_result == wire::Status::Ok) {
+        out.reset();
+        return wire::Status::Invalid;
     }
-    return heard;
+    out = long_packet;
+    return wire::Status::Ok;
 }
 
 // INFO: fc 20nov26 G.1.14 NACp thresholds, where code 0 is "unknown or HFOM >= 0.5 NM"

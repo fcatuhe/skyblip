@@ -18,7 +18,7 @@ This directory holds seven libFuzzer harnesses, one per door a stranger's bytes 
 
 A mutation that breaks a checksum stops there, so each harness seals what an honest transmitter would, and leaves the corruption to the fuzzer:
 
-- `fuzz_air` encodes a frame, raw, sealed by its CRC or Reed-Solomon parity, or built from ALP-TAS fields, and XORs the rest of the input over its chips. Only the encoded ALP-TAS path gets past the decrypt check.
+- `fuzz_air` encodes a frame, raw, sealed by its CRC or Reed-Solomon parity, or built from fields, and XORs the rest of the input over its chips. An ADS-L direct frame can carry 16 or 24 bytes. The harness picks the length byte separately and can erase one of its Manchester pairs. Only the encoded ALP-TAS path gets past the decrypt check.
 - `fuzz_adsb` sends the input's frame raw or as a sealed DF17, then XORs the rest over the chips.
 - `fuzz_adsb_assembly` seals DF17 frames from 256 addresses, more than the cache holds, with gaps of up to 65 s. It aborts when the cache holds more than `kMaxAircraft`, a counter falls or a position lies past a pole. It calls `abort`, not `__builtin_trap`, because libFuzzer does not save the SIGTRAP the trap raises on aarch64.
 - `fuzz_nmea` rewrites the two hex digits after every `*` to the checksum of the sentence before it.

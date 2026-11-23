@@ -86,34 +86,16 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a doubtful length can be recovered at the size 
     uint8_t erasures[adsl::Packet::kDataBytes] = {0};
     adsl::Packet heard;
 
-    adsl::Packet status{};
-    adsl::encode_status(status, 0x000008, adsl::kAddressTableFlarm, adsl::StatusReport{});
-    status.scramble(adsl::Packet::kStatusDataBytes);
-    status.set_crc(adsl::Packet::kStatusDataBytes);
-    uint8_t short_burst[adsl::Packet::kDataBytes] = {0};
-    std::memcpy(short_burst, status.data, adsl::Packet::kStatusDataBytes);
+    const uint8_t short_burst[24] = {0x01, 0x66, 0xC8, 0x51, 0xEF, 0x31, 0x71, 0x0F,
+                                     0x41, 0x04, 0xC4, 0xB9, 0xB2, 0x04, 0x99, 0x32};
     // Past a 16-byte burst the receiver hears no transmitter, so every chip pair there is marked.
-    for (int i = adsl::Packet::kStatusDataBytes; i < adsl::Packet::kDataBytes; i++)
-        erasures[i] = 0xFF;
-    for (const uint8_t length : {uint8_t{16}, uint8_t{24}}) {
-        CAPTURE(int(length));
-        REQUIRE(adsl::receive_as_heard(short_burst, erasures, length, true, heard) ==
-                wire::Status::Ok);
-        CHECK(heard.payload_type == adsl::Packet::kPayloadTypeStatus);
-        CHECK(heard.address() == 0x000008u);
-    }
-
-    std::memset(erasures, 0, sizeof(erasures));
-    adsl::Packet traffic = traffic_packet();
-    traffic.scramble();
-    traffic.set_crc();
-    for (const uint8_t length : {uint8_t{24}, uint8_t{16}}) {
-        CAPTURE(int(length));
-        REQUIRE(adsl::receive_as_heard(traffic.data, erasures, length, true, heard) ==
-                wire::Status::Ok);
-        CHECK(heard.is_position());
-        CHECK(heard.address() == 0x123456u);
-    }
+    for (int i = 16; i < 24; i++) erasures[i] = 0xFF;
+    REQUIRE(adsl::receive_as_heard(short_burst, erasures, 17, 0x01, heard) == wire::Status::Ok);
+    CHECK(heard.payload_type == adsl::Packet::kPayloadTypeStatus);
+    CHECK(heard.address() == 0x123456u);
+    REQUIRE(adsl::receive_as_heard(short_burst, erasures, 24, 0x08, heard) == wire::Status::Ok);
+    CHECK(heard.payload_type == adsl::Packet::kPayloadTypeStatus);
+    CHECK(adsl::receive_as_heard(short_burst, erasures, 0, 0x01, heard) == wire::Status::Invalid);
 }
 
 // A repair that fits the wrong length must not hide the right one, found by a review probe.
@@ -123,7 +105,7 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: doubtful length Traffic is recovered even where
     traffic.scramble();
     traffic.set_crc();
     adsl::Packet heard;
-    REQUIRE(adsl::receive_as_heard(traffic.data, erasures, 16, true, heard) == wire::Status::Ok);
+    REQUIRE(adsl::receive_as_heard(traffic.data, erasures, 16, 0x08, heard) == wire::Status::Ok);
     CHECK(heard.is_position());
     CHECK(heard.address() == 0x00094Du);
 }
@@ -141,11 +123,11 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a doubtful length that checks at both sizes is 
     adsl::Packet heard;
     for (const uint8_t length : {uint8_t{24}, uint8_t{16}}) {
         CAPTURE(int(length));
-        CHECK(adsl::receive_as_heard(frame, erasures, length, true, heard) ==
+        CHECK(adsl::receive_as_heard(frame, erasures, length, 0x08, heard) ==
               wire::Status::Invalid);
         CHECK(heard.address() == 0u);
     }
-    REQUIRE(adsl::receive_as_heard(frame, erasures, 16, false, heard) == wire::Status::Ok);
+    REQUIRE(adsl::receive_as_heard(frame, erasures, 16, 0, heard) == wire::Status::Ok);
     CHECK(heard.payload_type == adsl::Packet::kPayloadTypeStatus);
 }
 

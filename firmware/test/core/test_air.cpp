@@ -61,7 +61,7 @@ TEST_CASE("air: the two sync words share the window the detector matches") {
     CHECK(protocol::kSharedSync[0] == 0x55);
     CHECK(protocol::kSharedSync[1] == 0x99);
 
-    // The 24 bits of sync word still ahead of the frame when the report starts name the system.
+    // ADS-L uses the first 16 bits of its tail for sync and the last eight for length.
     CHECK(protocol::kSyncTailBits == 24);
     CHECK(protocol::sync_tail(adsl::kSyncWord) == 0x724B18u);
     CHECK(protocol::sync_tail(alptas::kSyncWord) == 0x31FAB6u);
