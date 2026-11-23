@@ -440,3 +440,40 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a relayed Traffic leaves the version to the clien
     CHECK(sent.size() >= 4);
     check_written_in(sent, adsl::Packet::kProtocolVersionIssue2);
 }
+
+// The same flight twice, a millisecond a step: alone, then with a close Issue 1 client keying on
+// 868.4 MHz 25 ms before a position already armed there keys.
+TEST_CASE("ADS-L.4.SRD860.B.5: a close Issue 1 client heard after a position is armed rewrites it" *
+          doctest::test_suite("main")) {
+    constexpr uint64_t kBeforeUs = 25000;
+    OwnPosition planned{};
+    {
+        Flight alone(1);
+        alone.run_for(6000);
+        for (const OwnPosition& position : alone.positions()) {
+            const int phase_ms = static_cast<int>(position.at_us / 1000 % 1000);
+            if (phase_ms - timing::kWindowBMs.start_ms < 40) continue;
+            planned = position;
+            break;
+        }
+    }
+    REQUIRE(planned.at_us != 0);
+    CHECK(int(planned.version) == adsl::Packet::kProtocolVersionIssue2);
+
+    Flight beside(1);
+    const uint64_t heard_at_us = planned.at_us - kBeforeUs;
+    beside.run_for(static_cast<uint32_t>(heard_at_us / 1000) - beside.now_ms - 1);
+    REQUIRE(beside.state().rf.dwell.burst_armed);
+    beside.emit(beside.traffic(kNeighbour, kCloseNorthM, 0), heard_at_us,
+                timing::Scheduler::slot_frequency_hz(1));
+    beside.run_for(static_cast<uint32_t>(kBeforeUs / 1000) + 20);
+
+    CHECK(beside.state().traffic.find(adsl::kAddressTableFlarm, kNeighbour) >= 0);
+    OwnPosition rewritten{};
+    for (const OwnPosition& position : beside.positions())
+        if (position.at_us / 1000 == planned.at_us / 1000) rewritten = position;
+    REQUIRE(rewritten.at_us != 0);
+    CHECK(rewritten.at_us == planned.at_us);
+    CHECK(int(rewritten.version) == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(int(rewritten.category) == 3);
+}

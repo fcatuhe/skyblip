@@ -44,6 +44,22 @@ uint8_t RadioService::readable_version_at(uint64_t tx_at_us) const {
     return versions_.readable_version(context_.state.own, static_cast<uint32_t>(tx_at_us / 1000));
 }
 
+// INFO: fc 22nov26 B.5: a close client heard since arming rewrites a position before its CCA
+void RadioService::keep_readable() {
+    const uint64_t floor_us =
+        context_.roles.clock.microseconds() + timing::PoliteAccess::kCcaLeadUs;
+    Armed* const dwells[] = {&current_dwell_, next_armed_ ? &next_dwell_ : nullptr};
+    for (Armed* dwell : dwells) {
+        if (dwell == nullptr || !dwell->carries(Payload::Position)) continue;
+        const uint64_t tx_at_us = dwell->at(Payload::Position);
+        if (tx_at_us < floor_us || dwell->position_version <= readable_version_at(tx_at_us))
+            continue;
+        if (context_.roles.rf.withdraw(tx_at_us) != Status::Ok) continue;
+        dwell->drop(Payload::Position);
+        rearm(*dwell, Payload::Position, tx_at_us, /*forced=*/false);
+    }
+}
+
 // INFO: fc 13nov26 G.2.6 leaves an unknown capability unset: ADS-B counts while Bravo is live
 adsl::StatusReport RadioService::status_report() const {
     adsl::StatusReport report{};

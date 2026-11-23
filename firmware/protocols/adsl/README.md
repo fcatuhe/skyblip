@@ -27,7 +27,7 @@ These are skyBlip's choices, built on this stack:
 - which packets are forced and how a deferred burst is re-armed (`products/skyblip_go/services/radio_access.cpp`), and the channel assessment (`hardware/platform/zephyr/rf.h`)
 - the address table and the ICAO address (`core/settings/address.h`, `on_air()`), and the configurations the Go refuses (`products/skyblip_go/settings.*`)
 - the receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
-- B.5's bookkeeping: each client's Max. Protocol Version and where it is, apart from the display (`core/traffic/versions.*`), and when own Traffic goes in its Issue 1 form or is held (`products/skyblip_go/services/radio_frames.cpp`)
+- B.5's bookkeeping: each client's Max. Protocol Version and where it is, apart from the display (`core/traffic/versions.*`), and when own Traffic goes in its Issue 1 form, is held or is written again before it keys (`products/skyblip_go/services/radio_frames.cpp`)
 
 ## What the receiver refuses
 
