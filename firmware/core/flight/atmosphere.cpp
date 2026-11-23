@@ -94,6 +94,7 @@ bool ClimbWindow::observe(int32_t altitude_mm, uint32_t at_ms, int32_t& out_mm_s
     for (int back = 0; back < count_; back++) {
         const Height& height = heights_[(newest_ - back + kHeights) % kHeights];
         const uint32_t elapsed_ms = at_ms - height.at_ms;
+        if (elapsed_ms + kClimbWindowSlackMs < window_ms_) continue;
         const uint32_t off_ms =
             elapsed_ms > window_ms_ ? elapsed_ms - window_ms_ : window_ms_ - elapsed_ms;
         if (off_ms < then_off_ms) {

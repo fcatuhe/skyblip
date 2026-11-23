@@ -114,19 +114,16 @@ TEST_CASE("atmosphere: a pascal is centimetres of altitude, so the curve is walk
     CHECK(sea - flight::pressure_to_altitude_mm(flight::kIsaSeaLevelPa * 1000 + 1000) == 83);
 }
 
-// Four heights a second: each one gives a climb over the second behind it, never over a quarter.
-TEST_CASE("atmosphere: a climb window slides with every height, a window back from the newest") {
+// Four heights a second: no climb until a height a window back, then one from every height.
+TEST_CASE("atmosphere: a climb window waits for a height a window back, then slides with each") {
     flight::ClimbWindow window{1000};
     int32_t climb_mm_s = 0;
-    CHECK_FALSE(window.observe(0, 0, climb_mm_s));
-    CHECK_FALSE(window.observe(250, 250, climb_mm_s));
-    REQUIRE(window.observe(1000, 500, climb_mm_s));
-    CHECK(climb_mm_s == 2000);
-    for (uint32_t at_ms = 750; at_ms <= 3000; at_ms += 250) {
+    for (uint32_t at_ms = 0; at_ms < 1000; at_ms += 250)
+        CHECK_FALSE(window.observe(static_cast<int32_t>(at_ms) * 3, at_ms, climb_mm_s));
+    for (uint32_t at_ms = 1000; at_ms <= 3000; at_ms += 250) {
         CAPTURE(at_ms);
-        const int32_t climbing_mm = static_cast<int32_t>(at_ms) * 3;
-        REQUIRE(window.observe(1000 + climbing_mm, at_ms, climb_mm_s));
-        if (at_ms >= 2000) CHECK(climb_mm_s == 3000);
+        REQUIRE(window.observe(static_cast<int32_t>(at_ms) * 3, at_ms, climb_mm_s));
+        CHECK(climb_mm_s == 3000);
     }
 }
 

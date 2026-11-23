@@ -35,6 +35,9 @@ class ClimbWindow {
         uint32_t at_ms{0};
     };
     static constexpr int kHeights = 8;
+    // INFO: fc 22nov26 a pass moves a quarter's instant, so a height this short of a window back
+    // counts
+    static constexpr uint32_t kClimbWindowSlackMs = 125;
 
     Height heights_[kHeights]{};
     int newest_{0};
