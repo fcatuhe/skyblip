@@ -43,7 +43,8 @@ inline bool on_ground(uint8_t adsl_code) { return state_from(adsl_code) == Fligh
 
 bool flies_at_no_ground_speed(uint8_t aircraft_category);
 
-// INFO: fc 23sep26 G.1.2's Undefined: no ground speed shows that a craft able to hover has landed
+// INFO: fc 22nov26 G.1.2's Undefined: no ground speed shows that a craft able to fly slow has
+// landed
 uint8_t announced_state(uint8_t code, uint8_t aircraft_category);
 
 class FlightMonitor {

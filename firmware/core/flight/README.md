@@ -123,7 +123,7 @@ There is no altitude, vertical rate or barometer in the rule, so it rests on one
 - Higher fails into wind: liftoff is an airspeed, and a 120 kg class microlight into an 8 m/s breeze crosses the fence at 9 m/s over the ground.
 - The gap to the 1.0 m/s ground band is the hysteresis. A glider thermalling in a 15 m/s wind swings from 5 to 40 m/s over the ground every circle, and one threshold in the middle would land and launch it once a turn.
 
-A paraglider, a hang glider on a ridge or a balloon may never reach 12 m/s over the ground, and reads on the ground from launch to landing. `announced_state` sends on-ground as G.1.2's Undefined for every G.1.3 category that can fly at no ground speed, which G.1.16 transmits at the full rate, and the flight log opens on `rolling` for them (`log_session`). No vertical rate decides a takeoff, because on this board it is a gust or a pressure step as often as a climb.
+A paraglider, a hang glider on a ridge or a balloon may never reach 12 m/s over the ground, and reads on the ground from launch to landing. A glider ridge soaring into wind or a slow ultralight may hold under 8 m/s for the 10 s that land it. `announced_state` sends on-ground as G.1.2's Undefined for every G.1.3 category that can fly at no ground speed, which G.1.16 transmits at the full rate, and the flight log opens on `rolling` for them (`log_session`). No vertical rate decides a takeoff, because on this board it is a gust or a pressure step as often as a climb.
 
 ### Ground, 1.0 m/s, and rolling, 1.5 m/s
 
