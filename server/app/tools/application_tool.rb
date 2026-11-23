@@ -1,6 +1,6 @@
 class ApplicationTool < MCP::Tool
   READING = { read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: false }.freeze
-  DEVICE = { type: "string", description: "A device by its slug, go-00012a or bravo-3f2a, the address its pilot reads on the glass or the briefing's URL" }.freeze
+  DEVICE = { type: "string", description: "A device by its slug, go-00012a or bravo-3f2a, the serial or the tag its Bluetooth name ends with, or the briefing's URL" }.freeze
 
   class << self
     private

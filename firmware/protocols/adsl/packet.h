@@ -23,6 +23,11 @@ constexpr uint8_t manufacturer_page_table(uint8_t page) {
     return static_cast<uint8_t>(kAddressTableManufacturerFirst + page);
 }
 
+// INFO: fc 22nov26 B.3 counts bits from the least significant, so F.2.2's prefix is the low byte
+constexpr uint32_t manufacturer_address(uint8_t prefix, uint16_t base) {
+    return static_cast<uint32_t>(base) << 8 | prefix;
+}
+
 // INFO: fc 13nov26 G.1.4 codes "no emergency" as 1, so 0 is "undefined", not "all well"
 constexpr uint8_t kEmergencyNone = 1;
 constexpr uint8_t kEmergencyGeneral = 2;

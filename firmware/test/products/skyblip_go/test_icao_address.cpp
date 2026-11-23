@@ -178,6 +178,6 @@ TEST_CASE("product: status names the address on air, the aircraft address once i
     rig.run(rig.now_ms, rig.now_ms + 4000);
     CHECK(reads_in(rig.product.screen().framebuffer(), "3C6586", 0, 0, go::kGlassWidth,
                    go::kGlassHeight, 2));
-    CHECK_FALSE(reads_in(rig.product.screen().framebuffer(), "005AFE", 0, 0, go::kGlassWidth,
+    CHECK_FALSE(reads_in(rig.product.screen().framebuffer(), "5AFE00", 0, 0, go::kGlassWidth,
                          go::kGlassHeight, 2));
 }

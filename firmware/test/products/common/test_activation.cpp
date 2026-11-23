@@ -182,7 +182,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(bench.unlock_with_vectors() ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     CHECK(bench.activation().serial == 298);
-    CHECK(bench.activation().address() == settings::AirAddress{0x00012Au});
+    CHECK(bench.activation().address() == settings::AirAddress{0x012A00u});
     CHECK(bench.rig.platform.identity().writes == 1);
     REQUIRE(bench.rig.platform.identity().stored_unlock_code);
     CHECK(bench.rig.platform.identity().stored_unlock_code->serial == 298);

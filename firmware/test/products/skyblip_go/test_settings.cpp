@@ -127,12 +127,15 @@ TEST_CASE("settings: a set patch out of range is refused atomically") {
     CHECK(settings.alarm == Alarm::Loud);
 }
 
-// Issue #126: the registry assigned prefix 0x00, and the server fills the 16 bits below it.
-TEST_CASE("address: the prefix, then the serial the server signed" * doctest::test_suite("main")) {
+// Issue #126: the registry assigned prefix 0x00, and the server fills the 16 bits above it.
+TEST_CASE("address: the prefix in the low byte, the serial the server signed above it" *
+          doctest::test_suite("main")) {
     CHECK(address_of(0x0000) == 0x000000u);
-    CHECK(address_of(0x012A) == 0x00012Au);
-    CHECK(address_of(0xFFFF) == 0x00FFFFu);
+    CHECK(address_of(0x012A) == 0x012A00u);
+    CHECK(address_of(0xFFFF) == 0xFFFF00u);
     CHECK(int(kSkyblipManufacturerPrefix) == 0x00);
+    CHECK(serial_of(address_of(0x012A)) == 0x012A);
+    CHECK(serial_of(address_of(0xFFFF)) == 0xFFFF);
 }
 
 // Issue 2 F.2.2 numbers manufacturer pages from 9, so page 49 is table entry 58.

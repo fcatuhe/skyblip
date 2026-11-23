@@ -59,7 +59,7 @@ class McpTest < ActionDispatch::IntegrationTest
     assert_equal [ [ "RuntimeError", "the challenge expired", 1, true ] ], errors.map { it.values_at("error", "message", "count", "new") }
 
     unit = JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:)).sole
-    assert_equal [ 1, "000001" ], unit.values_at("serial", "address")
+    assert_equal [ 1, "000100" ], unit.values_at("serial", "address")
     assert_equal [ "active" ], unit["keys"].pluck("status")
     assert_equal [ [ "0.3.0+1300", true, "plus", "attested" ] ], unit["firmware"].map { it.values_at("version", "release", "variant", "source") }
 

@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include <vector>
 
+#include "core/settings/address.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
@@ -19,7 +20,7 @@ using Payload = Transmitter::Payload;
 
 Transmitter transmitter_for(uint32_t serial) {
     Transmitter transmitter;
-    transmitter.configure(serial);
+    transmitter.configure(settings::address_of(static_cast<uint16_t>(serial)));
     return transmitter;
 }
 

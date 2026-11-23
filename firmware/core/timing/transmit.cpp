@@ -55,7 +55,7 @@ uint32_t Transmitter::deferral_draw(uint64_t busy_at_us) const {
 }
 
 uint32_t Transmitter::cycle_start() const {
-    return 2 * ((address_ & settings::kSerialMask) % adsl::kGroundReportPeriodS);
+    return 2 * (settings::serial_of(address_) % adsl::kGroundReportPeriodS);
 }
 
 uint32_t Transmitter::cycle_second(uint32_t utc_s) const {

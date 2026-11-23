@@ -46,6 +46,25 @@ adsl::Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
     protocol::from_own(packet, own, address, table, 4);
     return packet;
 }
+
+// A field, read the way B.3 lays one out: bit 0 of the header is bit 0 of its first byte.
+uint32_t field(const uint8_t* header, int offset, int width) {
+    uint32_t value = 0;
+    for (int i = 0; i < width; i++) {
+        const int bit = offset + i;
+        value |= static_cast<uint32_t>((header[bit / 8] >> (bit % 8)) & 1u) << i;
+    }
+    return value;
+}
+
+void check_header(const adsl::Packet& packet, std::initializer_list<uint8_t> expected) {
+    int i = 0;
+    for (const uint8_t byte : expected) {
+        CAPTURE(i);
+        CHECK(int(packet.payload[i]) == int(byte));
+        i++;
+    }
+}
 }  // namespace
 
 TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits of address") {
@@ -55,21 +74,39 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
     packet.set_address(0x00FFFFFFu);
     CHECK(packet.address_mapping_table() == 63);
     CHECK(packet.address() == 0x00FFFFFFu);
+    CHECK(packet.table_and_address() == ((63u << 24) | 0xFFFFFFu));
+}
 
-    // Table 9 and up split the address: an 8-bit manufacturer prefix, then a 16-bit base.
-    packet.set_address_mapping_table(9);
-    packet.set_address(0xAB1234u);
-    CHECK(packet.address_mapping_table() == 9);
-    CHECK((packet.address() >> 16) == 0xABu);
-    CHECK((packet.address() & 0xFFFFu) == 0x1234u);
-    CHECK(packet.table_and_address() == ((9u << 24) | 0xAB1234u));
-
+TEST_CASE("ADS-L.4.SRD860.F.2.2: the prefix is address bits 0 to 7, the serial bits 8 to 23") {
     CHECK(int(settings::kSkyblipAddressMappingTable) == 58);
+    CHECK(int(settings::kSkyblipManufacturerPrefix) == 0x00);
     const adsl::Packet ours =
         traffic_packet(settings::address_of(0x1234), settings::kSkyblipAddressMappingTable);
-    CHECK(ours.address_mapping_table() == 58);
-    CHECK((ours.address() >> 16) == settings::kSkyblipManufacturerPrefix);
-    CHECK((ours.address() & 0xFFFFu) == 0x1234u);
+    // Header bits 0-7 type 2, 8-13 table 58, 14-21 prefix 0x00, 22-37 serial 0x1234, 38-39 zero.
+    check_header(ours, {0x02, 0x3A, 0x00, 0x8D, 0x04});
+    CHECK(field(ours.payload, 14, 24) == 0x123400u);
+    CHECK(field(ours.payload, 14, 8) == settings::kSkyblipManufacturerPrefix);
+    CHECK(field(ours.payload, 22, 16) == 0x1234u);
+}
+
+TEST_CASE("ADS-L.4.SRD860.F.2.2: every burst the Go sends carries its serial above the prefix" *
+          doctest::test_suite("main")) {
+    REQUIRE(platform::host::Identity::kSerial == 0x5AFE);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    run_on(simulator, past_settling(simulator), 21000);
+    int read = 0;
+    for (int i = 0; i < simulator.world().air().record_count(); i++) {
+        adsl::Packet packet{};
+        if (!packet_of(simulator.world().air().record_at(i), packet)) continue;
+        // The host's serial 0x5AFE: table 58 in bits 8-13, prefix 0x00 in 14-21, 0x5AFE in 22-37.
+        check_header(packet, {packet.payload_type, 0x3A, 0x80, 0xBF, 0x16});
+        read++;
+    }
+    CHECK(read >= 20);
 }
 
 // Our reading, which EASA is asked to confirm: every payload goes under table 5 while one is set.

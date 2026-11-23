@@ -128,7 +128,7 @@ A ground station may start its 9.4 ms uplink as late as 440.6 ms under §C.5 and
 
 The second alone picks the ADS-L channel. A position goes on A, slot 0, in an even UTC second and on B, slot 1, in an odd one, on the ground and airborne (`Transmitter::slot_in()`). The Status (§G.2) takes the other channel (`extra_slot_in()`). The name always goes on B, in slot 1's tail.
 
-Each unit owns a 20 s cycle from an even second, `c = 2 * (serial % 10)` (`cycle_start()`). skyblip.eu hands serials out densely, so a fleet spreads evenly over the ten start seconds. The address that keys the cycle, the instants and the deferral draws is the unit's own, even while it transmits an ICAO address (`core/settings/README.md`, The ICAO address), so changing that address moves no burst. On the ground the cycle holds six bursts (`kPositionOffsetsS`, `kStatusOffsetsS`, `kCallsignOffsetsS`):
+Each unit owns a 20 s cycle from an even second, `c = 2 * (serial % 10)` (`cycle_start()`). skyblip.eu hands serials out densely, so a fleet spreads evenly over the ten start seconds. `cycle_start()` reads the serial back from the unit's own address (`settings::serial_of()`), and the instants and the deferral draws hash that address. It stays the unit's own even while it transmits an ICAO address (`core/settings/README.md`, The ICAO address), so changing that address moves no burst. On the ground the cycle holds six bursts (`kPositionOffsetsS`, `kStatusOffsetsS`, `kCallsignOffsetsS`):
 
 | Offset | Burst | Channel |
 |---|---|---|

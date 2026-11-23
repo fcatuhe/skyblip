@@ -15,7 +15,7 @@
     </dd>
 
     <dt>Serial, activated</dt>
-    <dd>The serial is the unit's ADS-L address, given at activation. Only an activated unit transmits on ADS-L, and <em>Activated only</em> lists those, the units an authority asks about. A Bravo is never activated.</dd>
+    <dd>The serial names the unit, <code>00012A</code> for serial 298, and is given at activation. Its ADS-L address carries the serial above skyBlip's prefix 0x00, under AMT entry 58, so that unit transmits as <code>012A00</code>. Only an activated unit transmits on ADS-L, and <em>Activated only</em> lists those, the units an authority asks about. A Bravo is never activated.</dd>
 
     <dt>Device ID, device</dt>
     <dd>The device ID is the chip's FICR DEVICEID, which never changes. The device is the name the briefing app and the events use: <code>go-00012a</code> once activated, <code>activate-3f2a</code> before, <code>bravo-3f2a</code> for a Bravo. Its four hex digits are a Bluetooth tag that several units can share.</dd>

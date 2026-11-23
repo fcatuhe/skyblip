@@ -223,7 +223,7 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
         unit.load();
         CHECK(unit.key_provisioned());
         CHECK(unit.activation().serial == x.serial);
-        CHECK(unit.activation().address() == settings::AirAddress{0x00012Au});
+        CHECK(unit.activation().address() == settings::AirAddress{0x012A00u});
     }
     SUBCASE("the same code with another serial in front of it") {
         Exchange x;

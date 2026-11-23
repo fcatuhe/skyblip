@@ -79,7 +79,8 @@ class Unit < ApplicationRecord
 
   def hex_serial = (format("%06X", serial) if activated?)
 
-  def address = (format("%02X%04X", MANUFACTURER_PREFIX, serial) if activated?)
+  # INFO: fc 22nov26 ADS-L B.3 counts bits from the least significant, so F.2.2 puts the prefix in the low byte
+  def address = (format("%06X", serial << 8 | MANUFACTURER_PREFIX) if activated?)
 
   def slug
     if activated?

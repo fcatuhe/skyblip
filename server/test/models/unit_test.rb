@@ -7,7 +7,14 @@ class UnitTest < ActiveSupport::TestCase
 
     assert key.active?
     assert_equal [ 3, 4 ], [ key.unit.serial, other.unit.serial ]
-    assert_equal "000003", key.unit.address
+    assert_equal [ "000003", "000300" ], [ key.unit.hex_serial, key.unit.address ]
+  end
+
+  # ADS-L B.3 counts bits from the least significant, and F.2.2 puts the prefix at offset 0.
+  test "a unit is named by its serial and transmits it above skyBlip's prefix, in the low byte" do
+    assert_equal [ "001234", "go-001234", "123400" ], Unit.new(serial: 0x1234).then { [ it.hex_serial, it.slug, it.address ] }
+    assert_equal [ "00FFFF", "FFFF00" ], Unit.new(serial: 0xFFFF).then { [ it.hex_serial, it.address ] }
+    assert_equal [ nil, nil ], Unit.new.then { [ it.hex_serial, it.address ] }
   end
 
   test "a unit a browser reported before its activation gets the next serial on the same record" do

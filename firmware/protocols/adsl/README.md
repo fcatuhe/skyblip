@@ -6,7 +6,7 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, read from [`docs/reference/ad
 
 | File | Clauses | What it holds |
 |---|---|---|
-| `packet.{h,cpp}` | D.1.1, E, F.2, G.1, G.2 | `Packet`, the bytes the CRC covers, with the G.1 Traffic and G.2 Status fields at the offsets the tables print. XXTEA scrambling (E.2), the CRC-24 (E.3.1), the erasure repair, `receive()` and `receive_as_heard()`. The Traffic and Status payloads as plain values, `timestamp_code()` (G.1.1), and the HFOM, NACp and GVA tables (G.1.14, G.1.15) |
+| `packet.{h,cpp}` | D.1.1, E, F.2, F.2.2, G.1, G.2 | `Packet`, the bytes the CRC covers, with the G.1 Traffic and G.2 Status fields at the offsets the tables print. XXTEA scrambling (E.2), the CRC-24 (E.3.1), the erasure repair, `receive()` and `receive_as_heard()`. The Traffic and Status payloads as plain values, `manufacturer_address()` (F.2.2), `timestamp_code()` (G.1.1), and the HFOM, NACp and GVA tables (G.1.14, G.1.15) |
 | `physical.h` | C.2, C.4, D.1.1 | the M-band channels, modulation and 14 dBm e.r.p. ceiling, the O band, each band's backoff interval, and the sync word with D.1.1's length byte behind it |
 | `uplink.{h,cpp}`, `reed_solomon.{h,cpp}` | C.4, D.1.1, E.3.2, G.3 | the O-band HDR modulation and burst, the G.3 Traffic Uplink, and E.3.2's RS(255,223) code |
 | `flight_state.{h,cpp}` | G.1.2, G.1.16 | the flight state codes and each one's report period |
@@ -57,7 +57,7 @@ The device does not take these optional clauses:
 
 ## Before you ship a copy
 
-`encode_traffic()`, `encode_status()` and `Uplink::encode()` take the F.2.2 address table with no default, because it is a registry assignment, not a constant of the specification. The ADS-L registry assigned skyBlip table 58 with manufacturer prefix 0 (ticket #228794), and `core/settings/address.h` holds them. A product built from this code applies to `registry@ads-l.aero` for its own, and replaces the other identities `firmware/README.md` lists.
+`encode_traffic()`, `encode_status()` and `Uplink::encode()` take the F.2.2 address table with no default, because it is a registry assignment, not a constant of the specification. `manufacturer_address(prefix, base)` builds the address F.2.2 structures for a manufacturer page: the prefix in bits 0 to 7 and the base address in bits 8 to 23, as B.3 numbers bits from the least significant. The ADS-L registry assigned skyBlip table 58 with manufacturer prefix 0 (ticket #228794), and `core/settings/address.h` holds them. A product built from this code applies to `registry@ads-l.aero` for its own, and replaces the other identities `firmware/README.md` lists.
 
 ## The transmit rules
 

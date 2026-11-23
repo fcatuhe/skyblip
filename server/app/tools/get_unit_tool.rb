@@ -2,11 +2,11 @@ class GetUnitTool < ApplicationTool
   tool_name "get_unit"
   title "Read a unit's record"
   description "What the server holds on a skyBlip unit, any product, from its first connection to the briefing app: its product " \
-              "and variant, its DEVICEID and Bluetooth tag, and once activated its serial, address and each key it registered " \
-              "with, active, pending or revoked. Then its firmware, newest first, one stretch per version, build and variant, " \
-              "each with its source: read, a browser's report nobody vouches for, installed, an install from the briefing app " \
-              "the unit came back on, or attested, signed by the unit. A tag names up to 65536 units, so a slug from one can " \
-              "match several, so the answer is always a list. For admins only."
+              "and variant, its DEVICEID and Bluetooth tag, and once activated its serial, its ADS-L address under AMT entry 58 " \
+              "and each key it registered with, active, pending or revoked. Then its firmware, newest first, one stretch per " \
+              "version, build and variant, each with its source: read, a browser's report nobody vouches for, installed, an " \
+              "install from the briefing app the unit came back on, or attested, signed by the unit. A tag names up to 65536 " \
+              "units, so a slug from one can match several, so the answer is always a list. For admins only."
   input_schema properties: { device: DEVICE }, required: [ "device" ]
   annotations(**READING)
 
