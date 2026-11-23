@@ -1,5 +1,6 @@
 #include "core/gnss/nmea.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include "core/units/units.h"
@@ -193,19 +194,29 @@ bool NmeaParser::parse_line(const char* line, int bytes) {
 // INFO: fc 13sep26 GSA is asked for to carry VDOP, which GGA has no field for
 bool NmeaParser::apply_gsa(const char* fields[], int field_count) {
     if (field_count <= kGsaVdopField) return false;
+    const bool opens_set = last_sentence_ != Sentence::Gsa;
     last_sentence_ = Sentence::Gsa;
     // INFO: fc 18nov26 GSA comes once a second at 2 Hz, so its set replaces the marks, not each GGA
     if (solution_marks_stale_) sky_.clear_solution();
     solution_marks_stale_ = false;
+    if (opens_set) {
+        solution_.fix_mode = 0;
+        solution_.vdop_e2 = 0;
+    }
+    // INFO: fc 22nov26 one solution's GSAs come back to back, and a constellation outside it may
+    // say 1
+    solution_.fix_mode =
+        std::max(solution_.fix_mode, static_cast<uint8_t>(parse_long(fields[kGsaFixModeField], 1)));
     // INFO: fc 18sep26 one GSA per constellation, and one that solved nothing carries no DOP at all
     int64_t pdop_e2 = 0;
-    if (!parse_scaled(fields[kGsaPdopField], 100, pdop_e2) || pdop_e2 <= 0) return true;
-    solution_.fix_mode = static_cast<uint8_t>(parse_long(fields[kGsaFixModeField], 1));
     int64_t vdop_e2 = 0;
-    solution_.vdop_e2 =
-        parse_scaled(fields[kGsaVdopField], 100, vdop_e2) && vdop_e2 > 0 && vdop_e2 <= 0xFFFF
-            ? static_cast<uint16_t>(vdop_e2)
-            : 0;
+    if (parse_scaled(fields[kGsaPdopField], 100, pdop_e2) && pdop_e2 > 0)
+        solution_.vdop_e2 =
+            parse_scaled(fields[kGsaVdopField], 100, vdop_e2) && vdop_e2 > 0 && vdop_e2 <= 0xFFFF
+                ? static_cast<uint16_t>(vdop_e2)
+                : 0;
+    // INFO: fc 22nov26 the L76K documents no empty VDOP in 2D, so only a 3D mode vouches for one
+    if (solution_.fix_mode != kFixMode3D) solution_.vdop_e2 = 0;
 
     const System system =
         field_count > kGsaSystemField

@@ -9,6 +9,7 @@ namespace skyblip::gnss {
 void FixValidity::reset() {
     rmc_heard_ = false;
     gga_heard_ = false;
+    gsa_heard_ = false;
     rmc_fix_valid_ = false;
     gga_fix_valid_ = false;
     utc_valid_ = false;
@@ -17,6 +18,11 @@ void FixValidity::reset() {
 }
 
 void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t now_ms) {
+    if (which == Sentence::Gsa) {
+        gsa_heard_ = true;
+        gsa_heard_ms_ = now_ms;
+        return;
+    }
     if (which == Sentence::Gga) {
         gga_heard_ = true;
         gga_heard_ms_ = now_ms;
@@ -57,6 +63,14 @@ FixReject FixValidity::check(uint32_t now_ms) {
     if (reason != FixReject::None && reason != last_reject_) rejected_++;
     last_reject_ = reason;
     return reason;
+}
+
+// INFO: fc 22nov26 ADS-L 4 SRD860 issue 2 G.1.7: a 3D mode the receiver stopped reporting vouches
+// for no height
+void FixValidity::expire_fix_mode(GnssSolution& solution, uint32_t now_ms) const {
+    if (gsa_heard_ && now_ms - gsa_heard_ms_ <= kGsaMaxAgeMs) return;
+    solution.fix_mode = 0;
+    solution.vdop_e2 = 0;
 }
 
 FixReject FixValidity::evaluate(uint32_t now_ms) const {

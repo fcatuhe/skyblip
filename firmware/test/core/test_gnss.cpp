@@ -14,6 +14,9 @@
 using namespace skyblip::gnss;
 
 namespace {
+constexpr const char* kNextBurstGga =
+    "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
+
 std::string checksummed(const char* body) {
     uint8_t checksum = 0;
     for (const char* character = body; *character; character++)
@@ -271,6 +274,7 @@ TEST_CASE("gnss: GSA carries VDOP in hundredths") {
     CHECK(parser.solution().vdop_e2 == 210);
 
     // A 2D solution computes no vertical figure and leaves the field empty.
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
     const char* flat = "$GPGSA,A,2,04,05,,09,12,,,24,,,,,2.50,1.25,*11";
     REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
     CHECK(parser.solution().vdop_e2 == 0);
@@ -283,13 +287,43 @@ TEST_CASE("gnss: GSA says whether the receiver solved for height") {
     REQUIRE(parser.parse_line(solid, static_cast<int>(strlen(solid))));
     CHECK(parser.solution().fix_mode == kFixMode3D);
 
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
     const char* flat = "$GPGSA,A,2,04,05,,09,12,,,24,,,,,2.50,1.25,*11";
     REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
     CHECK(parser.solution().fix_mode == kFixMode2D);
 }
 
+// The L76K documents VDOP up to 99.0 and never an empty one, so a 2D GSA may still print it.
+TEST_CASE("gnss: a GSA that says 2D carries no VDOP, even one it prints") {
+    NmeaParser parser;
+    const char* flat = "$GPGSA,A,2,04,05,,09,12,,,24,,,,,2.50,1.25,3.10*0D";
+    REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
+    CHECK(parser.solution().fix_mode == kFixMode2D);
+    CHECK(parser.solution().vdop_e2 == 0);
+}
+
+// A GSA with no DOP used to be skipped whole, so a receiver that lost its height stayed 3D.
+TEST_CASE("gnss: a GSA with no DOP still says the receiver lost its height") {
+    NmeaParser parser;
+    const char* solid = "$GNGSA,A,3,04,05,,09,12,,,24,,,,,2.50,1.25,2.10,1*0E";
+    REQUIRE(parser.parse_line(solid, static_cast<int>(strlen(solid))));
+    REQUIRE(parser.solution().vdop_e2 == 210);
+
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
+    const char* flat = "$GNGSA,A,2,04,05,,09,12,,,24,,,,,,,,1*13";
+    REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
+    CHECK(parser.solution().fix_mode == kFixMode2D);
+    CHECK(parser.solution().vdop_e2 == 0);
+
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
+    const char* lost = "$GNGSA,A,1,,,,,,,,,,,,,,,,1*1D";
+    REQUIRE(parser.parse_line(lost, static_cast<int>(strlen(lost))));
+    CHECK(parser.solution().fix_mode == 1);
+    CHECK(parser.solution().vdop_e2 == 0);
+}
+
 // One GSA per constellation, and the one whose satellites are in no solution carries no DOP.
-TEST_CASE("gnss: a GSA with no DOP at all is a constellation that solved nothing") {
+TEST_CASE("gnss: a GSA with no DOP beside a solving one is a constellation that solved nothing") {
     NmeaParser parser;
     const char* solved = "$GNGSA,A,3,04,05,,09,12,,,24,,,,,2.50,1.25,2.10,1*0E";
     REQUIRE(parser.parse_line(solved, static_cast<int>(strlen(solved))));

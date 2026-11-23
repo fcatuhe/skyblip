@@ -56,7 +56,7 @@ struct GnssSolution {
     // INFO: fc 18nov26 the milliseconds of RMC's hhmmss.sss: at 2 Hz they name the quarter solved
     uint16_t utc_ms{0};
     uint16_t hdop_e2{0};
-    // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution
+    // INFO: fc 22nov26 vertical DOP in hundredths, GSA field 17, zero unless fix_mode is 3D
     uint16_t vdop_e2{0};
     uint16_t pps_latency_ms{0};
     // INFO: fc 18nov26 the drain that closed it closed an older pair too: the host was late
@@ -65,6 +65,7 @@ struct GnssSolution {
     uint16_t delivery_ms{0};
     uint8_t satellites{0};
     uint8_t fix_quality{0};
+    // INFO: fc 22nov26 the best of the last GSA set, cleared once that set is over kGsaMaxAgeMs old
     uint8_t fix_mode{0};
     bool altitude_msl_valid{false};
     bool altitude_hae_valid{false};

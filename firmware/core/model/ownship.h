@@ -37,7 +37,7 @@ struct Ownship {
     uint32_t fix_in_hand_ms;
     // INFO: fc 20nov26 zero means the receiver did not report it, not a perfect HDOP
     uint16_t hdop_e2;
-    // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution
+    // INFO: fc 22nov26 vertical DOP in hundredths, zero unless the receiver's last GSA set said 3D
     uint16_t vdop_e2;
     // INFO: fc 20nov26 false when altitude_msl_mm used a regional geoid constant
     bool geoid_measured;

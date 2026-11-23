@@ -91,6 +91,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
 
     // INFO: fc 20nov26 G.1.7, G.1.8: with no fix, altitude and speed go unavailable, never stale
     if (own.fix_valid) {
+        // INFO: fc 22nov26 G.1.7: a VDOP comes only from a 3D GSA set under 1.5 s old
         traffic.altitude_valid = own.vdop_e2 != 0;
         if (traffic.altitude_valid)
             traffic.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value;

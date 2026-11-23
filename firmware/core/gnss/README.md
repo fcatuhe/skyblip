@@ -4,6 +4,8 @@ A receiver produces solutions on its own cadence, two a second on the Go, whethe
 
 `GnssSolution::fix_valid` is filled twice with one meaning. The parser sets it from RMC status `A`, the receiver's own claim. `parts::L76k::poll` and `parts::Ag3335::poll` overwrite it with `FixValidity`'s verdict before publishing, so the receiver's claim never reaches the bus. The verdict needs GGA and RMC both heard within `kSentenceMaxAgeMs`, as SoftRF does, a real date, and no jump between consecutive solutions, as moshe-braner's gate does.
 
+GSA field 2 says whether the receiver solved for height: 1 no fix, 2 without height, 3 with. One GSA comes per constellation, back to back, and one outside the solution may say 1, so the parser takes the best mode of the run, from every GSA, with DOPs or without. VDOP comes from a GSA that carries a PDOP, and is zero unless the run said 3D, because the L76K documents a VDOP up to 99.0 and never an empty one, so a 2D GSA may still print it. The L76K sends GSA once a second at 2 Hz, so `FixValidity::expire_fix_mode` clears the mode and VDOP of a solution published over `kGsaMaxAgeMs`, 1.5 s, after the last GSA. A Traffic burst sends the altitude only with that VDOP, since ADS-L G.1.7 marks it invalid without a 3D fix.
+
 Both receivers share the parser. Bravo's AG3335 sends NMEA 4.10 on the `GN` talker (`../../hardware/parts/ag3335/README.md`). Its GSA names Galileo as system 3, which `system_of_gsa_id` does not know, so a Galileo satellite in use matches any constellation with the same id. Only the satellites page reads that, and Bravo has none. Its GGA without a fix is 37 bytes, under `kGgaLengthFloorBytes`, so its no-fix reason reads `NO GGA`.
 
 ## How far a receiver with no fix has got
@@ -38,7 +40,7 @@ Nothing acknowledges `$PCAS01`, so the driver moves the rate only after `Verifyi
 
 GSV is the only sentence that carries signal level. `sky.h` keeps one entry per satellite: id, elevation, azimuth, C/N0, the constellation from the talker, and whether GSA used it. An empty C/N0 is a satellite in view but not tracked, kept as zero and drawn as a foot.
 
-QZSS answers on the `GP` talker, and ids 193 to 197 tell it from GPS, as the L76K specification states. BeiDou ids restart at 1, so an id means nothing without its talker. GSA carries the system in field 18. Without it, the in-use mark matches the id alone. A GSA with an empty PDOP comes from a constellation in no solution, so it is skipped and does not overwrite the fix mode and VDOP.
+QZSS answers on the `GP` talker, and ids 193 to 197 tell it from GPS, as the L76K specification states. BeiDou ids restart at 1, so an id means nothing without its talker. GSA carries the system in field 18. Without it, the in-use mark matches the id alone. A GSA with an empty PDOP comes from a constellation in no solution, or from a receiver with none, so it sets no VDOP.
 
 GSV is asked for only while the `satellites` page is on the glass, the only reader of a level, because the widest set adds 648 bytes to a solution. `ScreenService` sets `bus::GnssState::levels_wanted`, and the board sends one `$PCAS03` with a null in every field but nGSV, which the receiver reads as keep the rest. The page opens empty and fills one solution later.
 
