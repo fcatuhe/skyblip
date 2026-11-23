@@ -10,6 +10,7 @@
 #include "doctest/doctest.h"
 #include "protocols/adsl/media_access.h"
 #include "protocols/adsl/packet.h"
+#include "protocols/adsl/transmit.h"
 #include "simulator/simulator.h"
 #include "test/support/armings_rig.h"
 #include "test/support/simulator_run.h"
@@ -143,13 +144,16 @@ TEST_CASE("rf: a busy channel defers the burst, which keys later inside its own 
     CHECK(deferred->phase_ms + timing::Transmitter::kAirTimeMs <= adsl::kDirectEndMs);
     CHECK(run.state().air.tx_busy_missed == 0);
 
-    // G.1.1: the timestamp names the instant the burst went out at, not the one it was drawn for.
+    // G.1.1 names the half-second solution carried, which G.1.16 keeps at most 500 ms old on air.
     adsl::Packet packet{};
     REQUIRE(packet_of(*deferred, packet));
     CHECK(packet.payload_type == adsl::Packet::kPayloadTypePosition);
     const uint32_t utc_s = run.state().traffic_now_s(run.now_ms) -
                            (run.now_ms / 1000 - static_cast<uint32_t>(deferred->at_us / 1000000));
-    CHECK(packet.timestamp == adsl::timestamp_code(utc_s, deferred->phase_ms));
+    const int32_t sent_ms = static_cast<int32_t>(utc_s % 15) * 1000 + deferred->phase_ms;
+    const int32_t age_ms = (sent_ms - packet.timestamp * 250 + 15000) % 15000;
+    CHECK(packet.timestamp % 2 == 0);
+    CHECK(age_ms <= adsl::kFixMaxAgeMs);
 }
 
 TEST_CASE("rf: a ground burst busy its whole window is missed, and goes 2 s on, same channel") {
