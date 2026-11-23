@@ -6,12 +6,14 @@ This directory holds the host tooling. The Python scripts run on the standard li
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| `blip_diagnostics_layout.py` | the diagnostics decoder tables `diagnostics_layout.py` generates. Never edit it by hand |
 | [`blip_ndjson.py`](blip_ndjson.py) | the NDJSON a fetch writes and `decode` reads: the session notes, the torn tail and the summary |
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
 | [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the press's verdict |
 | [`blip_fetch.py`](blip_fetch.py) | `blip.py fetch`: offload a store to NDJSON, resuming where a dead fetch stopped |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec, with the names `schemas/link.v1.json` gives its numbers |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`. The C++ opens with `// clang-format off`, so the generator alone decides its layout |
+| [`diagnostics_layout.py`](diagnostics_layout.py) | write the C++ header, the C++ mirrors test and the Python and JavaScript decoder tables generated from `schemas/diagnostics_layout.v1.json` |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build a board's drag-and-drop install image, refusing to write outside its factory bootloader window |
