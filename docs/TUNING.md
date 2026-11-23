@@ -261,9 +261,11 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | ADS-L and ALP-TAS key once a second, so a faster pass repeats a position and a slower one makes the map jump |
 | `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | core/traffic's freshness rule, so the tablet never holds a target longer than the device would alarm on it |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | a pass waits while own-ship's burst is armed, never longer than this, so the cadence stays a cadence |
-| `kBarometerClimbWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
+| `kBarometerClimbWindowMs` | 1000 (1 s) | milliseconds | Window | the one second the BME280's 6 cm/s of noise was measured over |
 | `kGnssClimbWindowMs` | 2000 (2 s) | milliseconds | Window | - |
-| `kBarometerMaxAgeMs` | `3 * boards::kBarometerPublishPeriodMs` | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
+| `kBarometerMaxAgeMs` | `3 * boards::kBarometerPublishPeriodMs` | milliseconds | MaxAge | three seconds unheard: a barometer that went silent hands the climb back |
+| `kClimbMaxAgeMs` | `kBarometerMaxAgeMs` | milliseconds | MaxAge | a climb whose source fell silent this long leaves the glass as well |
+| `kBarometerRecordFloorMs` | 875 | milliseconds | Floor | one record a second from samples a quarter apart, each a pass late or early |
 | `kPpsRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | an edge is a record, and a second that brought none is the record saying so |
 | `kMotionRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the hub reports faster than the filters behind it move, in whole seconds |
 | `kDieStaleMs` | 30000 (30 s) | milliseconds | Stale | a sensor that stopped answering must neither hold nor drive the glass |
@@ -344,6 +346,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRadioAnswerMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | three dwells and readings a second, so nine missed is a radio not answering |
 | `kRadioRefusalSamples` | 2 | samples | Samples | one refused dwell is a transient, a second inside the age a fault |
+| `kClimbAwaitMaxAgeMs` | 500 | milliseconds | MaxAge | a climb this recent has a fresher one coming, worth a position's wait |
 | `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -426,4 +429,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-281 constants over 26 folders.
+284 constants over 26 folders.
