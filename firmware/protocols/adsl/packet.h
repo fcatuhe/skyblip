@@ -202,6 +202,10 @@ struct __attribute__((packed)) Packet {
 
     void set_integrity_unknown();
 
+    static constexpr bool supports_data_bytes(uint8_t bytes) {
+        return bytes == kDataBytes || bytes == kStatusDataBytes;
+    }
+
     // INFO: fc 18nov26 D.1.1's Packet Length: 16 for a Status, 24 for Traffic and payload 66
     uint8_t data_bytes() const {
         return payload_type == kPayloadTypeStatus ? kStatusDataBytes : kDataBytes;
@@ -219,9 +223,9 @@ static_assert(sizeof(Packet) == Packet::kDataBytes, "Packet is the data the CRC 
 
 wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
                      uint8_t data_bytes = Packet::kDataBytes);
-// INFO: fc 18nov26 D.1.1's length is outside the CRC, so both are read, from kDataBytes buffers
+// INFO: fc 22nov26 a doubtful length can read either known size from kDataBytes buffers
 wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
-                              Packet& out);
+                              bool length_doubtful, Packet& out);
 
 // INFO: fc 20nov26 G.1.1 counts quarters of a 15 s cycle, and the position must be that quarter's
 static constexpr uint32_t kTimestampCycleS = 15;

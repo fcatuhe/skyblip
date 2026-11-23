@@ -224,8 +224,8 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
     adsl::Packet packet;
-    const wire::Status heard =
-        adsl::receive_as_heard(frame.data, frame.erasures, frame.length_heard, packet);
+    const wire::Status heard = adsl::receive_as_heard(
+        frame.data, frame.erasures, frame.length_heard, frame.length_doubtful, packet);
     if (heard == wire::Status::Crc) return radio::Verdict::BadCrc;
     if (heard != wire::Status::Ok) return radio::Verdict::Unsupported;
     if (adsl_edge::is_registration(packet)) return learn_callsign(packet, utc_s, observation);

@@ -109,8 +109,8 @@ TEST_CASE("air: the buffer a radio is handed is the burst, less the window the r
     CHECK(std::memcmp(on_air + protocol::kSyncWindowChipBytes, buffer, buffer_bytes) == 0);
 }
 
-// A dead chip pair in the sync tail must not cost the frame: it is 24 bits long
-// and the two systems differ in far more than one of them.
+// A dead chip pair in the sync tail must not cost the frame: the two sync words differ in many
+// bits.
 TEST_CASE("air: one flipped chip in the sync tail still names the system") {
     uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 3);

@@ -89,7 +89,7 @@ The integrator picks the CCA interval, the dead time, the threshold, the deferra
 
 The payload is 12 bytes, so the packet is 16 with the network header and the CRC, and its §D.1.1 length byte says 16 (`Packet::kStatusDataBytes`, `data_bytes()`). `scramble()`, `set_crc()` and `receive()` take the length, so a Status padded to 24 bytes or a Traffic cut to 16 is `Invalid`.
 
-The length byte rides outside the CRC, and 16 and 24 differ in one bit, so `receive_as_heard()` reads the frame at both lengths and keeps the one reading that comes out `Ok`. It refuses a frame both readings accept, since nothing under the CRC says which was sent: zeros behind a clean CRC codeword keep it clean. It reads 24 bytes only where the chips past the 16th byte were heard as a transmitter's, so a Status followed by silence reads at 16 alone.
+The length byte rides outside the CRC. `receive_as_heard()` checks only the size named by a clean length. The supported sizes are 16 and 24 bytes. When the length contains a doubtful Manchester pair, it tries both sizes and accepts only a unique valid codeword. Zeros behind a clean CRC codeword can keep it clean at either size, so it refuses an ambiguous repair. It checks at 24 bytes only when the chips after byte 16 were heard as a transmitter's.
 
 ## Which issue a payload is
 

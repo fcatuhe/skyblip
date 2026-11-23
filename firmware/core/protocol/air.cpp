@@ -1,7 +1,5 @@
 #include "core/protocol/air.h"
 
-#include <algorithm>
-
 #include "core/model/band.h"
 #include "protocols/common/manchester.h"
 
@@ -9,7 +7,6 @@ namespace skyblip::protocol {
 
 namespace {
 
-constexpr uint32_t kTailMask = sync_tail(0xFFFFFFFFu);
 // INFO: fc 20nov26 a dead chip pair decodes to a wrong bit, so the short tail allows one
 constexpr int kSyncTailErrorsCeiling = 1;
 
@@ -17,17 +14,12 @@ uint32_t tail_of(const uint8_t* data) {
     return (static_cast<uint32_t>(data[0]) << 16) | (static_cast<uint32_t>(data[1]) << 8) | data[2];
 }
 
-int tail_errors(const uint8_t* data, uint32_t sync_word) {
-    return __builtin_popcount((tail_of(data) ^ sync_tail(sync_word)) & kTailMask);
-}
-
-// INFO: fc 18nov26 D.1.1: 24 and 16 differ in one bit, so a damaged length byte is nearer to one
-System system_of(const uint8_t* data, uint8_t& adsl_bytes) {
-    const int traffic = tail_errors(data, adsl::kSyncWord);
-    const int status = tail_errors(data, adsl::sync_word(adsl::Packet::kStatusDataBytes));
-    adsl_bytes = status < traffic ? adsl::Packet::kStatusDataBytes : adsl::Packet::kDataBytes;
-    if (std::min(traffic, status) <= kSyncTailErrorsCeiling) return System::AdslDirect;
-    if (tail_errors(data, alptas::kSyncWord) <= kSyncTailErrorsCeiling) return System::Alptas;
+System system_of(const uint8_t* data) {
+    const uint32_t tail = tail_of(data);
+    const int adsl_errors = __builtin_popcount((tail ^ sync_tail(adsl::kSyncWord)) >> 8);
+    if (adsl_errors <= kSyncTailErrorsCeiling) return System::AdslDirect;
+    const int alptas_errors = __builtin_popcount(tail ^ sync_tail(alptas::kSyncWord));
+    if (alptas_errors <= kSyncTailErrorsCeiling) return System::Alptas;
     return System::Unknown;
 }
 
@@ -82,14 +74,21 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     out = Frame{};
     if (chip_bytes < kRxChipBytes) return false;
     wire::manchester_decode(chips, kRxFrameBytes, out.data, out.erasures);
-    uint8_t adsl_bytes = 0;
-    out.system = system_of(out.data, adsl_bytes);
-    if (out.system == System::Unknown) return false;
-    out.length_heard = out.data[kSyncTailBytes - 1];
+    const System system = system_of(out.data);
+    if (system == System::Unknown) return false;
+
+    if (system == System::AdslDirect) {
+        out.length_heard = out.data[kSyncTailBytes - 1];
+        out.length_doubtful = out.erasures[kSyncTailBytes - 1] != 0;
+        if (!out.length_doubtful && !adsl::Packet::supports_data_bytes(out.length_heard))
+            return false;
+        out.bytes = out.length_doubtful ? adsl::Packet::kDataBytes : out.length_heard;
+    } else {
+        out.bytes = frame_bytes(system);
+    }
+    out.system = system;
     shift_left(out.data, kRxFrameBytes, kSyncTailBits);
     shift_left(out.erasures, kRxFrameBytes, kSyncTailBits);
-    out.bytes = out.system == System::AdslDirect ? adsl_bytes : frame_bytes(out.system);
-    // INFO: fc 20nov26 chips past the shorter frame were never sent, so they are not damage
     for (uint8_t i = 0; i < out.bytes; i++)
         out.bad_chips = static_cast<uint16_t>(out.bad_chips + __builtin_popcount(out.erasures[i]));
     return true;

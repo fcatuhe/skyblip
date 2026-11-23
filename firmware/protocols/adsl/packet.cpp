@@ -33,10 +33,6 @@ constexpr auto kStatusCrcSyndromes =
         return wire::crc24_check(frame, Packet::kStatusDataBytes);
     });
 
-constexpr bool known_length(uint8_t data_bytes) {
-    return data_bytes == Packet::kDataBytes || data_bytes == Packet::kStatusDataBytes;
-}
-
 uint8_t nearer_length(uint8_t length_heard) {
     const int to_status = __builtin_popcount(length_heard ^ Packet::kStatusDataBytes);
     const int to_traffic = __builtin_popcount(length_heard ^ Packet::kDataBytes);
@@ -150,7 +146,7 @@ int Packet::correct(const uint8_t* erasures, int max_erasures, uint8_t data_byte
 wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
                      uint8_t data_bytes) {
     out.reset();
-    if (!known_length(data_bytes)) return wire::Status::Invalid;
+    if (!Packet::supports_data_bytes(data_bytes)) return wire::Status::Invalid;
     __builtin_memcpy(out.data, frame, data_bytes);
     if (out.correct(erasures, 6, data_bytes) < 0) return wire::Status::Crc;
     if (data_bytes < Packet::kDataBytes)
@@ -164,9 +160,11 @@ wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
     return out.data_bytes() == data_bytes ? wire::Status::Ok : wire::Status::Invalid;
 }
 
-// INFO: fc 18nov26 a frame both lengths read is refused, since no byte under the CRC says which
+// INFO: fc 22nov26 a clean length names the only codeword the receiver can check
 wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
-                              Packet& out) {
+                              bool length_doubtful, Packet& out) {
+    if (!length_doubtful) return receive_at(frame, erasures, length_heard, out);
+
     const uint8_t nearer = nearer_length(length_heard);
     const uint8_t other =
         nearer == Packet::kDataBytes ? Packet::kStatusDataBytes : Packet::kDataBytes;

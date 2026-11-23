@@ -134,30 +134,43 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status padded to 24 bytes is refused, never f
     CHECK_FALSE(rig.state().traffic.at(index)->version.declared);
 }
 
-// The length byte rides outside the CRC: one bit misheard there costs neither frame.
-TEST_CASE("ADS-L.4.SRD860.D.1.1: a length byte misheard by its one bit still reads either frame") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
-    model::Ownship neighbour = rig.state().own;
-    neighbour.latitude_1e7 += 10000;
-    adsl::Packet traffic{};
-    REQUIRE(protocol::from_own(traffic, neighbour, 0xC5D804, adsl::kAddressTableFlarm, 4));
-    traffic.scramble();
-    traffic.set_crc();
-    hear_m_band(rig, adsl::sync_word(adsl::Packet::kStatusDataBytes), traffic.data,
-                adsl::kFrameBytes);
-    settle(rig, now_ms);
-    CHECK(heard_verdict(rig) == radio::Verdict::Received);
-    REQUIRE(rig.state().traffic.find(adsl::kAddressTableFlarm, 0xC5D804) >= 0);
+TEST_CASE("ADS-L.4.SRD860.D.1.1: the Go trusts a clean length and repairs only a doubtful one") {
+    const uint8_t traffic[] = {0x00, 0xD1, 0x87, 0x13, 0x91, 0x5C, 0x80, 0x2C,
+                               0x88, 0xD4, 0xD3, 0x86, 0x0E, 0x87, 0xD1, 0x04,
+                               0x40, 0xC5, 0x3C, 0x02, 0x7F, 0x88, 0x7D, 0xBA};
+    for (const uint8_t length : {0, 16, 24, 25}) {
+        for (const bool doubtful : {false, true}) {
+            CAPTURE(int(length));
+            CAPTURE(doubtful);
+            Rig rig;
+            REQUIRE(rig.setup() == Status::Ok);
+            uint32_t now_ms = 0;
+            fly(rig, now_ms, 3);
 
-    adsl::Packet status{};
-    adsl::encode_status(status, 0xC5D804, adsl::kAddressTableFlarm, adsl::StatusReport{});
-    status.scramble(adsl::Packet::kStatusDataBytes);
-    status.set_crc(adsl::Packet::kStatusDataBytes);
-    hear_m_band(rig, adsl::kSyncWord, status.data, adsl::Packet::kStatusDataBytes);
-    settle(rig, now_ms);
-    CHECK(heard_verdict(rig) == radio::Verdict::Declared);
-    CHECK(rig.state().air.rx_status == 1);
+            events::RfEvent event{};
+            event.type = events::RfEventType::RxDone;
+            event.band = model::Band::M;
+            event.rssi_dbm = -15;
+            event.rssi_valid = true;
+            event.bytes = protocol::kRxChipBytes;
+            const auto put_byte = [&](size_t offset, uint8_t value) {
+                uint16_t chips = 0;
+                for (int bit = 7; bit >= 0; --bit)
+                    chips = static_cast<uint16_t>((chips << 2) | ((value >> bit) & 1 ? 1 : 2));
+                event.data[offset * 2] = static_cast<uint8_t>(chips >> 8);
+                event.data[offset * 2 + 1] = static_cast<uint8_t>(chips);
+            };
+            put_byte(0, 0x72);
+            put_byte(1, 0x4B);
+            put_byte(2, length);
+            for (size_t i = 0; i < sizeof(traffic); i++) put_byte(3 + i, traffic[i]);
+            if (doubtful) event.data[5] ^= 0x02;
+            rig.product.bus().rf.push(event);
+            settle(rig, now_ms);
+
+            const bool accepted = doubtful || length == 24;
+            CHECK((heard_verdict(rig) == radio::Verdict::Received) == accepted);
+            CHECK(rig.state().air.rx_ok == (accepted ? 1u : 0u));
+        }
+    }
 }
