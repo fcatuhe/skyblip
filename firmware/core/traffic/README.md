@@ -139,7 +139,7 @@ An advisory is announced once, because a tone that repeats while a glider shares
 
 ## Which ADS-L version a target reads
 
-`Target::version` holds the highest version each neighbour reads (§B.5): the version of its last Traffic packet, until a Status declares its Max. Protocol Version, which then wins until the slot is freed (`declare_max_version`). A Status from an unknown address is dropped, and the next one, within 20 s, finds the target. `readable_version` returns the lowest among the targets `adsl::close_client()` calls close, an unknown altitude counted as level. Relayed targets are left out, because the uplink record does not carry their version.
+`Target::version` holds the highest version each neighbour reads (§B.5): the version of its last Traffic packet, until a Status declares its Max. Protocol Version, which then wins until the slot is freed (`declare_max_version`). A Status from an unknown address is dropped, and the next one, within 20 s, finds the target. `readable_version` returns the lowest among the targets `adsl::close_client()` calls close, an unknown altitude counted as level. Without an own velocity, from a receiver that reported no speed or a speed with no course, the closure is G.1.8's fastest encodable 236 m/s plus the target's speed, so every client own-ship could meet within 30 s counts as close. Relayed targets are left out, because the uplink record does not carry their version.
 
 ## Turn rate
 

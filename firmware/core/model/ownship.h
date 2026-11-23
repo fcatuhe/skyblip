@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "core/units/units.h"
+
 namespace skyblip::model {
 struct Ownship {
     bool fix_valid;
@@ -54,6 +56,12 @@ struct Ownship {
     uint8_t aircraft_category;
     uint8_t flight_state;
 };
+
+// INFO: fc 22nov26 G.1.10: a speed that encodes as zero needs no track to be a whole velocity
+inline bool velocity_valid(const Ownship& own) {
+    return own.speed_valid &&
+           (own.track_valid || to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value == 0);
+}
 
 }  // namespace skyblip::model
 

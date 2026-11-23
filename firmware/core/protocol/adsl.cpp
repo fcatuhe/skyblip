@@ -94,10 +94,10 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
         traffic.altitude_valid = own.vdop_e2 != 0;
         if (traffic.altitude_valid)
             traffic.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value;
-        const uint16_t speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
         // INFO: fc 22nov26 G.1.10 has no invalid track, so a speed with none goes invalid unless 0
-        traffic.speed_valid = own.speed_valid && (own.track_valid || speed_q == 0);
-        if (traffic.speed_valid) traffic.speed_q = speed_q;
+        traffic.speed_valid = model::velocity_valid(own);
+        if (traffic.speed_valid)
+            traffic.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
         // INFO: fc 19nov26 VDOP cannot bound a geoid separation the parser had to assume
         traffic.integrity =
             integrity_from_dop_e2(own.hdop_e2, own.geoid_measured ? own.vdop_e2 : 0);
