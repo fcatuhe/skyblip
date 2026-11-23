@@ -190,7 +190,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSwitchRetuneMs` | 5 | milliseconds | - | no band change measured, until a unit's timing command reads its worst one |
 | `kSwitchLeadMs` | 3 | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kCompletionAllowanceMs` | 5 | milliseconds | - | bench worst 5.5 ms from the planned instant to TxDone, against 5 ms booked |
-| `kKeyToDoneMs` | `static_cast<int>(adsl::kAirTimeMs) + 1` | milliseconds | - | SetTx to TxDone, the frame's 5 ms and 1 ms more: bench worst 5.37 ms, build 863 |
+| `kKeyToDoneMs` | `static_cast<int>(adsl::kAirTimeMs) + 1` | milliseconds | - | the frame and 1 ms, over build 863's worst 5.53 ms from instant to TxDone |
 | `kGroundEmitStartMs` | `kUplinkWindowMs.start_ms` | milliseconds | - | - |
 | `kGroundEmitEndMs` | `kUplinkWindowMs.end_ms - kCompletionAllowanceMs` | milliseconds | - | a completion deadline, not a start deadline |
 | `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |

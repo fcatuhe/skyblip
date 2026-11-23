@@ -24,9 +24,10 @@ uint16_t chips_of(uint8_t byte) {
     return static_cast<uint16_t>((coded[0] << 8) | coded[1]);
 }
 
-// C.5 ends the Direct slot of second 3 at 1000 ms, and C.2's frame is 464 chips at 100 kchip/s.
+// C.5 ends the Direct slot of second 3 at 1000 ms.
 constexpr uint64_t kSecond3SlotEndUs = 4000000;
-constexpr uint64_t kFrameUs = (16 + 64 + 24 * 16) * 10;
+// Build 863's worst from a burst's instant to TxDone, docs/bench/2026-09-29-build-874.md.
+constexpr uint64_t kInstantToDoneUs = 5530;
 
 // Serial 243's position in second 3 is drawn at 990 ms, window B's last instant.
 void arm_on_last_instant(Pass& pass) {
@@ -218,12 +219,13 @@ TEST_CASE("ADS-L.4.SRD860.C.5: a burst keyed a clock tick past its last instant 
     pass.whole_pass(3991000);
 
     CHECK(pass.first_tx_us == 3990031);
-    CHECK(pass.first_tx_us + kFrameUs <= kSecond3SlotEndUs);
+    CHECK(pass.first_tx_us + kInstantToDoneUs <= kSecond3SlotEndUs);
     CHECK(pass.state.air.tx_lost == 0);
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.5: a stalled executor keys nothing it could not end inside the slot") {
-    for (const uint64_t resumed_us : {kSecond3SlotEndUs - kFrameUs + 1, kSecond3SlotEndUs + 1000}) {
+    for (const uint64_t resumed_us :
+         {kSecond3SlotEndUs - kInstantToDoneUs + 1, kSecond3SlotEndUs + 1000}) {
         CAPTURE(resumed_us);
         Pass pass;
         arm_on_last_instant(pass);

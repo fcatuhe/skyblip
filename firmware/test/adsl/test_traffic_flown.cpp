@@ -50,10 +50,11 @@ int check_flown(simulator::Simulator& simulator, const simulator::AirRecord& rec
     return 1;
 }
 
-// G.1.16 ends the burst 500 ms after its fix, and C.2's frame is 464 chips at 100 kchip/s.
+// G.1.16 ends the burst 500 ms after its fix.
 constexpr uint64_t kFixAtUs = 2000000;
 constexpr uint64_t kNavigationMaxAgeUs = 500000;
-constexpr uint64_t kFrameUs = (16 + 64 + 24 * 16) * 10;
+// Build 863's worst from a burst's instant to TxDone, docs/bench/2026-09-29-build-874.md.
+constexpr uint64_t kInstantToDoneUs = 5530;
 
 // Serial 1199's position on A in second 2 is drawn at 490 ms, the last instant its fix allows.
 void arm_on_fix_last_instant(Pass& pass) {
@@ -167,13 +168,13 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a position keyed a clock tick late still ends 
     pass.pass_on_fix(2491000);
 
     CHECK(pass.first_tx_us == 2490031);
-    CHECK(pass.first_tx_us + kFrameUs <= kFixAtUs + kNavigationMaxAgeUs);
+    CHECK(pass.first_tx_us + kInstantToDoneUs <= kFixAtUs + kNavigationMaxAgeUs);
     CHECK(pass.state.air.tx_lost == 0);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.16: a key delay cannot age the encoded fix past 500 ms on air") {
-    for (const uint64_t resumed_us :
-         {kFixAtUs + kNavigationMaxAgeUs - kFrameUs + 1, kFixAtUs + kNavigationMaxAgeUs + 1000}) {
+    for (const uint64_t resumed_us : {kFixAtUs + kNavigationMaxAgeUs - kInstantToDoneUs + 1,
+                                      kFixAtUs + kNavigationMaxAgeUs + 1000}) {
         CAPTURE(resumed_us);
         Pass pass;
         arm_on_fix_last_instant(pass);

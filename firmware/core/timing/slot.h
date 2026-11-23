@@ -30,7 +30,7 @@ constexpr int kSwitchRetuneMs = 5;
 constexpr int kSwitchLeadMs = 3;
 // INFO: fc 29sep26 bench worst 5.5 ms from the planned instant to TxDone, against 5 ms booked
 constexpr int kCompletionAllowanceMs = 5;
-// INFO: fc 22nov26 SetTx to TxDone, the frame's 5 ms and 1 ms more: bench worst 5.37 ms, build 863
+// INFO: fc 22nov26 the frame and 1 ms, over build 863's worst 5.53 ms from instant to TxDone
 constexpr int kKeyToDoneMs = static_cast<int>(adsl::kAirTimeMs) + 1;
 
 constexpr Window dwell_of(Window window) {

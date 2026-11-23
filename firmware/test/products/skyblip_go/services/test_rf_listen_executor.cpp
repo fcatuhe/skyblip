@@ -156,6 +156,30 @@ TEST_CASE("rf: a forced burst still misses if it cannot key by its deadline") {
     CHECK_FALSE(executor.events.pop(event));
 }
 
+// The executor's own ceiling, apart from the last key instant, which this burst is far from.
+TEST_CASE("rf: a burst keys up to 5 ms past its instant, forced or not, and misses from there") {
+    for (const bool forced : {false, true}) {
+        for (const uint64_t late_us : {4900u, 5000u}) {
+            CAPTURE(forced);
+            CAPTURE(late_us);
+            Executor executor;
+            REQUIRE(executor.rf.begin() == Status::Ok);
+            executor.chip.rssi_dbm = kQuietDbm;
+            auto dwell = executor.plan(450000, kInstantUs, forced);
+            dwell.tx_last_key_us = kInstantUs + 50000;
+            REQUIRE(executor.rf.arm(dwell) == Status::Ok);
+            executor.run(450, 595);
+            executor.run_us(kInstantUs + late_us, kInstantUs + late_us);
+
+            const bool late = late_us == 5000;
+            CHECK(executor.keyed() == !late);
+            events::RfEvent event{};
+            CHECK(executor.events.pop(event) == late);
+            if (late) CHECK(event.type == events::RfEventType::Missed);
+        }
+    }
+}
+
 // The silence after a forced burst reaches a burst the service already handed over.
 TEST_CASE("rf: a burst withdrawn before its instant never keys, one already keyed stays") {
     Executor executor;

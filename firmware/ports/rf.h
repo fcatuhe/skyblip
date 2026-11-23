@@ -30,7 +30,7 @@ struct RfPlan {
     int16_t frequency_correction_e1_ppm{0};
     const uint8_t* tx{nullptr};
     uint8_t tx_bytes{0};
-    // INFO: fc 14nov26 the burst keys here on a channel assessed clear, else it is reported Busy
+    // INFO: fc 22nov26 keys from here to its last key instant if clear, else Busy or Missed
     uint64_t tx_at_us{0};
     // INFO: fc 14nov26 ADS-L §D.3's forced transmission: keyed irrespective of carrier detect
     bool tx_forced{false};
