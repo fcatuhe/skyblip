@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include "core/diagnostics/layout.h"
 #include "core/events/stamp.h"
 #include "core/util/clamp.h"
 #include "core/util/result.h"
@@ -13,36 +14,6 @@ namespace skyblip::diagnostics {
 constexpr uint32_t kRecordBytes = 24;
 constexpr uint32_t kPayloadBytes = 16;
 constexpr uint32_t kPayloadOffset = 8;
-
-// INFO: fc 20sep26 a corpus outlives its firmware: a type is retired, never renumbered
-enum class Type : uint8_t {
-    None = 0,
-    Boot = 1,
-    Config = 2,
-    Gnss = 3,
-    Pps = 4,
-    Burst = 5,
-    Dwell = 6,
-    Flight = 7,
-    Power = 8,
-    Barometer = 9,
-    Motion = 10,
-    Contact = 11,
-    Link = 12,
-    Traffic = 13,
-    Write = 14,
-    Screen = 15,
-    Gap = 16,
-    End = 17,
-    Duty = 18,
-    Switch = 19,
-    Loop = 20,
-    Adsb = 21,
-};
-
-constexpr uint8_t kHighestType = static_cast<uint8_t>(Type::Adsb);
-
-const char* type_name(Type type);
 
 constexpr uint8_t kFlagPhaseValid = 1u << 0;
 constexpr uint8_t kFlagUtcDated = 1u << 1;
@@ -94,6 +65,7 @@ inline int8_t sample_offset_mv(int32_t sample_mv, int32_t median_mv) {
 
 // INFO: fc 03oct26 a burst's last byte holds the stage margin in 10 us steps, +-1.27 ms
 constexpr int32_t kStageMarginStepUs = 10;
+static_assert(kStageMarginStepUs == burst_scale::kTxStageMarginUs);
 
 inline int8_t stage_margin_steps(int32_t margin_us) {
     const int32_t steps = margin_us / kStageMarginStepUs;

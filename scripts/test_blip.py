@@ -4,9 +4,8 @@
     python3 scripts/test_blip.py
 
 Stdlib alone and no radio: every record here is handcrafted bytes, laid out
-against firmware/core/diagnostics/payload_*.cpp and firmware/core/flight/log_record.cpp.
-Those two files and these tables are the same layout written twice, once on each
-side of a Bluetooth link, and nothing but a test holds them together.
+against schemas/diagnostics_layout.v1.json and firmware/core/flight/log_record.cpp.
+The vectors hold the decoders to the bytes the firmware's encoders write.
 
 test_blip_offload.py holds the log endpoint conversation, test_blip_link.py the NMEA
 reassembly, reply framing and resume, test_blip_frames.py the CBOR codec and the
