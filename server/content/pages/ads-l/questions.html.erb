@@ -115,6 +115,20 @@ updated_on: "2026-11-19"
 </section>
 
 <section>
+  <h2 class="kicker">The age of the vertical rate</h2>
+  <h3>Is a vertical rate aged by its newest sample, or by the instant it describes?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.G.1.16</strong> says:</p>
+  <blockquote>
+    <p>No Traffic message shall be sent containing navigation data older than 500 ms.</p>
+  </blockquote>
+  <p>Go&rsquo;s vertical rate is the difference of two barometric heights a second apart, from a pressure sensor whose filter delays a step by about 0.75&nbsp;s. Go dates the rate by its newest pressure, and sends it only while that pressure is under 500&nbsp;ms old when the burst ends. Measured by the middle of its second and the filter&rsquo;s delay, the same rate describes the aircraft about 1.25&nbsp;s before its newest pressure.</p>
+  <ol>
+    <li><p><strong>How is a differenced and filtered rate to be aged?</strong> By its newest sample, or by the instant it describes? The second reading would need a shorter difference and less filtering, which roughly doubles the noise of each reading.</p></li>
+  </ol>
+  <p class="note">Not sent yet.</p>
+</section>
+
+<section>
   <h2 class="kicker">References</h2>
   <ul class="sources">
     <li>
