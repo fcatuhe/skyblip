@@ -20,7 +20,7 @@ constexpr uint32_t address_of(uint16_t serial) {
     return adsl::manufacturer_address(kSkyblipManufacturerPrefix, serial);
 }
 
-constexpr uint16_t serial_of(uint32_t address) { return static_cast<uint16_t>(address >> 8); }
+constexpr uint16_t serial_of(uint32_t address) { return adsl::manufacturer_base(address); }
 
 // INFO: fc 14nov26 ICAO Annex 10 Vol III, Appendix to Chapter 9, 5.2 f): never 24 zeros or 24 ones
 constexpr bool icao_assignable(uint32_t address) { return address != 0 && address < kAddressMask; }

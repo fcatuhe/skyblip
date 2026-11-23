@@ -12,6 +12,7 @@
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/adsl_edge/registration.h"
 #include "simulator/simulator.h"
 #include "test/support/config_frame.h"
 #include "test/support/settings_link.h"
@@ -47,8 +48,7 @@ adsl::Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
     return packet;
 }
 
-// A field, read the way B.3 lays one out: bit 0 of the header is bit 0 of its first byte.
-uint32_t field(const uint8_t* header, int offset, int width) {
+uint32_t b3_field(const uint8_t* header, int offset, int width) {
     uint32_t value = 0;
     for (int i = 0; i < width; i++) {
         const int bit = offset + i;
@@ -84,9 +84,9 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the prefix is address bits 0 to 7, the serial b
         traffic_packet(settings::address_of(0x1234), settings::kSkyblipAddressMappingTable);
     // Header bits 0-7 type 2, 8-13 table 58, 14-21 prefix 0x00, 22-37 serial 0x1234, 38-39 zero.
     check_header(ours, {0x02, 0x3A, 0x00, 0x8D, 0x04});
-    CHECK(field(ours.payload, 14, 24) == 0x123400u);
-    CHECK(field(ours.payload, 14, 8) == settings::kSkyblipManufacturerPrefix);
-    CHECK(field(ours.payload, 22, 16) == 0x1234u);
+    CHECK(b3_field(ours.payload, 14, 24) == 0x123400u);
+    CHECK(b3_field(ours.payload, 14, 8) == settings::kSkyblipManufacturerPrefix);
+    CHECK(b3_field(ours.payload, 22, 16) == 0x1234u);
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2.2: every burst the Go sends carries its serial above the prefix" *
@@ -98,15 +98,19 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: every burst the Go sends carries its serial abo
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(50);
     run_on(simulator, past_settling(simulator), 21000);
-    int read = 0;
+    int traffic = 0, status = 0, registration = 0;
     for (int i = 0; i < simulator.world().air().record_count(); i++) {
         adsl::Packet packet{};
         if (!packet_of(simulator.world().air().record_at(i), packet)) continue;
         // The host's serial 0x5AFE: table 58 in bits 8-13, prefix 0x00 in 14-21, 0x5AFE in 22-37.
         check_header(packet, {packet.payload_type, 0x3A, 0x80, 0xBF, 0x16});
-        read++;
+        traffic += packet.payload_type == adsl::Packet::kPayloadTypePosition;
+        status += packet.payload_type == adsl::Packet::kPayloadTypeStatus;
+        registration += packet.payload_type == adsl_edge::kPayloadTypeOgnDiagnostics;
     }
-    CHECK(read >= 20);
+    CHECK(traffic >= 20);
+    CHECK(status >= 1);
+    CHECK(registration >= 1);
 }
 
 // Our reading, which EASA is asked to confirm: every payload goes under table 5 while one is set.

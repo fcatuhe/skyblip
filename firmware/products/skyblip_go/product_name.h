@@ -12,7 +12,7 @@ constexpr ports::Capabilities kPlusParts =
     ports::Capability::Inclinometer | ports::Capability::Buzzer | ports::Capability::Haptic;
 
 static_assert(sizeof("skyBlip Go+") - 1 <= identity::kProductWordBytes,
-              "the name keeps its address");
+              "the name keeps its serial");
 
 constexpr identity::Variant variant_of(ports::Capabilities fitted) {
     return ports::has(fitted, kPlusParts) ? identity::Variant::Plus : identity::Variant::Standard;

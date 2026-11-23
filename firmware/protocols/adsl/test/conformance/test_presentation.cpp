@@ -38,6 +38,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2: the header is a type byte, 30 bits of sender, res
 
 TEST_CASE("ADS-L.4.SRD860.F.2.2: the prefix fills address bits 0 to 7 and the base bits 8 to 23") {
     CHECK(adsl::manufacturer_address(0xAB, 0x1234) == 0x1234ABu);
+    CHECK(adsl::manufacturer_base(0x1234ABu) == 0x1234u);
     const adsl::Packet packet =
         traffic_packet(adsl::manufacturer_address(0xAB, 0x1234), adsl::manufacturer_page_table(49));
     // Header bits 0-7 type 2, 8-13 table 58, 14-21 prefix 0xAB, 22-37 base 0x1234, 38-39 zero.

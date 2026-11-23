@@ -131,6 +131,9 @@ TEST_CASE("settings: a set patch out of range is refused atomically") {
 TEST_CASE("address: the prefix in the low byte, the serial the server signed above it" *
           doctest::test_suite("main")) {
     CHECK(address_of(0x0000) == 0x000000u);
+    CHECK(address_of(0x0001) == 0x000100u);
+    CHECK(address_of(0x00FF) == 0x00FF00u);
+    CHECK(address_of(0x0100) == 0x010000u);
     CHECK(address_of(0x012A) == 0x012A00u);
     CHECK(address_of(0xFFFF) == 0xFFFF00u);
     CHECK(int(kSkyblipManufacturerPrefix) == 0x00);

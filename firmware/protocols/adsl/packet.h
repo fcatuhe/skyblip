@@ -28,6 +28,10 @@ constexpr uint32_t manufacturer_address(uint8_t prefix, uint16_t base) {
     return static_cast<uint32_t>(base) << 8 | prefix;
 }
 
+constexpr uint16_t manufacturer_base(uint32_t address) {
+    return static_cast<uint16_t>(address >> 8);
+}
+
 // INFO: fc 13nov26 G.1.4 codes "no emergency" as 1, so 0 is "undefined", not "all well"
 constexpr uint8_t kEmergencyNone = 1;
 constexpr uint8_t kEmergencyGeneral = 2;

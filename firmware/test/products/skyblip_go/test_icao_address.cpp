@@ -123,7 +123,7 @@ TEST_CASE("rf: clearing the aircraft address puts table 58 and the serial back o
     CHECK(all_from(sent, {settings::kSkyblipAddressMappingTable, kSerialAddress}));
 }
 
-// The cycle start and the drawn instants key on the serial, so the address alone changes.
+// The cycle keys on the serial and the draws on the unit's own address, so neither moves.
 TEST_CASE("rf: setting an aircraft address mid-flight moves no burst in time or channel") {
     simulator::Simulator unset;
     simulator::Simulator set;
@@ -170,6 +170,14 @@ TEST_CASE(
 // Status is the page that names this aircraft, and it names the ICAO address once one is set.
 TEST_CASE("product: status names the address on air, the aircraft address once it is set" *
           doctest::test_suite("main")) {
+    Rig own;
+    REQUIRE(own.setup() == Status::Ok);
+    own.now_ms = 100;
+    own.show(go::Page::Status);
+    own.run(own.now_ms, own.now_ms + 4000);
+    CHECK(reads_in(own.product.screen().framebuffer(), "5AFE00", 0, 0, go::kGlassWidth,
+                   go::kGlassHeight, 2));
+
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().aircraft_address = kAircraftAddress;
