@@ -5,7 +5,7 @@ nav_title: "GPS"
 description: "Cómo valida y estabiliza skyBlip Go la posición GPS, se sincroniza con PPS y detecta el vuelo solo por la velocidad respecto al suelo."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-23"
 ---
 
 <section>
@@ -109,7 +109,7 @@ updated_on: "2026-11-20"
   <p class="lede">El cronómetro cuenta el tiempo en vuelo desde que encendiste el Go, no desde el último despegue. Se detiene al aterrizar y sigue en el siguiente despegue. Una toma y despegue no pone a cero el tiempo acumulado. Un aterrizaje falso solo pierde los segundos que cuenta como tiempo en tierra.</p>
 
   <h3 id="no-roll">Cuando la velocidad respecto al suelo no basta.</h3>
-  <p class="lede">Un parapente que vuela a unos 10&nbsp;m/s respecto al aire solo lleva 5&nbsp;m/s respecto al suelo con 5&nbsp;m/s de viento de cara. Puede quedar por debajo del umbral de despegue durante todo el vuelo. Las alas delta que vuelan en ladera y los globos pueden tener el mismo problema. Con esos tipos de aeronave, el Go transmite el estado indefinido de ADS-L en lugar de en tierra. ADS-L envía ese estado al ritmo de vuelo, de modo que la transmisión nunca los identifica como estacionados. Esto no hace que el detector de velocidad declare el estado en vuelo. Su registro de vuelo tiene otra regla: empieza cuando se mueven y termina tras dos minutos sin moverse.</p>
+  <p class="lede">Un parapente que vuela a unos 10&nbsp;m/s respecto al aire solo lleva 5&nbsp;m/s respecto al suelo con 5&nbsp;m/s de viento de cara. Puede quedar por debajo del umbral de despegue durante todo el vuelo. Los planeadores y las alas delta que vuelan en ladera, los ultraligeros lentos y los globos pueden tener el mismo problema. Con esos tipos de aeronave, el Go transmite el estado indefinido de ADS-L en lugar de en tierra. ADS-L envía ese estado al ritmo de vuelo, de modo que la transmisión nunca los identifica como estacionados. Esto no hace que el detector de velocidad declare el estado en vuelo. Su registro de vuelo tiene otra regla: empieza cuando se mueven y termina tras dos minutos sin moverse.</p>
   <p class="lede">Antes se usaba el ascenso barométrico para detectar estos vuelos. Se eliminó porque las rachas, los cambios de presión y los picos cuando fallaba el barómetro marcaban despegues falsos en la cola del hangar. La velocidad respecto al suelo evita esas detecciones falsas, pero puede no detectar un vuelo a baja velocidad respecto al suelo. El estado indefinido transmitido y la regla de registro separada cubren esos límites sin tomar el ascenso barométrico como prueba de vuelo.</p>
 
   <ul class="points">

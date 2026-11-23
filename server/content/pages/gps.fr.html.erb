@@ -5,7 +5,7 @@ slug: gps
 description: "Comment skyBlip Go tire un point des phrases GPS, attend qu'il se stabilise, garde l'heure avec le PPS et décide du vol à partir de la seule vitesse sol."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-23"
 ---
 
 <section>
@@ -109,7 +109,7 @@ updated_on: "2026-11-20"
   <p class="lede">Le chronomètre additionne le temps en vol depuis la mise en marche, pas depuis le dernier décollage. Il se met en pause à l&rsquo;atterrissage et reprend au décollage suivant. Un posé-décollé ne remet donc pas le compteur à zéro. Un faux atterrissage ne retire que les secondes passées dans l&rsquo;état sol.</p>
 
   <h3 id="no-roll">Les ailes qui n&rsquo;ont pas besoin de vitesse sol.</h3>
-  <p class="lede">Un parapente qui vole à environ 10&nbsp;m/s dans l&rsquo;air n&rsquo;a plus que 5&nbsp;m/s de vitesse sol face à une brise de 5&nbsp;m/s. Il peut rester sous le seuil de décollage pendant tout son vol. Les deltas en vol de pente et les ballons peuvent poser le même problème. Pour ces types d&rsquo;aéronefs, le Go émet l&rsquo;état indéfini d&rsquo;ADS-L plutôt que l&rsquo;état au sol. ADS-L transmet cet état à pleine cadence, sans jamais les annoncer comme garés. Cela ne fait pas passer le détecteur fondé sur la vitesse sol à l&rsquo;état en vol. Leur journal suit une règle distincte&nbsp;: il s&rsquo;ouvre quand ils bougent et se ferme après deux minutes d&rsquo;immobilité.</p>
+  <p class="lede">Un parapente qui vole à environ 10&nbsp;m/s dans l&rsquo;air n&rsquo;a plus que 5&nbsp;m/s de vitesse sol face à une brise de 5&nbsp;m/s. Il peut rester sous le seuil de décollage pendant tout son vol. Les planeurs et les deltas en vol de pente, les ULM lents et les ballons peuvent poser le même problème. Pour ces types d&rsquo;aéronefs, le Go émet l&rsquo;état indéfini d&rsquo;ADS-L plutôt que l&rsquo;état au sol. ADS-L transmet cet état à pleine cadence, sans jamais les annoncer comme garés. Cela ne fait pas passer le détecteur fondé sur la vitesse sol à l&rsquo;état en vol. Leur journal suit une règle distincte&nbsp;: il s&rsquo;ouvre quand ils bougent et se ferme après deux minutes d&rsquo;immobilité.</p>
   <p class="lede">La montée barométrique servait autrefois à détecter ces vols. Elle a été retirée parce que les rafales, les variations de pression et les pics lors d&rsquo;une perte du baromètre provoquaient de faux décollages dans la file du hangar. La vitesse sol évite ces fausses détections, mais peut manquer un vol à faible vitesse sol. L&rsquo;état indéfini émis par radio et la règle propre au journal répondent à ces limites sans prendre une montée barométrique pour une preuve de vol.</p>
 
   <ul class="points">

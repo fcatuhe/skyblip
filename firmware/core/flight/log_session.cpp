@@ -53,7 +53,7 @@ void LogSession::reset() {
 // INFO: fc 15oct26 the radio's full rate would log a parked paraglider for ever, so it moves
 bool LogSession::flying(const model::Ownship& own, bool rolling, uint32_t now_ms) {
     if (airborne(own.flight_state)) return true;
-    if (!flies_at_no_ground_speed(own.aircraft_category)) return false;
+    if (!flies_at_low_ground_speed(own.aircraft_category)) return false;
     if (rolling) {
         last_rolled_ms_ = now_ms;
         return true;

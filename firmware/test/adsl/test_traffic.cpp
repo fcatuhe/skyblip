@@ -115,13 +115,13 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
         model::Ownship own = flying();
         own.flight_state = state;
         adsl::Packet packet{};
-        protocol::from_own(packet, own, 0x123456, 6, 4);
+        protocol::from_own(packet, own, 0x123456, 6, 1);
         CHECK(packet.flight_state == state);
         CHECK(packet.flight_state != 3);
     }
 }
 
-// Our reading, put to EASA: with no ground speed to tell, a craft that can hover is Undefined.
+// Our reading, put to EASA: with no ground speed to tell, a craft that flies slow is Undefined.
 TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and goes at 1 Hz") {
     const auto flown = [](uint8_t category, uint8_t& state) {
         simulator::Simulator simulator;
@@ -140,20 +140,47 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and g
         }
         return sent;
     };
-    for (const uint8_t hovers : {3, 5, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
-        CAPTURE(int(hovers));
+    for (const uint8_t slow : {0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
+        CAPTURE(int(slow));
         model::Ownship parked = flying();
         parked.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
         adsl::Packet packet{};
-        REQUIRE(protocol::from_own(packet, parked, 0x123456, 6, hovers));
+        REQUIRE(protocol::from_own(packet, parked, 0x123456, 6, slow));
         CHECK(packet.flight_state == static_cast<uint8_t>(flight::FlightState::Unknown));
     }
     uint8_t paraglider_state = 3;
     CHECK(flown(7, paraglider_state) >= 14);
     CHECK(paraglider_state == static_cast<uint8_t>(flight::FlightState::Unknown));
-    uint8_t glider_state = 3;
-    CHECK(flown(4, glider_state) <= 2);
-    CHECK(glider_state == static_cast<uint8_t>(flight::FlightState::Ground));
+    uint8_t light_aircraft_state = 3;
+    CHECK(flown(1, light_aircraft_state) <= 2);
+    CHECK(light_aircraft_state == static_cast<uint8_t>(flight::FlightState::Ground));
+}
+
+// A glider ridge soaring into wind can hold 4 m/s over the ground, and went on air landed.
+TEST_CASE("ADS-L.4.SRD860.G.1.2: a glider slowed to 4 m/s is never announced On ground, at 1 Hz" *
+          doctest::test_suite("main")) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.product().settings().aircraft_type = 4;
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    const uint32_t now_ms = past_settling(simulator);
+    run_on(simulator, now_ms, 10000);
+    simulator.world().set_speed_kt(8);
+    simulator.world().air().clear();
+    run_on(simulator, now_ms + 10000 + simulator::Simulator::kStepMs, 30000);
+    int sent = 0;
+    int undefined = 0;
+    for (const simulator::AirRecord& record :
+         records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+        adsl::Packet packet{};
+        REQUIRE(packet_of(record, packet));
+        CHECK(packet.flight_state != static_cast<uint8_t>(flight::FlightState::Ground));
+        if (packet.flight_state == static_cast<uint8_t>(flight::FlightState::Unknown)) undefined++;
+        sent++;
+    }
+    CHECK(sent >= 28);
+    CHECK(undefined >= 15);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glider is 4") {

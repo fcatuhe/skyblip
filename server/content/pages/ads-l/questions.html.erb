@@ -4,7 +4,7 @@ nav_title: ADS-L questions
 description: "skyBlip's open questions to EASA on ADS-L Issue 2, grouped by theme, with the source clauses, current firmware behaviour and answer status."
 published_on: "2026-11-14"
 parent: ads-l
-updated_on: "2026-11-19"
+updated_on: "2026-11-23"
 ---
 
 <section>
@@ -37,12 +37,12 @@ updated_on: "2026-11-19"
 
 <section>
   <h2 class="kicker">The flight state</h2>
-  <h3>Should a craft that can hover announce Undefined rather than On ground?</h3>
+  <h3>Should a craft that can fly at low ground speed announce Undefined rather than On ground?</h3>
   <p>Clause <strong>ADS-L.4.SRD860.G.1.2, &ldquo;Flight State&rdquo;</strong>, says:</p>
   <blockquote>
     <p>The &ldquo;Undefined&rdquo; value shall be used if no reasonable decision is possible by the ADS-L device.</p>
   </blockquote>
-  <p>Go decides the flight state from ground speed. A paraglider soaring a ridge into wind, a balloon or a hovering helicopter can fly with no ground speed, so for those aircraft categories Go cannot tell a landing from flight. For categories 3, 5, 7 to 13 and 15 to 17 it sends Undefined instead of On ground. It therefore keeps the 1&nbsp;Hz rate of G.1.16 instead of dropping to the ground rate of 0.1&nbsp;Hz.</p>
+  <p>Go decides the flight state from ground speed. A glider or a paraglider soaring a ridge into wind, a slow ultralight, a balloon or a hovering helicopter can fly with little or no ground speed, so for those aircraft categories Go cannot tell a landing from flight. For categories 3 to 13 and 15 to 17, and for 0, where no category was set, it sends Undefined instead of On ground. It therefore keeps the 1&nbsp;Hz rate of G.1.16 instead of dropping to the ground rate of 0.1&nbsp;Hz.</p>
   <ol>
     <li><p><strong>Is this the use of Undefined the clause intends?</strong> Or should these categories announce On ground whenever their ground speed is low, and transmit at the ground rate?</p></li>
   </ol>

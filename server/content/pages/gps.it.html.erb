@@ -5,7 +5,7 @@ slug: gps
 description: "Come skyBlip Go ricava un fix dalle frasi GPS, attende che si stabilizzi, tiene il tempo con il PPS e decide se è in volo dalla sola velocità al suolo."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-23"
 ---
 
 <section>
@@ -109,7 +109,7 @@ updated_on: "2026-11-20"
   <p class="lede">Il cronometro di volo conta il tempo in volo dall&rsquo;accensione, non dall&rsquo;ultimo decollo. Si ferma all&rsquo;atterraggio e riparte al decollo successivo. Un tocca e riparti non azzera quindi il tempo accumulato e un falso atterraggio perde solo i secondi trascorsi nello stato a terra.</p>
 
   <h3 id="no-roll">Ali che non richiedono velocità al suolo.</h3>
-  <p class="lede">Un parapendio che vola a circa 10&nbsp;m/s rispetto all&rsquo;aria ha solo 5&nbsp;m/s di velocità al suolo contro una brezza di 5&nbsp;m/s. Può restare sotto la soglia di decollo per tutto il volo. Deltaplani in dinamica e palloni possono presentare lo stesso problema. Per questi tipi di aeromobile il Go trasmette lo stato indefinito di ADS-L invece dello stato a terra. ADS-L invia quello stato alla frequenza piena, quindi la trasmissione non li indica mai come parcheggiati. Questo non fa dichiarare il volo al rilevatore basato sulla velocità al suolo. Il loro registro di volo ha una regola separata: si apre quando si muovono e si chiude dopo due minuti da fermi.</p>
+  <p class="lede">Un parapendio che vola a circa 10&nbsp;m/s rispetto all&rsquo;aria ha solo 5&nbsp;m/s di velocità al suolo contro una brezza di 5&nbsp;m/s. Può restare sotto la soglia di decollo per tutto il volo. Alianti e deltaplani in dinamica, ultraleggeri lenti e palloni possono presentare lo stesso problema. Per questi tipi di aeromobile il Go trasmette lo stato indefinito di ADS-L invece dello stato a terra. ADS-L invia quello stato alla frequenza piena, quindi la trasmissione non li indica mai come parcheggiati. Questo non fa dichiarare il volo al rilevatore basato sulla velocità al suolo. Il loro registro di volo ha una regola separata: si apre quando si muovono e si chiude dopo due minuti da fermi.</p>
   <p class="lede">In passato la salita barometrica veniva usata per rilevare questi voli. È stata rimossa perché raffiche, variazioni di pressione e picchi quando il barometro smetteva di rispondere causavano falsi decolli nella coda davanti all&rsquo;hangar. La velocità al suolo evita questi falsi rilevamenti, ma può non riconoscere il volo a bassa velocità al suolo. Lo stato indefinito trasmesso e la regola separata per il registro affrontano questi limiti senza trattare la salita barometrica come prova di volo.</p>
 
   <ul class="points">

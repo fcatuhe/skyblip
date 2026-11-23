@@ -248,19 +248,19 @@ TEST_CASE("flight: a lost fix is not a landing, so the ground latch holds airbor
     CHECK(latch.state() == FlightState::Ground);
 }
 
-// A paraglider soaring a ridge at walking pace went on air landed, once every ten seconds.
-TEST_CASE("flight state: a craft that can hover is never announced landed, only undefined" *
+// A paraglider or a glider soaring a ridge into wind went on air landed, once every ten seconds.
+TEST_CASE("flight state: a craft that can fly at low ground speed is never announced landed" *
           doctest::test_suite("main")) {
     const uint8_t on_ground = static_cast<uint8_t>(FlightState::Ground);
     const uint8_t airborne_code = static_cast<uint8_t>(FlightState::Airborne);
     const uint8_t undefined = static_cast<uint8_t>(FlightState::Unknown);
-    for (const uint8_t hovers : {3, 5, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
-        CAPTURE(int(hovers));
-        CHECK(announced_state(on_ground, hovers) == undefined);
-        CHECK_FALSE(adsl::reduced_rate(announced_state(on_ground, hovers)));
-        CHECK(announced_state(airborne_code, hovers) == airborne_code);
+    for (const uint8_t slow : {0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
+        CAPTURE(int(slow));
+        CHECK(announced_state(on_ground, slow) == undefined);
+        CHECK_FALSE(adsl::reduced_rate(announced_state(on_ground, slow)));
+        CHECK(announced_state(airborne_code, slow) == airborne_code);
     }
-    for (const uint8_t fixed_wing : {0, 1, 2, 4, 6, 14}) {
+    for (const uint8_t fixed_wing : {1, 2, 14}) {
         CAPTURE(int(fixed_wing));
         CHECK(announced_state(on_ground, fixed_wing) == on_ground);
         CHECK(adsl::reduced_rate(announced_state(on_ground, fixed_wing)));
