@@ -45,8 +45,8 @@ struct Unit {
     }
 
     void pass(uint32_t for_ms) {
-        rig.run(now_ms, now_ms + for_ms);
-        now_ms += for_ms + 50;
+        rig.run_for(for_ms);
+        rig.now_ms += 50;
     }
 
     void ask() {
@@ -96,7 +96,6 @@ struct Unit {
     common::Pending pending;
     ActivationVectors vectors;
     Rig rig;
-    uint32_t now_ms{0};
 };
 
 }  // namespace
@@ -108,7 +107,7 @@ TEST_CASE("product: a press held through a prompt's arrival, and one press after
         const go::Alarm volume = unit.rig.settings().alarm;
         unit.hold_through_the_prompt();
         unit.pass(100);
-        unit.rig.press(unit.now_ms);
+        unit.rig.press();
         unit.pass(2000);
         CHECK(unit.prompt_stands());
         CHECK_FALSE(unit.allowed_anything());
@@ -122,13 +121,13 @@ TEST_CASE("product: after a held press the gesture arms only once the thumb has 
         Unit unit(pending);
         unit.hold_through_the_prompt();
         unit.pass(250);
-        unit.rig.press(unit.now_ms);
+        unit.rig.press();
         unit.pass(100);
         CHECK(unit.prompt_stands());
         CHECK_FALSE(unit.allowed_anything());
 
         unit.pass(800);
-        unit.rig.press(unit.now_ms);
+        unit.rig.press();
         unit.pass(100);
         CHECK_FALSE(unit.prompt_stands());
         CHECK(unit.allowed_anything());

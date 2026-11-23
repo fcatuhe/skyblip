@@ -37,10 +37,9 @@ std::string trust_browser() {
 
 common::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
 
-void say(Rig& rig, uint32_t& now_ms, const std::string& json) {
+void say(Rig& rig, const std::string& json) {
     rig.send(json.c_str());
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
 }
 
 std::vector<uint8_t> installed_slot() {
@@ -71,11 +70,11 @@ TEST_CASE("product: the browser whose record the .uf2 carried changes the settin
     CHECK(rig.platform.dfu().running_slot[InstalledSlot::kPage] == 0xFF);
 
     rig.platform.random().queue(kNonce);
-    say(rig, rig.now_ms, "{\"command\":\"browser_challenge\"}");
-    say(rig, rig.now_ms, trust_browser());
+    say(rig, "{\"command\":\"browser_challenge\"}");
+    say(rig, trust_browser());
     CHECK(rig.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"trusted\"}");
-    say(rig, rig.now_ms, "{\"command\":\"set\",\"units\":\"metric\"}");
+    say(rig, "{\"command\":\"set\",\"units\":\"metric\"}");
     CHECK(config(rig).pending() == common::Pending::None);
     CHECK(rig.settings().units == go::Units::Metric);
 }

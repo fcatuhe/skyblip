@@ -189,22 +189,18 @@ TEST_CASE(
 TEST_CASE("comms flight gate: a set in flight leaves the radar and an advisory on the glass") {
     ScreenRig sent;
     ScreenRig untouched;
-    uint32_t now_ms = 0;
     for (ScreenRig* rig : {&sent, &untouched}) {
-        uint32_t at_ms = 0;
         rig->config.set_flight_state(flight::FlightState::Airborne);
-        rig->run_seconds(at_ms, 3);
-        rig->threat(traffic::Level::Advisory, 200, 100, at_ms);
-        rig->run_seconds(at_ms, 2);
-        now_ms = at_ms;
+        rig->run_seconds(3);
+        rig->threat(traffic::Level::Advisory, 200, 100, rig->now_ms);
+        rig->run_seconds(2);
     }
 
     for (int i = 0; i < 6; i++) {
         sent.config.on_rx(config_frame("{\"command\":\"set\",\"units\":1}"));
         sent.config.on_rx(config_frame("{\"command\":\"set\"}"));
-        uint32_t at_ms = now_ms;
-        sent.run_seconds(at_ms, 20);
-        untouched.run_seconds(now_ms, 20);
+        sent.run_seconds(20);
+        untouched.run_seconds(20);
         CHECK(sent.config.pending() == common::Pending::None);
         CHECK(sent.screen.prompt() == common::Pending::None);
     }
