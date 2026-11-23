@@ -282,9 +282,11 @@ bool OwnshipService::relabels(int32_t off_ms, bool fixed) {
     if (off_ms == 0) {
         label_step_ms_ = 0;
         relabeled_ = false;
+        off_unmarked_ = false;
         return true;
     }
-    const bool stepped = fixed && relabeled_ && off_ms % 1000 == 0;
+    off_unmarked_ = off_unmarked_ || (fixed && !relabeled_);
+    const bool stepped = fixed && relabeled_ && !off_unmarked_ && off_ms % 1000 == 0;
     const bool confirmed = stepped && label_step_ms_ == off_ms;
     label_step_ms_ = stepped && !confirmed ? off_ms : 0;
     return confirmed;

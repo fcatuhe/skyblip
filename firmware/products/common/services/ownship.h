@@ -98,6 +98,8 @@ class OwnshipService : public runtime::Service {
     int32_t label_step_ms_{0};
     // INFO: fc 22nov26 the part's stamps stepped back since a whole second last named its own edge
     bool relabeled_{false};
+    // INFO: fc 23nov26 a timely fix named its edge off before any step back, as a late part does
+    bool off_unmarked_{false};
     bool second_opened_{false};
     int32_t gnss_reference_altitude_mm_{0};
     uint32_t gnss_reference_ms_{0};

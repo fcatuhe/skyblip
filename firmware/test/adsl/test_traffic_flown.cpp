@@ -57,21 +57,22 @@ int check_every_position(simulator::Simulator& simulator) {
     return checked;
 }
 
-// The positions a flying Go sends in the 15 s from 5 s after its receiver's label steps by step_s.
-int positions_after_label_step(int32_t step_s) {
+// Every position a flying Go sends in the 20 s from its receiver's label stepping by step_s,
+// checked.
+int positions_after_label_step(int32_t step_s, uint32_t latency_ms = parts::L76k::kBurstStartMs) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     fly_measured(simulator);
     uint32_t now_ms = past_settling(simulator);
+    simulator.world().gnss().latency_ms = latency_ms;
     run_on(simulator, now_ms, 10000);
     now_ms += 10000;
     while (now_ms % 1000 != 700) simulator.step(now_ms += simulator::Simulator::kStepMs);
     models::L76k& chip = simulator.world().gnss();
     chip.utc_seconds_of_day = static_cast<uint32_t>(
         (static_cast<int32_t>(chip.utc_seconds_of_day) + step_s + 86400) % 86400);
-    run_on(simulator, now_ms + simulator::Simulator::kStepMs, 5000);
     simulator.world().air().clear();
-    run_on(simulator, now_ms + 5000 + 2 * simulator::Simulator::kStepMs, 15000);
+    run_on(simulator, now_ms + simulator::Simulator::kStepMs, 20000);
     return check_every_position(simulator);
 }
 
@@ -220,11 +221,18 @@ TEST_CASE(
 // A leap second's 23:59:60 and the 00:00:00 after it name one second, and the Go fell silent for
 // good.
 TEST_CASE("ADS-L.4.SRD860.G.1.16: a receiver that names one second twice is on air again in 5 s") {
-    CHECK(positions_after_label_step(-1) >= 14);
+    CHECK(positions_after_label_step(-1) >= 16);
 }
 
 // A cold start may begin with a stale GPS-UTC offset, 18 s in 2026, and step its UTC back when
 // told.
 TEST_CASE("ADS-L.4.SRD860.G.1.16: a receiver whose UTC steps back 18 s is on air again in 5 s") {
-    CHECK(positions_after_label_step(-18) >= 14);
+    CHECK(positions_after_label_step(-18) >= 16);
+}
+
+// A part already a second late names its edge a second off with no step back, so a repeat moves
+// nothing.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.16: a part a second late that then names a second twice stays off air") {
+    CHECK(positions_after_label_step(-1, 1000 + parts::L76k::kBurstStartMs) == 0);
 }
