@@ -87,6 +87,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRollingSpeedMmS` | 1500 (1.5 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kGroundSpeedMmS` | 1000 (1 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/core/flight/README.md) argues it |
+| `kSpeedMaxAgeMs` | `kLandingHoldMs` = 10000 (10 s) | milliseconds | MaxAge | G.1.2: a state no speed has backed for a landing hold is no reasonable decision |
 | `kTurnWindowMs` | 1000 (1 s) | milliseconds | Window | [README](../firmware/core/flight/README.md) argues it |
 
 ## [`firmware/core/gnss`](../firmware/core/gnss/README.md)
@@ -426,4 +427,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-281 constants over 26 folders.
+282 constants over 26 folders.
