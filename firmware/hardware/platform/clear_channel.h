@@ -18,8 +18,9 @@ constexpr int32_t kCcaThresholdCentiDbm = timing::cca_threshold_centi_dbm(
 
 // INFO: fc 22nov26 build 892 staged in up to 660 us without the extra sync register write
 constexpr uint64_t kTxStageLeadUs = 800;
-// INFO: fc 22nov26 allow for SetTx, synthesizer wake and the configured 200 us PA ramp
-constexpr uint64_t kTxStartupAllowanceUs = 350;
+// INFO: fc 23nov26 DS Table 8-2 gives 105 us from STDBY_XOSC, plus 200 us ramp and a 66 us bench
+// SPI command
+constexpr uint64_t kTxStartupAllowanceUs = 400;
 // TODO: fc 14nov26 a guess at the CCA reads' overrun, until a bench capture times them on nRF52
 constexpr uint64_t kCcaOverrunUs = 300;
 // INFO: fc 14nov26 the CCA's window, then staging, so it listens on the dwell's channel in RX

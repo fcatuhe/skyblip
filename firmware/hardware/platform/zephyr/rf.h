@@ -262,7 +262,7 @@ class Rf : public ports::Rf {
     }
 
     // INFO: fc 14nov26 EN 300 220-1 5.21.1 before each burst not forced, kept to the dead time
-    bool listen_and_key(const ports::RfBurst& burst, uint8_t index) {
+    bool listen_and_key(const ports::RfBurst& burst, uint8_t index, bool& fault) {
         if (!mailbox_.claim(burst, index)) return false;
         Assessment assessment{};
         if (!burst.forced) {
@@ -270,8 +270,25 @@ class Rf : public ports::Rf {
                 radio_.mode() == parts::RadioMode::Rx, [this] { return read_level(); }, clock_);
             if (!assessment.clear) return refuse(burst, index, assessment);
         }
-        if (key(burst, assessment)) return true;
-        return refuse(burst, index, Assessment{});
+
+        tx_at_us_ = burst.at_us;
+        staged_at_us_ = 0;
+        if (radio_.stage_tx(burst.chips, burst.bytes) != Status::Ok ||
+            radio_.wait_ready() != Status::Ok)
+            return miss_unkeyed(index, fault);
+
+        staged_at_us_ = clock_.microseconds();
+        while (clock_.microseconds() < burst.at_us) k_busy_wait(1);
+        if (!burst.forced &&
+            !within_dead_time(assessment, clock_.microseconds() + kTxStartupAllowanceUs)) {
+            fault = radio_.start_receive() != Status::Ok;
+            if (fault) return miss_unkeyed(index, fault);
+            return refuse(burst, index, Assessment{});
+        }
+        if (radio_.key_tx() != Status::Ok) return miss_unkeyed(index, fault);
+        keyed_at_us_ = clock_.microseconds();
+        tail_from_us_ = keyed_at_us_ + radio_.air_us(burst.bytes);
+        return true;
     }
 
     bool refuse(const ports::RfBurst& burst, uint8_t index, const Assessment& assessment) {
@@ -280,25 +297,12 @@ class Rf : public ports::Rf {
         return false;
     }
 
-    // INFO: fc 28sep26 staged, so the instant costs one SetTx | 14nov26 none past the dead time
-    bool key(const ports::RfBurst& burst, const Assessment& assessment) {
-        tx_at_us_ = burst.at_us;
-        if (radio_.stage_tx(burst.chips, burst.bytes) != Status::Ok ||
-            radio_.wait_ready() != Status::Ok) {
-            (void)radio_.start_receive();
-            return false;
-        }
-        staged_at_us_ = clock_.microseconds();
-        while (clock_.microseconds() < burst.at_us) k_busy_wait(1);
-        if (!burst.forced &&
-            !within_dead_time(assessment, clock_.microseconds() + kTxStartupAllowanceUs)) {
-            (void)radio_.start_receive();
-            return false;
-        }
-        (void)radio_.key_tx();
-        keyed_at_us_ = clock_.microseconds();
-        tail_from_us_ = keyed_at_us_ + radio_.air_us(burst.bytes);
-        return true;
+    bool miss_unkeyed(uint8_t index, bool& fault) {
+        if (!fault) fault = radio_.start_receive() != Status::Ok;
+        mailbox_.release(index);
+        keyed_at_us_ = 0;
+        emit(events::RfEventType::Missed, clock_.microseconds());
+        return false;
     }
 
     // INFO: fc 03oct26 build 892's TxDone edge woke 0.3 ms after the status bit, RxDone's on time
@@ -345,7 +349,13 @@ class Rf : public ports::Rf {
         while (!abort_ && clock_.microseconds() < plan.end_us) {
             bursts = mailbox_.flying_bursts();
             if (clock_.microseconds() >= bursts.stage_at_us(keyed, done, kCcaLeadUs)) {
-                if (!listen_and_key(bursts.burst[keyed], keyed)) continue;
+                if (!listen_and_key(bursts.burst[keyed], keyed, fault)) {
+                    if (fault) {
+                        miss_unfinished(mailbox_.flying_bursts(), done, keyed);
+                        return;
+                    }
+                    continue;
+                }
                 keyed++;
             }
             if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.microseconds();

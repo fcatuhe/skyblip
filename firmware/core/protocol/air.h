@@ -34,6 +34,20 @@ static_assert(shared_sync(adsl::kSyncWord) == shared_sync(alptas::kSyncWord),
 constexpr uint8_t kSharedSync[2] = {static_cast<uint8_t>(shared_sync(adsl::kSyncWord) >> 8),
                                     static_cast<uint8_t>(shared_sync(adsl::kSyncWord))};
 
+constexpr uint16_t kAdslTxPreambleChips = 8;
+constexpr uint16_t kAdslSyncFirstChips =
+    wire::manchester_chips(static_cast<uint8_t>(adsl::kSyncWord >> 16));
+constexpr uint16_t kAdslSyncSecondChips =
+    wire::manchester_chips(static_cast<uint8_t>(adsl::kSyncWord >> 8));
+constexpr uint8_t kAdslTxSync[] = {0xD5,
+                                   kSharedSync[0],
+                                   kSharedSync[1],
+                                   static_cast<uint8_t>(kAdslSyncFirstChips >> 8),
+                                   static_cast<uint8_t>(kAdslSyncFirstChips),
+                                   static_cast<uint8_t>(kAdslSyncSecondChips >> 8),
+                                   static_cast<uint8_t>(kAdslSyncSecondChips)};
+constexpr uint8_t kAdslTxSyncBits = sizeof(kAdslTxSync) * 8;
+
 // INFO: fc 20nov26 the report drops the window the detector matched, so it opens on the sync tail
 constexpr uint8_t kSyncTailBits = static_cast<uint8_t>(32u - kSharedSyncEndChip / 2u);
 constexpr uint8_t kSyncTailBytes = 3;
@@ -69,6 +83,7 @@ uint8_t frame_bytes(System system);
 
 // INFO: fc 15sep26 SX1262 DS 6.2.2: the part inserts the window, the buffer carries the rest
 size_t m_band_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
+size_t adsl_m_band_fifo(const uint8_t* frame, uint8_t bytes, uint8_t* chips);
 
 bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out);
 

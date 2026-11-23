@@ -147,7 +147,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         return true;
     }
 
-    // INFO: fc 22nov26 DS 6.2.2 the modem puts its preamble and sync register ahead of the FIFO
+    // INFO: fc 23nov26 DS Figure 6-3 places the preamble and sync register ahead of the FIFO
     template <size_t Capacity>
     bool take_tx(uint8_t (&out)[Capacity], uint8_t& bytes) {
         if (!tx_pending) return false;

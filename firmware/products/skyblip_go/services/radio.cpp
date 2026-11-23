@@ -8,20 +8,6 @@
 
 namespace skyblip::go {
 
-namespace {
-constexpr uint16_t kSyncFirstChips =
-    wire::manchester_chips(static_cast<uint8_t>(adsl::kSyncWord >> 16));
-constexpr uint16_t kSyncSecondChips =
-    wire::manchester_chips(static_cast<uint8_t>(adsl::kSyncWord >> 8));
-constexpr uint8_t kTxSync[] = {0x55,
-                               protocol::kSharedSync[0],
-                               protocol::kSharedSync[1],
-                               static_cast<uint8_t>(kSyncFirstChips >> 8),
-                               static_cast<uint8_t>(kSyncFirstChips),
-                               static_cast<uint8_t>(kSyncSecondChips >> 8),
-                               static_cast<uint8_t>(kSyncSecondChips)};
-}  // namespace
-
 Status RadioService::setup() {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Rf)) return Status::Down;
     pass_us_ = context_.roles.clock.microseconds();
@@ -197,9 +183,9 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     plan.sync = protocol::kSharedSync;
     plan.sync_bits = protocol::kSharedSyncBits;
     plan.rx_bytes = protocol::kRxChipBytes;
-    plan.tx_sync = kTxSync;
-    plan.tx_sync_bits = sizeof(kTxSync) * 8;
-    plan.tx_preamble_chips = 8;
+    plan.tx_sync = protocol::kAdslTxSync;
+    plan.tx_sync_bits = protocol::kAdslTxSyncBits;
+    plan.tx_preamble_chips = protocol::kAdslTxPreambleChips;
     plan.bitrate = adsl::kMBandChipRateBps;
     plan.deviation_hz = adsl::kMBandDeviationHz;
     plan.bandwidth_hz = adsl::kMBandChannelBandwidthHz;

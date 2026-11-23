@@ -1,4 +1,4 @@
-// What goes on air and what comes off it: the buffer, the sync window the part inserts, the frame.
+// The chips on air and the frames the SX1262 reads back.
 #include <initializer_list>
 
 #include "core/protocol/adsl_uplink.h"
@@ -228,7 +228,7 @@ TEST_CASE("sx1262: a burst carrying a sync word the dwell is not armed for is no
     CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::None);
 }
 
-TEST_CASE("sx1262: the shorter receive sync and receive length return after transmission") {
+TEST_CASE("sx1262: receive framing returns after TxDone, a timeout or a cancelled stage") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
@@ -237,30 +237,70 @@ TEST_CASE("sx1262: the shorter receive sync and receive length return after tran
     config.sync_bits = protocol::kSharedSyncBits;
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
-    const uint8_t tx_sync[]{0x55, 0x55, 0x99, 0x95, 0xA6, 0x9A, 0x65};
-    config.tx_sync = tx_sync;
-    config.tx_sync_bits = sizeof(tx_sync) * 8;
-    config.tx_preamble_chips = 8;
+    config.tx_sync = protocol::kAdslTxSync;
+    config.tx_sync_bits = protocol::kAdslTxSyncBits;
+    config.tx_preamble_chips = protocol::kAdslTxPreambleChips;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
     const uint8_t burst[2 + 2 * adsl::kFrameBytes] = {0xAA};
-    REQUIRE(radio.transmit(burst, sizeof(burst)) == Status::Ok);
     uint8_t on_air[64] = {0};
-    uint8_t bytes = 0;
-    REQUIRE(chip.take_tx(on_air, bytes));
-    CHECK(bytes == 58);
-    CHECK(radio.air_us(sizeof(burst)) == 4640);
 
-    chip.signal_tx_done();
-    REQUIRE(radio.poll(on_air, sizeof(on_air)).type == RadioEventType::TxDone);
-    REQUIRE(radio.start_receive() == Status::Ok);
+    SUBCASE("TxDone") {
+        REQUIRE(radio.transmit(burst, sizeof(burst)) == Status::Ok);
+        uint8_t bytes = 0;
+        REQUIRE(chip.take_tx(on_air, bytes));
+        // Bench 28sep26: the receive length used to add four stale bytes to a burst.
+        CHECK(bytes == 58);
+        CHECK(radio.air_us(sizeof(burst)) == 4640);
+        chip.signal_tx_done();
+        REQUIRE(radio.poll(on_air, sizeof(on_air)).type == RadioEventType::TxDone);
+        REQUIRE(radio.start_receive() == Status::Ok);
+    }
+
+    SUBCASE("TX timeout") {
+        REQUIRE(radio.transmit(burst, sizeof(burst)) == Status::Ok);
+        REQUIRE(chip.expire_tx());
+        REQUIRE(radio.poll(on_air, sizeof(on_air)).type == RadioEventType::Timeout);
+        CHECK(radio.tx_recovery_count() == 1);
+    }
+
+    SUBCASE("cancelled after staging") {
+        REQUIRE(radio.stage_tx(burst, sizeof(burst)) == Status::Ok);
+        REQUIRE(chip.sync_bits == 56);
+        REQUIRE(radio.start_receive() == Status::Ok);
+        CHECK_FALSE(chip.saw_command(sx1262::kSetTx));
+    }
+
     CHECK(chip.receiving);
     CHECK(chip.sync_bits == 16);
     CHECK(chip.sync[0] == 0x55);
     CHECK(chip.sync[1] == 0x99);
     CHECK(chip.payload_bytes == protocol::kRxChipBytes);
-    const uint8_t short_preamble_peer[]{0x01, 0x55, 0x99, 0x95, 0xA6, 0x9A, 0x65};
-    CHECK(chip.receive_air(short_preamble_peer, sizeof(short_preamble_peer)));
+    const uint8_t modeled_short_preamble_peer[]{0x01, 0x55, 0x99, 0x95, 0xA6, 0x9A, 0x65};
+    CHECK(chip.receive_air(modeled_short_preamble_peer, sizeof(modeled_short_preamble_peer)));
     CHECK(chip.faults == 0);
+}
+
+TEST_CASE("sx1262: invalid framing is refused before any chip command") {
+    models::Sx1262 chip;
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.tx_sync = protocol::kAdslTxSync;
+    config.tx_sync_bits = protocol::kAdslTxSyncBits;
+    config.tx_preamble_chips = protocol::kAdslTxPreambleChips;
+
+    SUBCASE("oversized RX sync") { config.sync_bits = 65; }
+    SUBCASE("missing RX sync") { config.sync = nullptr; }
+    SUBCASE("oversized TX sync") { config.tx_sync_bits = 65; }
+    SUBCASE("missing TX sync") { config.tx_sync = nullptr; }
+    SUBCASE("no TX preamble") { config.tx_preamble_chips = 0; }
+    SUBCASE("no RX sync to restore") { config.sync_bits = 0; }
+
+    const size_t commands = chip.commands_seen.size();
+    CHECK(radio.configure_radio(config) == Status::Invalid);
+    CHECK(chip.commands_seen.size() == commands);
 }

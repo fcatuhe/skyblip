@@ -297,7 +297,7 @@ constexpr uint32_t kTxGuardUs = 25000;
 constexpr uint32_t kResetLowUs = 100;
 // INFO: fc 05sep26 DS 13.1.2: no SPI for 500 us after SetSleep, while the configuration saves
 constexpr uint32_t kSleepSettleUs = 500;
-// INFO: fc 20nov26 ADS-L §C.2 sends 16 preamble chips, and the detector needs 8 of them
+// INFO: fc 23nov26 16 chips is the default preamble length and RX uses the 8-chip detector
 constexpr uint16_t kPreambleChips = 16;
 constexpr uint8_t kSyncWordBitsCeiling = 64;
 constexpr uint8_t kPreambleDetect8Chips = 0x04;

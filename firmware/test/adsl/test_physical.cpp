@@ -61,7 +61,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2: a busy burst backs off 15 to 250 ms, and stays in
     CHECK(timing::PoliteAccess::kDeferralCeilingUs == adsl::kMBandBackoff.ceiling_us);
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.2.3: both modeled preamble phases leave five to twelve 01s") {
+TEST_CASE("ADS-L.4.SRD860.C.2.3: both modeled phases leave seven 01s before the marker") {
     for (const bool inverted : {false, true}) {
         CAPTURE(inverted);
         simulator::Simulator simulator;
@@ -90,8 +90,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.3: both modeled preamble phases leave five to twel
             for (auto start = marker; start >= 2 && chips.compare(start - 2, 2, "01") == 0;
                  start -= 2)
                 repetitions++;
-            CHECK(repetitions >= 5);
-            CHECK(repetitions <= 12);
+            CHECK(repetitions == 7);
             CHECK(chips.size() == 464);
         }
         CHECK(positions > 0);
