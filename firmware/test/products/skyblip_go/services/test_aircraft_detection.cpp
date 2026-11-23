@@ -138,18 +138,16 @@ TEST_CASE("aircraft detection: the AIRCRAFT menu reads what Bravo hears, and a p
     tango.go.tap();
     REQUIRE_FALSE(tango.go.product.screen().noticing());
 
-    uint32_t& now_ms = tango.now_ms;
-    open_menu(tango.go, now_ms);
-    focus_on(tango.go, now_ms, go::MenuRow::Detected);
-    tango.go.run(now_ms, now_ms + 4000);
-    now_ms += 4000;
+    open_menu(tango.go);
+    focus_on(tango.go, go::MenuRow::Detected);
+    tango.go.run_for(4000);
     CHECK(reads_in(tango.go.product.screen().framebuffer(), "ADS-B 3A4B5C", 0, 0, go::kGlassWidth,
                    go::kGlassHeight, 2, false));
 
-    change(tango.go, now_ms);
+    change(tango.go);
     CHECK(tango.go.settings().aircraft_address == kHeardAddress);
     CHECK(tango.go.product.screen().editor().focus() == go::MenuRow::Aircraft);
-    run_past_the_write_settle(tango.go, now_ms);
+    run_past_the_write_settle(tango.go);
     go::Settings stored{};
     REQUIRE(stored_settings(tango.go, stored));
     CHECK(stored.aircraft_address == kHeardAddress);
@@ -199,14 +197,12 @@ TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says 
     REQUIRE(field(status, "command") == "status");
     CHECK(field(status, "own_transponder").empty());
 
-    uint32_t& now_ms = flight.tango.now_ms;
-    open_menu(flight.go(), now_ms);
-    focus_on(flight.go(), now_ms, go::MenuRow::Detected);
-    flight.go().run(now_ms, now_ms + 4000);
-    now_ms += 4000;
+    open_menu(flight.go());
+    focus_on(flight.go(), go::MenuRow::Detected);
+    flight.go().run_for(4000);
     CHECK(reads_in(flight.glass(), "IN FLIGHT", 0, 0, go::kGlassWidth, go::kGlassHeight,
                    go::kMenuScale, false));
-    change(flight.go(), now_ms);
+    change(flight.go());
     CHECK(flight.go().settings().aircraft_address == go::kAircraftAddressUnset);
 }
 
@@ -219,14 +215,12 @@ TEST_CASE("aircraft detection: a Go with no fix proposes nothing, and the menu s
     tango.run_for(3000);
     CHECK_FALSE(tango.go.product.screen().noticing());
 
-    uint32_t& now_ms = tango.now_ms;
-    open_menu(tango.go, now_ms);
-    focus_on(tango.go, now_ms, go::MenuRow::Detected);
-    tango.go.run(now_ms, now_ms + 4000);
-    now_ms += 4000;
+    open_menu(tango.go);
+    focus_on(tango.go, go::MenuRow::Detected);
+    tango.go.run_for(4000);
     CHECK(reads_in(tango.go.product.screen().framebuffer(), "NO FIX", 0, 0, go::kGlassWidth,
                    go::kGlassHeight, go::kMenuScale, false));
-    change(tango.go, now_ms);
+    change(tango.go);
     CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
 }
 
