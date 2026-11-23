@@ -6,7 +6,7 @@ Every threshold in this tree, 12.0 m/s for a takeoff, 1000 ms for a long touch, 
 
 ## What it decides
 
-`record.h` is the envelope: a 24-byte slot, the type tag, the instant, and the flags every type shares. `payload.h` is one struct per subject, each inside the 16 bytes the envelope leaves, encoded in `payload_sensed.cpp` for what reached the device and `payload_decided.cpp` for what it made of it. `recorder.h` is the RAM ring a capture fills and a writer drains.
+`record.h` is the envelope: a 24-byte slot, the type tag, the instant, and the flags every type shares. `layout.h` holds the type codes, each field's payload offset and flag bit, and the enums this layer declares, all generated from the layout (below). `payload.h` is one struct per subject, each inside the 16 bytes the envelope leaves, encoded in `payload_sensed.cpp` for what reached the device and `payload_decided.cpp` for what it made of it. `recorder.h` is the RAM ring a capture fills and a writer drains.
 
 | Not here | Where |
 |---|---|
@@ -35,7 +35,7 @@ Every field is written and read one at a time, little-endian, as `core/flight/lo
 
 - `at_s` is UTC once the receiver has given a second, and time since boot before that, as `radio::Entry::at_s` is. `kFlagUtcDated` says which.
 - `kFlagPhaseValid` says `into_ms` was measured against a PPS edge. Without it the millisecond field means nothing.
-- Those two bits mean the same on every type. Bits 2 to 7 belong to the type and are named beside it in `payload.h`.
+- Those two bits mean the same on every type. Bits 2 to 7 belong to the type and are named in `layout.h`.
 - A type is retired, never renumbered, because a corpus outlives the firmware that wrote it and a decoder has only the number.
 - Type 0 is not a record, so an all-zero slot decodes as nothing. A slot no writer has reached reads erased (`store::erased`).
 
