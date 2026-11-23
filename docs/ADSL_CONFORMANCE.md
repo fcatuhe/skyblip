@@ -1,6 +1,6 @@
 # ADS-L conformance
 
-skyBlip's ADS-L implementation 0.1.0, read against ADS-L 4 SRD-860 Issue 2 clause by clause by the host test suite. Each of the specification's 80 clause headings is below, in the document's order, with the cases that read it: 170 pass and 20 are skipped (8 prose, 2 paperwork, 8 optional, 2 unmeasured).
+skyBlip's ADS-L implementation 0.1.0, read against ADS-L 4 SRD-860 Issue 2 clause by clause by the host test suite. Each of the specification's 80 clause headings is below, in the document's order, with the cases that read it: 172 pass and 20 are skipped (8 prose, 2 paperwork, 8 optional, 2 unmeasured).
 
 Each claim names the file that checks it, under `firmware/`. A file under `protocols/adsl/test/conformance/` belongs to the component, which builds and passes on its own and goes with any copy of the stack (`firmware/protocols/README.md`, Taking a stack into another project). A file under `test/adsl/` needs skyBlip around the stack, because it checks skyBlip's choices, which a copy replaces with its own. A skipped case is a clause this device makes no claim on, and says why: prose, paperwork, optional, not implemented or unmeasured (`firmware/test/adsl/README.md`). Quoted prose is the comment the case carries.
 
@@ -479,6 +479,10 @@ Issue 2 gives the same number to Transmit Rate and Timing, so the cases of both 
   > Flown with the channel busy one burst in three seconds, and a receiver 200 ms late on the wire.
 - two solutions a second and the redraw put a burst in every second (`test/adsl/test_traffic_flown.cpp`)
   > A receiver left at 1 Hz holds most airborne bursts, its solution too old by the time they fly.
+- a receiver that names one second twice is on air again in 5 s (`test/adsl/test_traffic_flown.cpp`)
+  > A leap second's 23:59:60 and the 00:00:00 after it name one second, and the Go fell silent for good.
+- a receiver whose UTC steps back 18 s is on air again in 5 s (`test/adsl/test_traffic_flown.cpp`)
+  > A cold start may begin with a stale GPS-UTC offset, 18 s in 2026, and step its UTC back when told.
 - an L76K that delivers every solution a second late is refused (`test/adsl/test_traffic_flown.cpp`)
   > Skipped, unmeasured: no bench has shown the L76K delivers each solution within 250 ms of it
 
