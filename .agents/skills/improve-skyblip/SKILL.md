@@ -16,9 +16,6 @@ From skyBlip's MCP server, `https://skyblip.eu/mcp`, which an admin connects as 
 - `resolve_error` with `fingerprint`: once the fix for an error is deployed, takes it off `list_errors` until it happens again.
 - `list_events`: the catalog first, then everybody's events as JSON lines. Narrow with `name` (`device.`, `browser.failed`), `device`, `support_code` or an error's `fingerprint`.
 - `get_unit` with `device`: an activated unit's record.
-- `get_analytics` with `days`: the numbers of the Analytics page, visitors, bounce rate and time on the site, with breakdowns by page, entry and exit page, referrer, channel, section and device. It reads `non_user` visits unless told otherwise, so admins' own browsing stays out. A row's value is a filter for the next read, `section: "briefing"` or `path: "/buy"`.
-- `list_outbound_clicks`: the links out visitors clicked, the affiliate links of the buy page by product among them.
-- `list_visitors` with the same filters, then `get_visitor` with a token: who came, and the timeline of their visits, pages, clicks and the controls they used.
 - `get_analytics`: the site's audience as the admin Analytics page shows it, the metrics, the series, the outbound links and every breakdown. Filter with `days` or `start_on` and `end_on`, `segment` (`non_user` unless said), `path`, `entry`, `referrer`, `channel`, `country`, `outbound` and the rest of the page's filters.
 - `list_visitors` with the same filters and `page`: who came, last seen first, with the token `get_visitor` reads.
 - `get_visitor` with `visitor_token`: one visitor's visits, oldest first, with the pages it viewed and what it clicked.
