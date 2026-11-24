@@ -44,6 +44,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       click_button "Connect a device"
       assert_selector ".unit-row", text: "v0.1.0, release", wait: 15
       assert_no_selector ".unit-row", text: "0.1.0+1765"
+      screen "28-release-named-by-tag"
     end
   end
 
