@@ -361,10 +361,10 @@ jobs:
         with:
           name: browser-simulator
           path: |
-            firmware/build/browser/skyblip_simulator.js
-            firmware/build/browser/skyblip_simulator.wasm
-            firmware/build/browser/embed.js
-            firmware/build/browser/scenarios.json
+            firmware/build/browser/skyblip-simulator.js
+            firmware/build/browser/skyblip-simulator.wasm
+            firmware/build/browser/skyblip-simulator-embed.js
+            firmware/build/browser/skyblip-simulator-scenarios.json
           if-no-files-found: error
           retention-days: 1
 

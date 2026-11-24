@@ -31,8 +31,8 @@ const FPM_TO_MM_S = 5080;
 const FEET_PER_METRE = 3.28084;
 
 execFileSync("make", ["-C", firmware, "browser"], { stdio: "inherit" });
-const { load } = await import(join(dist, "embed.js"));
-const wasm = readFileSync(join(dist, "skyblip_simulator.wasm"));
+const { load } = await import(join(dist, "skyblip-simulator-embed.js"));
+const wasm = readFileSync(join(dist, "skyblip-simulator.wasm"));
 
 class Device {
   static async boot(boot = undefined) {
