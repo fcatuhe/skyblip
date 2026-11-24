@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
-import { hasWebBluetooth, joinFleet, nameOf } from "#skyblip/fleet"
+import { bluetoothReadiness, joinFleet, nameOf } from "#skyblip/fleet"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "controllers/briefing/facts"
 import { labelOf, shownIn } from "controllers/briefing/fields"
@@ -232,7 +232,7 @@ export default class extends Controller {
   #offline(unit, away) {
     this.offlineTarget.hidden = away
     const busy = unit?.busy ?? false
-    this.connectTarget.hidden = !hasWebBluetooth()
+    this.connectTarget.hidden = !bluetoothReadiness().ready
     this.connectTarget.disabled = busy
     this.connectTarget.textContent = busy ? say("words.connecting") : this.connectTarget.dataset.label
     if (this.hasLastReadTarget) this.#lastRead(unit, away)

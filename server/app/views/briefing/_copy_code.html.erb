@@ -1,0 +1,9 @@
+<%= tag.button type: "button", class: "copy-code", data: {
+      controller: "copy-to-clipboard",
+      action: "copy-to-clipboard#copy",
+      copy_to_clipboard_content_value: code,
+      copy_to_clipboard_success_class: "is-copied"
+    } do %>
+  <code><%= code %></code>
+  <span class="copy-code-label"><span class="when-idle"><%= t("briefing.bluetooth_check.copy") %></span><span class="when-copied"><%= t("briefing.bluetooth_check.copied") %></span></span>
+<% end %>

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { Activator, httpServer } from "#skyblip/activation"
-import { hasWebBluetooth, installedNames, joinFleet } from "#skyblip/fleet"
+import { bluetoothReadiness, installedNames, joinFleet } from "#skyblip/fleet"
 import { DRIVE_NAMES, Installer, browserSupport } from "#skyblip/installer"
 import { sharedJournal } from "#skyblip/journal"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
@@ -220,7 +220,7 @@ export default class extends Controller {
     this.connectTextTarget.textContent = say(state.trusted ? "setup.installed_trusted" : "setup.installed", { name })
     const code = tagText(state.tag) ?? "…"
     this.connectHintTarget.textContent = say("setup.choose_in_list", { name: state.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}` })
-    this.connectTarget.hidden = !hasWebBluetooth()
+    this.connectTarget.hidden = !bluetoothReadiness().ready
   }
 
   #onboarding() {
@@ -341,7 +341,7 @@ export default class extends Controller {
     this.messageTarget.hidden = !message && !running
     this.messageTextTarget.hidden = !message
     this.messageTextTarget.textContent = message
-    this.connectRunningTarget.hidden = !running || !hasWebBluetooth()
+    this.connectRunningTarget.hidden = !running || !bluetoothReadiness().ready
   }
 
   #path(slug) {

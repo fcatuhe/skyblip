@@ -3,9 +3,22 @@ module BriefingTestHelper
   NEW_SETTINGS = { aircraft_type: 1, units: "nautical", callsign: "", aircraft_address: 0, alarm: "loud" }.freeze
 
   private
-    def in_range(*units)
+    def in_range(*units, adapter: true)
       script = Rails.root.join("test/system/fake_fleet.js").read
       units.each { |unit| script << "\nfakeFleet.add(#{unit.to_json});" }
+      script << "\nfakeFleet.adapter = false;" unless adapter
+      page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: script)
+    end
+
+    # INFO: fc 24nov26 the headless browser reports the platform it runs on, so a test that depends on it names one
+    def in_chrome_on(platform)
+      client_hints platform:, mobile: false, brands: [ { brand: "Chromium", version: "142" }, { brand: "Google Chrome", version: "142" } ]
+    end
+
+    def in_firefox = client_hints(nil)
+
+    def client_hints(hints)
+      script = "Object.defineProperty(navigator, 'userAgentData', { configurable: true, value: #{hints.to_json} });"
       page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: script)
     end
 

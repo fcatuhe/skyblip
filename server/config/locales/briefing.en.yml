@@ -30,6 +30,22 @@ en:
       no_bluetooth: "This browser cannot connect to Bluetooth devices. Chrome and Edge support Bluetooth on Android, Windows, macOS and Linux."
       copy_link: Copy the link
       copied: Copied
+    bluetooth_check:
+      title: Switch on Bluetooth in this browser
+      hint: "Briefing reaches your devices over Bluetooth, to connect, set up and update them. Each line says Done once it works."
+      ok: Done
+      missing: To do
+      unknown: Checked once Web Bluetooth is on
+      optional: Optional
+      flag: Turn on Web Bluetooth
+      flag_how: "Chrome keeps it off on Linux. Copy this address into the address bar, set Web Bluetooth to Enabled, then click Relaunch."
+      adapter: Turn on Bluetooth
+      adapter_how: "Turn on Bluetooth in the computer's settings. A computer without Bluetooth needs a USB Bluetooth adapter."
+      adapter_linux: "On Linux, also start the Bluetooth service:"
+      remember: Reconnect your devices by themselves
+      remember_how: "Copy this address into the address bar, set it to Enabled, then click Relaunch. Briefing then reconnects the devices it knows without showing the list."
+      copy: Copy
+      copied: Copied
     unit:
       menu: Disconnect or forget
       connect: Connect
