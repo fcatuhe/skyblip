@@ -50,14 +50,15 @@ export function nameOf(slug) {
   return namesOf(slug)[0] ?? slug;
 }
 
-function newestOf({ upgrade, file, running }, before) {
-  if (upgrade === true) return file.version;
-  if (upgrade === false) return running;
-  return before.newest ?? null;
+function newestOf({ upgrade, file, running }, track, before) {
+  if (upgrade === true) return { newest: file.version, newestRelease: file.release };
+  if (upgrade === false) return { newest: running, newestRelease: track === 'release' };
+  return { newest: before.newest ?? null, newestRelease: before.newestRelease ?? false };
 }
 
 function recordOf(slug, state, before = {}) {
   const { device, running, image, settings, address } = state;
+  const track = image?.key ? (image.downgrade ? 'development' : 'release') : before.track ?? null;
   return {
     slug,
     name: slugOf(device) === slug ? device : before.name ?? nameOf(slug),
@@ -65,8 +66,8 @@ function recordOf(slug, state, before = {}) {
     tag: state.identity?.bluetoothTag ?? before.tag ?? null,
     address: address ?? before.address ?? null,
     running: running ?? before.running ?? null,
-    newest: newestOf(state, before),
-    track: image?.key ? (image.downgrade ? 'development' : 'release') : before.track ?? null,
+    ...newestOf(state, track, before),
+    track,
     settings: settings ?? before.settings ?? null,
     pairedTag: settings ? state.pairedTag ?? null : before.pairedTag ?? null,
     seen: before.seen ?? null,

@@ -51,7 +51,7 @@ export async function take(unit, option, read = fetchImage) {
   unit.updater.clearImage()
   try {
     const bytes = await read(option.value, selection.signal)
-    if (!selection.signal.aborted) await unit.updater.choose(bytes, option.value.split("/").pop())
+    if (!selection.signal.aborted) await unit.updater.choose(bytes, option.value.split("/").pop(), { release: option.dataset?.channel === "release" })
     return { ok: true }
   } catch (error) {
     return { ok: error.name === "AbortError" }
