@@ -16,7 +16,7 @@ Copy `protocols/common/` and `protocols/<stack>/` under one include root, keepin
 
 ## Versions
 
-`version.h` holds `kVersion`, `major.minor.patch`, and `kSpecification`, what the stack implements. A version moves only when a change alters a rule conformance rests on: frames, encoding, channels, timing, transmit rules, or a reading the frozen suite pins. A change inside those rules moves the firmware version alone (`firmware/README.md`). A stack stays at 0.1.0 until it is ready for production. `adsl/version.h` is skyBlip's implementation version, not the Protocol Version field of E.1.1.
+`version.h` holds `kVersion`, `major.minor.patch`, and `kSpecification`, what the stack implements. A version moves only when a change alters a rule conformance rests on: frames, encoding, channels, timing, transmit rules, or a reading the frozen suite pins. A change inside those rules moves the firmware version alone (`firmware/README.md`). The stacks started at 0.8.0, the firmware version of the first release. `adsl/version.h` is skyBlip's implementation version, not the Protocol Version field of E.1.1.
 
 Each product lists its stacks in `products/<product>/PROTOCOLS`. Every release names their versions in its notes and `PROTOCOLS.md` (`lib/radio_protocols.rb`), and a unit reports them to the companion link's `protocols` command (`core/comms/README.md`), so a unit can be matched to a declaration of conformity, which names firmware versions.
 
@@ -24,7 +24,7 @@ Each product lists its stacks in `products/<product>/PROTOCOLS`. Every release n
 
 A version covers its stack and the `protocols/common/` files it includes. A frozen stack's `version.lock` holds the SHA-256 of every file under the roots its conformance rests on, and `scripts/check_protocol_freeze.py` fails in CI when one changed without a reseal. Run `python3 scripts/check_protocol_freeze.py --reseal <stack>` after moving `kVersion`, or after a change that leaves what goes on air and comes off it as it was, and say which in the pull request.
 
-ADS-L is sealed at 0.1.0, and until it is declared 1.0.0 a change to a sealed file is resealed without a bump. Its roots are the stack, both halves of its conformance suite, the EN 300 220-1 suite and the device files that set what goes on air. The rest of the firmware decides what the Go sends inside the rules, and the sealed cases in `test/adsl/` hold it to them.
+ADS-L is sealed at 0.8.0, and until it is declared 1.0.0 a change to a sealed file is resealed without a bump. Its roots are the stack, both halves of its conformance suite, the EN 300 220-1 suite and the device files that set what goes on air. The rest of the firmware decides what the Go sends inside the rules, and the sealed cases in `test/adsl/` hold it to them.
 
 `adsl_edge/` is not frozen, and `PROTOCOLS` leaves it out because no declaration covers payload 66. When an ADS-L issue defines the payload, its record moves into the ADS-L stack.
 
