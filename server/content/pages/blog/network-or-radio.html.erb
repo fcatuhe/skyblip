@@ -1,0 +1,58 @@
+---
+title: "SafeSky and ADS-L: network or radio?"
+nav_title: Network or radio
+description: "SafeSky shares traffic over the mobile network, ADS-L over the air. Where each one works, where it goes blind, and why we fly with both."
+published_on: "2026-11-24"
+parent: blog
+updated_on: "2026-11-24"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24 November 2026</p>
+  <h1>SafeSky and ADS-L: network or radio?</h1>
+  <p class="lede">On the French microlight forum, a pilot wrote that he turns on SafeSky to see the gliders near his field, and it works perfectly. Another answered that SafeSky goes blind where light aircraft fly most, far from towns. Both are right. The two systems carry traffic by different roads.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Two roads</h2>
+  <h3>SafeSky goes through the network. ADS-L goes from aircraft to aircraft.</h3>
+  <p>SafeSky is an app. Your phone sends your position over the mobile network to SafeSky&rsquo;s servers, which merge it with traffic from more than thirty sources, including OGN ground stations, ADS-B receivers and other SafeSky users, and send the picture back to every phone. It is free in its basic version and needs nothing but a phone.</p>
+  <p>ADS-L is a radio. A device in your aircraft broadcasts your position every second on 868&nbsp;MHz, and every receiver within a few kilometres hears it directly. No server, no SIM card, no subscription.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Where each one goes blind</h2>
+  <h3>The network fails where the coverage fails. The radio fails where nobody transmits.</h3>
+  <ul>
+    <li><strong>Mobile coverage.</strong> In the air, a phone can lose the network, and its position then reaches the server late or not at all. Light aircraft and gliders spend their time over the countryside, where coverage is thinnest. ADS-L does not care.</li>
+    <li><strong>Who takes part.</strong> SafeSky sees every app user and every aircraft a ground station hears, at any distance. ADS-L sees only the aircraft that carry a device on its band, but sees them directly.</li>
+    <li><strong>Who sees you.</strong> A military jet flying low does not run SafeSky, and does not carry ADS-L either. Neither one makes you visible to an aircraft that only reads transponders.</li>
+  </ul>
+  <p>An instructor on the same forum added a point we agree with: every screen in the cockpit pulls the eyes inside. A traffic system is there to tell you where to look, then let you look. That is why Go&rsquo;s alert lights the quarter of the screen facing the traffic, and nothing more.</p>
+</section>
+
+<section>
+  <h2 class="kicker">In practice</h2>
+  <h3>Use both. They cover each other.</h3>
+  <p>A Go in the cockpit makes you visible to every ADS-L receiver around you, whether or not anyone has a signal. OGN stations that hear it can pass you on to the network, so SafeSky users can see you too. Your phone keeps running SafeSky for the traffic only the network knows.</p>
+  <p>If you already use SafeSky&rsquo;s AERO Tracker, you already transmit ADS-L, and Go shows you to others the same way for a fraction of the price. Our <%= link_to_page "compare", label: "comparison" %> sets the two side by side.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>SafeSky</strong> &middot; <a href="https://www.safesky.app/device">Electronic device</a> page, read on 24 November 2026.
+      <span class="support">Traffic from more than 30 sources, and the plans for the AERO Tracker&rsquo;s mobile data.</span>
+    </li>
+    <li>
+      <strong>Forum ULM ELA LSA</strong> &middot; <a href="https://www.forum-ulm-ela-lsa.net/viewtopic.php?t=14657">skyBlip : l&rsquo;ADS-L sur du matériel à 68 &euro;</a>, November 2026.
+      <span class="support">The exchange this post answers.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/who-sees-ads-l", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/always-on-board", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

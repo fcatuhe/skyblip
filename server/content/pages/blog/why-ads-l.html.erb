@@ -1,0 +1,79 @@
+---
+title: "Why ADS-L, when ADS-B and UAT already exist?"
+nav_title: Why ADS-L
+description: "ADS-B needs a certified transponder, UAT is not open in Europe, and ADS-L runs on a battery. Why skyBlip chose ADS-L, and where ADS-B still fits."
+published_on: "2026-11-24"
+parent: blog
+updated_on: "2026-11-24"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24 November 2026</p>
+  <h1>Why ADS-L, when ADS-B and UAT already exist?</h1>
+  <p class="lede">A pilot asked us this on a French forum: why build on ADS-L rather than ADS-B, a world standard with certified equipment, or UAT, which the United States uses for light aircraft? The answer comes down to power, paperwork and price. ADS-B keeps its place, and the two meet in the cockpit.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Power</h2>
+  <h3>A battery can carry ADS-L. It cannot carry ADS-B.</h3>
+  <p>ADS-B on 1090&nbsp;MHz comes from a transponder, which transmits between 70 and 500&nbsp;W. The portable SkyEcho&nbsp;2 transmits 20&nbsp;W. UAT on 978&nbsp;MHz starts at 7&nbsp;W for its lowest class. ADS-L transmits at most 25&nbsp;mW in its main band, a thousand times less than the weakest of them.</p>
+  <p>That difference decides who can take part. A glider, a paraglider, a microlight with a small battery or a drone cannot feed a 20&nbsp;W transmitter for a whole flight. A pocket device at 25&nbsp;mW runs for a day on a phone-sized cell. Our Go ran 18&nbsp;hours parked on the bench, and the Go+ 49&nbsp;hours.</p>
+  <p>The low power has a cost: ADS-L reaches several kilometres, where ADS-B reaches tens of nautical miles. For seeing the aircraft that could hit you, several kilometres is the range that matters. Go alerts within 3&nbsp;km.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Paperwork</h2>
+  <h3>ADS-L needs no certification. ADS-B and UAT do.</h3>
+  <p>ADS-L uses the 868&nbsp;MHz short-range band, shared and licence-exempt across the EU, the same band as FLARM. The manufacturer declares that its device meets the EASA specification, and nobody has to approve the box or its owner.</p>
+  <p>ADS-B transmits in a protected aeronautical band. In Europe, a portable ADS-B transmitter may not transmit at all: SkyEcho&nbsp;2 transmits only in the United Kingdom, Australia and New Zealand, and works as a receiver elsewhere. An installed one needs a certified transponder, a certified position source to be useful to air traffic control, and an engineer to sign it off.</p>
+  <p>UAT is not open in Europe. EASA&rsquo;s own book of standard changes says so: &ldquo;The 978-MHz frequency for UAT emitters, although used [&hellip;] in the USA, is currently not standardised in the EU [&hellip;] UAT may only be operated in some EU Member States.&rdquo; Military TACAN and DME stations still use the band, and freeing it is a matter of years.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Price</h2>
+  <h3>Visibility is only worth the number of pilots who carry it.</h3>
+  <p>A system that sees and shows others works only if the others transmit. Gliding reached that point with FLARM because nearly every glider carries one. Light aviation and microlights never did, with any system, because the devices cost hundreds or thousands of euros or took an afternoon to set up.</p>
+  <p>ADS-L runs on hardware built for the Meshtastic hobby network, which sells in the tens of thousands. That is why a Go costs from &euro;68. No ADS-B transmitter will come near that price.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Where each one fits</h2>
+  <h3>ADS-B for those who fly with airliners, ADS-L for those who fly low.</h3>
+  <p>We see the landscape settling this way:</p>
+  <ul>
+    <li><strong>ADS-B</strong> for commercial and heavier aviation, and for any aircraft that flies in controlled airspace, where air traffic control and TCAS read it.</li>
+    <li><strong>ADS-L</strong> for light aviation, air sports and drones, in uncontrolled airspace at low level and in U-space, where SERA.6005(c) already lists it as a way to be electronically conspicuous.</li>
+    <li><strong>Both</strong> for pilots who fly in both worlds and are ready to install ADS-B out and in.</li>
+  </ul>
+  <p>The two do not talk to each other by radio. A Garmin GTX&nbsp;345 does not hear a Go, and a Go does not hear a GTX&nbsp;345. They meet in the receiver. skyBlip Bravo listens on 1090&nbsp;MHz, and paired with a Go it shows ADS-B, ADS-L and FLARM traffic on one radar. That pair is <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. With it, ADS-B aircraft show up tens of nautical miles away, sometimes close to a hundred, because their transmitters are so strong.</p>
+  <p>Ground stations can close the rest of the gap. ADS-L includes an uplink from the ground, which can relay ADS-B traffic, and weather, to ADS-L receivers. Few stations transmit it yet, and France has almost none. Our <%= link_to_page "roadmap", label: "skyPost stations" %> are meant to add some.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, Issue 2, appendix on performance.
+      <span class="support">M-band transmit power of 12 to 14&nbsp;dBm ERP, 16 to 25&nbsp;mW.</span>
+    </li>
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/sites/default/files/dfu/cs-stan_issue_4.pdf">CS-STAN Issue 4</a>, CS-SC057a.
+      <span class="support">UAT not standardised in the EU, and SRD bands licence-exempt.</span>
+    </li>
+    <li>
+      <strong>ICAO</strong> &middot; Annex 10, Volume IV, transponder classes, and Volume III, chapter 12, UAT transmitter classes.
+      <span class="support">70 to 500&nbsp;W for transponders, 7&nbsp;W and up for UAT.</span>
+    </li>
+    <li>
+      <strong>uAvionix</strong> &middot; SkyEcho&nbsp;2 product page at a European dealer, read on 24 November 2026.
+      <span class="support">20&nbsp;W 1090ES, transmit allowed in the UK, Australia and New Zealand only.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/who-sees-ads-l", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

@@ -1,0 +1,57 @@
+---
+title: "skyBlip, SoftRF and Stratux: why start again?"
+nav_title: SoftRF and Stratux
+description: "skyBlip is not a fork of SoftRF, and does less than a Stratux. What it aims for instead: ready in a browser, a day on battery, and ADS-L conformity."
+published_on: "2026-11-24"
+parent: blog
+updated_on: "2026-11-24"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24 November 2026</p>
+  <h1>skyBlip, SoftRF and Stratux: why start again?</h1>
+  <p class="lede">German pilots asked us two things in the first hours. Is this a fork of SoftRF? And what does it do that a Stratux with a T-Beam does not? Fair questions: both projects are older, and both do a lot. Here is what we owe them, and what we set out to do differently.</p>
+</section>
+
+<section>
+  <h2 class="kicker">What we owe</h2>
+  <h3>Ten years of open-source work, then a fresh start.</h3>
+  <p>skyBlip is not a fork. We learned a great deal from SoftRF, from the OGN Tracker and from open-source radio libraries, and the people who built them mapped this ground long before us. We then wrote the firmware from scratch, closer to the hardware, to gain speed and battery life.</p>
+</section>
+
+<section>
+  <h2 class="kicker">What we aimed for</h2>
+  <h3>Three goals the others did not set themselves.</h3>
+  <ul>
+    <li><strong>Ready without a workshop.</strong> Not every pilot has the time or the skill to assemble a Stratux, and its parts cost more. A Go is a finished device sold by LilyGO and on Amazon, and <%= link_to_page "install", label: "Briefing installs skyBlip from a browser" %>, with no soldering, no command line and no account.</li>
+    <li><strong>A day on battery.</strong> No cable, no power socket, no thought before the flight. On the bench a parked Go ran 18&nbsp;hours, a Go+ 49&nbsp;hours. That is why we chose a low-power processor and an e-paper screen that stays readable in full sun.</li>
+    <li><strong>Conformity you can check.</strong> skyBlip holds its own manufacturer range in the ADS-L registry since October 2026. Every clause of the specification the firmware applies has its own conformance test, every release passes them, and the documentation is generated from those tests. We are preparing the <%= link_to_page "ads-l/conformity", label: "declaration of conformity" %>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">What it does not do</h2>
+  <h3>A Stratux does more. A Go does less, in your pocket.</h3>
+  <p>A Stratux receives ADS-B, UAT, OGN and more, and sends it all to your tablet over Wi-Fi in GDL&nbsp;90. If you have one and it suits you, keep it.</p>
+  <p>The board we chose has no Wi-Fi, only Bluetooth, because Wi-Fi draws far more current. GDL&nbsp;90 travels over Wi-Fi, so a Go cannot send it. It sends NMEA over Bluetooth instead, the format SDVFR Next, SkyDemon and ForeFlight read, to three devices at once.</p>
+  <p>A Go receives ADS-L and FLARM. For ADS-B, it pairs with a second pocket device, <%= link_to_page "skyblip-bravo", label: "Bravo" %>, rather than growing into a bigger box.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>ulForum</strong> &middot; <a href="https://www.ulforum.de/ultraleicht/forum/2_technik-und-flugzeuge/11270_ads-l-auf-hardware-ab-68-eur-open-source-feedback-willkommen">ADS-L auf Hardware ab 68 &euro;</a>, November 2026.
+      <span class="support">The Stratux and GDL&nbsp;90 questions.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot; <a href="https://github.com/fcatuhe/skyblip">source code</a>, under the MIT license.
+      <span class="support">The firmware, its conformance tests and the bench power runs.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/club-fleet", class: "cta cta--previous" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

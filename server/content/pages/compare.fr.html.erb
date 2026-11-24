@@ -1,0 +1,81 @@
+---
+title: "ADS-L de poche ou installé : les boîtiers comparés"
+nav_title: Comparatif
+slug: comparatif
+description: "skyBlip Go et Tango face à l'AERO Tracker, PowerFLARM, Funke TM350 et SafeSky : ce que chacun émet et reçoit, comment il s'installe, ce qu'il coûte."
+updated_on: "2026-11-24"
+---
+
+<header class="page-hero">
+  <h1>De poche ou installé : comparez les systèmes de trafic</h1>
+  <p class="page-hero-subtitle">Ce que chaque boîtier émet et reçoit, comment il est alimenté et installé, et ce qu&rsquo;il coûte. Nous faisons skyBlip, lisez donc ce comparatif en connaissance de cause, et écrivez-nous si un chiffre est faux.</p>
+</header>
+
+<section id="table" class="band band--tint">
+  <h2 class="section-title">Huit façons de voir et d&rsquo;être vu</h2>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead>
+        <tr><th scope="col">Boîtier</th><th scope="col">Les autres vous voient par</th><th scope="col">Vous voyez</th><th scope="col">Installation et alimentation</th><th scope="col">Prix</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row"><%= link_to_page "features", label: "skyBlip Go" %></th><td>ADS-L</td><td>ADS-L, FLARM</td><td>De poche, sur sa batterie ou en USB-C</td><td>À partir de 68 € <small>Sans abonnement</small></td></tr>
+        <tr><th scope="row"><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></th><td>ADS-L</td><td>ADS-L, FLARM, ADS-B <small>Mode S détecté, sans position</small></td><td>Deux boîtiers de poche, chacun sur sa batterie</td><td>Un Go à partir de 68 € et un X1 à 55,95 $ livré en France <small>Sans abonnement</small></td></tr>
+        <tr><th scope="row">Avionix ADS-L Tracker</th><td>ADS-L, OGN</td><td>ADS-L, ADS-B, UAT <small>FLARM avec une licence à 90 €</small></td><td>Portable, batterie d&rsquo;environ 10&nbsp;h</td><td>480 € HT</td></tr>
+        <tr><th scope="row">Avionix AERO Tracker</th><td>ADS-L, OGN, FANET <small>Et SafeSky en LTE</small></td><td>ADS-L, OGN, FANET, ADS-B, Mode S sans position <small>FLARM avec une licence à 90 €, trafic réseau en LTE</small></td><td>Portable, batterie d&rsquo;environ 10&nbsp;h, ou version sans batterie sur l&rsquo;alimentation de bord</td><td>770 € HT <small>Forfait LTE à partir de 79,99 € par an</small></td></tr>
+        <tr><th scope="row">PowerFLARM Flex</th><td>FLARM, ADS-L</td><td>FLARM, ADS-B, Mode S et C</td><td>Portable, accu 18650 non fourni, environ 10&nbsp;h, ou USB-C</td><td>À partir de 1 642 €</td></tr>
+        <tr><th scope="row">PowerFLARM Core ou Fusion</th><td>FLARM <small>ADS-L avec une licence à 375 €</small></td><td>FLARM, ADS-B, Mode S et C</td><td>Installé</td><td>Le boîtier, plus 375 € pour l&rsquo;ADS-L</td></tr>
+        <tr><th scope="row">f.u.n.k.e. TM350</th><td>FLARM <small>ADS-B avec un transpondeur TRT800, ADS-L avec une carte en option</small></td><td>FLARM, ADS-B, Mode S, Mode A/C <small>Positions FLARM avec la clé de licence</small></td><td>Installé sous CS-STAN, 11 à 30&nbsp;V</td><td>1 599 €, ou 1 850 € avec la clé FLARM</td></tr>
+        <tr><th scope="row">Application SafeSky</th><td>Le réseau mobile</td><td>Le trafic de plus de 30 sources, par le réseau</td><td>Une application sur votre téléphone, avec couverture mobile</td><td>Gratuite <small>Premium 39,99 € par an</small></td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td colspan="5">Prix relevés sur la page du fabricant ou d&rsquo;un revendeur le 24 novembre 2026, TTC sauf mention HT. Installation non comprise.</td></tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<section id="pocket" class="band">
+  <h2 class="section-title">Quand choisir un boîtier de poche</h2>
+  <ul>
+    <li><strong>Vous volez sur plusieurs avions.</strong> Un avion du club, un avion de location, celui d&rsquo;un ami. Votre visibilité vous suit. Un <%= link_to_page "skyblip-tango", label: "Tango" %> dans le sac de vol vous donne le même radar dans chaque cockpit.</li>
+    <li><strong>Un club équipe sa flotte.</strong> Le prix d&rsquo;un seul boîtier installé achète un Go pour chaque avion en l&rsquo;air un jour chargé. <%= link_to_page "blog/club-fleet", label: "Comment un club les partage" %>.</li>
+    <li><strong>Le cockpit n&rsquo;a ni place ni alimentation.</strong> Un ULM, un avion ancien ou un avion de construction amateur à la planche de bord pleine. Le Go tient dans la main et tient une journée sur sa batterie.</li>
+    <li><strong>Vous ne voulez pas de paperasse.</strong> Un appareil portable ne demande ni modification standard ni mécanicien. Vous l&rsquo;allumez.</li>
+  </ul>
+  <p>Le prix à payer, c&rsquo;est la discipline : quelqu&rsquo;un doit le charger et l&rsquo;allumer.</p>
+</section>
+
+<section id="installed" class="band band--tint">
+  <h2 class="section-title">Quand choisir un boîtier installé</h2>
+  <ul>
+    <li><strong>Un avion, beaucoup de pilotes.</strong> Il démarre avec le contact général, et émet donc à chaque vol.</li>
+    <li><strong>Vous voulez le trafic sur la planche de bord.</strong> Un boîtier installé peut alimenter un EFIS par une liaison série.</li>
+    <li><strong>Vous voulez des antennes extérieures.</strong> Placées hors de la cabine, elles reçoivent dans toutes les directions.</li>
+  </ul>
+  <p>Dans un aéronef certifié de type par l&rsquo;EASA, la modification standard CS-STAN CS-SC057a permet à un mécanicien de l&rsquo;installer sans approbation de conception, pour 300&nbsp;g au plus, avec un supplément au manuel de vol et une approbation pour remise en service que le pilote-propriétaire ne peut pas signer. <%= link_to_page "blog/always-on-board", label: "Ce qu'exige CS-SC057a" %>. skyBlip n&rsquo;a pas de boîtier installé aujourd&rsquo;hui. <%= link_to_page "roadmap", label: "skyBlip Panel", anchor: "on-board" %> est celui que nous concevons.</p>
+</section>
+
+<section id="together" class="band">
+  <h2 class="section-title">Les combiner</h2>
+  <ul>
+    <li><strong>Un transpondeur et un Go.</strong> Le contrôle aérien voit le transpondeur, et les avions légers autour de vous voient le Go. Réglez le Go sur l&rsquo;adresse OACI de l&rsquo;avion pour que les deux signaux désignent le même avion.</li>
+    <li><strong>Un FLARM et un Go.</strong> Si votre FLARM n&rsquo;a pas l&rsquo;ADS-L, le Go l&rsquo;ajoute. Un Go n&rsquo;émet pas en FLARM.</li>
+    <li><strong>SafeSky et un Go.</strong> Le réseau apporte le trafic lointain, la radio le trafic proche, même sans couverture. <%= link_to_page "blog/network-or-radio", label: "Réseau ou radio" %>.</li>
+  </ul>
+</section>
+
+<section id="sources" class="band band--tint">
+  <h2 class="section-title">D&rsquo;où viennent les chiffres</h2>
+  <ul>
+    <li>Avionix : <a href="https://www.avionix-shop.eu/product/17946648/ads-l-tracker">ADS-L Tracker</a>, <a href="https://www.avionix-shop.eu/product/14989526/aero-tracker">AERO Tracker</a> et <a href="https://www.avionix-shop.eu/product/19585183/flarm-license-for-aero-or-ads-l-tracker">licence FLARM</a> dans la boutique Avionix. Les <a href="https://www.safesky.app/device">forfaits boîtiers</a> de SafeSky.</li>
+    <li>FLARM : <a href="https://www.flarm.com/en/general-aviation/powerflarm-flex/">PowerFLARM Flex</a>, <a href="https://shop.flarm.com/shop/ads-l-out/">licence ADS-L Out</a>, et le prix du Flex chez un revendeur allemand.</li>
+    <li>f.u.n.k.e. AVIONICS : <a href="https://www.funkeavionics.de/en/produkt/tm350/">TM350</a>, son <a href="https://www.funkeavionics.de/wp-content/uploads/2025/11/03.314.010.12e_TM350_Approval-CS-STAN_Rev1.00_250725.pdf">guide CS-STAN</a>, et son prix chez un revendeur allemand.</li>
+    <li>skyBlip : le <%= link_to_page "buy", label: "guide d'achat" %>, où nos liens affiliés sont signalés.</li>
+  </ul>
+  <p>skyBlip Go et Tango sont des aides à la veille visuelle, non certifiées. Ils ne remplacent pas un transpondeur ou un FLARM là où l&rsquo;un d&rsquo;eux est obligatoire.</p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

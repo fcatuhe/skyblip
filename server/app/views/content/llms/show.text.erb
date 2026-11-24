@@ -6,13 +6,16 @@ skyBlip is open source, with no subscription and no account. The links below lea
 
 ## Devices
 
-<%= render partial: "page", collection: @pages.values_at("index", "features", "skyblip-bravo", "skyblip-tango", "buy", "install", "skyblip-go") %>
+<%= render partial: "page", collection: @pages.values_at("index", "features", "skyblip-bravo", "skyblip-tango", "compare", "buy", "install", "skyblip-go") %>
 ## Guides
 
 <%= render partial: "page", collection: [ @pages["guides"], *@pages.values.select { it.parent&.base_slug == "guides" } ] %>
 ## ADS-L
 
 <%= render partial: "page", collection: [ @pages["ads-l"], *@pages.values.select { it.parent&.base_slug == "ads-l" } ] %>
+## Blog
+
+<%= render partial: "page", collection: [ @pages["blog"], *@pages.values.select { it.parent&.base_slug == "blog" } ] %>
 ## The project
 
 <%= render partial: "page", collection: @pages.values_at("about", "roadmap", "see-and-avoid") %>- [Source code](<%= Rails.configuration.x.repository_url %>): the firmware and this website, under the MIT license.

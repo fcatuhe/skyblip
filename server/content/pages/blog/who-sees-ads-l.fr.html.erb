@@ -1,0 +1,94 @@
+---
+title: "Qui voit votre signal ADS-L, et ce que vous voyez"
+nav_title: Qui voit l'ADS-L
+slug: blog/qui-voit-l-ads-l
+description: "Contrôle, FLARM, GTX 345, stations OGN : qui reçoit l'ADS-L émis par un Go, et quels trafics un Go et un Bravo reçoivent, bande par bande."
+published_on: "2026-11-24"
+parent: blog
+updated_on: "2026-11-24"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24 novembre 2026</p>
+  <h1>Qui voit votre signal ADS-L, et ce que vous voyez.</h1>
+  <p class="lede">Sur les forums, trois questions sont revenues sans cesse. Le contrôle aérien voit-il les signaux ADS-L sur ses écrans radar ? Mon GTX&nbsp;345 verra-t-il un Go ? Quelles bandes skyBlip reçoit-il ? Voici les réponses, bande par bande et récepteur par récepteur.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Bande par bande</h2>
+  <h3>Quatre fréquences, quatre familles d&rsquo;équipements.</h3>
+  <div class="table-scroll">
+    <table class="prose">
+      <thead>
+        <tr><th>Fréquence</th><th>Qui l&rsquo;utilise</th><th>skyBlip</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>1090&nbsp;MHz</th><td>Transpondeurs ADS-B, Mode S et Mode A/C, dans le monde entier</td><td>Bravo reçoit l&rsquo;ADS-B et détecte le Mode S. Il n&rsquo;émet rien.</td></tr>
+        <tr><th>978&nbsp;MHz</th><td>UAT, l&rsquo;ADS-B de l&rsquo;aviation légère aux États-Unis</td><td>Non reçu. L&rsquo;UAT n&rsquo;est pas ouvert en Europe.</td></tr>
+        <tr><th>868,2 et 868,4&nbsp;MHz</th><td>ADS-L, FLARM et balises OGN, dans la bande courte portée partagée</td><td>Go émet en ADS-L et reçoit l&rsquo;ADS-L et le FLARM.</td></tr>
+        <tr><th>869,525&nbsp;MHz</th><td>Liaison montante ADS-L des stations sol, et PilotAware</td><td>Go écoute la liaison montante ADS-L. Il ne reçoit pas PilotAware.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Go ne reçoit pas non plus le FANET, le protocole du parapente, ni le format propre aux balises OGN. Go n&rsquo;émet qu&rsquo;en ADS-L, et Bravo n&rsquo;émet rien.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Qui voit un Go</h2>
+  <h3>Tout ce qui écoute l&rsquo;ADS-L. Ni un radar, ni un transpondeur.</h3>
+  <div class="table-scroll">
+    <table class="prose">
+      <thead>
+        <tr><th>Récepteur</th><th>Voit un Go ?</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Un autre Go, ou tout appareil ADS-L</th><td>Oui, d&rsquo;aéronef à aéronef, sans réseau.</td></tr>
+        <tr><th>Un appareil FLARM</th><td>Certains. FLARM écrit que la plupart des appareils à une seule radio reçoivent mal l&rsquo;ADS-L, ou pas du tout, car ils alternent entre FLARM et ADS-L. FLARM donne la priorité au FLARM.</td></tr>
+        <tr><th>Une station sol OGN</th><td>Oui, à portée. Les applications qui utilisent les données OGN, comme SafeSky ou les cartes OGN, peuvent alors vous afficher.</td></tr>
+        <tr><th>Un prestataire de services U-space</th><td>Oui. C&rsquo;est pour cela que l&rsquo;ADS-L a été écrit : la spécification rend les aéronefs « visibles électroniquement par les prestataires de services U-space ».</td></tr>
+        <tr><th>Le radar du contrôle aérien</th><td>Non. Le radar lit les transpondeurs. Emportez le transpondeur qu&rsquo;exige votre espace aérien.</td></tr>
+        <tr><th>Un transpondeur ADS-B In, comme un GTX&nbsp;345, ou un TCAS</th><td>Non. Ils n&rsquo;écoutent que le 1090&nbsp;MHz.</td></tr>
+        <tr><th>L&rsquo;application SafeSky seule</th><td>Seulement via le réseau, quand une station sol vous a entendu.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>L&rsquo;ADS-L ne sert donc pas à vous montrer au contrôleur. Il sert à vous montrer aux pilotes proches qui emportent un récepteur adapté, et au U-space. C&rsquo;est aussi pourquoi nous espérons que les utilisateurs de FLARM activent l&rsquo;ADS-L : FLARM vend l&rsquo;émission ADS-L sous forme de licence pour ses PowerFLARM, et l&rsquo;inclut dans le nouveau PowerFLARM Flex.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Ce que voit un Go</h2>
+  <h3>L&rsquo;ADS-L et le FLARM en direct, l&rsquo;ADS-B avec un Bravo.</h3>
+  <ul>
+    <li><strong>L&rsquo;ADS-L</strong> de tous les appareils qui l&rsquo;émettent.</li>
+    <li><strong>Le FLARM</strong>, pour que les planeurs et les remorqueurs apparaissent sur le radar. Go lit le FLARM mais ne l&rsquo;émet jamais, car émettre en FLARM exige une licence de FLARM.</li>
+    <li><strong>L&rsquo;ADS-B</strong> via un <%= link_to_page "skyblip-bravo", label: "Bravo" %> associé. Les liners, les jets d&rsquo;affaires, les hélicoptères et les avions légers équipés d&rsquo;un transpondeur ADS-B apparaissent à plusieurs dizaines de milles nautiques.</li>
+    <li><strong>Le Mode S sans ADS-B</strong> : Bravo détecte ces transpondeurs, mais ils n&rsquo;envoient pas de position. Nous mesurons le lien entre la puissance reçue et la distance, pour les signaler sur le Go et dans les applications de navigation.</li>
+    <li><strong>Le trafic relayé depuis le sol</strong>, là où une station émet la liaison montante ADS-L.</li>
+  </ul>
+  <p>Aucun appareil ne vous montrera l&rsquo;aéronef qui n&rsquo;émet rien. C&rsquo;est la plus grande lacune de tous les systèmes, et la raison pour laquelle nous gardons le prix de l&rsquo;émission aussi bas que possible.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, Issue 2, introduction et Subpart C.
+      <span class="support">L&rsquo;objet de l&rsquo;ADS-L, et ses canaux en bande M et en bande O.</span>
+    </li>
+    <li>
+      <strong>FLARM</strong> &middot;
+      <a href="https://www.flarm.com/en/general-aviation/electronic-conspicuity-and-ads-l/">ADS-L and FASST-CH</a>, consulté le 24 novembre 2026.
+      <span class="support">« La réception de l&rsquo;ADS-L n&rsquo;est généralement pas possible, ou seulement de façon limitée » sur les appareils à une seule radio, et les appareils disponibles avec l&rsquo;ADS-L.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot; <%= link_to_page "radio", label: "La radio, seconde par seconde" %>.
+      <span class="support">Comment Go partage une seule radio entre l&rsquo;ADS-L, le FLARM et la liaison montante du sol.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/why-ads-l", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/network-or-radio", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

@@ -1,0 +1,56 @@
+---
+title: "ADS-L for a club fleet, for the price of one unit"
+nav_title: Club fleet
+description: "Fifteen aircraft and none equipped? How a club can share a few skyBlip Go between its aircraft, what to set before each flight, and what to fit for good."
+published_on: "2026-11-24"
+parent: blog
+updated_on: "2026-11-24"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24 November 2026</p>
+  <h1>Equip a club fleet for the price of one unit.</h1>
+  <p class="lede">&ldquo;In my club, 15 aircraft, and not one is equipped.&rdquo; A microlight pilot wrote that under our first post, and it is the most common answer we get. Fitting traffic equipment to every aircraft costs too much for a club. Here is another way: a few pocket devices that go wherever a pilot flies.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The sums</h2>
+  <h3>One installed unit, or a shelf of Go.</h3>
+  <p>An installed traffic unit costs from several hundred to more than &euro;1,500, before an engineer fits it and signs it off. Multiply by fifteen. A Go costs from &euro;68, so the price of one installed unit buys a Go for every aircraft that flies at the same time on a busy Saturday, with some left for spares.</p>
+  <p>Battery life makes sharing work. On the bench, a parked Go ran 18&nbsp;hours and a Go+ 49&nbsp;hours on one charge. A club can charge them once a week, not after every flight.</p>
+</section>
+
+<section>
+  <h2 class="kicker">How a club shares them</h2>
+  <h3>The Go leaves with the keys.</h3>
+  <ol>
+    <li><strong>Keep them with the keys</strong>, on a shelf with a USB charger. Number each one.</li>
+    <li><strong>Switch it on</strong> before taxiing, and wait for the light to wink green: it has a position.</li>
+    <li><strong>Check the aircraft type</strong> in Go&rsquo;s menu, light aircraft or microlight, and set the callsign to the registration you fly. Other pilots then see who you are.</li>
+    <li><strong>Mount it with the antenna up</strong>, on the glareshield or anywhere it sees the sky. The <%= link_to_page "mount", label: "mounting guide" %> lists a clamp that fits most cockpits.</li>
+    <li><strong>Bring it back and plug it in.</strong> It stays off on its charger.</li>
+  </ol>
+</section>
+
+<section>
+  <h2 class="kicker">Aircraft with a transponder</h2>
+  <h3>Give those aircraft their own Go.</h3>
+  <p>An aircraft that transmits Mode S or ADS-B should transmit ADS-L under the same ICAO address, so receivers know both signals come from one aircraft. The ADS-L specification asks for it. That address belongs to the aircraft, not the pilot, so a Go shared between aircraft would need a new address before each flight.</p>
+  <p>The simplest rule: one Go per transponder-equipped aircraft, its address set once in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, and shared Go for the aircraft without a transponder. A Bravo paired with the Go can read the address from the transponder on the ground, so nobody types it.</p>
+</section>
+
+<section>
+  <h2 class="kicker">For the club&rsquo;s most flown aircraft</h2>
+  <h3>Add ADS-B traffic where it matters.</h3>
+  <p>Near a busy airfield or under an approach, aircraft with ADS-B transponders are the ones a Go alone does not show. A Bravo next to the Go forms a <%= link_to_page "skyblip-tango", label: "Tango" %> and puts them on the same radar. A club can keep one or two Tango for cross-country flights and training near controlled airspace.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Before you buy</h2>
+  <p>Go is an uncertified aid to lookout. It does not replace a transponder where one is required, and it does not transmit FLARM. Our <%= link_to_page "compare", label: "comparison" %> sets it beside installed units, and the <%= link_to_page "buy", label: "buying guide" %> lists sellers in five countries.</p>
+  <p><%= link_to_page "blog/always-on-board", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/skyblip-softrf-stratux", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
