@@ -34,7 +34,7 @@ export function runningName(version, track) {
 }
 
 export function imageName(file) {
-  return versionName(file.version, file.release)
+  return versionName(file.version, file.channel === "release")
 }
 
 export function protocolsLine(protocols) {

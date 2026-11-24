@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { joinFleet } from "#skyblip/fleet"
-import { channelOf, fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
+import { channelOfImage, fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
 import { changesSince } from "controllers/briefing/changelog"
 import { imageName, productWord, runningName, trackOf } from "controllers/briefing/facts"
 import { installCause, reportShown } from "#skyblip/install_report"
@@ -133,7 +133,7 @@ export default class extends Controller {
 
   #changes(unit, state) {
     const changelog = this.element.querySelector("template[data-changes]")
-    const sections = changelog ? changesSince([...changelog.content.querySelectorAll("section[data-version]")], { channel: channelOf(unit), running: state.running, offered: state.file?.version }) : []
+    const sections = changelog ? changesSince([...changelog.content.querySelectorAll("section[data-version]")], { channel: channelOfImage(state.file, unit), running: state.running, offered: state.file?.version }) : []
     const shown = sections.map(section => section.dataset.version).join(" ")
     if (shown !== this.changesShown) this.changeListTarget.replaceChildren(...sections.map(section => document.importNode(section, true)))
     this.changesShown = shown

@@ -310,7 +310,7 @@ export class Updater {
     this.#set({ file: null, notice: null });
   }
 
-  async choose(bytes, name, { release = false } = {}) {
+  async choose(bytes, name, { channel = null } = {}) {
     const image = readImage(bytes);
     const choice = ++this.#choice;
     if (!image) {
@@ -322,7 +322,7 @@ export class Updater {
     this.#image = bytes;
     this.#sha = sha;
     this.#version = image.version;
-    const file = { name, version: versionText(image.version), release, bytes: bytes.length, key: image.key, sha: hex(sha.subarray(0, 8)), ...image.imu };
+    const file = { name, version: versionText(image.version), channel, bytes: bytes.length, key: image.key, sha: hex(sha.subarray(0, 8)), ...image.imu };
     this.#key = image.key;
     this.#product = image.product;
     this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });

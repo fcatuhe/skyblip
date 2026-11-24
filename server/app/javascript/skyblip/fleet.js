@@ -51,7 +51,7 @@ export function nameOf(slug) {
 }
 
 function newestOf({ upgrade, file, running }, track, before) {
-  if (upgrade === true) return { newest: file.version, newestRelease: file.release };
+  if (upgrade === true) return { newest: file.version, newestRelease: file.channel === 'release' };
   if (upgrade === false) return { newest: running, newestRelease: track === 'release' };
   return { newest: before.newest ?? null, newestRelease: before.newestRelease ?? false };
 }
