@@ -26,9 +26,15 @@ module Analytics
       where(Ahoy::Event.outbound_clicks.where(Ahoy::Event.property(:href).eq(href))
         .where(Ahoy::Event.arel_table[:visit_id].eq(arel_table[:ahoy_visit_id])).arel.exists)
     }
+    scope :activated, -> { where(activation_exists) }
+    scope :filter_by_activation, ->(value) { value == "activated" ? activated : none }
 
     def self.filtered(filter_params)
       Filter.new(filter_params).scope
+    end
+
+    def self.activation_exists
+      Ahoy::Event.activations.where(Ahoy::Event.arel_table[:visit_id].eq(arel_table[:ahoy_visit_id])).arel.exists
     end
   end
 end

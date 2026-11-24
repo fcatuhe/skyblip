@@ -11,6 +11,8 @@ en:
       non_user: "Non-users"
       user: "Users"
       internal: "Internal"
+    activations:
+      activated: "Activated"
     sections:
       public: "Public"
       briefing: "Briefing"
@@ -35,6 +37,7 @@ en:
       visitors: "Visitors"
     overview:
       visitors: "Visitors"
+      activated_visitors: "Activated"
       visits: "Visits"
       pageviews: "Pageviews"
       bounce_rate: "Bounce rate"
@@ -60,6 +63,9 @@ en:
         visitors:
           term: "Visitors"
           definition: "Distinct visitors, told apart by their browser cookie. A visitor can count in several rows of a tab, so visitors do not add up."
+        activated:
+          term: "Activated"
+          definition: "The visitors who activated a unit in the briefing, from the browser the visit was in. Activating again after a reflash counts again. A refused activation does not count, nor one made from another browser than the one that browsed the site."
         duration:
           term: "Duration"
           definition: "The average length of whole visits, with the tab visible. Never the time spent on a single page."
@@ -91,6 +97,8 @@ en:
       views: "Views"
       events: "Events"
       duration: "Duration"
+      activations: "Activations"
+      activated: "Activated"
       load_more: "Older visits"
       sources:
         all: "All"

@@ -3,7 +3,8 @@ class GetUnitTool < ApplicationTool
   title "Read a unit's record"
   description "What the server holds on a skyBlip unit, any product, from its first connection to the briefing app: its product " \
               "and variant, its DEVICEID and Bluetooth tag, and once activated its serial, address and each key it registered " \
-              "with, active, pending or revoked. Then its firmware, newest first, one stretch per version, build and variant, " \
+              "with, active, pending or revoked, and the visitor tokens get_visitor reads for the browsers that activated it. " \
+              "Then its firmware, newest first, one stretch per version, build and variant, " \
               "each with its source: read, a browser's report nobody vouches for, installed, an install from the briefing app " \
               "the unit came back on, or attested, signed by the unit. A tag names up to 65536 units, so a slug from one can " \
               "match several, so the answer is always a list. For admins only."
@@ -27,6 +28,7 @@ class GetUnitTool < ApplicationTool
     { device: unit.slug, product: unit.product, variant: unit.variant, device_id: unit.device_id,
       bluetooth_tag: unit.bluetooth_tag && format("%04X", unit.bluetooth_tag), serial: unit.serial, address: unit.address,
       first_seen_at: unit.created_at.utc.iso8601, last_seen_at: unit.updated_at.utc.iso8601, activated_at: unit.activated_at&.utc&.iso8601,
+      activated_by: Ahoy::Visit.activating(unit).distinct.pluck(:visitor_token),
       keys: unit.keys.sort_by(&:created_at).map do |key|
         { status: key.status, version: key.version, release: key.release, public_key_starts: key.public_key.first(16),
           first_registered_at: key.created_at.utc.iso8601, last_registered_at: key.updated_at.utc.iso8601 }

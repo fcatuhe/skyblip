@@ -8,6 +8,7 @@ class AnalyticsTool < ApplicationTool
     segment: { type: "string", enum: [ *Analytics::Visit.segments.keys, "all" ],
                description: "Whose visits: non_user unless said, which leaves out admins, the browsers they signed in from, and users" },
     section: { type: "string", enum: Analytics::Visit.entry_sections.keys, description: "The part of the site the visit entered" },
+    activation: { type: "string", enum: Analytics::ACTIVATION_CHOICES, description: "activated keeps the visits in which a unit was activated in the briefing" },
     channel: { type: "string", enum: Analytics::Visit.channels.keys, description: "Where the visit came from" },
     path: { type: "string", description: "A page the visit viewed, such as /buy" },
     entry: { type: "string", description: "The page the visit entered on" },
