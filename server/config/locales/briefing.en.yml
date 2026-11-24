@@ -203,6 +203,7 @@ en:
       port_closed: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge. A unit already running skyBlip lists no USB port: connect it over Bluetooth."
       port_failed: "The USB port could not be opened:"
       port_busy: "Another program is using the device. Close it, then click Install again."
+      port_busy_linux: "Another program is using the device, or Linux does not let this browser open it. Close any program using it. If none is, run sudo usermod -aG dialout $USER in a terminal (the group is uucp on Arch Linux), log out and back in, then click Install again."
       other_board: "This board does not run skyBlip. skyBlip runs on a LilyGO T-Echo or T-Echo Plus, and on a Seeed MeshTracker X1."
       not_drive: "That is not the drive. Choose the drive named TECHOBOOT or X1."
       drive_denied: "Briefing needs permission to save to the drive. Choose it again, and click Allow or Save changes."

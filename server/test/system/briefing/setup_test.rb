@@ -215,6 +215,31 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
+  test "a port Linux will not open names the group to join" do
+    in_chrome_on "Linux"
+    in_range
+    plugged_in a_meshtastic_go(refusesOpen: true)
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      assert_selector ".unit-message", text: "or Linux does not let this browser open it. Close any program using it. If none is, run sudo usermod -aG dialout $USER in a terminal"
+      assert_button "Install"
+      screen "53-port-linux"
+    end
+  end
+
+  test "a port Windows will not open says another program holds it" do
+    in_chrome_on "Windows"
+    in_range
+    plugged_in a_meshtastic_go(refusesOpen: true)
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      assert_selector ".unit-message", text: "Another program is using the device. Close it, then click Install again."
+      assert_no_text "dialout"
+    end
+  end
+
   test "a browser that cannot install over USB says where to install from" do
     in_range
     with_installers do

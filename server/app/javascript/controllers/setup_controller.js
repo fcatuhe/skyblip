@@ -4,6 +4,7 @@ import { Activator, httpServer } from "#skyblip/activation"
 import { bluetoothReadiness, installedNames, joinFleet } from "#skyblip/fleet"
 import { DRIVE_NAMES, Installer, browserSupport } from "#skyblip/installer"
 import { sharedJournal } from "#skyblip/journal"
+import { onDesktopLinux } from "#skyblip/readiness"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { PARTNER, PairingFailed, pairTango, sides, tagText } from "#skyblip/tango"
 import { storedBrowserKey } from "#skyblip/trust"
@@ -204,7 +205,7 @@ export default class extends Controller {
     if (panel === "drive") this.#drive(state, name)
     if (panel === "writing") this.writingTextTarget.textContent = state.version ? say("setup.writing", { version: state.version, name }) : say("setup.downloading", { name })
     if (panel === "connect") this.#connectPanel(state, name)
-    this.#show(panel, { notice: this.failure ?? state.notice })
+    this.#show(panel, { notice: this.#onThisSystem(this.failure ?? state.notice) })
   }
 
   #drive(state, name) {
@@ -320,6 +321,10 @@ export default class extends Controller {
     this.setUpPartnerTarget.textContent = say("tango.set_up", { other: PRODUCT_WORDS[other] })
     for (const item of this.guidesTarget.children) item.hidden = kind !== "tango" && item.dataset.product !== kind
     this.#show("done")
+  }
+
+  #onThisSystem(notice) {
+    return notice?.key === "port_busy" && onDesktopLinux(navigator) ? { ...notice, key: "port_busy_linux" } : notice
   }
 
   #name({ product, tag }) {
