@@ -1,5 +1,6 @@
 #include "products/common/services/nmea.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include "core/events/link.h"
@@ -52,6 +53,7 @@ void NmeaService::tick(uint32_t now_ms) {
     if (!listening()) {
         cursor_ = 0;
         passed_once_ = false;
+        held_ = false;
         pass_bytes_ = pass_sent_ = resume_count_ = 0;
         return;
     }
@@ -60,6 +62,7 @@ void NmeaService::tick(uint32_t now_ms) {
     if (passed_once_ && !pass_due(now_ms)) return;
     last_pass_ms_ = now_ms;
     passed_once_ = true;
+    held_ = false;
     passed_second_s_ = landed_second_s_;
     run_pass(now_ms);
 }
@@ -67,10 +70,7 @@ void NmeaService::tick(uint32_t now_ms) {
 uint32_t NmeaService::due_in_ms(uint32_t now_ms) const {
     if (!listening()) return runtime::kServiceRestCeilingMs;
     if (!passed_once_ || pass_sent_ < pass_bytes_) return runtime::kServicePassCeilingMs;
-    const uint32_t since_ms = now_ms - last_pass_ms_;
-    const uint32_t period_ms =
-        landed_second_s_ != passed_second_s_ ? kPassGapFloorMs : cadence_ms();
-    const uint32_t wait_ms = runtime::remaining_ms(since_ms, period_ms);
+    const uint32_t wait_ms = wait_for_pass_ms(now_ms);
     return wait_ms == 0 ? runtime::kServicePassCeilingMs : wait_ms;
 }
 
@@ -81,23 +81,28 @@ void NmeaService::note_whole_second(uint32_t now_ms) {
     landed_at_ms_ = now_ms;
 }
 
-// INFO: fc 25nov26 an armed burst holds the pass as before, at most kPassDeferralCeilingMs
-bool NmeaService::pass_due(uint32_t now_ms) const {
-    const bool burst_armed = context_.state.rf.dwell.burst_armed;
-    const uint32_t since_ms = now_ms - last_pass_ms_;
-    if (landed_second_s_ != passed_second_s_) {
-        if (since_ms < kPassGapFloorMs) return false;
-        return !burst_armed || now_ms - landed_at_ms_ >= kPassDeferralCeilingMs;
+// INFO: fc 25nov26 an armed burst holds a due pass as before, at most kPassDeferralCeilingMs
+bool NmeaService::pass_due(uint32_t now_ms) {
+    if (wait_for_pass_ms(now_ms) > 0) return false;
+    if (!context_.state.rf.dwell.burst_armed) return true;
+    if (!held_) {
+        held_ = true;
+        held_since_ms_ = now_ms;
     }
-    if (since_ms < cadence_ms()) return false;
-    return !burst_armed || since_ms >= cadence_ms() + kPassDeferralCeilingMs;
+    return now_ms - held_since_ms_ >= kPassDeferralCeilingMs;
 }
 
-uint32_t NmeaService::cadence_ms() const {
+// INFO: fc 25nov26 a lost whole second is waited for from the last one landed, keeping a 1 s grid
+uint32_t NmeaService::wait_for_pass_ms(uint32_t now_ms) const {
+    const uint32_t since_ms = now_ms - last_pass_ms_;
+    if (landed_second_s_ != passed_second_s_)
+        return runtime::remaining_ms(since_ms, kPassGapFloorMs);
+    const uint32_t cadence_ms = runtime::remaining_ms(since_ms, kMovingTargetRedrawPeriodMs);
     const model::Ownship& second = context_.state.own_second;
-    if (second.fix_valid && second.utc_valid)
-        return kMovingTargetRedrawPeriodMs + kWholeSecondWaitMs;
-    return kMovingTargetRedrawPeriodMs;
+    if (!second.fix_valid || !second.utc_valid) return cadence_ms;
+    return std::max(cadence_ms,
+                    runtime::remaining_ms(now_ms - landed_at_ms_,
+                                          kMovingTargetRedrawPeriodMs + kWholeSecondWaitMs));
 }
 
 // INFO: fc 20nov26 the alarm sentence goes first and outside the per-pass cap, so a full sky never

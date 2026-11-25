@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "doctest/doctest.h"
+#include "products/common/services/nmea.h"
 #include "test/support/half_second_feed.h"
 #include "test/support/nmea_stream.h"
 #include "test/support/product_rig.h"
@@ -54,20 +55,58 @@ TEST_CASE("nmea: the EFB's GPRMC leaves within a quarter second of its whole sec
     for (const uint32_t lag_ms : lags_ms) CHECK(lag_ms <= 250);
 }
 
+// Ticks every 10 ms from one half second to the next, noting when each $PFLAU leaves.
+static void tick_through(Rig& rig, uint32_t from_ms, std::vector<uint32_t>& heartbeats_ms) {
+    for (uint32_t at_ms = from_ms; at_ms < from_ms + kHalfSecondFeedMs; at_ms += 10) {
+        const int before = count_of(rig, "$PFLAU");
+        rig.run(at_ms, at_ms);
+        if (count_of(rig, "$PFLAU") > before) heartbeats_ms.push_back(at_ms);
+    }
+}
+
 // A pass that waits on the whole second must not wait on one the receiver lost.
 TEST_CASE("nmea: a lost whole second holds the tablet's heartbeat a quarter second, no more") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link();
     uint32_t updates = 0;
+    std::vector<uint32_t> heartbeats_ms;
     for (uint32_t second = 1; second <= 5; second++)
         for (uint32_t half = 0; half < 2; half++) {
             solve(rig, second, half, 25000, updates);
-            const uint32_t landed_ms = second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs;
-            rig.run(landed_ms + 10, landed_ms + kHalfSecondFeedMs - 10, 10);
+            tick_through(rig, second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs + 10,
+                         heartbeats_ms);
         }
-    rig.platform.link().clear();
-    solve(rig, 6, 1, 25000, updates);
-    rig.run(6580, 7060, 10);
-    CHECK(count_of(rig, "$PFLAU") == 1);
+    heartbeats_ms.clear();
+    tick_through(rig, 6000 + kFeedLatencyMs, heartbeats_ms);
+    REQUIRE(heartbeats_ms.size() == 1);
+    CHECK(heartbeats_ms[0] >= 6000 + kFeedLatencyMs + common::NmeaService::kWholeSecondWaitMs);
+    CHECK(heartbeats_ms[0] <= 6000 + kFeedLatencyMs + common::NmeaService::kWholeSecondWaitMs +
+                                  common::NmeaService::kPassDeferralCeilingMs);
+}
+
+// The pinned case: each fallback waited a quarter second past the last pass, so a run of lost whole
+// seconds spaced the passes 1250 ms and a full table missed its 5 s refresh.
+TEST_CASE("nmea: a run of lost whole seconds keeps the tablet's passes a second apart") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.raise_link();
+    uint32_t updates = 0;
+    std::vector<uint32_t> heartbeats_ms;
+    for (uint32_t second = 1; second <= 5; second++)
+        for (uint32_t half = 0; half < 2; half++) {
+            solve(rig, second, half, 25000, updates);
+            tick_through(rig, second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs + 10,
+                         heartbeats_ms);
+        }
+    heartbeats_ms.clear();
+    for (uint32_t second = 6; second <= 12; second++) {
+        tick_through(rig, second * 1000 + kFeedLatencyMs, heartbeats_ms);
+        solve(rig, second, 1, 25000, updates);
+        tick_through(rig, second * 1000 + kHalfSecondFeedMs + kFeedLatencyMs + 10, heartbeats_ms);
+    }
+    REQUIRE(heartbeats_ms.size() >= 6);
+    for (size_t i = 1; i < heartbeats_ms.size(); i++)
+        CHECK(heartbeats_ms[i] - heartbeats_ms[i - 1] <=
+              common::NmeaService::kMovingTargetRedrawPeriodMs + common::NmeaService::kPassDeferralCeilingMs);
 }

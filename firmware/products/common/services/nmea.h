@@ -63,8 +63,8 @@ class NmeaService : public runtime::Service {
    private:
     bool listening() const;
     void note_whole_second(uint32_t now_ms);
-    bool pass_due(uint32_t now_ms) const;
-    uint32_t cadence_ms() const;
+    bool pass_due(uint32_t now_ms);
+    uint32_t wait_for_pass_ms(uint32_t now_ms) const;
     void run_pass(uint32_t now_ms);
     void emit_status(uint32_t now_ms);
     void emit_ownship();
@@ -91,12 +91,14 @@ class NmeaService : public runtime::Service {
     uint32_t landed_second_s_{0};
     uint32_t landed_at_ms_{0};
     uint32_t passed_second_s_{0};
+    uint32_t held_since_ms_{0};
     uint32_t link_drops_{0};
     int payload_{ports::kMinimumLinkPayloadBytes};
     // INFO: fc 20nov26 advances only past a target that went out, so a pass a link cut short
     // resends its tail first
     int cursor_{0};
     bool passed_once_{false};
+    bool held_{false};
     bool enabled_{false};
 };
 
