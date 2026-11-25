@@ -34,6 +34,14 @@ class McpTest < ActionDispatch::IntegrationTest
     assert_not Event.exists?(name: "error.reported")
   end
 
+  test "an argument a tool does not take is refused to the agent by name, and logs no error" do
+    call_tool("list_pages", { language: "fr", days: 7 })
+
+    assert response.parsed_body.dig("result", "isError")
+    assert_match(/days/, response.parsed_body.dig("result", "content", 0, "text"))
+    assert_not Event.exists?(name: "error.reported")
+  end
+
   test "list_pages lists every page in a language, and in English the pages not translated yet" do
     pages = JSON.parse(call_tool("list_pages", { language: "fr" }))
 

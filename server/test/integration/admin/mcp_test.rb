@@ -61,6 +61,17 @@ class Admin::McpTest < ActionDispatch::IntegrationTest
       Event.where(name: "event.listed").last.payload)
   end
 
+  # An agent asked list_events for days, which list_errors takes and list_events does not, and the server raised.
+  test "list_events refuses an argument it does not take by name, and logs no error" do
+    token = connect(client_id: CLAUDE_CODE).fetch("access_token")
+
+    text = call_tool("list_events", { name: "device.", days: 7 }, token:)
+
+    assert response.parsed_body.dig("result", "isError")
+    assert_match(/days/, text)
+    assert_not Event.exists?(name: "error.reported")
+  end
+
   test "list_errors groups what broke, and get_unit reads a unit's record" do
     token = connect(client_id: CLAUDE_CODE).fetch("access_token")
     Rails.error.report RuntimeError.new("the challenge expired"), handled: true, source: "activation"

@@ -4,6 +4,10 @@ class ApplicationTool < MCP::Tool
   DEVICE = { type: "string", description: "A device by its slug, go-00012a or bravo-3f2a, the address its pilot reads on the glass or the briefing's URL" }.freeze
 
   class << self
+    def input_schema(value = NOT_SET)
+      super(value.is_a?(Hash) ? { additionalProperties: false, **value } : value)
+    end
+
     private
       # INFO: fc 14nov26 security: an admin demoted after connecting an agent reads nothing more through it
       def admin(server_context)
