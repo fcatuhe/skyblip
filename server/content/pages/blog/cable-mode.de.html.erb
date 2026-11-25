@@ -1,0 +1,83 @@
+---
+title: "skyBlip Go mit dem Hauptschalter einschalten"
+nav_title: Kabelmodus
+slug: blog/kabelmodus
+description: "Einmal am Go einstellen, dann übernimmt der Hauptschalter. Firmware 0.8.1 bringt den Kabelmodus für Go und Go+."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25. November 2026</p>
+  <h1>Hauptschalter ein, Go läuft.</h1>
+  <p class="lede">Der skyBlip Go bleibt im Flugzeug. Der Akku bleibt im Gerät, das USB-Kabel bleibt in einer Buchse, die der Hauptschalter schaltet. Im Kabelmodus fährt der Go mit dem Bordstrom hoch. Stellen Sie nach dem Flug den Hauptschalter aus, schaltet sich der Go fünf Minuten später selbst ab. Das richten Sie einmal ein. Wer danach fliegt, muss am Go nichts bedienen. Der Kabelmodus kommt mit der nächsten Firmware, Version 0.8.1. In 0.8.0 gibt es ihn noch nicht.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Die Frage bei Pilot und Flugzeug</h2>
+  <h3>Wie bleibt ADS-L im Vereinsflugzeug bei jedem Flug an?</h3>
+  <p>Sebastian G. wollte einen günstigen ADS-L-Sender, der am USB-Anschluss im Flugzeug bleiben kann und bei jedem Flug mitläuft. Norbert Rading fragte, ob man dafür den Akku aus dem T-Echo nehmen könnte, auf dem der Go basiert. <a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,25,00,5814566">François stellte beide Varianten zur Diskussion</a>. Wir lassen den Akku drin.</p>
+  <p><a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,25,09,0254359">Markus S. wollte keinen weiteren Punkt auf der Checkliste</a>. Der Hauptschalter sollte den Sender einschalten. Für mehrere Anlassversuche schlug er vor, das Gerät erst nach etwa drei Minuten abzuschalten. Wir haben fünf Minuten gewählt.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Einmal im Flugzeug einrichten</h2>
+  <h3>Prüfen Sie, ob die USB-Buchse am Hauptschalter hängt.</h3>
+  <ol>
+    <li><strong>Aktualisieren Sie den Go auf 0.8.1, sobald die Version verfügbar ist.</strong> Verbinden Sie ihn in Chrome oder Edge per Bluetooth mit <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> und bestätigen Sie das Update am Go. Bei einem neuen Gerät hilft die <%= link_to_page "install", label: "Installationsanleitung" %>. Beim Update von 0.8.0 bleiben die Einstellungen erhalten. Der Go startet mit <span class="mono">BUTTON</span>.</li>
+    <li><strong>Stellen Sie Luftfahrzeugtyp und Rufzeichen ein.</strong> Das geht in Briefing oder <%= link_to_page "go-first-steps", label: "im Menü am Go", anchor: "type" %>. Sendet das Flugzeug Mode S oder ADS-B, hinterlegen Sie die ICAO-Adresse seines Transponders einmal in Briefing. ADS-L soll dieselbe Adresse verwenden, damit Empfänger beide Signale demselben Flugzeug zuordnen. Geben Sie jedem solchen Flugzeug einen eigenen Go.</li>
+    <li><strong>Bringen Sie den Go mit der Antenne nach oben an.</strong> Wählen Sie einen Platz mit freier Sicht zum Himmel. Beispiele finden Sie in der <%= link_to_page "mount", label: "Anleitung zur Halterung" %>. Lassen Sie den Akku im Gerät und stecken Sie das USB-C-Kabel ein. Hat die Buchse auch bei ausgeschaltetem Hauptschalter Strom, bleibt der Go an.</li>
+    <li><strong>Stellen Sie am Go <span class="mono">POWER</span> auf <span class="mono">CABLE</span>.</strong> Drücken Sie in der Radaransicht die seitliche Taste, um <span class="mono">SETTINGS</span> zu öffnen. Tippen Sie auf das Touchfeld oben, bis Sie in der letzten Zeile bei <span class="mono">POWER</span> sind. Drücken Sie dort einmal die Taste, um von <span class="mono">BUTTON</span> auf <span class="mono">CABLE</span> zu wechseln. Der Go speichert die Einstellung. In Briefing lässt sie sich nicht ändern.</li>
+  </ol>
+  <figure class="shot">
+    <%= screen_image_tag "menu-power.png", alt: "In SETTINGS ist die letzte Zeile ausgewählt: POWER steht auf BUTTON" %>
+    <figcaption>Drücken Sie in dieser Zeile einmal die Taste, um <span class="mono">CABLE</span> zu wählen.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Vom Anlassen bis zum Abstellen</h2>
+  <h3>Der Go läuft mit, ohne dass Sie ihn bedienen.</h3>
+  <p>Schalten Sie den Hauptschalter wie gewohnt ein. Der Go meldet sich mit einem grünen Lichtimpuls von 400&nbsp;ms. Beim Go+ spüren Sie ihn auch. <a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,23,13,5147585">Markus S. hatte auch nach einer Betriebs-LED gefragt</a>. Im normalen Betrieb blinkt sie alle drei Sekunden. Blau heißt: Das Gerät läuft, hat aber noch keine Position. Grün heißt: Es läuft und hat eine Position zum Senden.</p>
+  <p>Solange USB-Strom anliegt, trennt ein elektronischer Schalter den Akku von der Last. Der Go läuft am Bordstrom und der Ladechip hält den Akku geladen. Bricht die USB-Spannung beim Anlassen kurz ein, übernimmt der Akku. Ohne ihn würde der Go neu starten. Wer den Akku ausbaut, kann außerdem die CE-Konformität des Geräts verlieren.</p>
+  <p>Die fünf Minuten sind für den Fall gedacht, dass Sie nach einem misslungenen Start den Hauptschalter ausschalten, damit der Anlasser abkühlt. Rotax sieht beim 912 nach zehn Sekunden Anlasserbetrieb zwei Minuten Pause vor. Lycoming nennt für den IO-320 fünf Minuten zwischen Startversuchen. Den Start über USB haben wir an einem Go+ auf dem Prüfstand geprüft. Den Spannungseinbruch auf der 5-V-Versorgung beim Anlassen haben wir dort noch nicht gemessen.</p>
+  <p>Fällt der USB-Strom im Flug weg, läuft der Go mit seinem Akku weiter. Der Countdown beginnt erst nach der Landung. Stellen Sie den Hauptschalter am Abstellplatz wie gewohnt aus. Im Radarkreis steht <span class="mono">OFF IN</span> über <span class="mono">5 MIN</span>. Kommt der Strom vorher zurück, verschwindet der Countdown und der Go läuft weiter. Sonst blinkt die LED nach fünf Minuten dreimal kurz rot und der Go schaltet sich aus. Sie müssen nicht darauf warten.</p>
+  <figure class="shot">
+    <%= screen_image_tag "cable-off.png", alt: "Nach dem Abschalten der USB-Stromversorgung steht im Radarkreis OFF IN über 4 MIN" %>
+    <figcaption>Während des Countdowns läuft der Go auf Akku.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Bedienung von Hand und Grenzen</h2>
+  <h3>Der Go bleibt ein tragbares Gerät.</h3>
+  <p>Wenn Sie den Go ohne USB-Strom starten wollen, drücken Sie <span class="mono">RESET</span>, das obere Bedienelement auf der linken Seite. Die Haupttaste weckt ihn im Kabelmodus nicht. Halten Sie diese Taste zwei Sekunden lang gedrückt, wenn Sie den Go ausschalten wollen. Das geht auch bei angeschlossenem Kabel. Er bleibt aus, bis wieder USB-Strom anliegt oder Sie <span class="mono">RESET</span> drücken.</p>
+  <p>Ein Go an der vorhandenen USB-Buchse bleibt ein tragbares Gerät. Wir liefern die nach <%= link_to_page "blog/pocket-or-installed", label: "CS-SC057a" %> geforderten Erklärungen nicht. Ein Festeinbau nach dieser CS-STAN-Standardänderung ist derzeit also nicht möglich. Der Go ist eine nicht zugelassene Hilfe für die Luftraumbeobachtung und sendet kein FLARM.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Quellen</h2>
+  <ul class="sources">
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, November 2026.
+      <span class="support">Die Vorschläge zum Betrieb am Bordstrom, zum Einschalten mit dem Hauptschalter und zur Betriebs-LED.</span>
+    </li>
+    <li>
+      <strong>skyBlip-Firmware</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/522">Kabelmodus</a> und <a href="https://github.com/fcatuhe/skyblip/issues/488">USB-Strom und Akku</a>.
+      <span class="support">Die Gründe für fünf Minuten Nachlauf, die Prüfungen am Go+ und die Umschaltung zwischen USB und Akku.</span>
+    </li>
+    <li>
+      <strong>skyBlip-Anleitungen</strong> &middot; <%= link_to_page "power", label: "Stromversorgung und Laden", anchor: "cable-mode" %> und <%= link_to_page "go-first-steps", label: "Was die LED anzeigt", anchor: "light" %>.
+      <span class="support">Die Bedienelemente und die Anzeigen beim Start, im Betrieb und beim Abschalten.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
