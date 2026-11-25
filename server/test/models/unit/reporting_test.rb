@@ -84,6 +84,16 @@ class Unit::ReportingTest < ActiveSupport::TestCase
     assert_equal [ "standard", "plus" ], Unit.find_by!(device_id: DEVICE_ID).firmwares.newest_first.pluck(:variant)
   end
 
+  # A browser can post any integer, and one past SQLite's 8 bytes would raise and stop the rest of the journal being heard.
+  test "an install that claims to have lasted longer than a day is ignored, and the events after it are still heard" do
+    hear read(version: "0.4.0+1400", at: 2.hours.ago),
+      entry("device.installed", device_id: DEVICE_ID, from: "0.3.0+1234", to: "0.4.0+1400", lasted_ms: 2**63),
+      read(version: "0.5.0+1500", at: 1.hour.ago)
+
+    firmwares = Unit.find_by!(device_id: DEVICE_ID).firmwares.newest_first
+    assert_equal [ [ "0.5.0+1500", "read", nil ], [ "0.4.0+1400", "read", nil ] ], firmwares.pluck(:version, :source, :lasted_ms)
+  end
+
   test "a report that names no valid identity records nothing" do
     hear read(device_id: "nope"), read(product: "tango"), read(variant: nil), read(bluetooth_tag: 0x10000)
 
