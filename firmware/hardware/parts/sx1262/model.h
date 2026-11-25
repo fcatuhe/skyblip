@@ -2,6 +2,7 @@
 #define SKYBLIP_HARDWARE_MODEL_SX1262_H
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <vector>
 
@@ -146,16 +147,21 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         return true;
     }
 
-    // INFO: fc 15sep26 DS 6.2.2: the part inserts its sync register on transmit as on receive
-    bool take_tx(uint8_t* out, uint8_t& bytes) {
+    // INFO: fc 23nov26 DS Figure 6-3 places the preamble and sync register ahead of the FIFO
+    template <size_t Capacity>
+    bool take_tx(uint8_t (&out)[Capacity], uint8_t& bytes) {
         if (!tx_pending) return false;
-        tx_pending = false;
-        const size_t inserted = sync_bits / 8u;
-        for (size_t i = 0; i < inserted; i++) out[i] = sync[i];
+        const size_t preamble = (256u * packet_parameters[0] + packet_parameters[1]) / 8u;
+        const size_t sync_bytes = sync_bits / 8u;
         const size_t sent = payload_bytes != 0 ? payload_bytes : tx_buffer_.size();
+        const size_t total = preamble + sync_bytes + sent;
+        if (total > Capacity || total > UINT8_MAX) std::abort();
+        tx_pending = false;
+        std::fill_n(out, preamble, preamble_inverted ? uint8_t{0xAA} : uint8_t{0x55});
+        std::copy_n(sync, sync_bytes, out + preamble);
         for (size_t i = 0; i < sent; i++)
-            out[inserted + i] = i < tx_buffer_.size() ? tx_buffer_[i] : 0;
-        bytes = static_cast<uint8_t>(inserted + sent);
+            out[preamble + sync_bytes + i] = i < tx_buffer_.size() ? tx_buffer_[i] : 0;
+        bytes = static_cast<uint8_t>(total);
         return true;
     }
 
@@ -174,6 +180,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint32_t frequency_hz{0};
     bool receiving{false};
     bool tx_pending{false};
+    bool preamble_inverted{false};
     int8_t rssi_dbm{-110};
     int8_t rx_rssi_dbm{-80};
     // INFO: fc 15sep26 a repeating sequence, one entry per read, is a channel changing mid-window

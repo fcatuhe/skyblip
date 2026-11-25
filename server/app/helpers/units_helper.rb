@@ -13,6 +13,10 @@ module UnitsHelper
 
   def unit_product(unit) = BriefingHelper::DEVICE_NAMES[unit.product]
 
+  def unit_visitor_links(visitor_tokens)
+    tag.span(safe_join(visitor_tokens.map { link_to it.first(8), admin_analytics_visitor_path(it) }, ", "), class: "mono")
+  end
+
   def unit_links(units)
     links = units.first(UNITS_LISTED).map { |unit| link_to unit_label(unit), admin_unit_path(unit), class: "mono" }
     more = units.size - UNITS_LISTED

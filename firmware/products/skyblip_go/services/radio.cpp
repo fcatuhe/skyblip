@@ -183,6 +183,9 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     plan.sync = protocol::kSharedSync;
     plan.sync_bits = protocol::kSharedSyncBits;
     plan.rx_bytes = protocol::kRxChipBytes;
+    plan.tx_sync = protocol::kAdslTxSync;
+    plan.tx_sync_bits = protocol::kAdslTxSyncBits;
+    plan.tx_preamble_chips = protocol::kAdslTxPreambleChips;
     plan.bitrate = adsl::kMBandChipRateBps;
     plan.deviation_hz = adsl::kMBandDeviationHz;
     plan.bandwidth_hz = adsl::kMBandChannelBandwidthHz;
@@ -379,6 +382,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         with_burst.tx = chips;
         with_burst.tx_bytes = tx_bytes;
         with_burst.tx_at_us = tx_at_us;
+        with_burst.tx_last_key_us = last_key_us(armed, payload);
         if (context_.roles.rf.arm(with_burst) != Status::Ok) {
             if (!dwell_armed) {
                 refuse_dwell(slot, first, phase, role, true, now_ms);

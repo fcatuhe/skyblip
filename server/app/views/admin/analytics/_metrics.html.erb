@@ -1,8 +1,12 @@
-<%# locals: (metrics:, visitors_url:) %>
+<%# locals: (metrics:, visitors_url:, activated_url:) %>
 <dl class="admin-metrics">
   <div>
     <dt><%= t("analytics.overview.visitors") %></dt>
     <dd><%= link_to number_with_delimiter(metrics[:visitors]), visitors_url %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.overview.activated_visitors") %></dt>
+    <dd><%= link_to number_with_delimiter(metrics[:activated_visitors]), activated_url %></dd>
   </div>
   <div>
     <dt><%= t("analytics.overview.visits") %></dt>

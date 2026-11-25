@@ -169,7 +169,7 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     log(event, stamp, radio::Verdict::Received, &observation);
 }
 
-// INFO: fc 20nov26 the uplink counts apart, so a packet Reed-Solomon refuses is never noise
+// INFO: fc 20nov26 the uplink counts apart, so a packet its parity refuses is never noise
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
                                uint32_t now_ms) {
     context_.state.air.uplink_frames++;
@@ -182,9 +182,14 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
         uplink_codec_.decode(event.data.data(), event.bytes, heard_s, heard_ms, relayed,
                              protocol::AdslUplink::kMaxTargets, statistics);
     context_.state.air.uplink_stale += static_cast<uint32_t>(statistics.stale);
-    if (decoded != Status::Ok) {
+    if (decoded == Status::Crc) {
         context_.state.air.uplink_bad++;
         log(event, stamp, radio::Verdict::BadCrc);
+        return;
+    }
+    if (decoded != Status::Ok) {
+        count_refusal(radio::Verdict::Unsupported);
+        log(event, stamp, radio::Verdict::Unsupported);
         return;
     }
 
@@ -225,8 +230,8 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
     adsl::Packet packet;
-    const wire::Status heard =
-        adsl::receive_as_heard(frame.data, frame.erasures, frame.length_heard, packet);
+    const wire::Status heard = adsl::receive_as_heard(
+        frame.data, frame.erasures, frame.length_heard, frame.length_erasures, packet);
     if (heard == wire::Status::Crc) return radio::Verdict::BadCrc;
     if (heard != wire::Status::Ok) return radio::Verdict::Unsupported;
     if (adsl_edge::is_registration(packet)) return learn_callsign(packet, utc_s, observation);

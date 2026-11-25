@@ -326,8 +326,8 @@ TEST_CASE("rf: a deferred position is re-encoded from the newest fix, byte for b
     // On air the radio puts its sync word in front of the chips it was handed, as the model does.
     simulator::AirRecord record{};
     record.event = simulator::AirEvent::Tx;
-    const uint8_t sync_bytes = deferred.sync_bits / 8;
-    std::memcpy(record.chips, deferred.sync, sync_bytes);
+    const uint8_t sync_bytes = deferred.tx_sync_bits / 8;
+    std::memcpy(record.chips, deferred.tx_sync, sync_bytes);
     std::memcpy(record.chips + sync_bytes, deferred.tx, deferred.tx_bytes);
     record.bytes = static_cast<uint16_t>(sync_bytes + deferred.tx_bytes);
     adsl::Packet sent{};

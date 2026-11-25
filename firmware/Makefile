@@ -75,7 +75,9 @@ EMCC ?= emcc
 EMXX ?= em++
 WEB_SRC := $(SRC) simulator/frontends/browser.cpp
 WEB_DIST := $(BUILD)/browser
-WEB_OUT := $(WEB_DIST)/skyblip_simulator.js
+WEB_OUT := $(WEB_DIST)/skyblip-simulator.js
+WEB_EMBED := $(WEB_DIST)/skyblip-simulator-embed.js
+WEB_SCENARIOS := $(WEB_DIST)/skyblip-simulator-scenarios.json
 # Objects under build/web/, so a save rebuilds one file in seconds rather than every source in 30 s.
 WEB_BUILD := $(BUILD)/web
 WEB_STAMP := $(BUILD)/web/emsdk-version
@@ -148,7 +150,7 @@ $(BIN): $(OBJ)
 browser:
 	@pinned=$$(ruby ../scripts/emsdk.rb "$(EMCC)") && set -- $$pinned && mkdir -p $(dir $(WEB_STAMP)) && \
 	  { echo "$$1" | cmp -s - $(WEB_STAMP) || echo "$$1" > $(WEB_STAMP); } && \
-	  $(MAKE) --no-print-directory $(WEB_OUT) $(WEB_DIST)/embed.js $(WEB_DIST)/scenarios.json \
+	  $(MAKE) --no-print-directory $(WEB_OUT) $(WEB_EMBED) $(WEB_SCENARIOS) \
 	    EMCC="$$2" EMXX="$${2%emcc}em++" WEB_BUILD="$(BUILD)/web/$$1"
 
 $(WEB_BUILD)/%.o: %.cpp
@@ -169,12 +171,12 @@ $(WEB_OUT): $(WEB_OBJ) $(WEB_STAMP)
 	@echo "built $(WEB_DIST)/"
 
 # Its own target: copied by the link recipe, an edit to it alone shipped nothing.
-$(WEB_DIST)/embed.js: simulator/web/embed.js
+$(WEB_EMBED): simulator/web/embed.js
 	@mkdir -p $(WEB_DIST)
 	cp $< $@
 
 # Each release carries the scenarios beside the WASM, as one file.
-$(WEB_DIST)/scenarios.json: $(wildcard scenarios/*.json) ../lib/simulator_scenarios.rb
+$(WEB_SCENARIOS): $(wildcard scenarios/*.json) ../lib/simulator_scenarios.rb
 	@mkdir -p $(WEB_DIST)
 	ruby ../scripts/simulator_scenarios.rb scenarios > $@.tmp && mv $@.tmp $@
 

@@ -17,16 +17,6 @@ export function portOf(info = {}) {
   return { vendor, id, firmware: FIRMWARE_OF_PORT[vendor]?.[id] ?? 'unknown', product: PRODUCT_OF_VENDOR[vendor] ?? null };
 }
 
-export function hasUsbInstall(scope = globalThis) {
-  return Boolean(scope.navigator?.serial && typeof scope.showDirectoryPicker === 'function');
-}
-
-export function browserSupport(scope = globalThis) {
-  if (hasUsbInstall(scope)) return 'usb';
-  const mobile = scope.navigator?.userAgentData?.mobile ?? /Android|iPhone|iPad/.test(scope.navigator?.userAgent ?? '');
-  return mobile ? 'phone' : 'other';
-}
-
 async function textOf(directory, name) {
   try {
     return await (await (await directory.getFileHandle(name)).getFile()).text();

@@ -22,8 +22,8 @@ using namespace skyblip;
 
 namespace {
 
-void taxi(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 0, 300); }
-void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 25000, 900); }
+void taxi(Rig& rig, uint32_t seconds) { rig.seconds(seconds, 0, 300); }
+void fly(Rig& rig, uint32_t seconds) { rig.seconds(seconds, 25000, 900); }
 
 int config_frames(Rig& rig) { return rig.platform.link().count_on(events::Endpoint::Config); }
 
@@ -52,7 +52,7 @@ std::string last_frame_on(Rig& rig, events::Endpoint endpoint) {
 TEST_CASE("companion link: the product raises LinkUp through its own platform, not by hand") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     REQUIRE_FALSE(rig.link_up());
 
     rig.raise_link(0x0042);
@@ -81,12 +81,12 @@ TEST_CASE(
     "companion link: a connected tablet's gauge moves without asking, and stops when it goes") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 4);
+    taxi(rig, 4);
     rig.platform.link().clear();
 
     // Nobody is listening yet: the cell can do what it likes and nothing is sent.
     rig.platform.battery().divider_mv = 3900;
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     CHECK(config_frames(rig) == 0);
 
     rig.raise_link();
@@ -96,7 +96,7 @@ TEST_CASE(
     CHECK(config_frames(rig) == 0);
 
     rig.platform.battery().divider_mv = 3600;
-    taxi(rig, rig.now_ms, 4);
+    taxi(rig, 4);
     const int pushed = config_frames(rig);
     CHECK(pushed >= 1);
     const std::string status = last_frame_on(rig, events::Endpoint::Config);
@@ -111,7 +111,7 @@ TEST_CASE(
     // with nobody there it is silence, not a notification into a dead handle.
     rig.platform.battery().external_power = true;
     rig.platform.battery().divider_mv = 4100;
-    taxi(rig, rig.now_ms, 5);
+    taxi(rig, 5);
     CHECK(config_frames(rig) == pushed);
 }
 
@@ -120,7 +120,7 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 6);
+    taxi(rig, 6);
     REQUIRE(rig.settings().callsign[0] == 0);
 
     rig.send("{\"command\":\"set\",\"callsign\":\"F-JABC\"}");
@@ -148,11 +148,11 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
 TEST_CASE("companion link: a Go arms a capture a page asks for once the glass is answered") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     rig.raise_link(1);
     rig.platform.link().push_rx(link_frame(events::Endpoint::Config, 1,
                                            "{\"command\":\"capture\",\"profile\":\"power_run\"}"));
-    taxi(rig, rig.now_ms, 1);
+    taxi(rig, 1);
     CHECK(last_frame_on(rig, events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,"
           "\"reason\":\"confirm_capture\"}");
@@ -175,7 +175,7 @@ TEST_CASE("companion link: a Go arms a capture a page asks for once the glass is
 TEST_CASE("companion link: a callsign written in flight is refused, not staged") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms, 6);
+    fly(rig, 6);
 
     rig.send("{\"command\":\"set\",\"callsign\":\"F-JABC\"}");
     rig.run_for(3000);
@@ -188,7 +188,7 @@ TEST_CASE("companion link: a callsign written in flight is refused, not staged")
 TEST_CASE("companion link: a connection that drops takes the standing prompt with it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Ground);
 
     rig.raise_link();
@@ -209,7 +209,7 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
 TEST_CASE("companion link: a dropped connection closes the upload window it opened") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
 
     rig.raise_link();
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
@@ -234,9 +234,9 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
 TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for the next one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
     rig.seconds(60, 50000, 800);
-    taxi(rig, rig.now_ms, 40);
+    taxi(rig, 40);
     REQUIRE(rig.product.flight_log().records_written() > 0);
 
     rig.raise_link(11);
@@ -266,7 +266,7 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
 TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
 
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     rig.raise_link(5);
@@ -290,7 +290,7 @@ TEST_CASE("companion link: two centrals read the same traffic stream" *
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
 
     rig.raise_link(1);
     rig.raise_link(2);
@@ -298,7 +298,7 @@ TEST_CASE("companion link: two centrals read the same traffic stream" *
     REQUIRE(rig.platform.link().links() == 2);
 
     rig.platform.link().clear();
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     // One frame formatted once, put on every subscribed connection by the
     // platform: what the host model records is the broadcast, session 0.
     CHECK(rig.platform.link().count_to(0, events::Endpoint::Nmea) >= 3);
@@ -310,7 +310,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
 
     rig.raise_link(1);
     rig.raise_link(2);
@@ -334,7 +334,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
 TEST_CASE("companion link: a reply is sized for the app that asked, not the narrowest link") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
 
     rig.raise_link(1);
     rig.raise_link(2);
@@ -351,7 +351,7 @@ TEST_CASE("companion link: a reply is sized for the app that asked, not the narr
 TEST_CASE("companion link: a second app leaving does not cancel the holder's prompt") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
 
     rig.raise_link(1);
     rig.raise_link(2);
@@ -383,7 +383,7 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
 TEST_CASE("companion link: a set queued before its connection dropped claims nothing") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
     common::ConfigService& config = rig.product.config_link().config();
 
     rig.raise_link(1);
@@ -412,7 +412,7 @@ TEST_CASE(
     "companion link: a frame from the last connection on a reused session id reaches no one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
     common::ConfigService& config = rig.product.config_link().config();
 
     rig.raise_link(1);
@@ -437,7 +437,7 @@ TEST_CASE(
 TEST_CASE("companion link: a log erase queued before its connection dropped claims nothing") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
     common::ConfigService& config = rig.product.config_link().config();
 
     rig.raise_link(1);
@@ -456,7 +456,7 @@ TEST_CASE("companion link: a log erase queued before its connection dropped clai
 TEST_CASE("companion link: a second central leaving does not end the holder's refusal") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
 
     rig.raise_link(1);
     rig.raise_link(2);
@@ -478,7 +478,7 @@ TEST_CASE("companion link: a second central leaving does not end the holder's re
 TEST_CASE("companion link: a config reply held for a phone that left never reaches the next one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, rig.now_ms, 20);
+    taxi(rig, 20);
     rig.raise_link(1);
     rig.run_for(200);
 

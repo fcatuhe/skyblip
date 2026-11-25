@@ -64,7 +64,7 @@
 
   class Device {
     constructor(options) {
-      Object.assign(this, { product: 'go', nodeNum: 0x9a3f2a, hwModel: 7, mode: 'meshtastic', unit: null, flashDelayMs: 0 }, options);
+      Object.assign(this, { product: 'go', nodeNum: 0x9a3f2a, hwModel: 7, mode: 'meshtastic', unit: null, flashDelayMs: 0, refusesOpen: false }, options);
     }
 
     port() {
@@ -90,7 +90,9 @@
       const ids = { meshtastic: 0x4405, softrf: 0x8029, bootloader: 0x0029 }[device.mode] ?? 0x1234;
       return {
         getInfo: () => ({ usbVendorId: device.product === 'go' ? 0x239a : 0x2886, usbProductId: device.product === 'go' ? ids : 0x1234 }),
-        open: async () => {},
+        open: async () => {
+          if (device.refusesOpen) throw named('NetworkError', 'Failed to open serial port.');
+        },
         close: async () => {},
         readable,
         writable,

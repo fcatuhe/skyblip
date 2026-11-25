@@ -27,7 +27,7 @@ The radio is judged by what its executor reports. A dwell the part would not ent
 
 ### A burst is timed only from a fresh edge
 
-On a lock every burst keys at most `kPpsEdgeMaxAgeMs`, 1202 ms, after the edge of the second it was planned in, where window B's dwell closes. `pps_fresh()` holds the gate to that age, so C.5 holds through a lost pulse. `Pps` (`../../hardware/platform/zephyr/pps.h`) reads the pulse locked for `kPpsLockTailMs`, 3 s, past its last edge, and that tail carries the dwells and `bus::State::traffic_now_s()`, never a burst. A lost pulse stops the bursts 1.2 s after its last edge and shows `NO TX PPS` 10 s later.
+On a lock every burst keys by its last key instant, at most 1194 ms after the edge of the second it was planned in (What the dwell map is for). `kPpsEdgeMaxAgeMs`, 1202 ms, limits planning from that edge through the close of window B's dwell. `pps_fresh()` holds the gate to that age, so C.5 holds through a lost pulse. `Pps` (`../../hardware/platform/zephyr/pps.h`) reads the pulse locked for `kPpsLockTailMs`, 3 s, past its last edge, and that tail carries the dwells and `bus::State::traffic_now_s()`, never a burst. A lost pulse stops the bursts 1.2 s after its last edge and shows `NO TX PPS` 10 s later.
 
 ### The PPS holdover keeps the dwells, receive only
 
@@ -39,15 +39,15 @@ Once the edge is stale the Go keeps it for `kPpsHoldoverMs`, 60 s, and only list
 
 The executor reads the burst's channel, already tuned in the dwell, over a 200 us window of nine instant reads averaged as power (`ChannelLevel`), ending at most 2 ms, the dead time, before the burst. Every window opens 3 ms into its dwell, so the 2.2 ms check before a first-instant burst (`PoliteAccess::kCcaLeadUs`) never falls in the retune. At or above the threshold the executor reports `RfEventType::Busy` with the level. A radio found out of receive reports busy with no level.
 
-Both executors start reading 1.2 ms before the instant (`platform::kCcaLeadUs`, `hardware/platform/clear_channel.h`): 0.7 ms of nRF52 staging, the window, and 0.3 ms of read overrun no bench has measured. A burst that would key more than 2 ms after its reading does not key. Once the reading starts the burst belongs to the executor (`RfMailbox::claim()`), and a `withdraw()` is refused.
+Both executors start reading 1.3 ms before the instant (`platform::kCcaLeadUs`, `hardware/platform/clear_channel.h`): 0.8 ms for staging, including the transmit sync register, the 0.2 ms window and 0.3 ms of read overrun. The silicon executor reserves another 0.4 ms of the 2 ms dead time for SetTx, synthesizer wake and the PA ramp. It refuses the burst if the reading is too old after staging. The new timing budget still needs a bench measurement. Once the reading starts the burst belongs to the executor (`RfMailbox::claim()`), and a `withdraw()` is refused.
 
 The threshold is EN 300 220-1 Table 45's for a device under 100 mW e.r.p.: 15 dB above Table 32's limit S = 10 log RB - 117 dBm. With ADS-L's 200 kHz channel, S is -93.99 dBm and the threshold -78.99 dBm at 0 dBd. Table 45's note corrects it by the antenna gain alone. The T-Echo's antenna peaks at 1.6 dBi, -0.55 dBd (`parts::sx1262::kAntennaGainCentiDbd`), so the limit at the connector is -78.44 dBm. The feed loses 0.5 dB to the chip (`kFeedLossCentiDb`), so the chip calls the channel busy from -78.94 dBm, -78 dBm in its whole-dBm reading (`platform::kCcaThresholdCentiDbm`). 200 kHz is the conservative RB: the SX1262's 234.3 kHz filter would allow 0.7 dB more. The gain is the datasheet's, the feed loss an allowance, and the threshold has no margin for the uncalibrated RSSI, all known limits until a bench measures them.
 
 `RadioService` defers a busy burst by a random 3 to 50 units of 5 ms, one ADS-L burst as 5.21.1's note asks (`../../products/skyblip_go/services/radio_access.cpp`). The draw hashes the address and the busy instant (`Transmitter::deferral_draw()`) and counts from that instant, so it spans §C.2's 15 to 250 ms backoff. `adsl::media_access()` draws only from the units left in the burst's window, so a burst with under 15 ms left misses. The burst never moves to another dwell or channel, because §C.2.5 gives the second its channel, so the device takes none of 5.21.4's frequency agility. A deferred position is encoded again from the newest fix. If that fix would be older than 500 ms, the position waits for the next fix and is drawn again, no earlier than the selected backoff permits and still inside its window (The age of a position). A burst missed after a busy assessment is not offered again in that dwell. The retry rule can give it a later dwell.
 
-§D.3 lets a device force a packet 3000 ms after its initial attempt, the turn's first busy assessment (`RadioService::Contention`). skyBlip forces only on the ground, where the next turn is 9 to 11 s away, never airborne, where the 2000 ms of silence after a forced burst would cost two positions. The forced burst carries `RfPlan::tx_forced` and keys without listening. For 2000 ms after it, bursts already handed over are withdrawn (`ports::Rf::withdraw()`) and none is armed.
+§D.3 lets a device force a packet 3000 ms after its initial attempt, the turn's first busy assessment (`RadioService::Contention`). skyBlip forces only on the ground, where the next turn is 9 to 11 s away, never airborne, where the 2000 ms of silence after a forced burst would cost two positions. The forced burst carries `RfPlan::tx_forced` and keys without listening. The silence counts from the latest the forced burst can end: its instant, the executor's 5 ms lateness ceiling and `kKeyToDoneMs`. For 2000 ms after that, bursts already handed over are withdrawn (`ports::Rf::withdraw()`) and none is armed. The silence holds even if the forced burst then misses.
 
-`air.tx_deferred`, `air.tx_forced` and `air.tx_busy_missed` count deferrals, forced bursts and bursts missed busy (`core/radio/README.md`).
+`air.tx_deferred`, `air.tx_forced` and `air.tx_busy_missed` count the deferral, force and busy verdicts (`core/radio/README.md`). A deferred or forced burst that then misses its last key instant also counts in `air.tx_lost`.
 
 ### The declarations
 
@@ -56,7 +56,7 @@ EN 300 220-1 5.21.3.2 asks the manufacturer to declare seven parameters. They ar
 | 5.21.3.2 | Declared | Table 48 | In the code |
 |---|---|---|---|
 | 1) the minimum CCA interval | 200 us | at least 160 us | `kCcaWindowUs`, the `ChannelLevel` window |
-| 2) the maximum dead time | 2 ms | at most 5 ms | `kDeadTimeCeilingUs`, enforced by both executors at the key. About 1 to 1.4 ms on the nRF52, not measured on a unit |
+| 2) the maximum dead time | 2 ms | at most 5 ms | `kDeadTimeCeilingUs`, enforced by both executors at the key. The nRF52 reserves 0.4 ms for SetTx through PA ramp. The interval is not measured on a unit |
 | 3) the method that randomises a retransmission | a hash of the device address and the busy instant | | `Transmitter::deferral_draw()` |
 | 4) the unit of the deferral period | 5 ms, one ADS-L burst | at least the CCA interval | `kDeferralUnitUs` |
 | 5) the minimum and maximum of the random deferral | 15 ms and 250 ms, 3 to 50 units from the busy instant, ADS-L §C.2's interval, cut where the burst's window ends. The busy instant is the later of the planned instant and the end of the assessment. A position waiting for a fresh fix can wait longer, never less | | `kDeferralFloorUs`, `kDeferralCeilingUs` |
@@ -71,9 +71,9 @@ Carrier sense is a requirement met, not a protection counted on. Two aircraft co
 
 G.1.1 names the PVT fix's time in the Timestamp to +/-10 ms, and G.1.16 sends no Traffic "containing navigation data older than 500 ms". The L76K solves on `.000` and `.500`, two of the Timestamp's quarters (`../../hardware/parts/l76k/README.md`). A position burst carries the newest solution unextrapolated, stamped with its own quarter, and a solution more than 10 ms off a quarter builds no Traffic (`core/protocol/adsl.cpp`). `own.fix_at_ms` is the solution's instant on the PPS edge (`../gnss/README.md`, PPS, and what it is worth).
 
-The age runs to the instant on air. `Transmitter::attempt()` refuses a position whose solution would then be older than `kFixMaxAgeMs` less `kFixAgeAllowanceMs`: the frame's 5 ms and `kCompletionAllowanceMs`, so the last chip leaves inside 500 ms. A burst keys at its instant or not at all, so it flies at most 490 ms after its solution.
+The age runs to the instant on air. `Transmitter::attempt()` refuses a position whose solution would then be older than `kFixMaxAgeMs` less `kFixAgeAllowanceMs`: the frame's 5 ms and `kCompletionAllowanceMs`, so the last chip leaves inside 500 ms. A position's last key instant is also at most 500 ms less `kKeyToDoneMs` after its encoded fix, 494 ms (`Transmitter::last_key()`), so a late key never carries the fix past 500 ms on air.
 
-A position whose fix arrives, `own.fix_in_hand_ms`, after its drawn instant less `kRedrawLeadMs` is drawn again: `Transmitter::redrawn_in()` draws over the rest of the window, from the fix plus that lead, keyed on the address and the second so units fed by one receiver model do not bunch. A fix after the window's last instant loses the position. `air.tx_redrawn_for_fix` counts redrawn positions and `air.tx_held_for_fix` lost ones.
+A position whose fix arrives, `own.fix_in_hand_ms`, after its drawn instant less `kRedrawLeadMs` is drawn again: `Transmitter::redrawn_in()` draws over the rest of the window, from the fix plus that lead, keyed on the address and the second so units fed by one receiver model do not bunch. A fix in hand by the window's last instant is redrawn up to `kRedrawLeadMs` past it, still before the burst's last key instant. A fix after it loses the position. `air.tx_redrawn_for_fix` counts redrawn positions and `air.tx_held_for_fix` lost ones.
 
 A position also needs a fix the clock can date, `own.fix_dated`, mapped through an anchor a valid fix set inside its quarter. Until then it is held like a stale one, and its dwell record says `held_for_fix`.
 
@@ -113,7 +113,7 @@ Every switch is the same 10 ms from T, the end of the window before it, and a `s
 
 A dwell is its window plus the lead and the margin (`dwell_of()`). The 5 ms retune covers the bench's worst hop, 1.16 ms over 2880, and no band change has been measured yet.
 
-A burst's instants run from its window's start to the end less its air time and `kCompletionAllowanceMs`, which covers the bench's worst 5.5 ms from SetTx to TxDone (`last_instant_ms()`, `Transmitter::window_of()`):
+A burst's instants run from its window's start to the end less its air time and `kCompletionAllowanceMs`, which covers the bench's worst 5.5 ms from the planned instant to TxDone (`last_instant_ms()`, `Transmitter::window_of()`):
 
 | Bursts | Instants |
 |---|---|
@@ -122,7 +122,9 @@ A burst's instants run from its window's start to the end less its air time and 
 | name on B | 1000 to 1190 ms |
 | skyPost uplink | 210 to 425 ms: 440 - 9.4 - 5, rounded down. `kGroundEmitEndMs`, a completion deadline, is 435 |
 
-A ground station may start its 9.4 ms uplink as late as 440.6 ms under §C.5 and end after the uplink dwell closes at 442, which is why skyPost starts from 210. `SlotPlan::tx_allowed` belongs to the dwell, so the plan that opens slot 0's dwell at 447, and the retune before it, carries it.
+A ground station may start its 9.4 ms uplink as late as 440.6 ms under §C.5 and end after the uplink dwell closes at 442, which is why skyPost starts from 210. The dwell reads a fixed 230 bytes behind the sync word, 9.2 ms at 200 kbps, whatever the packet's length, so a sync word that ends after about 432.8 ms is lost with its packet. That cuts 8 ms off the slot for the longest FEC packet, and 16 ms for a one-record CRC packet, which §C.5 lets start until 448.6 ms. `SlotPlan::tx_allowed` belongs to the dwell, so the plan that opens slot 0's dwell at 447, and the retune before it, carries it.
+
+Each burst of ours also carries its last key instant: its window's end less `kKeyToDoneMs` (`last_key_ms()`, `Transmitter::last_key()`). `kKeyToDoneMs` is 6 ms, the frame's 5 ms and 1 ms more. It must cover the time from the executor's last clock reading before SetTx to the frame's end, which build 863 bounds at 5.53 ms, its worst from a burst's instant to TxDone. That leaves about 0.47 ms, which a unit running this build has not yet measured. A burst keyed by then ends inside its window. Traffic and Status key by 814 ms on A and 994 ms on B, so they end inside the direct slot as §C.5 asks, and the name keys by 1194 ms, so it ends before the next second's uplink slot opens at 200 ms. A burst planned on its last instant can therefore key up to 4 ms late. The executor reports a burst missed if it cannot key by its last key instant, or would key 5 ms or more past its planned instant, even when it is forced (`ports::RfBurst`). The 5 ms ceiling allows for the simulator's 5 ms step, where the bench measured at most 0.33 ms. The hardware executor checks again after staging the burst.
 
 ## The seconds each burst owns
 

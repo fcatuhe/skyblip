@@ -2,7 +2,9 @@ class GetVisitorTool < AnalyticsTool
   tool_name "get_visitor"
   title "Read a visitor's story on skyblip.eu"
   description "One visitor, by the token list_visitors or list_outbound_clicks gives: the users it signed in as, when it " \
-              "was first and last seen, its first referrer, its latest place, browser, system and device, its visits, " \
+              "was first and last seen, the units it activated, each with the support code of the briefing browser that " \
+              "activated it, which list_events reads, its first referrer, its latest place, browser, system and device, " \
+              "its visits, " \
               "views, server events and seconds, and the timeline of its latest #{Analytics::Visitor::Timeline::VISITS_PER_PAGE} " \
               "visits, oldest first: each visit's start and end, the pages it viewed, what it clicked, submitted and typed " \
               "into, when it left and came back, and with source server or all, each request the server answered. " \
@@ -20,6 +22,7 @@ class GetVisitorTool < AnalyticsTool
 
       if visitor.metrics[:visits].positive?
         json visitor_token:, users: visitor.users.values.map { { id: it.id, name: it.name } },
+             activations: visitor.activations.map { { at: it.time, device: it.device, support_code: it.browser }.compact },
              **visitor.metadata.except(:all_user_ids), **visitor.metrics,
              page: visitor.timeline.page, more: visitor.timeline.more?, timeline: timeline_of(visitor)
       else
