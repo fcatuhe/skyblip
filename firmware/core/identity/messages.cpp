@@ -6,12 +6,12 @@ namespace skyblip::identity {
 
 namespace {
 constexpr const char* kRegisterLabel = "skyblip:register:v1";
-constexpr const char* kRegistrationLabel = "skyblip:registration:v1";
+constexpr const char* kRegistrationLabel = "skyblip:registration:v2";
 constexpr const char* kUnlockLabel = "skyblip:unlock:v1";
 constexpr const char* kAttestationLabel = "skyblip:attestation:v1";
 
-static_assert(sizeof("skyblip:registration:v1") - 1 + kDeviceIdBytes + Ed25519::kPublicKeyBytes +
-                      2 * kNonceBytes + kServerKeyIdBytes + 1 + kMaxVersionBytes <=
+static_assert(sizeof("skyblip:registration:v2") - 1 + kDeviceIdBytes + Ed25519::kPublicKeyBytes +
+                      2 * kNonceBytes + kServerKeyIdBytes + 3 + 2 + kMaxVersionBytes <=
                   Message::kBytes,
               "the longest message, the registration, fits whole");
 
@@ -53,8 +53,11 @@ Message register_message(const Nonce& unit_nonce, const Nonce& server_nonce) {
 
 Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                              const Nonce& unit_nonce, const Nonce& server_nonce,
-                             const ServerKeyId& server_key_id, bool release, const char* version) {
-    const uint8_t release_byte = release ? 1 : 0;
+                             const ServerKeyId& server_key_id, bool release, uint8_t product,
+                             uint8_t variant, uint16_t bluetooth_tag, const char* version) {
+    const uint8_t unit[] = {static_cast<uint8_t>(release ? 1 : 0), product, variant,
+                            static_cast<uint8_t>(bluetooth_tag >> 8),
+                            static_cast<uint8_t>(bluetooth_tag & 0xFF)};
     Message message;
     message.append(kRegistrationLabel)
         .append(span_of(device_id))
@@ -62,7 +65,7 @@ Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey
         .append(span_of(unit_nonce))
         .append(span_of(server_nonce))
         .append(span_of(server_key_id))
-        .append(ConstByteSpan(&release_byte, 1))
+        .append(ConstByteSpan(unit, sizeof(unit)))
         .append(version_of(version));
     return message;
 }

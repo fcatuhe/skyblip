@@ -9,7 +9,13 @@ module Identity::Message
     label("register") + bytes(unit_nonce, server_nonce)
   end
 
-  def registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, version:)
+  def registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, product:, variant:, bluetooth_tag:, version:)
+    label("registration", 2) + bytes(device_id, public_key, unit_nonce, server_nonce, server_key_id) +
+      [ release ? 1 : 0, PRODUCTS.fetch(product), VARIANTS.fetch(variant), bluetooth_tag ].pack("C3n") + version.b
+  end
+
+  # INFO: fc 25nov26 firmware as old as v0.8.0 signs this one, so it stays until activation refuses that firmware
+  def registration_v1(device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, version:)
     label("registration") + bytes(device_id, public_key, unit_nonce, server_nonce, server_key_id) + [ release ? 1 : 0 ].pack("C") + version.b
   end
 
@@ -23,7 +29,7 @@ module Identity::Message
   end
 
   private
-    def label(purpose) = "skyblip:#{purpose}:v1".b
+    def label(purpose, version = 1) = "skyblip:#{purpose}:v#{version}".b
 
     def bytes(*hex) = [ hex.join ].pack("H*")
 end

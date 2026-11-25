@@ -13,8 +13,8 @@ class IdentityLink {
    public:
     // INFO: fc 18oct26 #126: long enough to reach the server and back, short of a forgotten tab
     static constexpr uint32_t kNonceForgetMs = 10u * 60u * 1000u;
-    // INFO: fc 18oct26 the widest registration frame: version 9.99.99+99999
-    static constexpr int kRegistrationFrameBytes = 138;
+    // INFO: fc 18oct26 the widest registration frame: version 9.99.99+99999 | 25nov26 tag over 0xFF
+    static constexpr int kRegistrationFrameBytes = 146;
     static constexpr int kChallengeFrameBytes = 27;
     // INFO: fc 14nov26 the widest attestation frame: version 9.99.99+99999
     static constexpr int kAttestationFrameBytes = 102;

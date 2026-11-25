@@ -9,20 +9,23 @@ export const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/activat
 // INFO: fc 18oct26 the DER headers that wrap a raw Ed25519 seed or public key for node:crypto
 const PKCS8_ED25519 = Buffer.from('302e020100300506032b657004220420', 'hex');
 const SPKI_ED25519 = Buffer.from('302a300506032b6570032100', 'hex');
-export const REGISTRATION_FRAME_BYTES = 138;
+export const REGISTRATION_FRAME_BYTES = 146;
 export const ATTESTATION_FRAME_BYTES = 102;
-// INFO: fc 15nov26 the codes schemas/link.v1.json gives product and variant, one byte each in the attestation
+// INFO: fc 15nov26 the codes schemas/link.v1.json gives product and variant, one byte each in the attestation and the registration
 const PRODUCT_CODES = { go: 0, bravo: 1 };
 const VARIANT_CODES = { standard: 0, plus: 1 };
 const UNIT_COMMANDS = ['challenge', 'register', 'unlock', 'attest'];
 
 const bytes = (...hex) => Buffer.from(hex.join(''), 'hex');
-const label = purpose => Buffer.from(`skyblip:${purpose}:v1`);
+const label = (purpose, version = 1) => Buffer.from(`skyblip:${purpose}:v${version}`);
 const hex = buffer => Buffer.from(buffer).toString('hex');
 
 export const messages = {
   register: ({ unitNonce, serverNonce }) => Buffer.concat([label('register'), bytes(unitNonce, serverNonce)]),
-  registration: ({ deviceId, publicKey, unitNonce, serverNonce, serverKeyId, release, version }) =>
+  registration: ({ deviceId, publicKey, unitNonce, serverNonce, serverKeyId, release, product, variant, bluetoothTag, version }) =>
+    Buffer.concat([label('registration', 2), bytes(deviceId, publicKey, unitNonce, serverNonce, serverKeyId),
+      Buffer.of(release ? 1 : 0, PRODUCT_CODES[product], VARIANT_CODES[variant], bluetoothTag >> 8, bluetoothTag & 0xff), Buffer.from(version)]),
+  registrationV1: ({ deviceId, publicKey, unitNonce, serverNonce, serverKeyId, release, version }) =>
     Buffer.concat([label('registration'), bytes(deviceId, publicKey, unitNonce, serverNonce, serverKeyId), Buffer.of(release ? 1 : 0), Buffer.from(version)]),
   unlock: ({ deviceId, publicKey, serial, unitNonce }) => {
     const serialBytes = Buffer.alloc(2);
@@ -106,18 +109,18 @@ export class FakeServer {
     return { server_nonce: serverNonce, signature: this.key.sign(messages.register({ unitNonce: unit_nonce, serverNonce })) };
   }
 
-  async register({ device_id, public_key, version, server_key_id, release, server_nonce, signature }) {
+  async register({ device_id, public_key, version, server_key_id, release, product, variant, bluetooth_tag, server_nonce, signature }) {
     this.requests.push('register');
     if (this.held) await this.held.promise;
     this.#refuse();
     const unitNonce = this.challenges.get(server_nonce);
     if (!unitNonce) throw new ServerRefusal('expired');
-    const message = messages.registration({
-      deviceId: device_id, publicKey: public_key, unitNonce, serverNonce: server_nonce, serverKeyId: server_key_id, release, version,
-    });
+    const signed = { deviceId: device_id, publicKey: public_key, unitNonce, serverNonce: server_nonce, serverKeyId: server_key_id, release, version };
+    const named = product === undefined ? null : { product, variant, bluetoothTag: bluetooth_tag };
+    const message = named ? messages.registration({ ...signed, ...named }) : messages.registrationV1(signed);
     if (!verifies(public_key, signature, message)) throw new ServerRefusal('bad_signature');
     this.challenges.delete(server_nonce);
-    const known = this.units.get(device_id) ?? { serial: this.units.size + 1, publicKey: public_key };
+    const known = this.units.get(device_id) ?? { serial: this.units.size + 1, publicKey: public_key, ...named };
     if (known.publicKey !== public_key) throw new ServerRefusal('other_key');
     this.units.set(device_id, known);
     const unlock = messages.unlock({ deviceId: device_id, publicKey: public_key, serial: known.serial, unitNonce });
@@ -135,7 +138,7 @@ export class FakeServer {
 export class FakeUnit extends FakeSkyblip {
   constructor({ seed = VECTORS.unit_seed, deviceId = VECTORS.device_id, trusted = VECTORS.server_public_key,
     version = VECTORS.version, release = VECTORS.release, keyed = true, trustsBrowser = false, ...options } = {}) {
-    super({ address: null, variant: VECTORS.variant, ...options });
+    super({ address: null, variant: VECTORS.variant, bluetoothTag: VECTORS.bluetooth_tag, ...options });
     this.unitKey = keyPair(seed);
     Object.assign(this, { deviceId, trusted, version, release, keyed, trustsBrowser });
     this.trustedId = hex(createHash('sha256').update(bytes(trusted)).digest().subarray(0, 4));
@@ -177,10 +180,11 @@ export class FakeUnit extends FakeSkyblip {
     if (this.pending !== 'register') return super.press();
     this.pending = null;
     const fields = { deviceId: this.deviceId, publicKey: this.unitKey.publicKey, unitNonce: this.nonce, serverNonce: this.serverNonce,
-      serverKeyId: this.trustedId, release: this.release, version: this.version };
+      serverKeyId: this.trustedId, release: this.release, product: this.product, variant: this.variant, bluetoothTag: this.bluetoothTag, version: this.version };
     this.reply({
       command: 'registration', device_id: this.deviceId, public_key: this.unitKey.publicKey, version: this.version,
       server_key_id: this.trustedId, release: this.release, signature: this.unitKey.sign(messages.registration(fields)),
+      product: this.product, variant: this.variant, bluetooth_tag: this.bluetoothTag,
     });
   }
 

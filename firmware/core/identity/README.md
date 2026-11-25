@@ -9,7 +9,7 @@ Who this unit is, as skyblip.eu knows it: a FICR DEVICEID, the public half of a 
 | Message | Bytes | Signed by |
 |---|---|---|
 | register | `skyblip:register:v1` unit_nonce server_nonce | the server |
-| registration | `skyblip:registration:v1` device_id public_key unit_nonce server_nonce server_key_id release version | the unit |
+| registration | `skyblip:registration:v2` device_id public_key unit_nonce server_nonce server_key_id release product variant bluetooth_tag(2, big-endian) version | the unit |
 | unlock | `skyblip:unlock:v1` device_id public_key serial(2, big-endian) unit_nonce | the server |
 | attestation | `skyblip:attestation:v1` device_id public_key server_nonce release product variant version | the unit |
 
@@ -18,7 +18,7 @@ Who this unit is, as skyblip.eu knows it: a FICR DEVICEID, the public half of a 
 - `release` is one byte, 1 for a build made with the release fragments in `products/common/release/`, whose bootloader refuses an older image. `ports::Dfu::release_build()` reports it as the inverse of `downgrade_allowed()`. Nothing on the air differs: a development unit is a real aircraft with a real serial.
 - `product` and `variant` are one byte each, the codes `schemas/link.v1.json` gives them.
 
-The attestation is the unit's word on the firmware it runs, over a nonce the server minted (`core/comms/README.md`, Attestation).
+The registration names the unit as its identity frame does, so the server records an activated unit with its product, variant and Bluetooth tag on the unit's own signature. Firmware as old as v0.8.0 signs `skyblip:registration:v1`, which stops at `release` and the version, and the server still takes it. The attestation is the unit's word on the firmware it runs, over a nonce the server minted (`core/comms/README.md`, Attestation).
 
 `schemas/activation.v1.vectors.json` holds all four, and the server's suite checks the same vectors. Ed25519 is deterministic, so the unit's signatures match the server's byte for byte.
 

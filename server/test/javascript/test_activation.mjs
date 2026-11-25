@@ -43,7 +43,8 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
   const server = keyPair(VECTORS.server_seed);
   const unit = keyPair(VECTORS.unit_seed);
   const fields = { deviceId: VECTORS.device_id, publicKey: VECTORS.unit_public_key, unitNonce: VECTORS.unit_nonce,
-    serverNonce: VECTORS.server_nonce, serverKeyId: VECTORS.server_key_id, release: VECTORS.release, version: VECTORS.version, serial: VECTORS.serial };
+    serverNonce: VECTORS.server_nonce, serverKeyId: VECTORS.server_key_id, release: VECTORS.release, product: VECTORS.product,
+    variant: VECTORS.variant, bluetoothTag: VECTORS.bluetooth_tag, version: VECTORS.version, serial: VECTORS.serial };
   assert.equal(server.id, VECTORS.server_key_id);
   assert.equal(server.sign(messages.register(fields)), VECTORS.register_signature);
   assert.equal(unit.sign(messages.registration(fields)), VECTORS.registration_signature);
@@ -52,6 +53,8 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
   const development = messages.registration({ ...fields, release: false });
   assert.equal(development.toString('hex'), VECTORS.development_registration_message);
   assert.equal(unit.sign(development), VECTORS.development_registration_signature);
+  assert.equal(messages.registrationV1(fields).toString('hex'), VECTORS.v1_registration_message);
+  assert.equal(unit.sign(messages.registrationV1(fields)), VECTORS.v1_registration_signature);
 });
 
 test('the page counts down the prompt the firmware stands for as long', () => {
@@ -76,6 +79,7 @@ test('activating asks the server, then the glass, then stores the unlock code an
   const done = await until(state => state.notice?.key === 'activated' && state.address);
   assert.equal(done.address, '000001');
   assert.deepEqual(server.requests, ['challenge', 'register']);
+  assert.deepEqual(server.units.get(VECTORS.device_id), { serial: 1, publicKey: VECTORS.unit_public_key, product: 'go', variant: 'plus', bluetoothTag: 0x3f2a });
   assert.equal(unit.unlockCode.serial, 1);
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);
 });

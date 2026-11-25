@@ -96,7 +96,7 @@ Each frame is measured at its widest, and `test/products/common/test_link_payloa
 | `identity` reply | 39, and never under 31 |
 | install report | 30 (`core/dfu/README.md`) |
 | `protocols` reply | 18 on a Go and 11 on a Bravo at this release's versions |
-| registration, attestation | 138, 102 |
+| registration, attestation | 146, 102 |
 | challenge, `browser_challenge` reply | 27, 22 |
 | `browser` entry, acknowledgement | 45, 11 |
 | timing report | 147 |
@@ -198,7 +198,7 @@ Each connection leaves one `Link` `down` record in a `Full` capture, with `paylo
 
 `challenge`, `register` and `unlock` travel on the config endpoint: `IdentityLink` in `identity_link.h` holds the session, and the handlers are in `config_identity.cpp`. `schemas/activation.v1.schema.json` says what each signature covers, and `core/identity/README.md` the messages.
 
-`challenge` draws `unit_nonce`, 16 bytes from the hardware RNG, for the claim holder, and answers it with `server_key_id`. The nonce is single-use, and dies when `unlock` spends it, when the holder's link drops, or at `IdentityLink::kNonceForgetMs`, ten minutes. `register` verifies the server's signature over `unit_nonce` and `server_nonce`, stands `Pending::Register` under `confirm_register`, and one press answers the registration frame, signed by the unit's key. `unlock` verifies the unlock signature over the unit's DEVICEID, its current key, the serial and `unit_nonce`, and refuses serial 0, which would put 0x000000 on the air. The nonce is spent before the check, so a refused code is never retried on it. The code is written and read back before the `unlock` acknowledgement goes out. An activated unit's radio runs, so the code waits in `IdentityLink` for the product's own `timing::DurableWriteWindow`, and the power rule is asked again then: a cell that fell through it drops the code with `low_power`, never a forced write. A held code dies with its sender's link.
+`challenge` draws `unit_nonce`, 16 bytes from the hardware RNG, for the claim holder, and answers it with `server_key_id`. The nonce is single-use, and dies when `unlock` spends it, when the holder's link drops, or at `IdentityLink::kNonceForgetMs`, ten minutes. `register` verifies the server's signature over `unit_nonce` and `server_nonce`, stands `Pending::Register` under `confirm_register`, and one press answers the registration frame, signed by the unit's key, which names the product, the variant and the Bluetooth tag as the identity frame does. `unlock` verifies the unlock signature over the unit's DEVICEID, its current key, the serial and `unit_nonce`, and refuses serial 0, which would put 0x000000 on the air. The nonce is spent before the check, so a refused code is never retried on it. The code is written and read back before the `unlock` acknowledgement goes out. An activated unit's radio runs, so the code waits in `IdentityLink` for the product's own `timing::DurableWriteWindow`, and the power rule is asked again then: a cell that fell through it drops the code with `low_power`, never a forced write. A held code dies with its sender's link.
 
 An unactivated unit transmits nothing, so none of this is gated on the flight state, and its `register` prompt survives a take-off. An activated unit refuses `challenge`, `register`, `unlock` and `attest` `in_flight`, and cancels its register prompt at take-off.
 
@@ -211,7 +211,7 @@ Every identity refusal but `small_mtu` and `invalid` is written in `config_ident
 | `low_power` | an `unlock` while the cell is below the settings write rule (`core/power/cutoff.h`): the nonce stays live for a retry on the charger |
 | `no_session` | no live nonce for this claim holder: no `challenge`, a spent nonce, a dropped link, ten minutes, or a `challenge` since the registration was staged |
 | `bad_signature` | the signature does not verify with the trusted key, or the field is not a byte string of the width the registry pins |
-| `small_mtu` | the link cannot carry the 138-byte registration frame, or the 27-byte challenge reply, in one notification |
+| `small_mtu` | the link cannot carry the 146-byte registration frame, or the 27-byte challenge reply, in one notification |
 | `flash` | the identity page did not take the code, or did not read it back |
 
 A product that hands `ConfigService` no `IdentityLink` answers the three commands, and `attest`, `unknown_command`.
