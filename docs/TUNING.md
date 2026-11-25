@@ -124,6 +124,7 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | the gauge needs three readings to reject a transient, so this still shows charge on the first screen |
 | `kWindowSamples` | 3 | samples | Window | - |
+| `kCableGoneHoldMs` | 300000 (5 min) | milliseconds | Hold | outlasts a Lycoming starter's 5-minute rest between cranks, master off |
 | `kLevelSamples` | 3 | samples | Samples | [README](../firmware/core/power/README.md) argues it |
 | `kRailSettleMs` | 20 | milliseconds | Settle | the rail's discharge before the wake pin is armed, the 20 ms MB waits after driving the enables low (nRF52.cpp:2075) |
 | `kLongPressHoldMs` | 2000 (2 s) | milliseconds | Hold | long enough that it cannot be a page press, short enough to do with gloves on |
@@ -426,4 +427,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-281 constants over 26 folders.
+282 constants over 26 folders.

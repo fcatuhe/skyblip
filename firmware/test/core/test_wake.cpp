@@ -172,3 +172,17 @@ TEST_CASE("wake: a charger wake is named without hiding a fault that came with i
     CHECK(classify(ResetCause::Watchdog | ResetCause::UsbVbus) == ResetReason::Watchdog);
     CHECK(classify(ResetCause::Pin | ResetCause::UsbVbus) == ResetReason::Pin);
 }
+
+// In cable mode the aircraft's master switch is the unit's switch, through the USB socket.
+TEST_CASE("wake: in cable mode a cable plugged into a sleeping device switches it on" *
+          doctest::test_suite("main")) {
+    const ResetCause cable = ResetCause::UsbVbus | ResetCause::PowerOn;
+    BootCell on_cable = healthy(3000);
+    on_cable.external_power = true;
+    CHECK(boot_path(cable, false, healthy(), Switch::Cable) == BootPath::Run);
+    CHECK(boot_path(cable, false, on_cable, Switch::Cable) == BootPath::Run);
+    CHECK(boot_path(cable, false, healthy(), Switch::Button) == BootPath::SleepAgain);
+    // The cable wake is no exception to the lockout once the cable has gone again.
+    CHECK(boot_path(cable, false, healthy(kBootLockoutMv - 1), Switch::Cable) ==
+          BootPath::SleepAgain);
+}

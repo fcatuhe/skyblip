@@ -231,6 +231,11 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
                 static_cast<uint8_t>(next_range_step(current.settings.range_step));
             break;
         case MenuRow::Plot: next.settings.plot = next_radar_plot(current.settings.plot); break;
+        case MenuRow::Power:
+            next.settings.power_switch = current.settings.power_switch == power::Switch::Cable
+                                             ? power::Switch::Button
+                                             : power::Switch::Cable;
+            break;
         case MenuRow::Alarm:
             next.settings.alarm =
                 next_alarm(current.settings.alarm, alarm_sounds(current.settings, current.sounds));

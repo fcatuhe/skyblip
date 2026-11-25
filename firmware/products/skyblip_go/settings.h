@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "core/events/central.h"
+#include "core/power/cable.h"
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "core/util/result.h"
@@ -55,13 +56,17 @@ struct Settings {
     uint32_t aircraft_address{kAircraftAddressUnset};
     // INFO: fc 11nov26 the pinned Bravo, its type with its address, all zero while unpaired
     events::BluetoothAddress bravo{};
+    // INFO: fc 26nov26 in the padding byte after bravo, so a version 14 blob keeps its size
+    power::Switch power_switch{power::Switch::Button};
 
     // INFO: fc 20nov26 the link contract of schemas/link.v1.json: it moves when a key changes
     // meaning, not when the flash layout does
     static constexpr uint8_t kCurrentVersion = 1;
 };
 
-constexpr uint8_t kBlobVersion = 14;
+constexpr uint8_t kBlobVersion = 15;
+// INFO: fc 26nov26 v0.8.0 shipped it, so its blob loads with power_switch on Button
+constexpr uint8_t kBlobVersionBeforePowerSwitch = 14;
 
 Settings defaults();
 

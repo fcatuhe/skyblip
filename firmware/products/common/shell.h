@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "core/power/battery.h"
+#include "core/power/cable.h"
 #include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
 #include "core/power/wake.h"
@@ -31,7 +32,8 @@ class Shell {
 
     power::BootPath read_boot(power::ResetCause causes, int16_t battery_offset_mv) {
         boot_cell_ = read_boot_cell(battery_offset_mv);
-        boot_path_ = power::boot_path(causes, product_.platform_.button_down(), boot_cell_);
+        boot_path_ = power::boot_path(causes, product_.platform_.button_down(), boot_cell_,
+                                      product_.power_switch());
         return boot_path_;
     }
 
@@ -45,7 +47,9 @@ class Shell {
     Status start(Status board) {
         if (board != Status::Ok) return board;
         if (!flyable_) return Status::Down;
-        if (reset_reason_ == power::ResetReason::LowPowerWake) product_.alarm_.sign_on();
+        if (reset_reason_ == power::ResetReason::LowPowerWake ||
+            reset_reason_ == power::ResetReason::ChargerWake)
+            product_.alarm_.sign_on();
         const Status loop = product_.loop_.setup();
         product_.state_.started = loop == Status::Ok;
         return loop;
@@ -72,6 +76,7 @@ class Shell {
         if (metered) meter_.end_pass();
         record_loop(now_ms);
         if (product_.power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
+        watch_cable(now_ms);
         take_confirmed(now_ms);
         return true;
     }
@@ -123,6 +128,12 @@ class Shell {
                         product_.board_.due_in_ms(product_.state_.clock, now_ms));
     }
 
+    // INFO: fc 26nov26 only VBUS rising wakes SYSTEM OFF, so a cable back during the park restarts
+    bool cable_returned() const {
+        return shutdown_.reason() == power::ShutdownReason::CableGone &&
+               product_.platform_.external_power();
+    }
+
     bool flyable() const { return flyable_; }
     power::ResetReason reset_reason() const { return reset_reason_; }
     power::BootPath boot_path() const { return boot_path_; }
@@ -145,6 +156,15 @@ class Shell {
         product_.board_.poll_battery(now_ms);
         product_.power_.tick(now_ms);
         if (product_.power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
+        watch_cable(now_ms);
+    }
+
+    void watch_cable(uint32_t now_ms) {
+        if (product_.power_switch() != power::Switch::Cable) return;
+        const bool airborne =
+            product_.state_.flight.confirmed_state == flight::FlightState::Airborne;
+        if (cable_.gone(now_ms, product_.state_.power.battery.external_power, airborne))
+            shutdown_.request(power::ShutdownReason::CableGone, now_ms);
     }
 
     void record_loop(uint32_t now_ms) {
@@ -231,6 +251,7 @@ class Shell {
     const uint32_t radio_park_ceiling_ms_;
     uint32_t loop_window_s_{0};
     power::ShutdownSequencer shutdown_{};
+    power::CableWatch cable_{};
     power::ShutdownPhase acted_phase_{power::ShutdownPhase::Running};
     power::ResetReason reset_reason_{power::ResetReason::Unknown};
     power::BootPath boot_path_{power::BootPath::Run};

@@ -127,7 +127,9 @@ class SystemPower : public PowerDown {
                 lower(peripheral_rail_);
                 k_msleep(power::kRailSettleMs);
                 return;
-            case power::PowerDownStep::WakePinArmed: arm_wake(wake_); return;
+            case power::PowerDownStep::WakePinArmed:
+                if (button_wakes()) arm_wake(wake_);
+                return;
         }
     }
 

@@ -124,8 +124,8 @@ void switch_off() {
     printk("smoke: switching off, release the button\n");
     while (g_platform.button_down()) hold(runtime::kServicePassCeilingMs);
     hold(power::kReleaseSettleMs);
-    uint8_t magic =
-        power::boot_magic_for_system_off(boards::meshtracker_x1::kFactoryDfuButton, false);
+    uint8_t magic = power::boot_magic_for_system_off(boards::meshtracker_x1::kFactoryDfuButton,
+                                                     false, power::Switch::Button);
     const int retained =
         retention_write(DEVICE_DT_GET(DT_NODELABEL(uf2_boot_retention)), 0, &magic, sizeof(magic));
     if (retained != 0) {

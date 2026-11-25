@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include "core/power/cable.h"
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
 
@@ -33,7 +34,8 @@ static_assert(kImplausibleFloorMv < kFlatMv,
               "an unpopulated divider must fall through the lockout, not into it");
 
 // INFO: fc 05aug26 charge mode was considered and refused: README.md
-BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell);
+BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell,
+                   Switch power_switch = Switch::Button);
 
 RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass);
 

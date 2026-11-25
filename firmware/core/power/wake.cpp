@@ -26,14 +26,15 @@ RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass) {
     return on_glass == CellOnGlass::None ? RefusedFrame::Leave : RefusedFrame::Wordmark;
 }
 
-BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell) {
+BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell, Switch power_switch) {
     if (restarted(causes) ? below(cell, kFlatMv) : too_flat_to_run(cell))
         return BootPath::SleepAgain;
     if (button_down) return BootPath::Run;
     if (has_cause(causes, ResetCause::Pin)) return BootPath::Run;
     if (restarted(causes)) return BootPath::Run;
     // INFO: fc 12nov26 only a VBUS wake from SYSTEM OFF sets RESETREAS.VBUS: README.md
-    if (has_cause(causes, ResetCause::UsbVbus)) return BootPath::SleepAgain;
+    if (has_cause(causes, ResetCause::UsbVbus))
+        return power_switch == Switch::Cable ? BootPath::Run : BootPath::SleepAgain;
     return BootPath::Run;
 }
 

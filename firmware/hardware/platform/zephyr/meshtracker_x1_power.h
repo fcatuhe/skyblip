@@ -55,7 +55,9 @@ class MeshtrackerX1Power : public PowerDown {
                 k_msleep(power::kRailSettleMs);
                 return;
             // INFO: fc 12nov26 SENSE is a level, and the X1's button reads high when pressed
-            case power::PowerDownStep::WakePinArmed: arm_wake(button_); return;
+            case power::PowerDownStep::WakePinArmed:
+                if (button_wakes()) arm_wake(button_);
+                return;
         }
     }
 

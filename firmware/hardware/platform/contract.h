@@ -89,8 +89,11 @@ constexpr bool fills_the_platform_contract() {
         std::is_convertible_v<decltype(std::declval<Self>().system_power().reset_causes()),
                               power::ResetCause>,
         "platform: system_power().reset_causes() -> power::ResetCause, read once at boot");
-    static_assert(std::is_void_v<decltype(std::declval<Self>().system_power().system_off())>,
-                  "platform: system_power().system_off()");
+    static_assert(std::is_void_v<decltype(std::declval<Self>().system_power().system_off(
+                      power::Switch::Button))>,
+                  "platform: system_power().system_off(power::Switch)");
+    static_assert(std::is_void_v<decltype(std::declval<Self>().system_power().restart())>,
+                  "platform: system_power().restart()");
     static_assert(
         std::is_convertible_v<decltype(std::declval<Self>().system_power().take_supply_warning()),
                               bool>,

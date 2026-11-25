@@ -27,7 +27,7 @@ template <class Platform, class Product, class Collector>
             platform.watchdog().feed();
             k_sleep(K_MSEC(runtime::kServicePassCeilingMs));
         }
-        platform.system_power().system_off();
+        platform.system_power().system_off(product.power_switch());
     }
 
     for (;;) {
@@ -38,7 +38,10 @@ template <class Platform, class Product, class Collector>
 
         if (product.may_feed_watchdog(now_ms)) platform.watchdog().feed();
 
-        if (product.ready_to_power_off()) platform.system_power().system_off();
+        if (product.ready_to_power_off()) {
+            if (product.cable_returned()) platform.system_power().restart();
+            platform.system_power().system_off(product.power_switch());
+        }
 
         skyblip::platform::zephyr::g_loop_wake.rest_after(began_ticks, product.due_in_ms(now_ms),
                                                           runtime::kServicePassFloorMs);

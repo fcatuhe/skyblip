@@ -375,12 +375,33 @@ TEST_CASE("power down: every part is told before the rail drops, and the wake pi
 
 // A bootloader that enters DFU on a press needs the skip, and one that waits for a hold does not.
 TEST_CASE("power down: a switch-off asks the bootloader to skip DFU only where a press enters it") {
-    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, /*recovery_armed=*/false) == 0x6d);
-    CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/false) == 0x00);
+    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, /*recovery_armed=*/false,
+                                    Switch::Button) == 0x6d);
+    CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/false,
+                                    Switch::Button) == 0x00);
 }
 
 TEST_CASE("power down: a recovery asks every factory bootloader for the UF2 drive" *
           doctest::test_suite("main")) {
-    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, /*recovery_armed=*/true) == 0x57);
-    CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/true) == 0x57);
+    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, /*recovery_armed=*/true,
+                                    Switch::Button) == 0x57);
+    CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/true,
+                                    Switch::Button) == 0x57);
+}
+
+// GPREGRET 0x6d makes the T-Echo's bootloader send a VBUS wake back to SYSTEM OFF.
+TEST_CASE("power down: a cable-mode switch-off leaves no skip for the cable wake to meet" *
+          doctest::test_suite("main")) {
+    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, false, Switch::Cable) == 0x00);
+    CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, false, Switch::Cable) == 0x00);
+    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, true, Switch::Cable) == 0x57);
+}
+
+// With no skip, a press held through the T-Echo's bootloader lands in DFU, which has no timeout.
+TEST_CASE("power down: the button stays unarmed where its wake press would enter DFU" *
+          doctest::test_suite("main")) {
+    CHECK_FALSE(button_wakes(DfuButton::PressEntersDfu, Switch::Cable));
+    CHECK(button_wakes(DfuButton::PressEntersDfu, Switch::Button));
+    CHECK(button_wakes(DfuButton::HoldEntersDfu, Switch::Cable));
+    CHECK(ends_switched_off(ShutdownReason::CableGone, false));
 }

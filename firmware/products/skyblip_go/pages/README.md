@@ -318,7 +318,7 @@ The button opens the menu of the page a pilot stands on, so a pilot with no phon
 
 | Menu | Rows |
 |---|---|
-| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `BRAVO` |
+| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `BRAVO`, `POWER` |
 | `AIRCRAFT` row | `AIRCRAFT`: what Bravo heard, `TYPE`, `CALLSIGN`, `ADS-B` |
 | `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `BRAVO LOG`, `SELF TEST` |
 
@@ -333,7 +333,8 @@ The radar's menu holds every setting changed on the glass, and the front light, 
 - `UNITS`, `RANGE` and `PLOT` follow, the three the radar is made of.
 - `RANGE` steps 1, 2, 4 and 8 NM, or 2, 4, 8 and 16 KM, and round. Each table doubles in whole units of its own rather than converting the other, and the step survives a change of unit.
 - `ALARM` steps `LOUD`, `SOFT`, `VISUAL`, `OFF` and round, so one stray press from the default still sounds. A Go with no buzzer and no haptic toggles `VISUAL` and `OFF`, and while paired steps `BRAVO LOUD`, `BRAVO SOFT`, `VISUAL` and `OFF`, the `BRAVO` steps sounding on Bravo alone. Pairing sets `BRAVO LOUD`, and unpairing turns a `BRAVO` step into `VISUAL`. While paired the row sets the alarm for both units (`../../../core/comms/README.md`, The alarm).
-- `BRAVO` is last, since a Bravo is paired once, on the ground. It shows the tag or `NONE` and opens the `bravo` page.
+- `BRAVO` follows, since a Bravo is paired once, on the ground. It shows the tag or `NONE` and opens the `bravo` page.
+- `POWER` is last, the one row the menu slides up to, because it is set once per aircraft. `BUTTON`, the default, keeps the button as the switch. `CABLE` hands it to USB power, so a Go wired to the aircraft's socket follows the master switch (`../../../core/power/README.md`, Cable mode).
 
 `TYPE` holds ADS-L G.1.3's codes 0 to 10 and 15 to 17, the categories a person flies in. The longest name, `HANG GLIDER`, fits the row with its label, and a code with no name prints as `CODE 12`.
 

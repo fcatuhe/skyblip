@@ -87,7 +87,28 @@ A charger plugged into a switched-off device must not wake it. On the T-Echo the
 
 ### Arming the button
 
-The wake pin senses a level, so every road to SYSTEM OFF waits for the button to come up, the cutoff and a refused press included. Nothing bounds the wait, so a bag holding the button down keeps the unit awake. The button always wakes because, with the cable swallowed by the bootloader, a unit whose button was withheld could be woken only by the reset pin (#113).
+The wake pin senses a level, so every road to SYSTEM OFF waits for the button to come up, the cutoff and a refused press included. Nothing bounds the wait, so a bag holding the button down keeps the unit awake. With `power_switch` on `Button` the button always wakes, because, with the cable swallowed by the bootloader, a unit whose button was withheld could be woken only by the reset pin (#113). Cable mode is the one exception, below.
+
+## Cable mode
+
+`settings.power_switch` picks what switches a Go on and off. `Button` is the default and everything above. `Cable` is for a Go wired to the aircraft's USB socket, with its cell left in, so it follows the master switch (#488). The Go+ and the Go both have it, on the menu's `POWER` row. Bravo has no such setting and stays on its button.
+
+The hardware already takes the cell out of the load on the cable. Q7, an SI2301 P-FET between VBAT and the 5 V rail, has VBUS on its gate, so with the cable in the rail runs from VBUS through D7 and the cell only charges (LilyGO's `schematic/T-Echo_Schematic.pdf`). When the cable goes, Q7 closes and the cell carries the unit, so a cranking dip should not reset a Go with its cell in. No bench has checked that yet.
+
+In cable mode:
+
+- Every SYSTEM OFF writes GPREGRET `0x00` instead of `0x6d` and leaves the button unarmed (`boot_magic_for_system_off` and `button_wakes` in `shutdown.h`). With no skip, the T-Echo's bootloader lets a VBUS wake through (`../../boards/lilygo/t_echo_plus/factory/README.md`), and `boot_path` runs it. The X1's bootloader enters DFU only on a 3 s hold, so there the button stays armed.
+- A cable wake signs on, as a press does, so a pilot sees the unit come on with the master.
+- `CableWatch` switches the unit off once the cable has been gone for `kCableGoneHoldMs`, with `ShutdownReason::CableGone`. It counts only a cable it saw, so a unit woken on its cell by RESET runs until a long press or the cutoff.
+- The hold runs only on the ground. A cable lost in flight costs the cell, and an airborne unit that switched itself off would stop transmitting. After a landing the hold starts again.
+- The VBUS wake fires on VBUS rising. A cable that comes back while the unit parks for its loss would find it in SYSTEM OFF with nothing to wake it, so the unit restarts instead (`Shell::cable_returned`).
+- A long press or the link's `power_off` with the cable in switches the unit off until the cable next comes back, or RESET.
+
+`kCableGoneHoldMs` is 5 minutes, to ride out a start that fails. Each crank lasts seconds, and the cell bridges it. The longest gap is a pilot who switches the master off while the starter cools. Rotax gives the 912 2 minutes of cooling after 10 s of cranking (912 Series Maintenance Manual Line, 2.8). Lycoming rests the starter 5 minutes between cranks of 10 to 12 s (IO-320 Operator's Manual 60297-31, section 3). A hold that runs out early costs a reboot on the next master-on, with a GNSS fix to find again. A hold that runs long costs a few minutes of the cell transmitting at the parking spot, which the next cable refills.
+
+On a cell, a unit in cable mode does not wake on its main button. With GPREGRET `0x00` the waking press is still held when the bootloader reads P1.10, and it starts DFU with no timeout. RESET, the upper button on the left side, wakes it as a pin reset. For the same reason, a unit plugged in with the main button held lands in DFU.
+
+The soft off was considered and kept as the fallback: System ON with every part parked, woken by USBDETECTED. It never resets, so the bootloader is never involved and the button keeps working, but it costs some uA over SYSTEM OFF, not measured, and needs the watchdog paused or fed.
 
 ## Charge mode, considered and refused
 
@@ -117,7 +138,7 @@ Then `power_down` walks `kPowerDownOrder`:
 - `GnssStandby`: the L76K's WAKE_UP driven low and kept low. That is its standby, so no `$PCAS12` is sent.
 - `GnssLinesReleased`: the UART stopped and disabled, TX, RX and RESET_N disconnected with no pull. RESET_N is never pulsed.
 - `PeripheralRailOff`: P0.12 driven low into SYSTEM OFF, because a floating one restarted a unit (Meshtastic #10510). The BME280 and BHI260AP sit behind it and get no sleep command.
-- `WakePinArmed`: `kRailSettleMs` (20 ms) later. Only the button wakes this device.
+- `WakePinArmed`: `kRailSettleMs` (20 ms) later. With `power_switch` on `Button` only the button wakes this device. In cable mode on the T-Echo the pin stays unarmed (Cable mode, above).
 
 P0.13 is never lowered: per the vendor schematic it enables U11, the AP2112K-3.3 that feeds the SoC and the radio.
 
