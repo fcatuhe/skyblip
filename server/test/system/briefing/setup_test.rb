@@ -352,7 +352,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
-  # Samsung Internet on an Android tablet offered Install, and its port chooser closed empty in 15 ms, five times over.
+  # Samsung Internet on an Android tablet offered Install, and its port chooser closed empty within 17 ms, six times over.
   test "a tablet whose browser has Web Serial connects a unit installed from a computer, and activates a new Go on the page" do
     in_chrome_on "Android"
     in_range a_new_go

@@ -84,7 +84,7 @@ test('installing needs Web Serial and the folder chooser, which only Chrome and 
   assert.equal(browserSupport({ navigator: { userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0' } }), 'other');
 });
 
-// Samsung Internet on an Android tablet offered Install, and its port chooser closed empty in 15 ms, five times over.
+// Samsung Internet on an Android tablet offered Install, and its port chooser closed empty within 17 ms, six times over.
 test('a phone or a tablet installs from a computer, even when its browser has Web Serial and the folder chooser', () => {
   const usb = { serial: {} };
   const scope = navigator => ({ navigator: { ...usb, ...navigator }, showDirectoryPicker: () => {} });
