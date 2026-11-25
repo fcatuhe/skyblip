@@ -15,7 +15,7 @@ Reopen the page before the scenario check because the keyboard check removes its
 
 ```sh
 agent-browser --session simulator-check --cdp "$CDP" open http://127.0.0.1:8119/briefing/simulator
-agent-browser --session simulator-check --cdp "$CDP" wait '#scenario:not([disabled])'
+agent-browser --session simulator-check --cdp "$CDP" wait '[data-dev-simulator-target=scenario]:not([disabled])'
 agent-browser --session simulator-check --cdp "$CDP" eval --stdin < server/test/browser/workbench_scenarios.js
 ~/.pi/agent/git/github.com/fcatuhe/pi-wares/skills/agent-browser/leave.sh simulator-check
 ```
