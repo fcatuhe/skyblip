@@ -5,14 +5,15 @@ slug: comandi
 description: "Usa il pad e il pulsante di skyBlip Go. Inserisci il nominativo, modifica le impostazioni del radar e apri le pagine diagnostiche senza telefono."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Due comandi, e niente da imparare due volte.</h1>
+  <h1>Usare il pad e il pulsante del Go</h1>
   <p class="lede">
-    Un pad e un pulsante per i menu, con pagine diagnostiche per il banco di lavoro.
+    Scorri le pagine con il pad. Apri i menu con il pulsante.
+    Consulta le pagine diagnostiche al banco.
   </p>
 </section>
 
@@ -21,15 +22,15 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="two-contacts">Il pad scorre, <span class="highlight">il pulsante agisce</span>.</h3>
       <p>
-        Due comandi, ciascuno con un ruolo da ricordare.
-        Il pad capacitivo sul bordo superiore scorre le quattro pagine,
+        Il pad capacitivo sul bordo superiore fa scorrere le quattro pagine,
         senza modificare le impostazioni. Il pulsante laterale apre il menu della pagina attuale
         e ogni pressione successiva modifica il valore della riga selezionata.
       </p>
       <p>
-        Due pagine hanno un menu. Tutte le impostazioni modificabili con i comandi sono nel menu radar,
-        la prima schermata usata per configurare il dispositivo. Nessuna modifica richiede conferma:
-        ogni pressione applica subito la modifica.
+        Due pagine hanno un menu. Il radar è la prima schermata usata per configurare
+        il dispositivo. Il suo menu raccoglie tutte le impostazioni accessibili con il pad e il pulsante.
+        Ogni pressione applica subito la modifica, tranne la cancellazione dell&rsquo;indirizzo ADS-B,
+        che richiede una conferma su una seconda schermata.
       </p>
     </div>
     <figure class="shot">
@@ -40,10 +41,10 @@ updated_on: "2026-11-20"
 
   <ul class="points">
     <li>Tocca brevemente il pad per passare alla pagina successiva</li>
-    <li>Tocca il pad per un secondo per tornare al radar</li>
+    <li>Tieni il dito sul pad per un secondo per silenziare un allarme attivo o tornare al radar se non ci sono allarmi attivi</li>
     <li>Premi il pulsante per aprire il menu, se la pagina ne ha uno</li>
     <li>Premi di nuovo per modificare il valore della riga selezionata</li>
-    <li>Supera l&rsquo;ultima riga per tornare alla pagina</li>
+    <li>Nel menu, tocca il pad dopo l&rsquo;ultima riga per tornare alla pagina</li>
     <li>Non toccare i comandi per un minuto per tornare automaticamente alla pagina</li>
   </ul>
 
@@ -62,8 +63,8 @@ updated_on: "2026-11-20"
       <p>
         Premi il pulsante sull&rsquo;ultimo carattere per salvare il nominativo. Gli spazi
         finali vengono rimossi. Per cancellare un nominativo, cambia il primo
-        carattere in uno spazio e premi il pulsante. Il tasto del pulsante
-        mostra <span class="mono">ERASE</span> quando lo spazio è sotto la barra. Se esci dal campo prima di finire o non lo tocchi per un
+        carattere in uno spazio e premi il pulsante. L&rsquo;etichetta del pulsante
+        diventa <span class="mono">ERASE</span> quando il primo carattere è uno spazio. Se esci dal campo prima di finire o non lo tocchi per un
         minuto, non viene salvato nulla.
       </p>
     </div>
@@ -80,28 +81,29 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Il menu aeromobile dopo la pressione, con la riga CALLSIGN selezionata che mostra NONE" %>
-      <figcaption>Una pressione dopo</figcaption>
+      <figcaption>Il nominativo è stato cancellato</figcaption>
     </figure>
   </div>
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="diagnostics">Quattro pagine da scorrere, <span class="highlight">le altre per nome</span>.</h3>
+      <h3 id="diagnostics">Quattro pagine da scorrere, <span class="highlight">le pagine diagnostiche da aprire per nome</span>.</h3>
       <p>
-        Toccando brevemente il pad scorri il radar, l&rsquo;elenco, gli strumenti, poi
-        l&rsquo;accelerometro, e nessun&rsquo;altra pagina. Un pilota che scorre le pagine in volo
-        non deve ritrovarsi davanti alle barre dei satelliti. Una scheda senza sensore inerziale non ha
-        un accelerometro da mostrare, quindi il pad salta quella pagina invece di mostrare
+        Tocca brevemente il pad per passare dal radar all&rsquo;elenco, poi agli strumenti
+        e all&rsquo;accelerometro. Le altre pagine restano fuori da questo ciclo.
+        Così, scorrendo le pagine in volo, non ti ritrovi davanti alle barre dei satelliti.
+        Su un dispositivo con una scheda senza sensore inerziale, il pad salta la pagina dell&rsquo;accelerometro invece di mostrare
         <span class="mono">NO SENSOR</span> una volta su quattro.
       </p>
       <p>
-        Apri le altre pagine per nome dal menu dell&rsquo;elenco. Quando le chiudi,
-        torni alla pagina in cui ti trovavi. Le schermate qui sotto servono sul banco di lavoro,
-        sul piazzale e per le segnalazioni di bug. Non puoi raggiungerle scorrendo
-        le pagine con il pad. Il registro Bravo mostra il software eseguito da uno skyBlip Bravo abbinato,
-        la sua batteria e ciò che riceve. Per registrare un volo per una segnalazione di bug o una
-        prova di scarica, avvia la registrazione dalla pagina del dispositivo nell&rsquo;app Briefing.
-        Lo schermo mostra cosa verrà cancellato e una pressione del pulsante avvia la registrazione.
+        Apri le pagine diagnostiche per nome dal menu dell&rsquo;elenco. Quando le chiudi,
+        torni alla pagina in cui ti trovavi. Le schermate qui sotto servono per i controlli al banco,
+        sul piazzale e per le segnalazioni di problemi. Non puoi raggiungerle scorrendo
+        le pagine con il pad. Il registro Bravo indica il software usato da uno skyBlip Bravo abbinato,
+        lo stato della batteria e ciò che riceve il suo ricevitore.
+        Per registrare un volo destinato a una segnalazione di problema o a una prova di scarica,
+        apri la pagina del dispositivo nell&rsquo;app Briefing e avvia la registrazione.
+        Lo schermo indica cosa verrà cancellato. Premi il pulsante per confermare e iniziare a registrare.
       </p>
     </div>
     <figure class="shot">
