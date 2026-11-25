@@ -32,6 +32,7 @@ void RadioService::tick(uint32_t now_ms) {
     collect_busy(now_ms);
 
     if (next_armed_ && pass_us_ >= next_dwell_.from_us) promote();
+    keep_readable();
     const int64_t origin_us = dwell_origin_us();
     count_held_for_fix(plan, origin_us, now_ms);
     // INFO: fc 17nov26 a retune plans the dwell it leads to, which is the queued one
@@ -54,6 +55,7 @@ uint32_t RadioService::due_in_ms(uint32_t /*now_ms*/) const {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Rf) ||
         !context_.state.activation.address())
         return runtime::kServiceRestCeilingMs;
+    if (carries_position() && versions_.revision() != reread_revision_) return 0;
     if (!next_armed_) return runtime::kServicePassCeilingMs;
     const uint64_t now_us = context_.roles.clock.microseconds();
     if (next_dwell_.from_us <= now_us) return 0;
@@ -398,7 +400,10 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         dwell_armed = true;
         carried_now = true;
         armed.carry(payload, tx_at_us);
-        if (payload == Payload::Position) carry_position(payload_attempt, armed.utc_s);
+        if (payload == Payload::Position) {
+            armed.position_version = outgoing_.protocol_version();
+            carry_position(payload_attempt, armed.utc_s);
+        }
         if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
         if (payload == Payload::Status) context_.state.rf.status_at_us = tx_at_us;
     }
