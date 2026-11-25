@@ -9,6 +9,7 @@ cannot change what goes on air (firmware/disciplines/README.md). The dispatcher,
 directly under firmware/disciplines/, may also include the packs.
 """
 import os
+import posixpath
 import re
 import sys
 
@@ -39,7 +40,8 @@ def violations(disciplines=DISCIPLINES):
             found += [f"{relative} includes <{header}>, which is not the C++ standard library"
                       for header in ANGLE.findall(text) if header not in STANDARD]
             found += [f'{relative} includes "{header}", which a discipline may not read'
-                      for header in QUOTED.findall(text) if not header.startswith(readable)]
+                      for header in QUOTED.findall(text)
+                      if not posixpath.normpath(header).startswith(readable)]
     return found
 
 

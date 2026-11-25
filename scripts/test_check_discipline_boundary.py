@@ -46,6 +46,18 @@ class CheckDisciplineBoundary(unittest.TestCase):
         self.assertEqual(len(found), 5)
         self.assertIn('disciplines/soaring/soaring.cpp includes "core/radio/schedule.h"', found[0])
 
+    def test_a_path_that_climbs_out_of_a_readable_directory_is_judged_where_it_lands(self):
+        root, disciplines = tree({
+            "soaring/soaring.cpp": '#include "core/model/../settings/address.h"\n'
+                                   '#include "disciplines/soaring/../../core/radio/schedule.h"\n'
+                                   '#include "core/flight/../traffic/alarm.h"\n',
+        })
+        with root:
+            found = check_discipline_boundary.violations(disciplines)
+        self.assertEqual(len(found), 2)
+        self.assertIn('"core/model/../settings/address.h"', found[0])
+        self.assertIn('"disciplines/soaring/../../core/radio/schedule.h"', found[1])
+
     def test_the_dispatcher_may_include_every_pack(self):
         root, disciplines = tree({
             "discipline.cpp": '#include "disciplines/discipline.h"\n#include "disciplines/soaring/soaring.h"\n',
