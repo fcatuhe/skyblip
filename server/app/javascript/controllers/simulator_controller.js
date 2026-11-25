@@ -170,14 +170,13 @@ export default class extends Controller {
     clearTimeout(this.bootTimer)
     this.#stop()
     const generation = ++this.#generation
-    const { load, PAGES, PRODUCT } = await import(this.srcValue)
+    const { load, PAGES } = await import(this.srcValue)
     if (generation !== this.#generation) return
     this.pages = PAGES
     const sim = await load()
     if (generation !== this.#generation) return
-    const supportsBravo = PRODUCT?.includes("paired") && typeof sim.loadScenario === "function"
-    this.bravoControlTarget.hidden = !supportsBravo
-    this.paired = supportsBravo && this.bravoTarget.checked
+    this.bravoControlTarget.hidden = false
+    this.paired = this.bravoTarget.checked
     if (this.paired) {
       const scenario = JSON.stringify({ product: "paired" })
       if (!sim.loadScenario(scenario, scenario.length)) throw new Error("The firmware rejected the paired scenario")
@@ -395,8 +394,7 @@ export default class extends Controller {
     const powered = this.sim.powered() === 1
     this.element.classList.toggle("simulator--off", !powered)
     this.statusTarget.textContent = this.#screen()
-    // TODO: fc 09nov26 builds before simulator_lamp cannot report it, drop the ?. once the newest main dev build exports it
-    this.lampTarget.dataset.lamp = this.sim.lamp?.() ?? "dark"
+    this.lampTarget.dataset.lamp = this.sim.lamp()
     this.chargeTarget.classList.toggle("sb-led--lit", this.sim.batteryCharging() === 1)
   }
 

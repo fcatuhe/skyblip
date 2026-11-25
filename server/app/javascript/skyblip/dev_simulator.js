@@ -82,8 +82,7 @@ export async function mountSimulator(element, src, manifest, signal) {
   const PRODUCT_NAME = { go: 'skyBlip\u00a0Go', bravo: 'skyBlip\u00a0Bravo', paired: 'skyBlip\u00a0Go paired with Bravo' };
   SIM.applyMode = () => {
     const mode = MODES[f.mode()] || 'dev';
-    // TODO: fc 13nov26 a release before simulator_product flies only a Go: drop the ?. once Release.simulator serves one that exports it
-    const product = PRODUCT?.[f.product?.() ?? 0] ?? 'go';
+    const product = PRODUCT[f.product()];
     element.dataset.mode = mode;
     element.dataset.product = product;
     for (const panel of element.querySelectorAll('.panel')) {
@@ -223,9 +222,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('tape').replaceChildren(...(out.length ? out : ['-']));
   }
 
-  // TODO: fc 17nov26 a release before simulator_bravo_follows says bravoSilent: drop that branch once Release.simulator serves one that exports it
   function bravoAlarm() {
-    if (!f.bravoFollows) return f.bravoSilent() === 1 ? 'Bravo keeps silent: the Go+ sounds for both.' : 'Bravo sounds by its own settings.';
     return f.bravoFollows() === 1 ? "Bravo plays the Go's calls." : 'Bravo grades its own ADS-B.';
   }
 
@@ -235,8 +232,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('phone').textContent = out.length ? out.join('') : '-';
     $('phone').scrollTop = $('phone').scrollHeight;
     $('adsbhint').textContent = f.adsbHeard() + ' squitters heard, ' + f.adsbAircraft() + ' aircraft assembled.';
-    // TODO: fc 14nov26 a release before simulator_bravo_lamp shows no Bravo lamp: drop the ?. once Release.simulator serves one that exports it
-    const lamp = f.bravoLamp?.() ?? 'dark';
+    const lamp = f.bravoLamp();
     $('bravo_lamp').dataset.lamp = lamp;
     $('bravo_lamp_name').textContent = lamp;
     if (element.dataset.product !== 'paired') return;
@@ -255,8 +251,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('refreshstate').textContent = REFRESH[refresh];
     $('refreshstate').className = refresh === 2 ? 'full' : '';
     $('refreshcount').textContent = '  ·  ' + f.presents() + ' refreshes';
-    // TODO: fc 09nov26 builds before simulator_lamp cannot report it, drop the ?. once the newest main dev build exports it
-    if (element.dataset.product !== 'bravo') $('led_lamp').dataset.lamp = f.lamp?.() ?? 'dark';
+    if (element.dataset.product !== 'bravo') $('led_lamp').dataset.lamp = f.lamp();
     $('led_charge').className = 'sb-led sb-led--charge' + (f.batteryCharging() ? ' sb-led--lit' : '');
     $('pagehint').textContent = 'page: ' + PAGES[f.page()] +
         '  ·  backlight ' + (f.backlightOn() ? 'on' : 'off') +
