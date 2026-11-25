@@ -1,27 +1,23 @@
 # skyBlip
 
-> <%== t "footer.description", locale: :en %>
+> <%== t "footer.description" %>
 
-skyBlip is open source, with no subscription and no account. The links below lead to the Markdown version of each page. Every page of skyblip.eu answers in Markdown at its address followed by `.md`, or to a request that accepts `text/markdown`. [llms-full.txt](<%= Content.canonical_url(content_llms_full_path) %>) holds every English page in one file.
+<%== t "llms.intro", full: Content.canonical_url(content_llms_full_path), mcp: Content.canonical_url(mcp_path(locale: nil)) %>
 
-## Devices
+## <%== t "nav.devices" %>
 
 <%= render partial: "page", collection: @pages.values_at("index", "features", "skyblip-bravo", "skyblip-tango", "compare", "buy", "install", "skyblip-go") %>
-## Guides
+<% %w[guides ads-l blog].each do |section| %>
+## <%== @pages[section].nav_label %>
 
-<%= render partial: "page", collection: [ @pages["guides"], *@pages.values.select { it.parent&.base_slug == "guides" } ] %>
-## ADS-L
+<%= render partial: "page", collection: [ @pages[section], *@pages.values.select { it.parent&.base_slug == section } ] %>
+<% end %>
+## <%== t "footer.project" %>
 
-<%= render partial: "page", collection: [ @pages["ads-l"], *@pages.values.select { it.parent&.base_slug == "ads-l" } ] %>
-## Blog
+<%= render partial: "page", collection: @pages.values_at("about", "roadmap", "see-and-avoid") %>- [<%== t "llms.source_code" %>](<%= Rails.configuration.x.repository_url %>): <%== t "llms.source_code_description" %>
 
-<%= render partial: "page", collection: [ @pages["blog"], *@pages.values.select { it.parent&.base_slug == "blog" } ] %>
-## The project
+## <%== t "llms.other_languages" %>
 
-<%= render partial: "page", collection: @pages.values_at("about", "roadmap", "see-and-avoid") %>- [Source code](<%= Rails.configuration.x.repository_url %>): the firmware and this website, under the MIT license.
-
-## Other languages
-
-<% I18n.available_locales.without(I18n.default_locale).each do |locale| %>
-- [<%== t "language_name", locale: %>](<%= Content.canonical_url(Content::Page.find("index", locale:).markdown_path) %>)
+<% I18n.available_locales.without(I18n.locale).each do |locale| %>
+- [<%== t "language_name", locale: %>](<%= Content.canonical_url(content_llms_path(locale: (locale unless locale == I18n.default_locale))) %>)
 <% end %>
