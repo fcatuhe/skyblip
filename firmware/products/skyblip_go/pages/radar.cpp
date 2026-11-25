@@ -265,6 +265,13 @@ void reverse(ui::Canvas& canvas, const Box& box) {
             canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
 }
 
+// INFO: fc 26nov26 a split banner is centred as the parked frame centres its body, by its height
+int split_lift(const RingWords& ring) {
+    if (!ring.split) return 0;
+    const BodyLine split[] = {{ring.banner, kBannerScale}, {ring.note, kBannerScale}};
+    return (body_height(split, 2) - kCharacterHeight * kBannerScale) / 2;
+}
+
 Box word_box(const char* word, int y, int scale) {
     const int width = text_width(word, scale);
     return padded(kCentreX - width / 2, y, width, kCharacterHeight * scale);
@@ -459,8 +466,7 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     int reading_count = 2;
     char cell_buffer[12];
     const RingWords ring = ring_words(snapshot, cell_buffer);
-    // INFO: fc 26nov26 a split banner rises half a line, so the pair centres where one line stands
-    const int lift = ring.split ? line_pitch(kBannerScale) / 2 : 0;
+    const int lift = split_lift(ring);
     const int banner_y =
         ring.banner ? banner_y_inside(ring.banner, layout) - lift : layout.banner_y;
     const int note_y = ring.split ? banner_y + line_pitch(kBannerScale)
