@@ -101,6 +101,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.track_valid = solution.track_valid;
     own.hdop_e2 = solution.hdop_e2;
     own.vdop_e2 = solution.vdop_e2;
+    own.altitude_hae_valid = height_solved(own);
     own.utc_s = solution.utc_s;
     own.utc_ms = solution.utc_ms;
     const Dated dated = solution_instant(solution, now_ms);
