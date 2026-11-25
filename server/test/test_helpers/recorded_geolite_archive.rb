@@ -1,3 +1,4 @@
+require "rubygems/package"
 require_relative "maxmind_database_file"
 
 # INFO: fc 25nov26 the GeoLite licence forbids publishing the database, so a recording keeps MaxMind's answers around a stand-in archive
@@ -13,7 +14,7 @@ module RecordedGeoliteArchive
       end
       gzip = StringIO.new
       Zlib::GzipWriter.wrap(gzip) { it.mtime = 1; it.write(tar.string) }
-      gzip.string
+      gzip.string.b
     end
   end
 
