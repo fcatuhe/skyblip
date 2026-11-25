@@ -26,7 +26,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Wie alt ist die Position?</h2>
   <h3>Die nächste Firmware wartet nicht mehr auf einen eigenen Sendetakt.</h3>
   <p>Bis einschließlich Firmware 0.8.0 begann der Go mit dem Verbinden der App einen eigenen Sekundentakt. Der GPS-Empfänger lieferte die zur vollen Sekunde gemessene Position normalerweise etwa 0,1&nbsp;s nach der Messung. Verpasste sie den Sendezeitpunkt knapp, konnte sie fast eine weitere Sekunde liegen bleiben. Eine Funkübertragung konnte das Senden zusätzlich verzögern. Nach unserer Schätzung war die Position bei Sendebeginn im Mittel rund 0,6&nbsp;s alt, im ungünstigsten Fall etwa 1,2&nbsp;s.</p>
-  <p>Mit Firmware [version] beginnt der Go zu senden, sobald die zur vollen Sekunde gemessene Position vorliegt. Das ist normalerweise etwa 0,1&nbsp;s nach der Messung. Der Funk hat weiter Vorrang. Wenn die Position vorliegt, kann nur noch das Rufzeichen zur Aussendung anstehen. Der Go funkt es alle zehn Sekunden. In diesem Fall kann das Senden per Bluetooth bis zu 0,1&nbsp;s länger warten. Die Werte sind aus dem Programmablauf und den Zeitangaben des Empfängers abgeleitet. Wir haben die Verzögerung weder im Flug noch am Prüfstand mit einem Tablet gemessen. Die Bluetooth-Übertragung braucht zusätzlich Zeit.</p>
+  <p>Mit Firmware 0.8.1 beginnt der Go zu senden, sobald die zur vollen Sekunde gemessene Position vorliegt. Das ist normalerweise etwa 0,1&nbsp;s nach der Messung. Der Funk hat weiter Vorrang. Wenn die Position vorliegt, kann nur noch das Rufzeichen zur Aussendung anstehen. Der Go funkt es alle zehn Sekunden. In diesem Fall kann das Senden per Bluetooth bis zu 0,1&nbsp;s länger warten. Die Werte sind aus dem Programmablauf und den Zeitangaben des Empfängers abgeleitet. Wir haben die Verzögerung weder im Flug noch am Prüfstand mit einem Tablet gemessen. Die Bluetooth-Übertragung braucht zusätzlich Zeit.</p>
   <p>Bei 100&nbsp;kt über Grund legen Sie in 0,6&nbsp;s rund 30&nbsp;m zurück, in 0,1 bis 0,2&nbsp;s rund 5 bis 10&nbsp;m. Das ist die Strecke bis zum Sendebeginn am Go. Wie groß der Unterschied auf der Karte ist, haben wir nicht gemessen.</p>
   <p>Der Go sendet im Normalbetrieb weiterhin einmal pro Sekunde. Häufigeres Senden würde Verkehrsmeldungen wiederholen. Das Update fügt keine Bluetooth-Meldungen hinzu und ändert weder den Zeitpunkt der Display-Aktualisierung noch den Zeitpunkt der Schreibvorgänge im Speicher.</p>
 </section>
@@ -36,7 +36,7 @@ updated_on: "2026-11-25"
   <h3>Sie sollten das GPS des Tablets weiter nutzen können.</h3>
   <p>Die FLARM-Verkehrsmeldung <code>$PFLAA</code> gibt an, wie weit ein anderes Luftfahrzeug nördlich, östlich und über oder unter dem Go liegt. Um es richtig auf der Karte einzutragen, braucht die App die Position des Go als Bezugspunkt.</p>
   <p>Am 13. November 2026 haben wir unseren <%= link_to_page "ads-l/nmea", label: "Vorschlag für ADS-L-NMEA" %> bei der EASA und dem für ADS-L zuständigen Gremium eingereicht. Nach dem Vorschlag enthält jede Verkehrsmeldung die Koordinaten und die Höhe des anderen Luftfahrzeugs. Eine App könnte den Verkehr dann anzeigen und für Ihr Flugzeug das GPS des Tablets nutzen. Für Tablets ohne GPS würde der Go weiterhin seine eigene Position liefern.</p>
-  <p>Firmware [version] sendet die Position des Go früher. Die GPS-Quelle lässt sich damit noch nicht wählen. Das Gremium müsste das Format annehmen. SkyDemon und andere Apps müssten es lesen und Sie die GPS-Quelle getrennt vom Verkehr wählen lassen. Den Stand halten wir in <a href="https://github.com/fcatuhe/skyblip/issues/529">GitHub-Issue #529</a> fest.</p>
+  <p>Firmware 0.8.1 sendet die Position des Go früher. Die GPS-Quelle lässt sich damit noch nicht wählen. Das Gremium müsste das Format annehmen. SkyDemon und andere Apps müssten es lesen und Sie die GPS-Quelle getrennt vom Verkehr wählen lassen. Den Stand halten wir in <a href="https://github.com/fcatuhe/skyblip/issues/529">GitHub-Issue #529</a> fest.</p>
 </section>
 
 <section>
@@ -67,7 +67,7 @@ updated_on: "2026-11-25"
     </li>
     <li>
       <strong>skyBlip-Firmware</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/528">Die GPS-Position senden, sobald sie vorliegt</a>.
-      <span class="support">Was Firmware [version] beim Sendetakt ändert und wie die Verzögerung abgeschätzt wurde.</span>
+      <span class="support">Was Firmware 0.8.1 beim Sendetakt ändert und wie die Verzögerung abgeschätzt wurde.</span>
     </li>
   </ul>
 </section>

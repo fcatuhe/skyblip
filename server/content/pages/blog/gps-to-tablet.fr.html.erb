@@ -26,7 +26,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">De quand date la position ?</h2>
   <h3>Le prochain firmware envoie le point dès qu&rsquo;il est prêt.</h3>
   <p>Jusqu&rsquo;au firmware 0.8.0 inclus, le Go lançait son propre cycle d&rsquo;envoi d&rsquo;une seconde quand l&rsquo;application se connectait. Le récepteur fournissait normalement le point du début de seconde environ 0,1&nbsp;s après la mesure. Si le point arrivait juste après un envoi, il pouvait attendre presque une seconde de plus. Une émission radio pouvait encore retarder l&rsquo;envoi. D&rsquo;après nos estimations, le point datait en moyenne de 0,6&nbsp;s au début de l&rsquo;envoi, et d&rsquo;environ 1,2&nbsp;s dans le pire cas.</p>
-  <p>Avec le firmware [version], le Go commence l&rsquo;envoi dès qu&rsquo;il reçoit le point du début de seconde, normalement environ 0,1&nbsp;s après la mesure. La radio garde la priorité. Seul l&rsquo;indicatif, émis par le Go toutes les dix secondes, peut encore être en attente à l&rsquo;arrivée du point. Dans ce cas, l&rsquo;envoi en Bluetooth peut attendre jusqu&rsquo;à 0,1&nbsp;s de plus. Ces estimations viennent du code et des délais du récepteur. Nous n&rsquo;avons pas mesuré le délai en vol ni sur un banc avec une tablette. La transmission en Bluetooth prend du temps en plus.</p>
+  <p>Avec le firmware 0.8.1, le Go commence l&rsquo;envoi dès qu&rsquo;il reçoit le point du début de seconde, normalement environ 0,1&nbsp;s après la mesure. La radio garde la priorité. Seul l&rsquo;indicatif, émis par le Go toutes les dix secondes, peut encore être en attente à l&rsquo;arrivée du point. Dans ce cas, l&rsquo;envoi en Bluetooth peut attendre jusqu&rsquo;à 0,1&nbsp;s de plus. Ces estimations viennent du code et des délais du récepteur. Nous n&rsquo;avons pas mesuré le délai en vol ni sur un banc avec une tablette. La transmission en Bluetooth prend du temps en plus.</p>
   <p>À 100&nbsp;kt de vitesse sol, vous parcourez environ 30&nbsp;m en 0,6&nbsp;s et 5 à 10&nbsp;m en 0,1 à 0,2&nbsp;s. C&rsquo;est la distance parcourue avant que le Go commence l&rsquo;envoi. Nous n&rsquo;avons pas mesuré la différence sur la carte.</p>
   <p>En fonctionnement normal, le Go fait toujours un envoi par seconde. Des envois plus fréquents répéteraient des messages de trafic. La mise à jour n&rsquo;ajoute pas de messages Bluetooth et ne change pas le moment où le Go rafraîchit l&rsquo;écran ou écrit en mémoire.</p>
 </section>
@@ -36,7 +36,7 @@ updated_on: "2026-11-25"
   <h3>Vous devriez pouvoir garder le GPS de la tablette.</h3>
   <p>Le message de trafic FLARM, <code>$PFLAA</code>, situe chaque aéronef par rapport au Go. Il indique à quelle distance il se trouve vers le nord ou l&rsquo;est et à quelle hauteur au-dessus ou en dessous. Pour placer cet aéronef au bon endroit sur la carte, l&rsquo;application doit partir de la position du Go.</p>
   <p>Le 13 novembre 2026, nous avons soumis notre <%= link_to_page "ads-l/nmea", label: "proposition ADS-L NMEA" %> à l&rsquo;EASA et à l&rsquo;organisme responsable de l&rsquo;ADS-L. Dans ce format, chaque message de trafic donne la latitude, la longitude et l&rsquo;altitude de l&rsquo;autre aéronef. Une application pourrait alors afficher ce trafic tout en utilisant le GPS de la tablette pour votre avion. Le Go continuerait à fournir sa propre position aux tablettes sans GPS.</p>
-  <p>Le firmware [version] envoie la position du Go plus tôt. Il ne permet pas de choisir la source GPS. L&rsquo;organisme responsable de l&rsquo;ADS-L devrait adopter le format. SkyDemon et les autres applications devraient le lire et vous laisser choisir le GPS indépendamment du trafic. Nous suivons ce travail dans le <a href="https://github.com/fcatuhe/skyblip/issues/529">ticket GitHub n°&nbsp;529</a>.</p>
+  <p>Le firmware 0.8.1 envoie la position du Go plus tôt. Il ne permet pas de choisir la source GPS. L&rsquo;organisme responsable de l&rsquo;ADS-L devrait adopter le format. SkyDemon et les autres applications devraient le lire et vous laisser choisir le GPS indépendamment du trafic. Nous suivons ce travail dans le <a href="https://github.com/fcatuhe/skyblip/issues/529">ticket GitHub n°&nbsp;529</a>.</p>
 </section>
 
 <section>
@@ -67,7 +67,7 @@ updated_on: "2026-11-25"
     </li>
     <li>
       <strong>Firmware skyBlip</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/528">Envoyer la position GPS dès qu&rsquo;elle est disponible</a>.
-      <span class="support">Ce que change le firmware [version] et comment le délai a été estimé.</span>
+      <span class="support">Ce que change le firmware 0.8.1 et comment le délai a été estimé.</span>
     </li>
   </ul>
 </section>
