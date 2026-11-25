@@ -116,6 +116,7 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
     plan.tx_last_key_us = last_key_us(dwell, payload);
     if (context_.roles.rf.arm(plan) != Status::Ok) return false;
     dwell.carry(payload, tx_at_us);
+    if (payload == Payload::Position) dwell.position_version = outgoing_.protocol_version();
     if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
     if (payload == Payload::Status) context_.state.rf.status_at_us = tx_at_us;
     return true;

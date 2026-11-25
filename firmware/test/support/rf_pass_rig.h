@@ -49,8 +49,9 @@ struct Pass {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::RadioService radio_service{context, settings};
-    go::TrafficService traffic_service{context, bus.rf, settings.aircraft_address};
+    traffic::VersionTable versions{};
+    go::RadioService radio_service{context, settings, versions};
+    go::TrafficService traffic_service{context, bus.rf, settings.aircraft_address, versions};
 
     Status begin() {
         const Status status = rf.begin();

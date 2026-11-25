@@ -236,13 +236,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kClosingFixes` | 2 | fixes | Fixes | [README](../firmware/core/traffic/README.md) argues it |
 | `kLiftoffWindowMs` | `kTogetherHoldMs` = 6000 (6 s) | milliseconds | Window | [README](../firmware/core/traffic/README.md) argues it |
 | `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
+| `kReceptionAheadCeilingS` | 2 | seconds | Ceiling | our second lags our clock by one, a paired Bravo's runs one ahead: no further |
 | `kAirborneTargetForgetS` | `kTargetForgetReports * adsl::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kGroundTargetForgetS` | `kTargetForgetReports * adsl::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | [README](../firmware/core/traffic/README.md) argues it |
 | `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | [README](../firmware/core/traffic/README.md) argues it |
 | `kAdsbRangeCeilingM` | 1115000 | metres | Ceiling | 1090 MHz line of sight between two aircraft at FL600, worked out in README.md |
-| `kReceptionAheadCeilingS` | 2 | seconds | Ceiling | our second lags our clock by one, a paired Bravo's runs one ahead: no further |
 | `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
+| `kStatusForgetS` | `3 * adsl::kStatusPeriodS` = 60 | seconds | Forget | B.5: three of G.2.11's 20 s Status periods, so two Statuses missed keep it |
 
 ## [`firmware/products/common`](../firmware/products/common/README.md)
 
@@ -430,4 +431,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-285 constants over 26 folders.
+286 constants over 26 folders.
