@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://skyblip.eu/</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/about</loc>
@@ -33,8 +33,36 @@
     <lastmod>2026-11-13</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/blog</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/always-on-board</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/club-fleet</loc>
+    <lastmod>2026-11-21</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/network-or-radio</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/skyblip-softrf-stratux</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/who-sees-ads-l</loc>
+    <lastmod>2026-11-02</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/why-ads-l</loc>
+    <lastmod>2026-10-26</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/bravo</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/bravo-first-steps</loc>
@@ -45,12 +73,16 @@
     <lastmod>2026-11-18</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/compare</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/controls</loc>
     <lastmod>2026-11-20</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/anleitungen</loc>
@@ -65,8 +97,36 @@
     <lastmod>2026-11-20</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/de/blog</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/netz-oder-funk</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/skyblip-softrf-stratux</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/tasche-oder-einbau</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/vereinsflotte</loc>
+    <lastmod>2026-11-21</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/warum-ads-l</loc>
+    <lastmod>2026-10-26</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/wer-sieht-ads-l</loc>
+    <lastmod>2026-11-02</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/de/bravo</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/bravo-erste-schritte</loc>
@@ -94,7 +154,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/de/go</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/go-erste-schritte</loc>
@@ -142,11 +202,15 @@
   </url>
   <url>
     <loc>https://skyblip.eu/de/tango</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/ueber-skyblip</loc>
     <lastmod>2026-11-18</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/vergleich</loc>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/displays</loc>
@@ -154,7 +218,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/es</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/acerca-de</loc>
@@ -169,8 +233,40 @@
     <lastmod>2026-11-09</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/es/blog</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/bolsillo-o-instalado</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/flota-del-club</loc>
+    <lastmod>2026-11-21</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/por-que-ads-l</loc>
+    <lastmod>2026-10-26</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/quien-ve-el-ads-l</loc>
+    <lastmod>2026-11-02</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/red-o-radio</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/skyblip-softrf-stratux</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/es/bravo</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/comparativa</loc>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/comprar</loc>
@@ -178,7 +274,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/es/go</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/gps</loc>
@@ -238,7 +334,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/es/tango</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/temporizacion</loc>
@@ -254,7 +350,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/a-propos</loc>
@@ -269,8 +365,36 @@
     <lastmod>2026-11-19</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/fr/blog</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/flotte-de-club</loc>
+    <lastmod>2026-11-21</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/poche-ou-installe</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/pourquoi-l-ads-l</loc>
+    <lastmod>2026-10-26</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/qui-voit-l-ads-l</loc>
+    <lastmod>2026-11-02</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/reseau-ou-radio</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/skyblip-softrf-stratux</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/fr/bravo</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/bravo-premiers-pas</loc>
@@ -279,6 +403,10 @@
   <url>
     <loc>https://skyblip.eu/fr/commandes</loc>
     <lastmod>2026-11-20</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/comparatif</loc>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/ecrans</loc>
@@ -298,7 +426,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/go</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/go-premiers-pas</loc>
@@ -338,7 +466,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/tango</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/telephone</loc>
@@ -354,7 +482,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/go</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/go-first-steps</loc>
@@ -378,7 +506,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/it</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/acquista</loc>
@@ -389,16 +517,48 @@
     <lastmod>2026-11-19</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/it/blog</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/chi-vede-ads-l</loc>
+    <lastmod>2026-11-02</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/flotta-del-club</loc>
+    <lastmod>2026-11-21</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/perche-ads-l</loc>
+    <lastmod>2026-10-26</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/rete-o-radio</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/skyblip-softrf-stratux</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/tascabile-o-installato</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/it/bravo</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/comandi</loc>
     <lastmod>2026-11-20</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/it/confronto</loc>
+    <lastmod>2026-11-24</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/it/go</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/gps</loc>
@@ -458,7 +618,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/it/tango</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/telefono</loc>
@@ -510,7 +670,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/tango</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-24</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/timing</loc>

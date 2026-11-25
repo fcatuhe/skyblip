@@ -1,0 +1,59 @@
+---
+title: "SafeSky und ADS-L: Netz oder Funk?"
+nav_title: Netz oder Funk
+slug: blog/netz-oder-funk
+description: "SafeSky teilt Verkehr über das Mobilfunknetz, ADS-L über Funk. Wo beides funktioniert, wo es blind wird und warum wir mit beidem fliegen."
+published_on: "2026-11-13"
+parent: blog
+updated_on: "2026-11-13"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 13. November 2026</p>
+  <h1>SafeSky und ADS-L: Netz oder Funk?</h1>
+  <p class="lede">Manche Piloten schalten SafeSky ein, um die Segelflugzeuge in der Nähe ihres Flugplatzes zu sehen, und das funktioniert. Andere finden es blind dort, wo Leichtflugzeuge am meisten fliegen, weit weg von Städten. Beide haben recht. Die zwei Systeme übertragen den Verkehr auf verschiedenen Wegen.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Zwei Wege</h2>
+  <h3>SafeSky geht über das Netz. ADS-L geht von Luftfahrzeug zu Luftfahrzeug.</h3>
+  <p>SafeSky ist eine App. Ihr Smartphone sendet Ihre Position über das Mobilfunknetz an die Server von SafeSky. Diese führen sie mit Verkehr aus mehr als dreißig Quellen zusammen, darunter OGN-Bodenstationen, ADS-B-Empfänger und andere SafeSky-Nutzer, und schicken das Gesamtbild an jedes Smartphone zurück. Die App allein ist kostenlos. Für den Verkehr in Ihrer Navigations-App oder für Verkehr von einem Funkgerät wie einem FLARM-Empfänger brauchen Sie SafeSky Premium für 39,99&nbsp;€ im Jahr.</p>
+  <p>ADS-L ist Funk. Ein Gerät in Ihrem Luftfahrzeug sendet Ihre Position jede Sekunde auf 868&nbsp;MHz, und jeder Empfänger im Umkreis einiger Kilometer hört sie direkt. Kein Server, keine SIM-Karte, kein Abo.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Wo jedes System blind wird</h2>
+  <h3>Das Netz versagt, wo der Empfang fehlt. Der Funk versagt, wo niemand sendet.</h3>
+  <ul>
+    <li><strong>Mobilfunkempfang.</strong> In der Luft kann ein Smartphone das Netz verlieren. Seine Position erreicht den Server dann zu spät oder gar nicht. Leichtflugzeuge und Segelflugzeuge sind meist über dem Land unterwegs, wo der Empfang am schwächsten ist. ADS-L ist darauf nicht angewiesen.</li>
+    <li><strong>Wer teilnimmt.</strong> SafeSky sieht jeden App-Nutzer und jedes Luftfahrzeug, das eine Bodenstation hört, in jeder Entfernung. ADS-L sieht nur Luftfahrzeuge mit einem Gerät auf seinem Band, aber sieht sie direkt.</li>
+    <li><strong>Wer Sie sieht.</strong> Ein Militärjet im Tiefflug nutzt kein SafeSky und hat auch kein ADS-L an Bord. Keines der beiden Systeme macht Sie für ein Luftfahrzeug sichtbar, das nur Transponder liest.</li>
+  </ul>
+  <p>Fluglehrer betonen einen Punkt, dem wir zustimmen: Jeder Bildschirm im Cockpit zieht den Blick nach innen. Ein Verkehrssystem soll Ihnen sagen, wohin Sie schauen sollen, und Sie dann schauen lassen. Deshalb lässt die Warnung des Go nur das Bildschirmviertel in Richtung des Verkehrs aufleuchten, und mehr nicht.</p>
+</section>
+
+<section>
+  <h2 class="kicker">In der Praxis</h2>
+  <h3>Nutzen Sie beides. Die Systeme ergänzen sich.</h3>
+  <p>Ein Go im Cockpit macht Sie für jeden ADS-L-Empfänger in Ihrer Nähe sichtbar, ob jemand Netz hat oder nicht. OGN-Stationen, die ihn hören, können Sie an das Netz weitergeben. Dann können auch SafeSky-Nutzer Sie sehen. Ihr Smartphone zeigt mit SafeSky weiter den Verkehr, den nur das Netz kennt.</p>
+  <p>Wenn Sie schon den AERO Tracker von SafeSky nutzen, senden Sie bereits ADS-L. Ein Go zeigt Sie den anderen auf dieselbe Weise, für einen Bruchteil des Preises. Unser <%= link_to_page "compare", label: "Vergleich" %> stellt beide nebeneinander.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Quellen</h2>
+  <ul class="sources">
+    <li>
+      <strong>SafeSky</strong> &middot; Seite <a href="https://www.safesky.app/application">App</a>, abgerufen am 13. November 2026.
+      <span class="support">Was die kostenlose App kann und wofür Premium nötig ist: Navigations-Apps und Funkgeräte.</span>
+    </li>
+    <li>
+      <strong>SafeSky</strong> &middot; Seite <a href="https://www.safesky.app/device">Electronic device</a>, abgerufen am 13. November 2026.
+      <span class="support">Verkehr aus mehr als 30 Quellen und die Tarife für die mobilen Daten des AERO Tracker.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/skyblip-softrf-stratux", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/club-fleet", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

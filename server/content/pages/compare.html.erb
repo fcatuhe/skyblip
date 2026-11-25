@@ -1,0 +1,79 @@
+---
+title: "Pocket or installed ADS-L: devices compared"
+nav_title: Compare
+description: "skyBlip Go and Tango beside the AERO Tracker, PowerFLARM, Funke TM350 and SafeSky: what each transmits and receives, how it is fitted, what it costs."
+updated_on: "2026-11-24"
+---
+
+<header class="page-hero">
+  <h1>Pocket or installed: compare traffic devices</h1>
+  <p class="page-hero-subtitle">What each device transmits and receives, how it is powered and fitted, and what it costs. We make skyBlip, so read this with that in mind, and write to us if a figure is wrong.</p>
+</header>
+
+<section id="table" class="band band--tint">
+  <h2 class="section-title">Eight ways to see and be seen</h2>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead>
+        <tr><th scope="col">Device</th><th scope="col">Others see you by</th><th scope="col">You see</th><th scope="col">Fitting and power</th><th scope="col">Price</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row"><%= link_to_page "features", label: "skyBlip Go" %></th><td>ADS-L</td><td>ADS-L, FLARM</td><td>Pocket, its own battery or USB-C</td><td>From &euro;68 <small>No subscription</small></td></tr>
+        <tr><th scope="row"><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></th><td>ADS-L</td><td>ADS-L, FLARM, ADS-B <small>Mode S detected, with no position</small></td><td>Two pocket devices, each on its battery</td><td>A Go from &euro;68 and an X1 for $55.95 delivered to France <small>No subscription</small></td></tr>
+        <tr><th scope="row">Avionix ADS-L Tracker</th><td>ADS-L, OGN</td><td>ADS-L, ADS-B, UAT <small>FLARM with a &euro;90 licence</small></td><td>Portable, battery about 10&nbsp;h</td><td>&euro;480 excl. VAT</td></tr>
+        <tr><th scope="row">Avionix AERO Tracker</th><td>ADS-L, OGN, FANET <small>And SafeSky over LTE</small></td><td>ADS-L, OGN, FANET, ADS-B, Mode S with no position <small>FLARM with a &euro;90 licence, network traffic over LTE</small></td><td>Portable, battery about 10&nbsp;h, or a version with no battery on aircraft power</td><td>&euro;770 excl. VAT <small>LTE plan from &euro;79.99 a year</small></td></tr>
+        <tr><th scope="row">PowerFLARM Flex</th><td>FLARM, ADS-L</td><td>FLARM, ADS-B, Mode S and C</td><td>Portable, 18650 cell not included, about 10&nbsp;h, or USB-C</td><td>From &euro;1,642</td></tr>
+        <tr><th scope="row">PowerFLARM Core or Fusion</th><td>FLARM <small>ADS-L with a &euro;375 licence</small></td><td>FLARM, ADS-B, Mode S and C</td><td>Installed</td><td>Device, plus &euro;375 for ADS-L</td></tr>
+        <tr><th scope="row">f.u.n.k.e. TM350</th><td>FLARM <small>ADS-B with a TRT800 transponder, ADS-L with an optional board</small></td><td>FLARM, ADS-B, Mode S, Mode A/C <small>FLARM positions with the licence key</small></td><td>Installed under CS-STAN, 11 to 30&nbsp;V</td><td>&euro;1,599, or &euro;1,850 with the FLARM key</td></tr>
+        <tr><th scope="row">SafeSky app</th><td>The mobile network <small>Only where your phone has coverage, and nothing aircraft to aircraft</small></td><td>Traffic from more than 30 sources, over the network <small>Lost with the coverage. In your navigation app, or from a radio device, only with Premium</small></td><td>An app on your phone</td><td>Free for the app alone <small>Premium &euro;39.99 a year for your navigation app or a radio device</small></td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td colspan="5">Prices read on the maker&rsquo;s or a dealer&rsquo;s page on 24 November 2026, VAT included unless marked. Installation is not included.</td></tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<section id="pocket" class="band">
+  <h2 class="section-title">When a pocket device fits</h2>
+  <ul>
+    <li><strong>You fly more than one aircraft.</strong> A club aircraft, a rental, a friend&rsquo;s. Your visibility goes with you. A <%= link_to_page "skyblip-tango", label: "Tango" %> in the flight bag gives you the same radar in every cockpit.</li>
+    <li><strong>A club equips its fleet.</strong> The price of one installed unit buys a Go for every aircraft in the air on a busy day. <%= link_to_page "blog/club-fleet", label: "How a club shares them" %>.</li>
+    <li><strong>The cockpit has no room and no power.</strong> A microlight, a vintage aircraft or a homebuilt with a full panel. Go fits in a hand and runs a day on its battery.</li>
+    <li><strong>You want no paperwork.</strong> A portable device needs no standard change and no engineer. You switch it on.</li>
+  </ul>
+  <p>The cost is discipline: someone has to charge it and switch it on.</p>
+</section>
+
+<section id="installed" class="band band--tint">
+  <h2 class="section-title">When an installed unit fits</h2>
+  <ul>
+    <li><strong>One aircraft, many pilots.</strong> It starts with the master switch, so it transmits on every flight.</li>
+    <li><strong>You want the traffic on the panel.</strong> An installed unit can feed an EFIS through a serial link.</li>
+    <li><strong>You want external antennas.</strong> Placed outside the cabin, they hear in every direction.</li>
+  </ul>
+  <p>In an EASA type-certified aircraft, CS-STAN standard change CS-SC057a lets an engineer fit it without a design approval, at 300&nbsp;g or less, with a supplement to the flight manual and a release to service the pilot-owner cannot sign. <%= link_to_page "blog/always-on-board", label: "What CS-SC057a asks" %>. skyBlip has no installed device today. <%= link_to_page "roadmap", label: "skyBlip Panel", anchor: "on-board" %> is the one we are designing.</p>
+</section>
+
+<section id="together" class="band">
+  <h2 class="section-title">Combine them</h2>
+  <ul>
+    <li><strong>A transponder and a Go.</strong> Air traffic control sees the transponder, and the light aircraft around you see the Go. Set the Go to the aircraft&rsquo;s ICAO address so both signals name one aircraft.</li>
+    <li><strong>A FLARM and a Go.</strong> If your FLARM has no ADS-L, the Go adds it. A Go does not transmit FLARM.</li>
+    <li><strong>SafeSky and a Go.</strong> The network brings the traffic far away, the radio the traffic close by, even with no coverage. <%= link_to_page "blog/network-or-radio", label: "Network or radio" %>.</li>
+  </ul>
+</section>
+
+<section id="sources" class="band band--tint">
+  <h2 class="section-title">Where the figures come from</h2>
+  <ul>
+    <li>Avionix: <a href="https://www.avionix-shop.eu/product/17946648/ads-l-tracker">ADS-L Tracker</a>, <a href="https://www.avionix-shop.eu/product/14989526/aero-tracker">AERO Tracker</a> and <a href="https://www.avionix-shop.eu/product/19585183/flarm-license-for-aero-or-ads-l-tracker">FLARM licence</a> in the Avionix shop. SafeSky&rsquo;s <a href="https://www.safesky.app/application">app plans</a> and <a href="https://www.safesky.app/device">device plans</a>.</li>
+    <li>FLARM: <a href="https://www.flarm.com/en/general-aviation/powerflarm-flex/">PowerFLARM Flex</a>, <a href="https://shop.flarm.com/shop/ads-l-out/">ADS-L Out licence</a>, and the Flex price at a German dealer.</li>
+    <li>f.u.n.k.e. AVIONICS: <a href="https://www.funkeavionics.de/en/produkt/tm350/">TM350</a>, its <a href="https://www.funkeavionics.de/wp-content/uploads/2025/11/03.314.010.12e_TM350_Approval-CS-STAN_Rev1.00_250725.pdf">CS-STAN guide</a>, and its price at a German dealer.</li>
+  </ul>
+  <p>skyBlip Go and Tango are uncertified aids to lookout. They do not replace a transponder where one is required.</p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

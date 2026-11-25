@@ -1,0 +1,57 @@
+---
+title: "ADS-L für die Vereinsflotte zum Preis eines Geräts"
+nav_title: Vereinsflotte
+slug: blog/vereinsflotte
+description: "Fünfzehn Flugzeuge und keines ausgerüstet? Wie ein Verein einige skyBlip Go teilt, was vor jedem Flug einzustellen ist und was fest eingebaut wird."
+published_on: "2026-11-21"
+parent: blog
+updated_on: "2026-11-21"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 21. November 2026</p>
+  <h1>Rüsten Sie die Vereinsflotte zum Preis eines Geräts aus.</h1>
+  <p class="lede">»In meinem Verein gibt es 15 Maschinen, und keine einzige ist ausgerüstet.« Das schrieb ein UL-Pilot unter unseren ersten Beitrag, und diese Antwort lesen wir am häufigsten. Jedes Flugzeug mit einem Verkehrswarngerät auszurüsten, ist für einen Verein zu teuer. Es geht auch anders: mit ein paar Taschengeräten, die überall mitfliegen, wo ein Pilot fliegt.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Die Rechnung</h2>
+  <h3>Ein Einbaugerät oder ein Regal voller Go.</h3>
+  <p>Ein eingebautes Verkehrswarngerät kostet einige Hundert bis über 1.500&nbsp;€, bevor ein Prüfer es einbaut und freigibt. Mal fünfzehn. Ein Go kostet ab 68&nbsp;€. Für den Preis eines Einbaugeräts bekommen Sie also einen Go für jedes Flugzeug, das an einem vollen Samstag gleichzeitig in der Luft ist, und noch einige als Reserve.</p>
+  <p>Die Akkulaufzeit macht das Teilen möglich. Auf dem Prüfstand lief ein abgestellter Go 18&nbsp;Stunden und ein Go+ 49&nbsp;Stunden mit einer Ladung. Ein Verein kann sie einmal pro Woche laden, nicht nach jedem Flug.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Wie ein Verein sie teilt</h2>
+  <h3>Der Go geht mit den Schlüsseln.</h3>
+  <ol>
+    <li><strong>Bewahren Sie sie bei den Schlüsseln auf</strong>, in einem Regal mit USB-Ladegerät. Nummerieren Sie jeden Go.</li>
+    <li><strong>Schalten Sie ihn ein</strong>, bevor Sie rollen, und warten Sie, bis die LED grün blinkt: Dann hat er eine Position.</li>
+    <li><strong>Prüfen Sie den Luftfahrzeugtyp</strong> im Menü des Go, Leichtflugzeug oder Ultraleicht, und stellen Sie als Rufzeichen das Kennzeichen des Flugzeugs ein, das Sie fliegen. Dann sehen andere Piloten, wer Sie sind.</li>
+    <li><strong>Bringen Sie ihn mit der Antenne nach oben an</strong>, auf der Instrumentenbrettabdeckung oder überall, wo er den Himmel sieht. Die <%= link_to_page "mount", label: "Anleitung zur Halterung" %> nennt eine Klemme, die in die meisten Cockpits passt.</li>
+    <li><strong>Bringen Sie ihn zurück und stecken Sie ihn ein.</strong> Am Ladegerät bleibt er ausgeschaltet.</li>
+  </ol>
+</section>
+
+<section>
+  <h2 class="kicker">Flugzeuge mit Transponder</h2>
+  <h3>Geben Sie diesen Flugzeugen einen eigenen Go.</h3>
+  <p>Ein Flugzeug, das Mode S oder ADS-B sendet, sollte ADS-L unter derselben ICAO-Adresse senden. Dann wissen Empfänger, dass beide Signale vom selben Flugzeug kommen. Die ADS-L-Spezifikation verlangt das. Diese Adresse gehört zum Flugzeug, nicht zum Piloten. Ein Go, den mehrere Flugzeuge teilen, bräuchte also vor jedem Flug eine neue Adresse.</p>
+  <p>Die einfachste Regel: ein Go pro Flugzeug mit Transponder, dessen Adresse einmal in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> eingestellt wird, und geteilte Go für die Flugzeuge ohne Transponder. Ein Bravo, der mit dem Go gekoppelt ist, kann die Adresse am Boden vom Transponder ablesen. Dann muss niemand sie eintippen.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Für die meistgeflogenen Flugzeuge des Vereins</h2>
+  <h3>Ergänzen Sie ADS-B-Verkehr, wo er zählt.</h3>
+  <p>In der Nähe eines belebten Flugplatzes oder unter einem Anflug sind Flugzeuge mit ADS-B-Transponder genau die, die ein Go allein nicht zeigt. Ein Bravo neben dem Go bildet einen <%= link_to_page "skyblip-tango", label: "Tango" %> und zeigt sie auf demselben Radar. Ein Verein kann ein oder zwei Tango für Überlandflüge und für die Ausbildung in der Nähe von kontrolliertem Luftraum bereithalten.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Vor dem Kauf</h2>
+  <p>Go ist eine nicht zugelassene Hilfe für die Luftraumbeobachtung. Er ersetzt keinen Transponder, wo einer vorgeschrieben ist, und er sendet kein FLARM. Unser <%= link_to_page "compare", label: "Vergleich" %> stellt ihn neben Einbaugeräte, und die <%= link_to_page "buy", label: "Kaufberatung" %> nennt Händler in fünf Ländern.</p>
+  <p><%= link_to_page "blog/network-or-radio", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/always-on-board", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
