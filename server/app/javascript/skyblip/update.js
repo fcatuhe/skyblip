@@ -31,6 +31,7 @@ const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploading', 'installing']);
 // INFO: fc 11nov26 an install restarts the device in about thirty seconds, and a full image writes the hub for up to a minute more
 const RETURN_WITHIN_MS = 120_000;
+const BOOT_SECONDS_WRAP = 2 ** 32 / 1000;
 export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
@@ -133,10 +134,11 @@ export function captureOf(dump, now = Date.now()) {
   };
 }
 
-// INFO: fc 25nov26 a session is named by the UTC second it opened, or by the second since boot when the unit had no time yet
+// INFO: fc 25nov26 a session is named by the UTC second it opened, or by the second since boot, which wraps with the 32-bit millisecond clock
 function startedAtOf(session, uptime, now) {
   if (uptime === undefined) return null;
-  return session <= uptime ? now - (uptime - session) * 1000 : session * 1000;
+  if (session >= BOOT_SECONDS_WRAP) return session * 1000;
+  return now - Math.round(((uptime - session + BOOT_SECONDS_WRAP) % BOOT_SECONDS_WRAP) * 1000);
 }
 
 function settlingOf({ phase, image }) {

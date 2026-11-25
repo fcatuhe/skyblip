@@ -82,6 +82,12 @@ test('a capture opened before the unit had the time started as many seconds befo
   assert.equal(captureOf(dump, Date.UTC(2026, 10, 25, 16, 24, 39)).startedAt, Date.UTC(2026, 10, 25, 16, 18, 57));
 });
 
+// The unit counts milliseconds in 32 bits, so a capture can open before the count wraps and be read after.
+test('a capture opened before the unit clock wrapped started as long before as the wrap leaves', () => {
+  const dump = { system: { uptime_s: 100 }, capture: { armed: true, profile: 'power_run', session: 4294900 } };
+  assert.equal(captureOf(dump, Date.UTC(2026, 10, 25, 17)).startedAt, Date.UTC(2026, 10, 25, 17) - 167296);
+});
+
 test('a capture opened with the time started at the UTC second that names its session', () => {
   const dump = { system: { uptime_s: 4000 }, capture: { armed: true, profile: 'full', session: 1795969080 } };
   assert.equal(captureOf(dump, Date.UTC(2026, 10, 25, 17)).startedAt, 1795969080 * 1000);
