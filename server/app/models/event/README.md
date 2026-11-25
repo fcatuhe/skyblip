@@ -47,6 +47,7 @@ On the server, one `Rails.event.notify` line where the fact becomes true, in the
 Ask for the support code, or the device's address. `list_events` with `support_code` or `device`, the Events page with either, or `bin/rails events:tail CODE=ABCD-EFGH` lines the story up by time.
 
 - **Could the browser reach a device at all?** `browser.opened`: `bluetooth` false is a browser without Web Bluetooth, such as any browser on an iPhone.
+- **Did the setup move to a phone?** `installer.handed_off` on the computer that installed the unit without reaching Bluetooth, with its cause, and `installer.resumed` `from` `code` on the phone that opened its code. They are two browsers with two support codes, so ask the pilot for both.
 - **Did the chooser show the device?** `bluetooth.chooser_closed`: its `detail` tells a pilot who cancelled from a Bluetooth adapter that is off.
 - **Did it connect, and stay connected?** `device.connected` and how long it took, `device.disconnected` and the phase it dropped in, `expected` when an install, a recovery or the pilot closed it, and `device.drop_reported` on the next connection, with the reason the unit's controller gave for the last link it lost.
 - **What was the device like?** `device.read`: the identity the unit stated, product, variant, version, build, DEVICEID and Bluetooth tag, which `Unit.hear` keeps on the unit's record (`server/README.md`, Every unit a browser meets), then firmware, track, image state, the signing key it runs, sensor hub blob, settings fallback, trust, activation, flight state and battery.
