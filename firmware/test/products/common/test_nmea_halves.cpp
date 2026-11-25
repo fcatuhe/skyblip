@@ -30,7 +30,7 @@ TEST_CASE("nmea: a fix withdrawn at .500 stops the EFB's GPRMC at once") {
     CHECK(count_of(rig, "$GPGGA") == 0);
 }
 
-// The pinned case: a pass on its own 1 s cadence held the whole second until 300 ms after it landed.
+// The pinned case: a 1 s cadence of its own held the whole second 300 ms after it landed.
 TEST_CASE("nmea: the EFB's GPRMC leaves within a quarter second of its whole second") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -55,7 +55,6 @@ TEST_CASE("nmea: the EFB's GPRMC leaves within a quarter second of its whole sec
     for (const uint32_t lag_ms : lags_ms) CHECK(lag_ms <= 250);
 }
 
-// Ticks every 10 ms from one half second to the next, noting when each $PFLAU leaves.
 static void tick_through(Rig& rig, uint32_t from_ms, std::vector<uint32_t>& heartbeats_ms) {
     for (uint32_t at_ms = from_ms; at_ms < from_ms + kHalfSecondFeedMs; at_ms += 10) {
         const int before = count_of(rig, "$PFLAU");
@@ -85,8 +84,7 @@ TEST_CASE("nmea: a lost whole second holds the tablet's heartbeat a quarter seco
                                   common::NmeaService::kPassDeferralCeilingMs);
 }
 
-// The pinned case: each fallback waited a quarter second past the last pass, so a run of lost whole
-// seconds spaced the passes 1250 ms and a full table missed its 5 s refresh.
+// The pinned case: fallbacks counted from the last pass spaced lost whole seconds 1250 ms apart.
 TEST_CASE("nmea: a run of lost whole seconds keeps the tablet's passes a second apart") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -108,5 +106,6 @@ TEST_CASE("nmea: a run of lost whole seconds keeps the tablet's passes a second 
     REQUIRE(heartbeats_ms.size() >= 6);
     for (size_t i = 1; i < heartbeats_ms.size(); i++)
         CHECK(heartbeats_ms[i] - heartbeats_ms[i - 1] <=
-              common::NmeaService::kMovingTargetRedrawPeriodMs + common::NmeaService::kPassDeferralCeilingMs);
+              common::NmeaService::kMovingTargetRedrawPeriodMs +
+                  common::NmeaService::kPassDeferralCeilingMs);
 }
