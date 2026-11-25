@@ -66,4 +66,16 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :content_too_large
     assert_not Event.exists?(name: "device.diagnosed")
   end
+
+  # A dump shaped as a list failed the whole post with a 500.
+  test "a dump or a group that is a list is dropped, and the rest of the post is kept" do
+    entries = [ { dump: [ "radio" ] }, { dump: { radio: [ "rx_ok" ], gnss: { valid: true } } } ].map do |properties|
+      { id: SecureRandom.uuid, name: "device.diagnosed", at: Time.current.iso8601, seq: 1, page: SecureRandom.uuid, properties: }
+    end
+
+    post events_path, params: { browser: "01AZ018Z", entries: }, headers: { "User-Agent" => CHROME }, as: :json
+
+    assert_response :no_content
+    assert_equal [ {}, { "dump" => { "radio" => {}, "gnss" => { "valid" => true } } } ], Event.where(name: "device.diagnosed").order(:id).map(&:payload)
+  end
 end

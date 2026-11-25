@@ -66,8 +66,8 @@ class Event::Journal
     end
 
     def told(properties, keys)
-      if properties.respond_to?(:to_h)
-        properties.to_h.stringify_keys.slice(*keys).to_h { |key, value| [ key.to_sym, kept(key, value) ] }.compact
+      if properties.is_a?(Hash)
+        properties.stringify_keys.slice(*keys).to_h { |key, value| [ key.to_sym, kept(key, value) ] }.compact
       else
         {}
       end
@@ -86,9 +86,9 @@ class Event::Journal
     end
 
     def dump_of(value)
-      if value.respond_to?(:to_h)
-        value.to_h.stringify_keys.select { |group, _| group.match?(DUMP_NAME) }.first(DUMP_GROUPS).to_h do |group, fields|
-          [ group, fields.respond_to?(:to_h) ? dump_fields(fields.to_h.stringify_keys) : {} ]
+      if value.is_a?(Hash)
+        value.stringify_keys.select { |group, _| group.match?(DUMP_NAME) }.first(DUMP_GROUPS).to_h do |group, fields|
+          [ group, fields.is_a?(Hash) ? dump_fields(fields.stringify_keys) : {} ]
         end
       end
     end
