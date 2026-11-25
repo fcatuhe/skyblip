@@ -5,14 +5,14 @@ slug: radar
 description: "Leggi il radar del traffico di skyBlip Go, i simboli e la lista Nearby. Scopri gli avvisi entro 3 km e 300 m e come PLOT ALL mostra il traffico lontano."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Dove guardare e chi c&rsquo;è.</h1>
+  <h1>Leggere il radar, l&rsquo;allarme e la lista Nearby.</h1>
   <p class="lede">
-    La pagina su cui lasciare il tuo skyBlip Go: dove guardare, chi c&rsquo;è e cosa significa l&rsquo;allarme quando si fa sentire.
+    Il radar è la pagina su cui lasciare il tuo skyBlip Go. Qui trovi come leggere i simboli, la lista Nearby e l&rsquo;allarme.
   </p>
 </section>
 
@@ -21,17 +21,18 @@ updated_on: "2026-11-20"
 
   <div class="feature">
     <div>
-      <h3 id="heading-up">Il traffico disegnato <span class="highlight">come lo vedi tu</span>.</h3>
+      <h3 id="heading-up">Sei al centro, <span class="highlight">con la rotta al suolo verso l&rsquo;alto</span>.</h3>
       <p>
-        Sei al centro, con la rotta al suolo verso l&rsquo;alto. La vista resta orientata così mentre il cielo
-        gira intorno a te. Il traffico disegnato in alto a destra va cercato
-        a destra del muso, senza dover convertire nulla. La parte alta dello schermo resta libera, perché è la metà verso cui stai volando. L&rsquo;unica eccezione è <span class="mono">NO TX</span> con il motivo nell&rsquo;angolo in alto a sinistra.
+        Sei al centro, con la rotta al suolo verso l&rsquo;alto. L&rsquo;immagine ruota per mantenere
+        la tua rotta al suolo in alto. Un aeromobile mostrato in alto a destra va cercato
+        davanti a te, a destra del muso, senza conversioni mentali. La parte alta dello schermo resta libera
+        per mostrare il traffico davanti a te. L&rsquo;unica eccezione è <span class="mono">NO TX</span> con il motivo dell&rsquo;interruzione della trasmissione nell&rsquo;angolo in alto a sinistra.
       </p>
       <p>
-        Ogni aeromobile ha una forma che ti dice dove guardare.
+        La forma del simbolo indica la quota dell&rsquo;aeromobile rispetto a te.
         Una punta verso l&rsquo;alto indica che è sopra di te. Una punta verso il basso indica che è sotto. Un rombo indica che è alla tua
         quota. Un piccolo segno inclinato mostra se sale o scende. La linea
-        che parte da ogni simbolo termina dove sarà l&rsquo;aeromobile fra un minuto.
+        che parte da ogni simbolo indica la posizione prevista dell&rsquo;aeromobile fra un minuto.
       </p>
     </div>
     <figure class="shot">
@@ -51,28 +52,29 @@ updated_on: "2026-11-20"
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="every-aircraft">Ogni aeromobile, <span class="highlight">anche lontano</span>.</h3>
+      <h3 id="every-aircraft">Tutti gli aeromobili ricevuti, <span class="highlight">a qualunque distanza</span>.</h3>
       <p>
-        In scala, la vista termina al bordo dello schermo: con il cerchio da 4&nbsp;NM, un
-        aeromobile oltre circa sei miglia scompare. Con
-        <span class="mono">PLOT</span> su <span class="mono">ALL</span>, la
-        prima opzione nel menu delle impostazioni e quella predefinita su un dispositivo nuovo,
-        ogni aeromobile ricevuto con una posizione viene mostrato. Il cerchio
+        Nella modalità in scala, gli aeromobili oltre il bordo dello schermo non sono più visibili.
+        Con il cerchio da 4&nbsp;NM, un aeromobile oltre circa sei miglia scompare.
+        L&rsquo;impostazione <span class="mono">PLOT</span> su <span class="mono">ALL</span> mostra
+        ogni aeromobile ricevuto con una posizione. È la prima opzione nel menu delle impostazioni
+        e quella predefinita su un dispositivo nuovo. Il cerchio
         si restringe per lasciare una fascia esterna. Un aeromobile oltre il cerchio appare
         sulla fascia, nella sua direzione, con la stessa forma che avrebbe al suo interno.
       </p>
       <p>
-        La sua distanza non è in scala, ma il suo minuto di traiettoria sì: dalla posizione
-        reale dell&rsquo;aeromobile viene disegnata soltanto la parte interna al cerchio. Un aeromobile
-        che si avvicina veloce da sei miglia appare come un segno sulla fascia e una linea già
-        dentro il cerchio, che termina dove sarà fra un minuto.
+        Il simbolo sulla fascia indica la direzione dell&rsquo;aeromobile, non la distanza.
+        La linea della traiettoria resta in scala. Viene calcolata dalla posizione
+        reale dell&rsquo;aeromobile, ma viene disegnata soltanto la parte interna al cerchio.
+        Un aeromobile che si avvicina veloce da sei miglia appare quindi sulla fascia
+        con una linea già dentro il cerchio. La linea termina nella sua posizione prevista fra un minuto.
       </p>
       <p>
-        Gli aeromobili vicini fra loro sulla fascia condividono un segno con un numero accanto.
-        Un aeromobile che attiva un allarme ha la priorità. Altrimenti il segno rappresenta l&rsquo;aeromobile
-        più vicino alla tua quota. Il numero non copre mai un altro aeromobile e
-        un segno dietro di te si sposta di lato anziché scomparire
-        sotto l&rsquo;indicazione della portata.
+        Gli aeromobili vicini fra loro sulla fascia condividono un solo simbolo, con il loro numero accanto.
+        Il simbolo mostrato è prima di tutto quello di un aeromobile che attiva un allarme.
+        Altrimenti rappresenta l&rsquo;aeromobile più vicino alla tua quota.
+        Il numero non copre mai un altro aeromobile. Un simbolo dietro di te si sposta di lato
+        per non essere coperto dall&rsquo;indicazione della portata.
       </p>
     </div>
     <figure class="shot">
@@ -86,12 +88,12 @@ updated_on: "2026-11-20"
     <li>TO SCALE: la vista alla scala del cerchio</li>
     <li>Sulla fascia: la direzione, la forma, l&rsquo;allarme</li>
     <li>Un minuto di traiettoria, dove entra nel cerchio</li>
-    <li>Gli aeromobili vicini sulla fascia condividono un segno e un numero</li>
+    <li>Un simbolo condiviso e un numero indicano gli aeromobili raggruppati sulla fascia</li>
     <li>Nell&rsquo;angolo compare il numero di tutti gli aeromobili ricevuti</li>
   </ul>
 
   <p class="lede">
-    <%= link_to_page "displays", label: "La pagina delle schermate", anchor: "both-ways" %>
+    <%= link_to_page "displays", label: "Il confronto fra le due modalità", anchor: "both-ways" %>
     mostra lo stesso traffico nelle due modalità, passando da una all&rsquo;altra con una pressione del pulsante.
   </p>
 
@@ -99,22 +101,23 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="alarm">Un solo allarme, che dice <span class="highlight">dove guardare</span>.</h3>
       <p>
-        Un aeromobile entro 3&nbsp;km in orizzontale e 300&nbsp;m in verticale ha il simbolo
-        pieno. Un quarto dello schermo centrato su di lui diventa nero una volta al secondo. Non
-        hai nulla da leggere: cogli il lampeggio con la coda dell&rsquo;occhio.
-        Ti dice di girare la testa in quella direzione. Qualunque pagina tu stia guardando,
-        il radar prende il suo posto.
+        Quando un aeromobile è entro 3&nbsp;km in orizzontale e 300&nbsp;m in verticale, il suo simbolo
+        diventa pieno e nero. Un quarto dello schermo centrato sulla sua direzione diventa nero una volta al secondo.
+        Non hai nulla da leggere: cogli il lampeggio con la coda dell&rsquo;occhio
+        e sai da che parte guardare. Qualunque pagina tu stia guardando,
+        il Go torna al radar.
       </p>
       <p>
-        Il settore nero attira l&rsquo;occhio. Il simbolo ti dà l&rsquo;angolo.
-        Il traffico a 38° dal muso non viene arrotondato a «davanti e
-        a destra»: il settore è centrato su 38°, così guardi lì anziché
-        cercare in un quarto di cielo.
+        Il settore nero attira l&rsquo;occhio. Il simbolo indica la direzione precisa.
+        Per un aeromobile a 38° dal muso, il settore è centrato su 38°.
+        Cerchi in quella direzione, non solo «davanti e
+        a destra».
       </p>
       <p>
         Non esiste un livello di avviso superiore e non ci sarà mai. Salire o
         scendere richiede un coordinamento con l&rsquo;altro aeromobile. Questo
-        dispositivo non ha un collegamento per farlo. Il suo messaggio più forte è: guarda.
+        dispositivo non ha un collegamento per farlo. Ti indica dove guardare,
+        senza dare istruzioni di manovra.
       </p>
     </div>
     <figure class="shot">
@@ -132,7 +135,7 @@ updated_on: "2026-11-20"
     <li>Un avvertimento, mai un&rsquo;istruzione</li>
   </ul>
 
-  <h3 id="shapes">Sei forme, che <span class="highlight">leggi senza doverle imparare</span>.</h3>
+  <h3 id="shapes">Sei forme per la quota relativa, <span class="highlight">leggibili senza doverle imparare</span>.</h3>
   <p class="lede">
     Una punta verso l&rsquo;alto indica traffico sopra di te. Una punta verso il basso indica che è sotto. Un rombo indica
     traffico entro 60&nbsp;m dalla tua quota. Un simbolo a grandezza piena indica che l&rsquo;aeromobile è entro la fascia
@@ -142,12 +145,12 @@ updated_on: "2026-11-20"
   </p>
   <p class="lede">
     Il cerchietto indica un aeromobile che non trasmette la quota. Non punta né in alto né in basso, perché
-    nessuno sa se sia sopra o sotto di te. Entro 3&nbsp;km diventa pieno
+    la sua quota rispetto a te non è nota. Entro 3&nbsp;km diventa pieno
     come ogni allarme, perché potrebbe essere alla tua quota.
   </p>
   <p class="lede">
-    Un simbolo pieno nero indica un allarme. Finché nessun simbolo è pieno, nulla è
-    urgente: è il contrasto che lo schermo tiene in riserva.
+    Il riempimento nero dei simboli è riservato all&rsquo;allarme. Finché nessun simbolo
+    è pieno, lo schermo non segnala alcuna urgenza.
   </p>
 
   <%= render "shared/blips",
@@ -172,28 +175,30 @@ updated_on: "2026-11-20"
 
   <div class="feature">
     <div>
-      <h3 id="nearby">Chi c&rsquo;è, <span class="highlight">prima chi è alla tua quota</span>.</h3>
+      <h3 id="nearby">La lista Nearby, <span class="highlight">prima chi è alla tua quota</span>.</h3>
       <p>
-        Il radar dice dove guardare. Questa pagina dice chi c&rsquo;è. Una riga per
-        ogni aeromobile con una posizione nota: il nominativo se lo trasmette, altrimenti
-        l&rsquo;indirizzo radio, la distanza orizzontale da te e quanto è sopra o
-        sotto di te, oppure due trattini se non trasmette la quota. L&rsquo;indirizzo
-        radio è scritto in piccolo, per distinguerlo da un nominativo.
+        Il radar indica dove guardare. La lista Nearby identifica gli aeromobili
+        con una posizione nota. Ogni riga mostra il nominativo dell&rsquo;aeromobile,
+        oppure il suo indirizzo radio se non trasmette un nominativo.
+        Mostra anche la distanza orizzontale da te e la differenza di quota.
+        Due trattini sostituiscono la differenza se l&rsquo;aeromobile non trasmette la quota.
+        L&rsquo;indirizzo radio è scritto in piccolo per distinguerlo da un nominativo.
       </p>
       <p>
-        Sopra la lista, una riga per il Go e una per un Bravo abbinato: la sua
-        batteria, i satelliti usati per la posizione e gli aeromobili che la sua radio
-        riceve. Quando un&rsquo;unità non ha una posizione o non funziona, una parola sostituisce
-        gli ultimi due dati: <span class="mono">GPS OFF</span>,
+        Sopra la lista, una riga indica lo stato del Go. Un&rsquo;altra fa lo stesso per un Bravo abbinato.
+        Ogni riga mostra la batteria, il numero di satelliti usati per calcolare la posizione
+        e il numero di aeromobili ricevuti. Quando un&rsquo;unità non ha una posizione o non funziona,
+        un messaggio sostituisce le indicazioni sui satelliti e sul traffico: <span class="mono">GPS OFF</span>,
         <span class="mono">MOVE OUT</span>, <span class="mono">FINDS FIX</span>,
         <span class="mono">TX OFF</span>, <span class="mono">NO LINK</span> o
         <span class="mono">RX DOWN</span>.
       </p>
       <p>
-        Per primo compare un aeromobile che attiva un allarme, poi quelli entro 300&nbsp;m
-        (circa 1.000&nbsp;ft) dalla tua quota, poi gli altri, dal più vicino in
-        ciascun gruppo. Un aereo di linea sopra di te è vicino in orizzontale, ma compare sotto
-        un aliante alla tua quota.
+        Gli aeromobili che attivano un allarme compaiono per primi. Seguono quelli entro 300&nbsp;m
+        (circa 1.000&nbsp;ft) dalla tua quota, poi gli altri. In ciascun gruppo,
+        sono ordinati per distanza orizzontale, dal più vicino al più lontano.
+        Un aereo di linea sulla tua verticale ha una piccola distanza orizzontale,
+        ma compare dopo un aliante alla tua quota.
       </p>
       <p>
         La lettera all&rsquo;inizio della riga indica da dove arriva l&rsquo;informazione.
@@ -212,10 +217,10 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="no-tx">Quando il Go smette di trasmettere, <span class="highlight">continua ad avvisarti</span>.</h3>
       <p>
-        Il Go continua a ricevere il traffico, ad avvisarti, a inviare dati alla tua app di navigazione e a registrare il volo quando smette di trasmettere la tua posizione. Se una condizione necessaria per trasmettere manca per 10&nbsp;s, ogni pagina mostra <span class="mono">NO TX</span> sopra una parola che ne indica il motivo, in bianco su nero nell&rsquo;angolo in alto a sinistra. <span class="mono">RADIO</span> indica che la radio non risponde o non ascolta prima di trasmettere. <span class="mono">GNSS</span> indica che il ricevitore GPS non calcola due posizioni al secondo, al secondo intero e al mezzo secondo. <span class="mono">FIX</span> significa che manca una posizione valida. <span class="mono">UTC</span> indica che manca un&rsquo;ora UTC valida per sincronizzare la radio. <span class="mono">PPS</span> significa che manca l&rsquo;impulso del ricevitore GPS per il secondo in corso. Se mancano più condizioni, il Go mostra la prima in quest&rsquo;ordine.
+        Quando il Go smette di trasmettere la tua posizione, continua a ricevere il traffico e ad avvisarti. Continua anche a inviare dati alla tua app di navigazione e a registrare il volo. Se una condizione necessaria per trasmettere manca per 10&nbsp;s, ogni pagina mostra <span class="mono">NO TX</span> sopra una parola che ne indica il motivo, in bianco su nero nell&rsquo;angolo in alto a sinistra. <span class="mono">RADIO</span> indica che la radio non risponde o non ascolta prima di trasmettere. <span class="mono">GNSS</span> indica che il ricevitore GPS non calcola due posizioni al secondo, al secondo intero e al mezzo secondo. <span class="mono">FIX</span> significa che manca una posizione valida. <span class="mono">UTC</span> indica che manca un&rsquo;ora UTC valida per sincronizzare la radio. <span class="mono">PPS</span> significa che manca l&rsquo;impulso del ricevitore GPS per il secondo in corso. Se mancano più condizioni, il Go mostra la prima in quest&rsquo;ordine.
       </p>
       <p>
-        La trasmissione si interrompe appena manca una condizione e riprende da sola non appena sono tutte soddisfatte. Il segno resta finché tutte le condizioni non sono soddisfatte da 10&nbsp;s, quindi può rimanere visibile per poco anche dopo la ripresa della trasmissione. Non compare sopra i menu o le richieste di conferma. In volo, il Go vibra una volta quando compare il segno, oppure al decollo se è già visibile. Prima della prima posizione, il radar mostra invece l&rsquo;avanzamento del ricevitore. La radio viene controllata fin dall&rsquo;avvio. La pagina di autotest contrassegna con <span class="mono">NO TX</span> il componente che impedisce di trasmettere. La riga del traffico nella pagina di stato mostra <span class="mono">TX OFF</span> e il motivo senza attendere 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> mostra lo stesso motivo del segno nell&rsquo;angolo finché è collegato.
+        La trasmissione si interrompe appena manca una condizione e riprende da sola non appena sono tutte soddisfatte. L&rsquo;indicazione resta visibile finché tutte le condizioni non sono soddisfatte da 10&nbsp;s. Può quindi rimanere per poco anche dopo la ripresa della trasmissione. Non compare sopra i menu o le richieste di conferma. In volo, il Go vibra una volta quando compare il segno, oppure al decollo se è già visibile. Prima che il Go ottenga la prima posizione GPS, il radar mostra invece l&rsquo;avanzamento del ricevitore. La radio viene controllata fin dall&rsquo;avvio. La pagina di autotest contrassegna con <span class="mono">NO TX</span> il componente che impedisce di trasmettere. La riga del traffico nella pagina di stato mostra <span class="mono">TX OFF</span> e il motivo senza attendere 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> mostra lo stesso motivo del segno nell&rsquo;angolo finché è collegato.
       </p>
     </div>
     <figure class="shot">
@@ -226,5 +231,6 @@ updated_on: "2026-11-20"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

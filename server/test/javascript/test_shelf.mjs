@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fitting } from '../../app/javascript/controllers/briefing/shelf.js';
+import { channelOfImage, fitting } from '../../app/javascript/controllers/briefing/shelf.js';
 
 const DEVELOPMENT = '212602F2';
 const RELEASE = '88A4BEF5';
@@ -43,4 +43,15 @@ test('a unit that names no product is offered nothing', () => {
   const options = [option('0.2.0', RELEASE)];
 
   assert.deepEqual(offered(options, unit('0.1.0+1800', { key: RELEASE }, null)), []);
+});
+
+// A development unit offered a release reads the release's news, not the builds of main in between.
+test('the changelog follows the channel of the image offered, and the unit\'s own track for a file from disk', () => {
+  const development = unit('0.1.0+2328', { key: DEVELOPMENT, downgrade: true });
+  const release = unit('0.8.0+2405', { key: RELEASE });
+
+  assert.equal(channelOfImage({ channel: 'release' }, development), 'release');
+  assert.equal(channelOfImage({ channel: 'development' }, release), 'development');
+  assert.equal(channelOfImage({ channel: null }, development), 'development');
+  assert.equal(channelOfImage(null, release), 'release');
 });

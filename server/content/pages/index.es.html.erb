@@ -1,7 +1,7 @@
 ---
 title: "El tráfico cercano, en tu bolsillo"
 description: "Transmite tu posición en ADS-L y ve el tráfico ADS-L y FLARM con skyBlip Go. Desde 68 €, sin suscripción."
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
@@ -16,26 +16,41 @@ updated_on: "2026-11-18"
   </figure>
 </header>
 
-<section id="journey" class="band band--tint">
-  <h2 class="section-title">De la primera prueba a tu primer vuelo</h2>
-  <p class="section-intro">Tanto si vuelas en avión ligero, ultraligero, planeador o parapente, te guiamos en cada paso.</p>
-  <div class="journey">
-    <ol class="journey-steps">
-      <li>
-        <h3><%= link_to_page "skyblip-go", label: "Pruébalo" %></h3>
-        <p>Prueba el radar en el simulador.</p>
-      </li>
-      <li>
-        <h3><%= link_to_page "buy", label: "Compra el dispositivo" %></h3>
-        <p>Un dispositivo que ya está a la venta. El software es gratis.</p>
-      </li>
-      <li>
-        <h3><%= link_to_page "install", label: "Instálalo" %></h3>
-        <p>Desde tu navegador, con Briefing.</p>
-      </li>
-    </ol>
-    <p class="journey-end"><strong>Ya puedes volar.</strong> La <%= link_to_page "guides", label: "guía de primeros pasos" %> te muestra lo esencial.</p>
+<section id="who" class="band band--tint">
+  <h2 class="section-title">Pensado para <span class="highlight">tu forma de volar</span></h2>
+  <div class="resource-cards">
+    <article>
+      <h3>Un club con su flota</h3>
+      <p>Quince aeronaves, ninguna equipada, y un equipo instalado cuesta cientos de euros por avión antes de pagar al mecánico. Unos cuantos Go en el armario de las llaves cubren todos los aviones en vuelo. Cada uno aguanta el día con una carga.</p>
+      <p><%= link_to_page "blog/club-fleet", label: "Cómo los comparte un club" %></p>
+    </article>
+    <article>
+      <h3>Un piloto que vuela en aviones ajenos</h3>
+      <p>El del club el sábado, el de un amigo el domingo, uno de alquiler en vacaciones, y ninguno equipado igual. Un Tango en la bolsa de vuelo muestra ADS-L, FLARM y ADS-B en el mismo radar, en cualquier cabina.</p>
+      <p><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
+    </article>
+    <article>
+      <h3>Una cabina pequeña sin sitio libre</h3>
+      <p>Un ultraligero, una réplica de un clásico o un avión de construcción amateur, con el panel lleno y sin toma de corriente. El Go cabe en la mano, funciona con su batería y se lee a pleno sol.</p>
+      <p><%= link_to_page "mount", label: "Fíjalo en la cabina" %></p>
+    </article>
+    <article>
+      <h3>Un aeródromo compartido con planeadores</h3>
+      <p>Los planeadores y los remolcadores llevan FLARM. El Go los muestra en su radar e indica la dirección del que se acerca, sin que lleves FLARM a bordo.</p>
+      <p><%= link_to_page "features", label: "skyBlip Go" %></p>
+    </article>
+    <article>
+      <h3>Un avión con transpondedor</h3>
+      <p>El control de tránsito aéreo ve tu transpondedor. Un ultraligero que solo lleva ADS-L o FLARM no lo ve. El Go añade ADS-L con la dirección de tu propia aeronave y además te muestra el tráfico FLARM.</p>
+      <p><%= link_to_page "blog/who-sees-ads-l", label: "Quién ve qué" %></p>
+    </article>
+    <article>
+      <h3>Un usuario de SafeSky lejos de la red</h3>
+      <p>SafeSky se queda ciego donde acaba la cobertura móvil, que es justo donde vuela la aviación ligera. El Go funciona de aeronave a aeronave sin red, junto a la aplicación que ya usas.</p>
+      <p><%= link_to_page "blog/network-or-radio", label: "Red o radio" %></p>
+    </article>
   </div>
+  <p class="signature"><%= link_to_page "compare", label: "Compáralo con los equipos instalados y con otros dispositivos" %></p>
 </section>
 
 <section id="where-to-look" class="band">
@@ -123,7 +138,29 @@ updated_on: "2026-11-18"
       «La seguridad no es una función de pago. Nuestras funciones de seguridad para la aviación recreativa y los deportes aéreos siguen siendo gratuitas y de código abierto».
     </blockquote>
   </div>
-  <p class="signature"><%= link_to_page "buy", label: "Consulta los equipos y los precios", class: "button button--primary" %> · <%= link_to_page "about", label: "Lee nuestro compromiso" %></p>
+  <p class="signature"><%= link_to_page "buy", label: "Consulta los equipos y los precios", class: "button button--primary" %> · <%= link_to_page "about", label: "Lee nuestro compromiso", anchor: "pledge" %></p>
+</section>
+
+<section id="journey" class="band band--tint">
+  <h2 class="section-title">De la primera prueba a tu primer vuelo</h2>
+  <p class="section-intro">Tanto si vuelas en avión ligero, ultraligero, planeador o parapente, te guiamos en cada paso.</p>
+  <div class="journey">
+    <ol class="journey-steps">
+      <li>
+        <h3><%= link_to_page "skyblip-go", label: "Pruébalo" %></h3>
+        <p>Prueba el radar en el simulador.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "buy", label: "Compra el dispositivo" %></h3>
+        <p>Un dispositivo que ya está a la venta. El software es gratis.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "install", label: "Instálalo" %></h3>
+        <p>Desde tu navegador, con Briefing.</p>
+      </li>
+    </ol>
+    <p class="journey-end"><strong>Ya puedes volar.</strong> La <%= link_to_page "guides", label: "guía de primeros pasos" %> te muestra lo esencial.</p>
+  </div>
 </section>
 
 <section id="questions" class="band">
@@ -131,10 +168,18 @@ updated_on: "2026-11-18"
   <div class="faq">
     <details>
       <summary>¿Quién puede verme?</summary>
-      <p>Los pilotos con equipos capaces de recibir tu señal ADS-L pueden ver la posición que transmite tu Go. El Go recibe FLARM, pero no transmite en FLARM. Bravo no transmite tu posición.</p>
-    </details>
-    <details>
-      <summary>¿Puedo ver aeronaves con transpondedor?</summary>
+      <p>Los pilotos con equipos capaces de recibir tu señal ADS-L pueden ver la posición que transmite tu Go. El Go recibe FLARM, pero no transmite en FLARM. Bravo no transmite tu posición. El radar del control de tránsito aéreo no muestra ADS-L. Lleva el transpondedor que exija tu espacio aéreo.</p>
+</details>
+<details>
+  <summary>¿Por qué ADS-L y no ADS-B?</summary>
+  <p>ADS-L transmite a 25&nbsp;mW, así que un dispositivo de bolsillo aguanta un día con su batería, y no necesita certificación. ADS-B necesita un transpondedor certificado de 70&nbsp;W o más, y en la UE un equipo ADS-B portátil no puede transmitir. Aun así, Bravo te permite ver las aeronaves ADS-B. <%= link_to_page "blog/why-ads-l", label: "Por qué ADS-L" %>.</p>
+</details>
+<details>
+  <summary>Ya uso SafeSky. ¿Por qué añadir un Go?</summary>
+  <p>SafeSky necesita cobertura móvil. El Go funciona de aeronave a aeronave sin ella y te hace visible para todos los receptores ADS-L a tu alrededor. Los dos funcionan juntos. <%= link_to_page "blog/network-or-radio", label: "Red o radio" %>.</p>
+</details>
+<details>
+  <summary>¿Puedo ver aeronaves con transpondedor?</summary>
       <p>Sí, las equipadas con ADS-B. Con Bravo, sus posiciones aparecen en tu aplicación de navegación o en un Go emparejado. Mode S por sí solo no da la posición. Bravo lo detecta y estamos recogiendo datos para averiguar cómo mostrarlo en el Go y en las aplicaciones de navegación.</p>
     </details>
     <details>
@@ -153,5 +198,24 @@ updated_on: "2026-11-18"
       <summary>¿Puedo volver al software original?</summary>
       <p>Sí. skyBlip deja intacto el programa que instala el software. Puedes descargar de Internet el software original del T-Echo y del X1 y volver a instalarlo.</p>
     </details>
+  </div>
+  <p class="signature">Más respuestas en las páginas de <%= link_to_page "features", label: "Go", anchor: "questions" %>, <%= link_to_page "skyblip-bravo", label: "Bravo", anchor: "questions" %> y <%= link_to_page "skyblip-tango", label: "Tango", anchor: "questions" %>.</p>
+</section>
+
+<section id="resources" class="band band--tint">
+  <h2 class="section-title">Para saber más</h2>
+  <div class="resource-cards">
+    <article>
+      <h3><%= link_to_page "guides", label: "Guías" %></h3>
+      <p>Instala tu dispositivo, lee el radar y la luz, fíjalo en la cabina y descubre cómo la radio reparte cada segundo.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "blog", label: "Blog" %></h3>
+      <p>Respuestas más largas a lo que nos preguntan los pilotos en los foros: ADS-L o ADS-B, red o radio, de bolsillo o instalado.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "compare", label: "Comparativa" %></h3>
+      <p>skyBlip junto al AERO Tracker, el PowerFLARM, el Funke TM350 y SafeSky: qué transmite, qué recibe y cuánto cuesta cada uno.</p>
+    </article>
   </div>
 </section>

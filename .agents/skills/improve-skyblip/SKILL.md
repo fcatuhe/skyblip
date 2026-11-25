@@ -1,27 +1,27 @@
 ---
 name: improve-skyblip
-description: Find what to improve in the briefing app, skyblip.eu or the firmware from how pilots use them, turn it into a change with a number to move, and check after the deploy that it moved. Use for a weekly review, when asked what to improve, why pilots get stuck, what breaks, or whether a shipped change helped.
+description: Find what to improve in the briefing app, skyblip.eu or the firmware from how pilots and visitors use them, turn it into a change with a number to move, and check after the deploy that it moved. Use for a weekly review, when asked what to improve, why pilots get stuck, what breaks, or whether a shipped change helped.
 ---
 
 # Improve skyBlip
 
-skyBlip records every request, job, error, activation and every step a browser takes with a device as an event, with no words a pilot typed in it. This skill reads them, picks the change worth making, and comes back after the deploy to see whether it worked. `server/app/models/event/README.md` says what is recorded and how.
+skyBlip records every request, job, error, activation and every step a browser takes with a device as an event, with no words a pilot typed in it. Ahoy records the site's visits, the pages they view and the links out they click, as the server README's Admin and analytics section says. This skill reads both, picks the change worth making, and comes back after the deploy to see whether it worked. `server/app/models/event/README.md` says what is recorded and how.
 
 ## Read the numbers
 
-From skyBlip's MCP server, `https://skyblip.eu/mcp`, which an admin connects as `server/app/models/oauth/README.md` says. Every tool is for admins only:
+From skyBlip's admin MCP server, `https://skyblip.eu/admin/mcp`, which an admin connects as `server/app/models/oauth/README.md` says. Every tool is for admins only:
 
 - `get_insights` with `days` 7, 30 or 90: this period against the one before, the numbers of the Insights page.
 - `list_errors` with `days`: what breaks, grouped by fingerprint, newest first, without the errors resolved since they last happened.
 - `resolve_error` with `fingerprint`: once the fix for an error is deployed, takes it off `list_errors` until it happens again.
 - `list_events`: the catalog first, then everybody's events as JSON lines. Narrow with `name` (`device.`, `browser.failed`), `device`, `support_code` or an error's `fingerprint`.
 - `get_unit` with `device`: an activated unit's record.
-- `get_analytics`: the site's audience as the admin Analytics page shows it, the metrics, the series, the outbound links and every breakdown. Filter with `days` or `start_on` and `end_on`, `segment` (`non_user` unless said), `path`, `entry`, `referrer`, `channel`, `country`, `outbound` and the rest of the page's filters.
+- `get_analytics`: the site's audience as the admin Analytics page shows it, the metrics, the series, the outbound links and every breakdown. Filter with `days` or `start_on` and `end_on`, `segment` (`non_user` unless said), `path`, `entry`, `referrer`, `channel`, `country`, `outbound`, `activation` (`activated` for the visitors who activated a unit) and the rest of the page's filters.
 - `list_visitors` with the same filters and `page`: who came, last seen first, with the token `get_visitor` reads.
 - `get_visitor` with `visitor_token`: one visitor's visits, oldest first, with the pages it viewed and what it clicked.
 - `list_outbound_clicks` with the same filters: the clicks on links to other sites, the affiliate links among them, one line per link with its section (`go`, `go-plus`, `bravo` on the buy page). Narrow with `href`, and add `each` for every click with its visitor.
 
-When the MCP server is unavailable, from a laptop that deploys skyBlip, in `server/`:
+When the admin MCP server is unavailable, from a laptop that deploys skyBlip, in `server/`:
 
 ```
 mise run kamal app exec "bin/rails events:review DAYS=30"
@@ -37,19 +37,24 @@ mise run kamal app exec "bin/rails events:tail NAME=browser.failed LAST=200"
 5. **Browsers that cannot connect.** `browsers.without_bluetooth_on`: a pilot on a browser with no Web Bluetooth is stranded at the door, and the page that tells them where to go instead is the lever.
 6. **The notices pilots read most.** `notices`: each key has its words in `server/config/locales/briefing.*.yml`. A notice read often is a flow to change or words to make clearer, and one that comes back after the pilot acted on it says the words did not work.
 7. **The fleet.** `firmware.running`, `images_not_confirmed` and `settings_fallen_back`: how far the fleet lags a release, and units in a state the page should help them out of.
-8. **The log itself.** On the Events page, an event never seen is either unused or no longer emitted.
+8. **Visitors who never reach a device.** In `get_analytics`, the share of visitors who view `/buy` and then click an affiliate link in `list_outbound_clicks`, by product, the share who enter `/briefing`, and the share who activate a unit, `activated_visitors` against `visitors`. With `activation: activated`, the breakdowns say where the visitors who activated came from and what they read first. A page many visitors leave from on the way there, or a search entry page left within seconds, is words or a link to change.
+9. **Friction on the site.** In `get_visitor` timelines, repeated clicks on one control, a form left half filled, a visit that goes back and forth between two pages. A section or a link nobody clicks is a candidate to remove.
+10. **The log itself.** On the Events page, an event never seen is either unused or no longer emitted.
+
+Read two or three journals or visitor timelines behind a number before believing it. A breakdown row of one or two visitors is not a finding.
 
 ## Turn a finding into a change
 
 Write it down as: the number now, the period, the hypothesis, the change, and the number expected after. Then make the smallest change that tests it, through the `pull-request` skill, with a `Measure:` line in the body naming the number and the period to compare.
 
-When a question cannot be answered from the events, the change is an event: one `Rails.event.notify` line or one `journal.record` where the fact happens, an entry in `server/app/models/event/catalog.yml`, and a test.
+When a question cannot be answered from the events, the change is an event: one `Rails.event.notify` line or one `journal.record` where the fact happens, an entry in `server/app/models/event/catalog.yml`, and a test. When it cannot be answered from the analytics, the change is a link or a control Ahoy already tracks, not new JavaScript.
 
 ## Check it after the deploy
 
-Once a fix for an error is deployed, resolve the error with `resolve_error`. A week after the deploy, read `get_insights` again and compare the number with the one in the PR. Say on the PR whether it moved, and by how much. If it did not, say so, and revert or try the next hypothesis.
+Once a fix for an error is deployed, resolve the error with `resolve_error`. A week after the deploy, read `get_insights` or `get_analytics` again and compare the number with the one in the PR. Say on the PR whether it moved, and by how much. If it did not, say so, and revert or try the next hypothesis.
 
 ## Never
 
 - Never put what a pilot typed, their callsign or a location into an event, a PR or an issue. Name a pilot by their support code or their device, never by anything else.
-- Never read one pilot's journal except to understand a problem or to help them.
+- Never put a visitor's token, city, region or anything they typed into a PR or an issue. Analytics findings are counts and shares.
+- Never read one pilot's journal or one visitor's timeline except to understand a problem or to help them.

@@ -29,6 +29,17 @@ class OAuthTest < ActiveSupport::TestCase
     assert_empty OAuth::Token.all
   end
 
+  test "the sweep drops a connection granted for a resource skyBlip no longer serves" do
+    moved = granted(users(:francois), "https://claude.ai/oauth/claude-code-client-metadata")
+    moved.update! resource: "https://www.example.com/mcp"
+    moved.issue_tokens
+    held = granted(users(:amelie), "https://pi.dev/oauth/client.json")
+
+    OAuth.sweep
+
+    assert_equal [ held ], OAuth::Grant.all
+  end
+
   private
     def granted(user, document_url)
       client = OAuth::Client.create!(document_url:, name: "Agent", redirect_uris: %w[http://127.0.0.1/callback],

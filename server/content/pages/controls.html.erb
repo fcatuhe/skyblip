@@ -4,14 +4,14 @@ nav_title: Controls
 description: "Use the skyBlip Go pad and button. Enter your callsign, change radar settings and open diagnostic pages without a phone."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Two controls, and nothing to learn twice.</h1>
+  <h1>Use the Go&rsquo;s pad and button</h1>
   <p class="lede">
-    A pad and a button for the menus, with diagnostic pages for the workbench.
+    Cycle through pages with the pad. Open menus with the button. Use the diagnostic pages at the workbench.
   </p>
 </section>
 
@@ -20,15 +20,14 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="two-contacts">The pad moves, <span class="highlight">the button acts</span>.</h3>
       <p>
-        Two controls, with one role each to remember.
         The capacitive touch pad on the top edge cycles through the four pages,
         without changing settings. The button on the side opens the current page&rsquo;s menu,
         and each further press changes the value in the selected row.
       </p>
       <p>
         Two pages have a menu. All the settings you can change with the controls are in the radar menu,
-        the first screen used to set up the device. No change needs confirming:
-        each press applies the change immediately.
+        the first screen used to set up the device. Each press applies the change immediately,
+        except clearing the ADS-B address, which asks you to confirm on a second screen.
       </p>
     </div>
     <figure class="shot">
@@ -39,10 +38,10 @@ updated_on: "2026-11-20"
 
   <ul class="points">
     <li>Tap the pad to go to the next page</li>
-    <li>Touch the pad for a second to return to the radar</li>
+    <li>Touch the pad for a second to silence an active alarm, or return to the radar if no alarm is active</li>
     <li>Press the button to open the menu, if the page has one</li>
     <li>Press again to change the value in the selected row</li>
-    <li>Move past the last row to return to the page</li>
+    <li>In the menu, tap the pad after the last row to return to the page</li>
     <li>Leave the controls untouched for a minute to return to the page automatically</li>
   </ul>
 
@@ -61,9 +60,8 @@ updated_on: "2026-11-20"
       <p>
         Press the button on the last character to save the callsign. Any blanks
         at the end are removed. To clear a callsign, change the first
-        character to a blank and press the button. The button's key
-        reads <span class="mono">ERASE</span> once the blank is under the bar. If you leave the field before finishing, or leave it untouched for a
-        minute, nothing is saved.
+        character to a blank and press the button. The button label
+        reads <span class="mono">ERASE</span> when the first character is blank. If you leave the field before finishing or leave it untouched for a minute, nothing is saved.
       </p>
     </div>
     <figure class="shot">
@@ -79,28 +77,19 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "The aircraft menu after the press, with the CALLSIGN row selected and reading NONE" %>
-      <figcaption>One press later</figcaption>
+      <figcaption>The callsign is cleared</figcaption>
     </figure>
   </div>
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="diagnostics">Four pages to cycle through, <span class="highlight">the rest by name</span>.</h3>
+      <h3 id="diagnostics">Four pages to cycle through, <span class="highlight">diagnostics to open by name</span>.</h3>
       <p>
-        Tapping cycles through the radar, the list, the instruments, then the
-        g-meter, and no other pages. A pilot cycling through pages in flight should
-        not end up on the satellite bars. A board with no inertial sensor has no
-        g-meter to display, so tapping skips that page rather than showing
+        Tap the pad to cycle through the radar, the list, the instruments and the g-meter. Other pages stay outside this cycle, so you do not end up on the satellite bars while changing pages in flight. On a device with no inertial sensor, tapping skips the g-meter page rather than showing
         <span class="mono">NO SENSOR</span> every fourth time.
       </p>
       <p>
-        Open the other pages by name from the list&rsquo;s menu. When you close them,
-        you return to the page you were on. The screens below are for the workbench,
-        the apron and bug reports. You cannot reach them by cycling through
-        pages with the pad. The Bravo log shows what a paired skyBlip Bravo runs, its
-        battery and what its receiver hears. To record a flight for a bug report or a
-        discharge test, start the recording from the device page in the briefing app.
-        The screen shows what it will erase, and a press on the button starts it.
+        Open the diagnostic pages by name from the list&rsquo;s menu. When you close them, you return to the page you were on. The screens below are for checks at the workbench, on the apron and for bug reports. You cannot reach them by cycling through pages with the pad. The Bravo log shows the software running on a paired skyBlip Bravo, its battery status and what its receiver receives. To record a flight for a bug report or a discharge test, open the device page in the briefing app and start the recording. The device screen shows what will be erased. Press the button to confirm and begin recording.
       </p>
     </div>
     <figure class="shot">
@@ -163,5 +152,6 @@ updated_on: "2026-11-20"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

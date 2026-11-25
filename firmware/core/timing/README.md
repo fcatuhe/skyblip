@@ -122,7 +122,7 @@ A burst's instants run from its window's start to the end less its air time and 
 | name on B | 1000 to 1190 ms |
 | skyPost uplink | 210 to 425 ms: 440 - 9.4 - 5, rounded down. `kGroundEmitEndMs`, a completion deadline, is 435 |
 
-A ground station may start its 9.4 ms uplink as late as 440.6 ms under §C.5 and end after the uplink dwell closes at 442, which is why skyPost starts from 210. `SlotPlan::tx_allowed` belongs to the dwell, so the plan that opens slot 0's dwell at 447, and the retune before it, carries it.
+A ground station may start its 9.4 ms uplink as late as 440.6 ms under §C.5 and end after the uplink dwell closes at 442, which is why skyPost starts from 210. The dwell reads a fixed 230 bytes behind the sync word, 9.2 ms at 200 kbps, whatever the packet's length, so a sync word that ends after about 432.8 ms is lost with its packet. That cuts 8 ms off the slot for the longest FEC packet, and 16 ms for a one-record CRC packet, which §C.5 lets start until 448.6 ms. `SlotPlan::tx_allowed` belongs to the dwell, so the plan that opens slot 0's dwell at 447, and the retune before it, carries it.
 
 ## The seconds each burst owns
 

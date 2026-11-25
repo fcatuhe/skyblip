@@ -307,6 +307,18 @@
     mix-blend-mode: multiply;
   }
 
+  .guide-cards img.guide-screenshot {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 12rem;
+    object-fit: contain;
+    background: var(--paper);
+    border: 1px solid var(--card-border);
+    border-radius: var(--space-inline-xs);
+    box-shadow: none;
+    image-rendering: auto;
+  }
+
   .guide-cards:has(> :last-child:nth-child(2)) { max-inline-size: 40rem; }
 
   @media (min-width: 52rem) {

@@ -17,5 +17,8 @@ class Briefing::Devices::CapturesController < Briefing::ApplicationController
     def profile = params.expect(capture: [ :profile ])[:profile]
 
     # INFO: fc 15nov26 one byte past the ceiling is enough to refuse, so a large upload is never read whole
-    def body = params.expect(capture: [ :body ])[:body].read(Capture::MAX_BYTES + 1)
+    def body
+      upload = params.expect(capture: [ :body ])[:body]
+      upload.read(Capture::MAX_BYTES + 1) if upload.is_a?(ActionDispatch::Http::UploadedFile)
+    end
 end

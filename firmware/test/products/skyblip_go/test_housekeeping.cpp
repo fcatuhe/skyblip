@@ -23,12 +23,11 @@ TEST_CASE("product: a long press parks the radio and the panel, then asks for th
           doctest::test_suite("main")) {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.run(0, 1000);
-    now_ms = 1000;
+    rig.now_ms = 1000;
     REQUIRE(rig.product.board().rf().sleeps() == 0);
 
-    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
+    rig.hold_button(power::kLongPressHoldMs + 200);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     // A receiver armed through most of every second is what flattens the pack,
@@ -39,12 +38,12 @@ TEST_CASE("product: a long press parks the radio and the panel, then asks for th
 
     // Still held: the rails must not go, or a level-sensed wake pin brings the
     // device straight back up.
-    rig.hold_button(now_ms, power::kParkSettleMs + 1000);
+    rig.hold_button(power::kParkSettleMs + 1000);
     CHECK_FALSE(rig.product.ready_to_power_off());
     // The park frame has had its seconds by now, so the panel is asleep before the rails go.
     CHECK_FALSE(rig.platform.chips().epd.powered);
 
-    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    rig.hold_button(power::kReleaseSettleMs + 200, /*down=*/false);
     CHECK(rig.product.ready_to_power_off());
 }
 
@@ -52,21 +51,20 @@ TEST_CASE("product: a long press parks the radio and the panel, then asks for th
 TEST_CASE("product: the rails wait for the park frame, not only for the park window") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.run(0, 1000);
-    now_ms = 1000;
+    rig.now_ms = 1000;
 
-    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
+    rig.hold_button(power::kLongPressHoldMs + 200);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     rig.platform.chips().epd.busy_stuck = true;
 
-    rig.hold_button(now_ms, power::kParkSettleMs, /*down=*/false);
-    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    rig.hold_button(power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(power::kReleaseSettleMs + 200, /*down=*/false);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(rig.platform.chips().epd.powered);
 
     rig.platform.chips().epd.busy_stuck = false;
-    rig.hold_button(now_ms, 200, /*down=*/false);
+    rig.hold_button(200, /*down=*/false);
     CHECK(rig.product.ready_to_power_off());
     CHECK_FALSE(rig.platform.chips().epd.powered);
 }
@@ -75,19 +73,18 @@ TEST_CASE("product: the rails wait for the park frame, not only for the park win
 TEST_CASE("product: the rails wait for the radio to park, and go at the ceiling if it never does") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.run(0, 1000);
-    now_ms = 1000;
+    rig.now_ms = 1000;
     rig.product.board().rf().defer_park = true;
 
-    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
-    rig.hold_button(now_ms, power::kParkSettleMs, /*down=*/false);
-    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    rig.hold_button(power::kLongPressHoldMs + 200);
+    rig.hold_button(power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(power::kReleaseSettleMs + 200, /*down=*/false);
     REQUIRE_FALSE(rig.platform.chips().epd.powered);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(rig.product.board().rf().abandons() == 0);
 
-    rig.hold_button(now_ms, go::kRadioParkCeilingMs + 100, /*down=*/false);
+    rig.hold_button(go::kRadioParkCeilingMs + 100, /*down=*/false);
     CHECK(rig.product.ready_to_power_off());
     CHECK(rig.product.board().rf().abandons() == 1);
 }
@@ -96,18 +93,17 @@ TEST_CASE("product: the rails wait for the radio to park, and go at the ceiling 
 TEST_CASE("product: a radio that parks before the ceiling ends the wait without an abandon") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.run(0, 1000);
-    now_ms = 1000;
+    rig.now_ms = 1000;
     rig.product.board().rf().defer_park = true;
 
-    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
-    rig.hold_button(now_ms, power::kParkSettleMs, /*down=*/false);
-    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    rig.hold_button(power::kLongPressHoldMs + 200);
+    rig.hold_button(power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(power::kReleaseSettleMs + 200, /*down=*/false);
     REQUIRE_FALSE(rig.product.ready_to_power_off());
 
     rig.product.board().rf().finish_park();
-    rig.hold_button(now_ms, 50, /*down=*/false);
+    rig.hold_button(50, /*down=*/false);
     CHECK(rig.product.ready_to_power_off());
     CHECK(rig.product.board().rf().abandons() == 0);
 }
@@ -137,14 +133,13 @@ TEST_CASE("product: a radio that failed bring-up powers off with no wait and no 
     rig.platform.chips().radio.fail_calibration = parts::sx1262::kErrorPllCalibration;
     REQUIRE(rig.setup() != Status::Ok);
     REQUIRE(ports::has(rig.product.capabilities(), ports::Capability::Rf));
-    uint32_t now_ms = 0;
     rig.run(0, 1000);
-    now_ms = 1000;
+    rig.now_ms = 1000;
     rig.product.board().rf().defer_park = true;
 
-    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
-    rig.hold_button(now_ms, power::kParkSettleMs, /*down=*/false);
-    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    rig.hold_button(power::kLongPressHoldMs + 200);
+    rig.hold_button(power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(power::kReleaseSettleMs + 200, /*down=*/false);
     CHECK(rig.product.ready_to_power_off());
     CHECK(rig.product.board().rf().abandons() == 0);
 }
@@ -153,16 +148,15 @@ TEST_CASE("product: a radio that failed bring-up powers off with no wait and no 
 TEST_CASE("product: the hold that switches the device off does not page first") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.run(0, 1000);
-    now_ms = 1000;
+    rig.now_ms = 1000;
     const go::Page page = rig.product.screen().page();
 
-    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
+    rig.hold_button(power::kLongPressHoldMs + 200);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.screen().page() == page);
 
-    rig.hold_button(now_ms, 300, /*down=*/false);
+    rig.hold_button(300, /*down=*/false);
     CHECK(rig.product.screen().page() == page);
     // Nor does it open the settings on the way out: a hold is never a press.
     CHECK(rig.product.screen().mode() == go::Mode::Page);
@@ -174,9 +168,8 @@ TEST_CASE("product: the hold that switches the device off does not page first") 
 TEST_CASE("product: a confirmed gnss_cold_start restarts the receiver once") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.on_ground(now_ms);
-    rig.run(now_ms, 1000);
+    rig.on_ground();
+    rig.run(rig.now_ms, 1000);
 
     rig.send("{\"command\":\"gnss_cold_start\"}");
     rig.run(1000, 1500);
@@ -193,9 +186,8 @@ TEST_CASE("product: a confirmed gnss_cold_start restarts the receiver once") {
 TEST_CASE("product: a confirmed power_off over the link parks the device like a long press") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.on_ground(now_ms);
-    rig.run(now_ms, 1000);
+    rig.on_ground();
+    rig.run(rig.now_ms, 1000);
 
     rig.send("{\"command\":\"power_off\"}");
     rig.run(1000, 1500);
@@ -224,10 +216,9 @@ TEST_CASE("product: a confirmed power_off over the link parks the device like a 
 TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.on_ground(now_ms);
+    rig.on_ground();
     rig.send("{\"command\":\"power_off\"}");
-    rig.run(now_ms, 5000);
+    rig.run(rig.now_ms, 5000);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.product.screen().powered());
     CHECK(rig.product.board().rf().sleeps() == 0);
@@ -241,23 +232,20 @@ TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
     // an aircraft.
     HousekeepingRig flying;
     REQUIRE(flying.setup() == Status::Ok);
-    uint32_t flying_now_ms = 0;
-    flying.airborne(flying_now_ms);
+    flying.airborne();
     flying.send("{\"command\":\"power_off\"}");
-    flying.run(flying_now_ms, flying_now_ms + 2000);
-    flying_now_ms += 2000;
+    flying.run_for(2000);
     CHECK(flying.config().pending() == common::Pending::None);
     flying.config().confirm();
-    flying.run(flying_now_ms, flying_now_ms + 2000);
+    flying.run(flying.now_ms, flying.now_ms + 2000);
     CHECK_FALSE(flying.product.shutdown().going_down());
 }
 
 TEST_CASE("product: a page tap is not a power-off") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 2000);
+    rig.tap();
+    rig.run(rig.now_ms, rig.now_ms + 2000);
     CHECK(rig.product.screen().page() == go::Page::Nearby);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.product.board().rf().sleeps() == 0);
@@ -358,9 +346,9 @@ TEST_CASE("product: the loop feeds the watchdog while it is flying and through a
 
     // A device that is deliberately going down is doing what it was told: a
     // held button must not turn a power-off into a watchdog reboot.
-    uint32_t now_ms = 3 * runtime::kServiceSilenceCeilingMs;
-    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
+    rig.now_ms = 3 * runtime::kServiceSilenceCeilingMs;
+    rig.hold_button(power::kLongPressHoldMs + 200);
     REQUIRE(rig.product.shutdown().going_down());
-    rig.hold_button(now_ms, 2 * runtime::kServiceSilenceCeilingMs);
-    CHECK(rig.product.may_feed_watchdog(now_ms));
+    rig.hold_button(2 * runtime::kServiceSilenceCeilingMs);
+    CHECK(rig.product.may_feed_watchdog(rig.now_ms));
 }

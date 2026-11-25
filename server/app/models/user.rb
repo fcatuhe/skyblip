@@ -12,6 +12,7 @@ class User < ApplicationRecord
   normalizes :email, with: -> { it.strip.downcase }
 
   after_update :end_other_sessions, if: :saved_change_to_password_digest?
+  after_update :disconnect_agents, if: -> { saved_change_to_password_digest? || saved_change_to_role?(from: "admin") }
   after_create_commit -> { Rails.event.notify "user.created", person_id: id, role:, by_id: Current.user&.id }
   after_update_commit -> { Rails.event.notify "user.role_changed", person_id: id, was: role_previously_was, role:, by_id: Current.user&.id },
     if: :saved_change_to_role?
@@ -24,4 +25,7 @@ class User < ApplicationRecord
 
   private
     def end_other_sessions = sessions.excluding(Current.session).destroy_all
+
+    # INFO: fc 25nov26 security: a new password or a demotion ends every agent's access, so only a fresh consent brings it back
+    def disconnect_agents = oauth_grants.each(&:revoke)
 end

@@ -20,10 +20,7 @@ constexpr uint32_t kAnswerSettleMs = common::PromptAnswer::kAnswerSettleMs;
 
 // Long enough for a press to have finished meaning one thing before the next
 // one is made: the pairing window, and a little.
-inline void settle(Rig& rig, uint32_t& now_ms) {
-    rig.run(now_ms, now_ms + kAnswerSettleMs + 200);
-    now_ms += kAnswerSettleMs + 200;
-}
+inline void settle(Rig& rig) { rig.run_for(kAnswerSettleMs + 200); }
 
 inline void push_fix(Rig& rig, int32_t speed_mm_s, int32_t altitude_msl_m) {
     gnss::GnssSolution solution{};
@@ -34,50 +31,47 @@ inline void push_fix(Rig& rig, int32_t speed_mm_s, int32_t altitude_msl_m) {
     rig.product.bus().gnss.push(solution);
 }
 
-inline void open_menu(Rig& rig, uint32_t& now_ms) {
-    rig.press(now_ms);
+inline void open_menu(Rig& rig) {
+    rig.press();
     REQUIRE(rig.product.screen().mode() == go::Mode::Menu);
-    settle(rig, now_ms);
+    settle(rig);
 }
 
 // A tap of the pad: the focus moves down a row.
-inline void move(Rig& rig, uint32_t& now_ms) {
-    rig.tap(now_ms);
-    settle(rig, now_ms);
+inline void move(Rig& rig) {
+    rig.tap();
+    settle(rig);
 }
 
 // A press of the button: the focused row is acted on, once, and the focus stays on it.
-inline void change(Rig& rig, uint32_t& now_ms) {
-    rig.press(now_ms);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
-    settle(rig, now_ms);
+inline void change(Rig& rig) {
+    rig.press();
+    rig.run_for(200);
+    settle(rig);
 }
 
 // The blob goes to flash kSettleMs after the last tap, in the next free window.
-inline void run_past_the_write_settle(Rig& rig, uint32_t& now_ms) {
-    const uint32_t settle_ms = timing::DurableWriteWindow::kSettleMs + 1000;
-    rig.run(now_ms, now_ms + settle_ms);
-    now_ms += settle_ms;
+inline void run_past_the_write_settle(Rig& rig) {
+    rig.run_for(timing::DurableWriteWindow::kSettleMs + 1000);
 }
 
-inline void walk_to(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
+inline void walk_to(Rig& rig, go::MenuRow row) {
     for (int i = 0; i < rig.product.screen().editor().menu().row_count; i++) {
         if (rig.product.screen().editor().focus() == row) break;
-        move(rig, now_ms);
+        move(rig);
     }
     REQUIRE(rig.product.screen().editor().focus() == row);
 }
 
 // A row of the AIRCRAFT menu is reached through the settings row that opens it.
-inline void focus_on(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
+inline void focus_on(Rig& rig, go::MenuRow row) {
     if (!rig.product.screen().editor().aircraft() &&
         go::menu_row_index(go::aircraft_menu(), row) >= 0) {
-        walk_to(rig, now_ms, go::MenuRow::Aircraft);
-        change(rig, now_ms);
+        walk_to(rig, go::MenuRow::Aircraft);
+        change(rig);
         REQUIRE(rig.product.screen().editor().aircraft());
     }
-    walk_to(rig, now_ms, row);
+    walk_to(rig, row);
 }
 
 inline bool stored_settings(Rig& rig, go::Settings& out) {

@@ -5,27 +5,27 @@ slug: telefono
 description: "Vedi il traffico di skyBlip Go in SDVFR Next, SkyDemon o ForeFlight via Bluetooth. Tre connessioni alla volta, senza abbinamento."
 parent: guides
 share_image: radar
-updated_on: "2026-11-15"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Con il tuo telefono, senza fidarsi di lui.</h1>
+  <h1>Visualizzare il traffico sul telefono</h1>
   <p class="lede">
-    Cosa può vedere un&rsquo;app, cosa può chiedere e lo schermo del dispositivo che ha l&rsquo;ultima parola.
+    Collega la tua app di navigazione via Bluetooth. Conferma le modifiche sullo schermo del Go.
   </p>
 </section>
 
 <section>
   <div class="feature">
     <div>
-      <h3 id="by-name">Appare con il suo nome e <span class="highlight">tre schermi</span> vedono il suo traffico contemporaneamente.</h3>
+      <h3 id="by-name">Il Go appare con il suo nome e <span class="highlight">tre connessioni</span> ricevono il suo traffico contemporaneamente.</h3>
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>: il prodotto, poi
         l&rsquo;indirizzo a 24 bit ricevuto quando è stato <%= link_to "attivato", briefing_activation_path %>.
-        Niente da abbinare, nessun codice da digitare. Invia il traffico come flusso di dati NMEA
-        FLARM su entrambi i tipi di connessione seriale Bluetooth cercati dai software di navigazione,
-        così l&rsquo;app con cui voli già lo trova.
+        Non servono abbinamento o codici da inserire. Il Go invia il traffico come flusso di dati
+        nel formato NMEA FLARM. Usa entrambi i tipi di connessione seriale Bluetooth
+        cercati dai software di navigazione. Per questo l&rsquo;app con cui voli già lo trova.
       </p>
       <p>
         Il tablet sul volantino, il telefono in tasca e l&rsquo;iPad del passeggero
@@ -50,14 +50,14 @@ updated_on: "2026-11-15"
 
   <h3 id="asked">Una pressione autorizza, <span class="highlight">un tocco rifiuta</span>.</h3>
   <p class="lede">
-    Quando un&rsquo;app chiede qualcosa che riguarda il dispositivo che hai a bordo,
-    un nuovo firmware, un riavvio nel bootloader USB, il salvataggio delle impostazioni, la cancellazione
-    dei voli o lo spegnimento, il dispositivo non si fida della parola del telefono.
-    Mostra la domanda sul proprio schermo, indica la richiesta e aspetta trenta
-    secondi. Una pressione sul tasto <span class="mono">ACCEPT</span> la autorizza,
-    un tocco sul tasto <span class="mono">CANCEL</span> del pad la rifiuta. Lo
-    schermo mostra il conto alla rovescia, <span class="mono">CANCELS IN 30 S</span>, e se non rispondi
-    entro quel tempo la richiesta viene rifiutata.
+    Un&rsquo;app può chiedere un aggiornamento del software interno, chiamato firmware,
+    un riavvio nel programma di installazione via USB, chiamato bootloader,
+    il salvataggio delle impostazioni, la cancellazione dei voli o lo spegnimento.
+    Il dispositivo mostra la richiesta sul proprio schermo e aspetta trenta secondi.
+    Premi il pulsante associato all&rsquo;etichetta <span class="mono">ACCEPT</span> per autorizzarla.
+    Tocca brevemente il pad associato all&rsquo;etichetta <span class="mono">CANCEL</span> per rifiutarla.
+    Il messaggio <span class="mono">CANCELS IN 30 S</span> mostra il conto alla rovescia.
+    Se non rispondi entro quel tempo, la richiesta viene rifiutata.
   </p>
 
   <figure class="shot">
@@ -67,8 +67,9 @@ updated_on: "2026-11-15"
 
   <p class="lede">
     Il nominativo è una di queste impostazioni. L&rsquo;app lo invia. Lo schermo chiede
-    il permesso. Una volta approvato, appare sulla pagina di stato, viene trasmesso
-    una volta ogni dieci secondi e compare sugli schermi degli aeromobili nelle vicinanze. Puoi anche inserirlo sul
+    il permesso. Una volta approvato, appare sulla pagina di stato. Viene trasmesso
+    una volta ogni dieci secondi. Può comparire sugli schermi degli aeromobili nelle vicinanze
+    se i loro dispositivi leggono questo messaggio. Puoi anche inserirlo sul
     dispositivo stesso, nel <%= link_to_page "controls", label: "campo del nominativo", anchor: "callsign" %>,
     o impostarlo da un browser in <%= link_to "Briefing", briefing_root_path %>, accanto
     al tipo di aeromobile, alle unità e all&rsquo;allarme.
@@ -79,7 +80,7 @@ updated_on: "2026-11-15"
     autorizzare una richiesta.
   </p>
 
-  <h3 id="firmware">Il nuovo firmware arriva <span class="highlight">da una pagina web</span>.</h3>
+  <h3 id="firmware">Installare un aggiornamento <span class="highlight">dal browser</span>.</h3>
   <p class="lede">
     <%= link_to "Briefing", briefing_root_path %> invia un file di
     firmware firmato sullo stesso collegamento Bluetooth, da Chrome o Edge. Lo schermo chiede il permesso
@@ -95,12 +96,13 @@ updated_on: "2026-11-15"
     controlla il nominativo e il tipo di aeromobile prima di volare.
   </p>
   <p class="lede">
-    Quando il firmware non si installa affatto, la stessa pagina passa il dispositivo
-    al suo bootloader USB, dopo la stessa pressione. Il dispositivo si spegne
-    con la schermata qui sotto. La pressione successiva avvia il bootloader: collegato con un cavo
-    USB, il dispositivo appare come un&rsquo;unità chiamata <span class="mono">TECHOBOOT</span>.
+    Se il firmware non si installa affatto, apri la modalità di ripristino
+    dalla stessa pagina. Premi il pulsante sul dispositivo per confermare.
+    Il dispositivo si spegne mostrando la schermata qui sotto.
+    Premi di nuovo il pulsante per avviare il bootloader.
+    Collega il dispositivo con un cavo USB. Appare come un&rsquo;unità chiamata <span class="mono">TECHOBOOT</span>.
     Copia un file <span class="mono">.uf2</span> su questa unità per installare un nuovo firmware.
-    <span class="mono">RESET</span> riporta a skyBlip. Non viene trasmesso nulla
+    Premi <span class="mono">RESET</span> per tornare a skyBlip. Non viene trasmesso nulla
     durante il ripristino. Due pressioni di <span class="mono">RESET</span> aprono la stessa
     unità senza telefono.
   </p>
@@ -125,7 +127,7 @@ updated_on: "2026-11-15"
   <ul class="points">
     <li>Il bootloader verifica la firma del firmware con la nostra chiave</li>
     <li>Rifiuta firmware più vecchi della versione installata</li>
-    <li>Un canale di trasporto aperto non basta per installare il firmware</li>
+    <li>Una connessione Bluetooth senza abbinamento non basta ad autorizzare l&rsquo;installazione del firmware</li>
     <li>Tutte le altre richieste possono essere eseguite solo a terra</li>
     <li>Il dispositivo le rifiuta senza una conferma sul proprio schermo</li>
     <li>La tua presenza davanti al dispositivo sostituisce un codice di abbinamento</li>
@@ -133,5 +135,6 @@ updated_on: "2026-11-15"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

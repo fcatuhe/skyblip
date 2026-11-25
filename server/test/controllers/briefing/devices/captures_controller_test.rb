@@ -20,6 +20,29 @@ class Briefing::Devices::CapturesControllerTest < ActionDispatch::IntegrationTes
     assert_equal 0, Capture.count
   end
 
+  test "an unknown profile, or a body sent as text, is refused, and nothing is kept" do
+    post briefing_device_captures_path(device_slug: "go-00012a"),
+      params: { capture: { profile: "everything", body: gzipped(capture_body) } }
+    assert_response :unprocessable_content
+
+    post briefing_device_captures_path(device_slug: "go-00012a"),
+      params: { capture: { profile: "power_run", body: "not a file" } }
+    assert_response :unprocessable_content
+
+    assert_equal 0, Capture.count
+  end
+
+  test "a body whose lines are not a session note with a whole session and record count is refused, and nothing is kept" do
+    [ ActiveSupport::Gzip.compress("42\n"), ActiveSupport::Gzip.compress(%("session"\n)),
+      capture_body(session: nil), capture_body(records: "960"), capture_body(session: 2**64) ].each do |body|
+      post briefing_device_captures_path(device_slug: "go-00012a"),
+        params: { capture: { profile: "power_run", body: gzipped(body) } }
+
+      assert_response :unprocessable_content
+    end
+    assert_equal 0, Capture.count
+  end
+
   private
     def gzipped(bytes) = Rack::Test::UploadedFile.new(StringIO.new(bytes), "application/gzip", original_filename: "capture.ndjson.gz")
 end

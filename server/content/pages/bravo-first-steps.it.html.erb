@@ -5,13 +5,13 @@ slug: primi-passi-bravo
 description: "Accendi Bravo, leggi la sua spia e vedi il traffico ADS-B nella tua app o sul radar del Go."
 parent: guides
 share_image: bravo
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Bravo, un pulsante e una spia.</h1>
-  <p class="lede">skyBlip Bravo ti avvisa del traffico ADS-B in avvicinamento e lo invia alla tua app di navigazione. Bravo riceve soltanto. Non trasmette la tua posizione.</p>
+  <p class="lede">skyBlip Bravo ti avvisa del traffico ADS-B in avvicinamento. Lo invia alla tua app di navigazione. Per il traffico aereo, Bravo riceve soltanto: non trasmette la tua posizione.</p>
 </section>
 
 <section>
@@ -34,12 +34,12 @@ updated_on: "2026-11-18"
         <tr><th>Premi durante un lampeggio verde rapido</th><td>Autorizza una modifica alle impostazioni o un aggiornamento richiesti da un telefono o da Briefing. Se non premi, la richiesta scade dopo 30 secondi.</td></tr>
         <tr><th>Premi durante un lampeggio blu rapido</th><td>Si abbina al Go che lo ha richiesto.</td></tr>
         <tr><th>Tieni premuto per 2&nbsp;s</th><td>Si spegne, con tre impulsi rossi che senti anche come vibrazioni.</td></tr>
-        <tr><th>Tieni premuto, collega USB-C e continua a tenere premuto</th><td>Dopo circa 3 secondi, il LED sopra il pulsante diventa bianco. X1 diventa un&rsquo;unità USB chiamata X1 per installare il firmware manualmente. Briefing te lo chiede solo se non riesce a riavviare Bravo da solo.</td></tr>
+        <tr><th>Tieni premuto, collega USB-C e continua a tenere premuto</th><td>Dopo circa 3 secondi, il LED sopra il pulsante diventa bianco. X1 compare come un&rsquo;unità USB chiamata X1 per installare skyBlip manualmente. Briefing te lo chiede solo se non riesce a riavviare Bravo da solo.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p>Una pressione iniziata prima che arrivi una richiesta non risponde a nulla. Tenere premuto non risponde mai a una richiesta. Il browser che ha installato Bravo modifica le impostazioni, lo aggiorna e lo abbina senza richiedere una pressione. Gli altri browser la richiedono.</p>
+  <p>Per rispondere a una richiesta, premi dopo che è arrivata. Tenere premuto il pulsante non autorizza mai una richiesta. Il browser che ha installato Bravo può modificarne le impostazioni, aggiornarlo e abbinarlo a un Go senza richiedere una pressione. Gli altri browser richiedono una pressione per modificare le impostazioni o aggiornarlo e non possono abbinarlo.</p>
 
   <div class="feature">
     <div>
@@ -61,10 +61,10 @@ updated_on: "2026-11-18"
         <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blu, lampeggio rapido</th><td>Un Go chiede di abbinarsi.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Due brevi lampi ogni 3&nbsp;s</th><td>Una registrazione diagnostica è pronta a partire. Il colore continua a indicare lo stato della posizione.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, ogni 3&nbsp;s</th><td>Batteria quasi scarica.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, ogni 600&nbsp;ms</th><td>Batteria a livello critico. Se la batteria è carica, un ricevitore di traffico o satellitare non risponde e Bravo rifiuta di funzionare.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, ogni 600&nbsp;ms</th><td>Batteria a livello critico. Se la batteria è carica, questo lampeggio indica che un ricevitore di traffico o il ricevitore satellitare non risponde. In questo caso Bravo non si avvia.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Tre impulsi rossi con vibrazioni</th><td>Si sta spegnendo, poi la spia si spegne.</td></tr>
         <tr><th>Spia spenta</th><td>Dispositivo spento.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Bianco fisso</th><td>X1 è un&rsquo;unità USB per installare il firmware.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Bianco fisso</th><td>X1 compare come un&rsquo;unità USB per installare skyBlip.</td></tr>
       </tbody>
     </table>
   </div>
@@ -82,5 +82,6 @@ updated_on: "2026-11-18"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>
