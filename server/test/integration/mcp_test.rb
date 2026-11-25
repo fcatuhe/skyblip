@@ -141,6 +141,8 @@ class McpTest < ActionDispatch::IntegrationTest
     assert response.parsed_body.dig("result", "isError")
     call_tool("get_analytics", { start_on: "last week" }, token:)
     assert response.parsed_body.dig("result", "isError")
+    capped = JSON.parse(call_tool("get_analytics", { start_on: "2026-02-10", end_on: "0001-01-01" }, token:))
+    assert_equal [ (Date.new(2026, 2, 10) - Analytics::MAX_DAYS).iso8601, "2026-02-10" ], capped["filters"].values_at("start_on", "end_on")
   end
 
   # The agent goes from the visitors who activated to a unit and the briefing journal that activated it, and back.

@@ -1,8 +1,7 @@
 class AnalyticsTool < ApplicationTool
-  MAX_DAYS = Rails.configuration.x.retention.in_days.to_i
   DAYS = 30
   FILTERS = {
-    days: { type: "integer", minimum: 1, maximum: MAX_DAYS, description: "The last days, #{DAYS} unless said or start_on is given" },
+    days: { type: "integer", minimum: 1, maximum: Analytics::MAX_DAYS, description: "The last days, #{DAYS} unless said or start_on is given" },
     start_on: { type: "string", format: "date", description: "The first day, YYYY-MM-DD, in place of days" },
     end_on: { type: "string", format: "date", description: "The last day, YYYY-MM-DD, today unless said" },
     segment: { type: "string", enum: [ *Analytics::Visit.segments.keys, "all" ],
@@ -45,12 +44,13 @@ class AnalyticsTool < ApplicationTool
 
       def filter_params_from(arguments)
         filters = arguments.slice(*Analytics::FILTER_KEYS).compact_blank
-        filters[:segment] = arguments.fetch(:segment, "non_user").then { it unless it == "all" }
-        filters[:start_on] = filters[:start_on] ? Date.iso8601(filters[:start_on]) : arguments.fetch(:days, DAYS).to_i.clamp(1, MAX_DAYS).days.ago.to_date
-        filters[:end_on] = filters[:end_on] ? Date.iso8601(filters[:end_on]) : Date.current
-        filters.compact
-      rescue Date::Error
-        nil
+        dates = filters.slice(:start_on, :end_on).transform_values { Analytics.date_from(it) }
+
+        if dates.values.all?
+          segment = arguments.fetch(:segment, "non_user").then { it unless it == "all" }
+          start_on = dates.fetch(:start_on) { arguments.fetch(:days, DAYS).to_i.clamp(1, Analytics::MAX_DAYS).days.ago.to_date }
+          Analytics.with_default_period(filters.merge(dates, segment:, start_on:).compact)
+        end
       end
   end
 end
