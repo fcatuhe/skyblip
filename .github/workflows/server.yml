@@ -203,3 +203,15 @@ jobs:
         env:
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           SKYBLIP_SERVER_IP: ${{ secrets.SKYBLIP_SERVER_IP }}
+
+  # The one check the main ruleset requires, since a job skipped by its filter still counts as passed.
+  passed:
+    name: server passed
+    needs: [changes, checks, test, system-test]
+    if: always()
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - name: Fail when a check failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        working-directory: .
+        run: exit 1

@@ -14,7 +14,7 @@ class DeploymentTest < Minitest::Test
     jobs = workflow.fetch("jobs")
     deploy = jobs.fetch("deploy")
 
-    assert_equal (jobs.keys - %w[deploy]).sort, deploy.fetch("needs").sort
+    assert_equal (jobs.keys - %w[deploy passed]).sort, deploy.fetch("needs").sort
     assert_includes deploy.fetch("if"), "github.ref == 'refs/heads/main'"
     refute deploy.fetch("concurrency").fetch("cancel-in-progress")
     assert_equal "server_production", deploy.fetch("environment").fetch("name")
