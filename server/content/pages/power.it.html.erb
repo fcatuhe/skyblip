@@ -75,12 +75,13 @@ updated_on: "2026-11-25"
         riporterebbe la batteria alla stessa tensione di interruzione.
       </p>
       <p>
-        Collega il cavo per poter usare di nuovo il dispositivo. Il solo collegamento
+        Con <span class="mono">POWER BUTTON</span> (l&rsquo;impostazione predefinita), collega il cavo per poter usare di nuovo il dispositivo. Il solo collegamento
         non cambia nulla sullo schermo: la spia rossa del caricabatterie
         indica che la batteria si sta ricaricando. Premi il pulsante con il cavo collegato
         per avviare il dispositivo, qualunque sia la carica, e cancellare il messaggio.
         Se la batteria si è esaurita su uno scaffale, il dispositivo non ha lasciato messaggi.
         In quel caso, premere il pulsante mostra lo stesso messaggio di batteria scarica.
+        Con <span class="mono">POWER CABLE</span>, dopo uno spegnimento per batteria scarica, basta collegare il Go a una presa USB alimentata per avviarlo e ricaricare la batteria (vedi <%= link_to_page "power", label: "modalità cavo", anchor: "cable-mode" %>).
       </p>
       <p>
         All&rsquo;avvio successivo, l&rsquo;autotest segnala lo spegnimento per batteria scarica
@@ -94,10 +95,25 @@ updated_on: "2026-11-25"
     </figure>
   </div>
 
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="cable-mode">Accendi e spegni il Go <span class="highlight">con l&rsquo;interruttore generale</span>.</h3>
+      <p>Lascia il Go o il Go+ collegato alla presa USB di bordo, con la batteria inserita. Dalla pagina radar, premi il pulsante per aprire <span class="mono">SETTINGS</span>. Tocca brevemente il pad fino a raggiungere <%= link_to_page "controls", label: "l'ultima riga", anchor: "two-contacts" %>, <span class="mono">POWER</span>. Su quella riga, premi il pulsante una volta per passare da <span class="mono">BUTTON</span>, l&rsquo;impostazione predefinita, a <span class="mono">CABLE</span>. Cambia l&rsquo;impostazione sul Go, non in Briefing.</p>
+      <p>Quando attivi l&rsquo;interruttore generale, il Go si accende se era spento. La spia emette un impulso verde. Sul Go+, senti anche una vibrazione. La batteria si ricarica finché la presa USB è alimentata.</p>
+      <p>Se a terra viene a mancare l&rsquo;alimentazione USB, il Go continua a funzionare a batteria. Nel cerchio del radar, al posto della consueta indicazione di stato o della batteria, compare <span class="mono">OFF IN</span> sopra i minuti rimanenti, da <span class="mono">5 MIN</span> a <span class="mono">1 MIN</span>. Dopo cinque minuti il Go si spegne con tre brevi impulsi rossi. Se l&rsquo;alimentazione torna prima, il conto alla rovescia scompare e il Go resta acceso. Se l&rsquo;alimentazione USB manca in volo, il Go resta acceso a batteria. Il conto alla rovescia parte solo dopo l&rsquo;atterraggio.</p>
+      <p>La batteria mantiene acceso il Go durante l&rsquo;avviamento del motore. I cinque minuti di attesa coprono il tempo in cui l&rsquo;interruttore generale resta disattivato per far raffreddare il motorino di avviamento dopo un tentativo fallito. Per il 912, Rotax indica due minuti di attesa dopo dieci secondi di avviamento. Per l&rsquo;IO-320, Lycoming indica cinque minuti tra un tentativo e l&rsquo;altro.</p>
+      <p>Per accendere il Go senza alimentazione USB, premi <span class="mono">RESET</span>, il comando più in alto sul lato sinistro. Se tieni premuto il pulsante all&rsquo;avvio, il software di avvio di fabbrica apre la modalità di aggiornamento. Per questo in modalità cavo il pulsante non può accendere il Go. Per spegnerlo, tieni premuto il pulsante per due secondi. Il Go resta spento fino al ritorno dell&rsquo;alimentazione USB o finché non premi <span class="mono">RESET</span>.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "cable-off.png", alt: "La pagina radar a terra dopo l'interruzione dell'alimentazione di bordo: nel cerchio compare OFF IN sopra 4 MIN" %>
+      <figcaption>Conto alla rovescia a terra dopo l&rsquo;interruzione dell&rsquo;alimentazione USB</figcaption>
+    </figure>
+  </div>
+
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Da spento</th><th>Cosa succede</th></tr>
+        <tr><th>Da spento con <span class="mono">POWER BUTTON</span> (impostazione predefinita)</th><th>Cosa succede</th></tr>
       </thead>
       <tbody>
         <tr><th>Premi il pulsante</th><td>si avvia, tranne se la batteria è sotto 3,4&nbsp;V senza caricabatterie collegato. In quel caso, lo schermo mostra <span class="mono">BATTERY EMPTY</span></td></tr>
@@ -106,6 +122,21 @@ updated_on: "2026-11-25"
         <tr><th>Collega il caricabatterie a un dispositivo con batteria scarica</th><td>si ricarica e resta spento. <span class="mono">BATTERY EMPTY</span> resta sullo schermo fino alla pressione successiva</td></tr>
         <tr><th>Tieni premuto il pulsante e collega il caricabatterie</th><td>si avvia e si ricarica</td></tr>
         <tr><th>Premi <span class="mono">RESET</span></th><td>si riavvia. Premi due volte in mezzo secondo per avviare il programma di installazione del firmware via USB, chiamato bootloader</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Da spento con <span class="mono">POWER CABLE</span></th><th>Cosa succede</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Attiva l&rsquo;alimentazione di bordo</th><td>si avvia e si ricarica</td></tr>
+        <tr><th>Collega il Go a una presa USB alimentata dopo uno spegnimento per batteria scarica</th><td>si avvia e si ricarica</td></tr>
+        <tr><th>Premi il pulsante</th><td>resta spento</td></tr>
+        <tr><th>Premi <span class="mono">RESET</span></th><td>si avvia, anche senza alimentazione USB</td></tr>
+        <tr><th>Tieni premuto il pulsante mentre arriva l&rsquo;alimentazione USB</th><td>entra in modalità di aggiornamento e resta in attesa. Rilascia il pulsante e premi <span class="mono">RESET</span> per avviarlo normalmente</td></tr>
       </tbody>
     </table>
   </div>

@@ -58,7 +58,7 @@ updated_on: "2026-11-25"
         Bei 3,2&nbsp;V schaltet sich das Gerät aus. Die letzte Meldung zeigt, dass der Akku leer ist. Sie haben nichts gedrückt, also kann nur das Display erklären, warum Go aus ist. Ohne diese Meldung sähe es nach einem Absturz oder Defekt aus. Die Taste reagiert ab diesem Moment nicht mehr. Ein Tastendruck würde den Akku nur wieder an dieselbe Abschaltspannung bringen.
       </p>
       <p>
-        Schließen Sie das Kabel an, um das Gerät wieder nutzen zu können. Das Anschließen allein ändert die Anzeige nicht. Die rote Ladeanzeige zeigt, dass der Akku geladen wird. Das Gerät bleibt ausgeschaltet. Drücken Sie bei angeschlossenem Kabel die Taste, um es unabhängig vom Akkustand zu starten und die Meldung zu löschen. Hat sich der Akku bei der Lagerung entladen, steht noch keine Meldung auf dem Display. In diesem Fall zeigt ein Tastendruck dieselbe Meldung zum leeren Akku an.
+        Mit <span class="mono">POWER BUTTON</span> (Voreinstellung) schließen Sie das Kabel an, um das Gerät wieder nutzen zu können. Das Anschließen allein ändert die Anzeige nicht. Die rote Ladeanzeige zeigt, dass der Akku geladen wird. Das Gerät bleibt ausgeschaltet. Drücken Sie bei angeschlossenem Kabel die Taste, um es unabhängig vom Akkustand zu starten und die Meldung zu löschen. Hat sich der Akku bei der Lagerung entladen, steht noch keine Meldung auf dem Display. In diesem Fall zeigt ein Tastendruck dieselbe Meldung zum leeren Akku an. Mit <span class="mono">POWER CABLE</span> startet und lädt das Gerät nach dem Abschalten bei leerem Akku schon beim Anschließen einer USB-Stromquelle (siehe <%= link_to_page "power", label: "Kabelmodus", anchor: "cable-mode" %>).
       </p>
       <p>
         Beim nächsten Start meldet der Selbsttest das Abschalten wegen eines leeren Akkus mit
@@ -71,10 +71,25 @@ updated_on: "2026-11-25"
     </figure>
   </div>
 
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="cable-mode">Schalten Sie Go <span class="highlight">mit dem Hauptschalter</span> ein und aus.</h3>
+      <p>Lassen Sie Ihren Go oder Go+ an der USB-Buchse des Luftfahrzeugs angeschlossen und den Akku im Gerät. Drücken Sie in der Radaransicht die Taste, um <span class="mono">SETTINGS</span> zu öffnen. Tippen Sie auf das Touchfeld, bis Sie zur <%= link_to_page "controls", label: "letzten Zeile", anchor: "two-contacts" %> gelangen. Dort steht <span class="mono">POWER</span>. Drücken Sie in dieser Zeile einmal die Taste, um von der Voreinstellung <span class="mono">BUTTON</span> auf <span class="mono">CABLE</span> zu wechseln. Ändern Sie die Einstellung direkt am Go, nicht in Briefing.</p>
+      <p>Wenn Sie den Hauptschalter einschalten, startet ein ausgeschalteter Go mit einem grünen Lichtimpuls. Beim Go+ spüren Sie den Impuls auch. Solange USB-Strom anliegt, lädt der Akku.</p>
+      <p>Fällt am Boden der USB-Strom weg, läuft Go mit seinem Akku weiter. Im Radarkreis steht statt der üblichen Status- oder Akkumeldung <span class="mono">OFF IN</span> über der verbleibenden Zeit. Die Anzeige zählt von <span class="mono">5 MIN</span> bis <span class="mono">1 MIN</span> herunter. Nach fünf Minuten schaltet sich Go mit drei kurzen roten Lichtimpulsen aus. Liegt vorher wieder USB-Strom an, verschwindet der Countdown und Go läuft weiter. Im Flug bleibt Go bei einem Ausfall der USB-Stromversorgung eingeschaltet. Er läuft mit seinem Akku weiter und startet den Countdown erst nach der Landung.</p>
+      <p>Beim Anlassen des Motors versorgt der Akku den Go. Misslingt der Start, überbrücken die fünf Minuten die Pause, in der der Hauptschalter aus ist und der Anlasser abkühlt. Rotax sieht beim 912 nach zehn Sekunden Anlasserbetrieb zwei Minuten Pause vor. Lycoming nennt für den IO-320 fünf Minuten zwischen Startversuchen.</p>
+      <p>Drücken Sie <span class="mono">RESET</span>, das obere Bedienelement auf der linken Seite, um Go ohne USB-Strom zu starten. Die werkseitige Startsoftware öffnet beim Einschalten den Aktualisierungsmodus, wenn Sie die Taste gedrückt halten. Deshalb lässt sich Go im Kabelmodus nicht mit der Taste einschalten. Halten Sie die Taste zwei Sekunden lang gedrückt, um Go auszuschalten. Er bleibt aus, bis die USB-Stromversorgung erneut eingeschaltet wird oder Sie <span class="mono">RESET</span> drücken.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "cable-off.png", alt: "Radaransicht am Boden nach dem Abschalten des Bordstroms: Im Radarkreis steht OFF IN über 4 MIN" %>
+      <figcaption>Countdown nach Wegfall der USB-Stromversorgung am Boden</figcaption>
+    </figure>
+  </div>
+
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Bei ausgeschaltetem Gerät</th><th>Was passiert</th></tr>
+        <tr><th>Bei ausgeschaltetem Gerät mit <span class="mono">POWER BUTTON</span> (Voreinstellung)</th><th>Was passiert</th></tr>
       </thead>
       <tbody>
         <tr><th>Taste drücken</th><td>Das Gerät startet, außer der Akku liegt ohne angeschlossenes Ladegerät unter 3,4&nbsp;V. Dann zeigt das Display <span class="mono">BATTERY EMPTY</span></td></tr>
@@ -83,6 +98,21 @@ updated_on: "2026-11-25"
         <tr><th>Ladegerät bei leerem Akku anschließen</th><td>Das Gerät lädt und bleibt aus. <span class="mono">BATTERY EMPTY</span> bleibt bis zum nächsten Tastendruck stehen</td></tr>
         <tr><th>Taste halten und Ladegerät anschließen</th><td>Das Gerät startet und lädt</td></tr>
         <tr><th>Drücken Sie <span class="mono">RESET</span></th><td>für einen Neustart. Drücken Sie zweimal innerhalb einer halben Sekunde, um das Installationsprogramm für Firmware über USB zu starten, den USB-Bootloader</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Bei ausgeschaltetem Gerät mit <span class="mono">POWER CABLE</span></th><th>Was passiert</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Bordstrom einschalten</th><td>Das Gerät startet und lädt</td></tr>
+        <tr><th>Nach dem Abschalten bei leerem Akku eine USB-Stromquelle anschließen</th><td>Das Gerät startet und lädt</td></tr>
+        <tr><th>Taste drücken</th><td>Das Gerät bleibt aus</td></tr>
+        <tr><th><span class="mono">RESET</span> drücken</th><td>Das Gerät startet auch ohne USB-Strom</td></tr>
+        <tr><th>Taste gedrückt halten, während die USB-Stromversorgung eingeschaltet wird</th><td>Das Gerät wechselt in den Aktualisierungsmodus und bleibt dort. Lassen Sie die Taste los und drücken Sie <span class="mono">RESET</span>, um Go normal zu starten</td></tr>
       </tbody>
     </table>
   </div>
