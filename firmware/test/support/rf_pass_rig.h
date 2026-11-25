@@ -56,6 +56,8 @@ struct Pass {
         const Status status = rf.begin();
         if (status != Status::Ok) return status;
         state.own.fix_valid = true;
+        state.own.speed_valid = true;
+        state.own.track_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
         state.own.fix_dated = true;
@@ -77,11 +79,21 @@ struct Pass {
         services_at(now_us);
     }
 
+    // A whole pass with own-ship's fix left where the case put it.
+    void pass_on_fix(uint64_t now_us) {
+        poll_clock(now_us);
+        services_on_fix(now_us);
+    }
+
     void services_at(uint64_t now_us) {
+        state.own.fix_at_ms = static_cast<uint32_t>(now_us / 1000);
+        services_on_fix(now_us);
+    }
+
+    void services_on_fix(uint64_t now_us) {
         platform.clock().set_microseconds(now_us);
         const uint32_t now_ms = static_cast<uint32_t>(now_us / 1000);
         state.own.utc_s = now_ms / 1000;
-        state.own.fix_at_ms = now_ms;
         rf.service(now_ms);
         radio_service.tick(now_ms);
         traffic_service.tick(now_ms);

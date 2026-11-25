@@ -74,12 +74,11 @@ class L76k : public ports::Gnss {
     static constexpr int kRateCommandCount = 2;
     static constexpr const char* kRateCommands[kRateCommandCount] = {
         "$PCAS02,500*1A\r\n",
-        "$PCAS03,,,2,,,,,,,,,,,*30\r\n",
+        "$PCAS03,,,1,,,,,,,,,,,*33\r\n",
     };
-    // INFO: fc 19nov26 the second sentence above keeps GSA, and the VDOP it carries, once a second
-    static constexpr uint8_t kGsaPeriodSolutions = 2;
-    static_assert(kGsaPeriodSolutions * kSolutionPeriodMs == kFactorySolutionPeriodMs,
-                  "GSA keeps the once a second it had at the factory rate");
+    // INFO: fc 22nov26 ADS-L G.1.7: GSA every solution, so each says itself whether it solved
+    // height
+    static constexpr uint8_t kGsaPeriodSolutions = 1;
 
     // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.15 asks us to claim
     static constexpr bool kGsaEnabled = true;

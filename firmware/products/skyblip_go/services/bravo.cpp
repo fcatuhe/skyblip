@@ -443,7 +443,7 @@ void BravoService::claim(uint32_t now_ms) {
     claim.longitude_1e7 = own.longitude_1e7;
     claim.altitude_hae_mm = own.altitude_hae_mm;
     claim.fix_age_ms = now_ms - own.fix_at_ms;
-    claim.altitude_hae_valid = own.fix_valid;
+    claim.altitude_hae_valid = own.fix_valid && own.altitude_hae_valid;
     claim.altitude_hae_age_ms = claim.fix_age_ms;
     claim.pressure_altitude_valid = own.pressure_altitude_valid;
     claim.pressure_altitude_mm = own.pressure_altitude_mm;

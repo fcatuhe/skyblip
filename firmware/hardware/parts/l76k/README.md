@@ -16,7 +16,7 @@ The driver brings the part up in three steps:
 |---|---|---|
 | 1, at the boot rate | `$PCAS04,7`, `$PCAS03,1,0,1,0,1,0,0,0,0,0,,,0,0`, `$PCAS11,6`, `$PCAS02,1000` | no GLL or VTG for `kVerifyWindowMs` |
 | 2 | `$PCAS01,5`, 115200 | one sentence that checksums at the new rate |
-| 3, at 115200 | `$PCAS02,500`, `$PCAS03,,,2,,,,,,,,,,,` | `kMinHalfSteps` half steps in `kRateVerifyWindowMs` |
+| 3, at 115200 | `$PCAS02,500`, `$PCAS03,,,1,,,,,,,,,,,` | `kMinHalfSteps` half steps in `kRateVerifyWindowMs` |
 
 - Step 3 comes only after step 2 has proved the part answers at 115200, as V1.1 requires.
 - A product that asked 1 Hz settles at 9600 when the port cannot retune or the part refuses `$PCAS01`. A product that asked 2 Hz never settles below it: the driver recovers the part instead.
@@ -57,7 +57,7 @@ After `kSilentRoundsBeforeReset`, three rounds, the driver holds RESET_N low for
 | VDOP and the fix mode | GSA |
 | vertical rate | none, differenced from GGA's height or taken from the barometer |
 
-GGA and RMC go out every solution, GSA every second one, so once a second, and GSV only while the satellites page is up, one set in nine solutions. GGA and RMC are 150 bytes, 13 ms at 115200. They depart from V1.1's single sentence type, because no sentence carries a height and a velocity together: GGA has no speed, track or date, RMC no height, and CASIC's DHV no position. A Traffic burst takes both from one solution, so the driver publishes a solution only when its GGA and its RMC name the same instant (`gnss::NmeaParser::same_epoch()`).
+GGA, GSA and RMC go out every solution, and GSV only while the satellites page is up, one set in nine solutions. GSA rides every solution because it alone says whether that solution solved for height, which ADS-L G.1.7 asks before an altitude goes on air. GGA and RMC are 150 bytes, 13 ms at 115200. They depart from V1.1's single sentence type, because no sentence carries a height and a velocity together: GGA has no speed, track or date, RMC no height, and CASIC's DHV no position. A Traffic burst takes both from one solution, so the driver publishes a solution only when its GGA and its RMC name the same instant (`gnss::NmeaParser::same_epoch()`).
 
 ## What the bench checks
 

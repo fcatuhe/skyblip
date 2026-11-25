@@ -83,6 +83,8 @@ class Transmitter {
     // INFO: fc 17nov26 the dwell's window cut to the direct slot, or past it for the name
     static Window window_of(Payload payload, int slot);
     static int last_instant(Payload payload, int slot);
+    // INFO: fc 22nov26 C.5 ends it in its window, G.1.16 within 500 ms of a position's fix
+    static int last_key(Payload payload, int slot, int32_t fix_lag_ms);
     // INFO: fc 13nov26 the turn utc_s acts for: its own, or the one a retry in it is for
     uint32_t turn_of(Payload payload, uint32_t utc_s, bool airborne) const;
     // INFO: fc 14nov26 EN 300 220-1 5.21.3.2 3): a deferral's draw, hashed from address and instant
@@ -114,6 +116,9 @@ class Transmitter {
 
 static_assert(PoliteAccess::kCcaLeadUs <= static_cast<uint32_t>(kSwitchLeadMs) * 1000,
               "the channel check before a window's first instant listens in the switch's lead");
+static_assert(Transmitter::kRedrawLeadMs <
+                  static_cast<int>(Transmitter::kAirTimeMs) + kCompletionAllowanceMs - kKeyToDoneMs,
+              "a position redrawn past its window's last instant still keys, late");
 static_assert(Transmitter::kCycleS == Transmitter::kStatusPeriodS &&
                   Transmitter::kCycleS == 2 * adsl::kGroundReportPeriodS,
               "one cycle holds G.2.11's Status period and two of G.1.16's ground periods");
