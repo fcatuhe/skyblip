@@ -36,9 +36,7 @@ void shift_left(uint8_t* data, size_t bytes, uint8_t bits) {
 
 bool uplink_packet(const uint8_t* data, size_t bytes) {
     if (bytes < 1 || static_cast<size_t>(data[0]) + 1 > bytes) return false;
-    for (int count = 0; count <= adsl::kUplinkMaxTargets; count++)
-        if (data[0] == adsl::uplink_length(count)) return true;
-    return false;
+    return adsl::uplink_layout(data[0]).records >= 0;
 }
 
 }  // namespace

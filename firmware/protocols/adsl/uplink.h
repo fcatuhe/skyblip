@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/reed_solomon.h"
@@ -26,17 +27,37 @@ constexpr uint16_t kUplinkPreambleChips = 24;
 constexpr int kUplinkRecordBytes = 19;
 constexpr int kUplinkMaxTargets = 10;
 constexpr int kUplinkHeaderBytes = 5;
-constexpr int kUplinkParityBytes = ReedSolomon255::kParityBytes;
+constexpr int kUplinkCrcBytes = 3;
+
+enum class ErrorControl : uint8_t { Crc, Fec };
+
+constexpr int uplink_parity_bytes(ErrorControl mode) {
+    return mode == ErrorControl::Fec ? ReedSolomon255::kParityBytes : kUplinkCrcBytes;
+}
 
 // INFO: fc 13nov26 F.2.5: the payload is padded so that it is 3 bytes past a whole number of words
 constexpr int uplink_payload_bytes(int count) {
     return kUplinkRecordBytes * count + (3 - kUplinkRecordBytes * count % 4 + 4) % 4;
 }
 // INFO: fc 13nov26 D.1.1's Packet Length: network header, ADS-L data and parity, not itself
-constexpr int uplink_length(int count) {
-    return 1 + kUplinkHeaderBytes + uplink_payload_bytes(count) + kUplinkParityBytes;
+constexpr int uplink_length(int count, ErrorControl mode) {
+    return 1 + kUplinkHeaderBytes + uplink_payload_bytes(count) + uplink_parity_bytes(mode);
 }
-constexpr int kUplinkMaxLength = uplink_length(kUplinkMaxTargets);
+
+struct UplinkLayout {
+    int records{-1};
+    ErrorControl mode{ErrorControl::Crc};
+};
+
+// INFO: fc 22nov26 G.3 counts the records from the length, and no CRC length is also a FEC one
+constexpr UplinkLayout uplink_layout(int length) {
+    for (const ErrorControl mode : {ErrorControl::Crc, ErrorControl::Fec})
+        for (int count = 0; count <= kUplinkMaxTargets; count++)
+            if (uplink_length(count, mode) == length) return {count, mode};
+    return {};
+}
+
+constexpr int kUplinkMaxLength = uplink_length(kUplinkMaxTargets, ErrorControl::Fec);
 static_assert(kUplinkMaxLength <= 255, "the §D.1.1 length field is one byte wide");
 static_assert(1 + kUplinkHeaderBytes + uplink_payload_bytes(kUplinkMaxTargets) <=
                   ReedSolomon255::kDataBytes,
@@ -67,6 +88,8 @@ class Uplink {
                         UplinkStatistics& statistics) const;
 
    private:
+    int correct(const uint8_t* sent, int covered_bytes, ErrorControl mode, uint8_t* covered) const;
+
     ReedSolomon255 reed_solomon_;
 };
 

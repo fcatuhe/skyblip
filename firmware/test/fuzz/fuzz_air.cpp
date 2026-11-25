@@ -20,6 +20,7 @@
 #include "protocols/adsl/reed_solomon.h"
 #include "protocols/adsl/uplink.h"
 #include "protocols/adsl_edge/registration.h"
+#include "protocols/common/crc.h"
 #include "simulator/world/alptas_out.h"
 
 using namespace skyblip;
@@ -105,11 +106,27 @@ size_t transmit_m_band(FuzzedDataProvider& in, Sealing sealing, const Receiver& 
     return protocol::kRxChipBytes;
 }
 
-// A G.3 packet behind its D.1.1 length: raw, sealed by E.3.2's parity, or encoded by adsl::Uplink.
+// One parity over a G.3 packet: E.3.1's CRC-24, most significant byte first, or E.3.2's code.
+void seal_uplink(uint8_t* packet, int length, adsl::ErrorControl mode) {
+    const int covered = length - adsl::uplink_parity_bytes(mode);
+    if (mode == adsl::ErrorControl::Crc) {
+        const uint32_t crc = wire::crc24_compute(packet + 1, static_cast<size_t>(covered));
+        packet[1 + covered] = static_cast<uint8_t>(crc >> 16);
+        packet[2 + covered] = static_cast<uint8_t>(crc >> 8);
+        packet[3 + covered] = static_cast<uint8_t>(crc);
+        return;
+    }
+    static const adsl::ReedSolomon255 parity;
+    uint8_t block[adsl::ReedSolomon255::kDataBytes]{};
+    std::memcpy(block + adsl::ReedSolomon255::kDataBytes - covered, packet + 1,
+                static_cast<size_t>(covered));
+    parity.encode(block, packet + 1 + covered);
+}
+
+// A G.3 packet behind its D.1.1 length: raw, sealed by either parity, or encoded by adsl::Uplink.
 size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, const Receiver& receiver,
                        uint8_t* packet) {
     const int count = in.ConsumeIntegralInRange<int>(0, adsl::kUplinkMaxTargets);
-    const int length = adsl::uplink_length(count);
     if (sealing == Sealing::Encoded) {
         adsl::Packet records[adsl::kUplinkMaxTargets];
         for (int i = 0; i < count; i++) {
@@ -121,18 +138,14 @@ size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, const Receiver& 
         static const adsl::Uplink uplink;
         (void)uplink.encode(in.ConsumeIntegral<uint32_t>() & 0xFFFFFFu,
                             in.ConsumeIntegralInRange<uint8_t>(0, 63), records, count, packet);
-        return 1u + static_cast<size_t>(length);
+        return 1u + static_cast<size_t>(packet[0]);
     }
+    const adsl::ErrorControl mode =
+        in.ConsumeBool() ? adsl::ErrorControl::Fec : adsl::ErrorControl::Crc;
+    const int length = adsl::uplink_length(count, mode);
     packet[0] = in.ConsumeBool() ? static_cast<uint8_t>(length) : in.ConsumeIntegral<uint8_t>();
     in.ConsumeData(packet + 1, adsl::kUplinkMaxLength);
-    if (sealing == Sealing::Sealed) {
-        static const adsl::ReedSolomon255 parity;
-        const int covered = length - adsl::ReedSolomon255::kParityBytes;
-        uint8_t block[adsl::ReedSolomon255::kDataBytes]{};
-        std::memcpy(block + adsl::ReedSolomon255::kDataBytes - covered, packet + 1,
-                    static_cast<size_t>(covered));
-        parity.encode(block, packet + 1 + covered);
-    }
+    if (sealing == Sealing::Sealed) seal_uplink(packet, length, mode);
     return 1u + adsl::kUplinkMaxLength;
 }
 

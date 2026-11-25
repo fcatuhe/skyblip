@@ -33,8 +33,12 @@ TEST_CASE(
     CHECK(int(adsl::kSyncWord & 0xFFu) == adsl::Packet::kDataBytes);
     const int uplink_header = 5;
     const int fec_parity = 32;
-    CHECK(adsl::uplink_length(1) == network_header + uplink_header + 19 + fec_parity);
-    CHECK(adsl::uplink_length(10) == network_header + uplink_header + 191 + fec_parity);
+    const adsl::ErrorControl crc = adsl::ErrorControl::Crc;
+    const adsl::ErrorControl fec = adsl::ErrorControl::Fec;
+    CHECK(adsl::uplink_length(1, crc) == network_header + uplink_header + 19 + parity);
+    CHECK(adsl::uplink_length(10, crc) == network_header + uplink_header + 191 + parity);
+    CHECK(adsl::uplink_length(1, fec) == network_header + uplink_header + 19 + fec_parity);
+    CHECK(adsl::uplink_length(10, fec) == network_header + uplink_header + 191 + fec_parity);
 }
 
 // G.2's 56 bits behind the 40-bit header are 12 bytes of data: with the header byte and the

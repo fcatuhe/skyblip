@@ -2,6 +2,7 @@
 // the receiver is deaf to half the sky and does not know it.
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 
 #include "core/model/band.h"
 #include "core/protocol/air.h"
@@ -220,7 +221,7 @@ TEST_CASE("air: a report shorter than the dwell reads is refused") {
 TEST_CASE("air: an O-band burst is named an uplink frame without being decoded") {
     uint8_t packet[1 + adsl::kUplinkMaxLength];
     fill(packet, sizeof(packet), 9);
-    packet[0] = static_cast<uint8_t>(adsl::uplink_length(3));
+    packet[0] = static_cast<uint8_t>(adsl::uplink_length(3, adsl::ErrorControl::Fec));
     protocol::Frame out{};
     CHECK(protocol::receive_burst(model::Band::O, packet, sizeof(packet), out) ==
           protocol::System::AdslUplink);
@@ -230,13 +231,25 @@ TEST_CASE("air: an O-band burst is named an uplink frame without being decoded")
     CHECK(out.bytes == 0);
 }
 
+// E.3.1's three CRC bytes behind one record or ten: 28 and 200, the lengths a CRC uplink spells.
+TEST_CASE("air: an O-band burst sent with the CRC is named an uplink frame too") {
+    uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
+    protocol::Frame out{};
+    for (const uint8_t length : {uint8_t{28}, uint8_t{200}}) {
+        CAPTURE(int(length));
+        packet[0] = length;
+        CHECK(protocol::receive_burst(model::Band::O, packet, sizeof(packet), out) ==
+              protocol::System::AdslUplink);
+    }
+}
+
 TEST_CASE("air: an O-band burst of the wrong length is not an uplink frame") {
     uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
     protocol::Frame out{};
-    packet[0] = static_cast<uint8_t>(adsl::uplink_length(3) + 1);
+    packet[0] = static_cast<uint8_t>(adsl::uplink_length(3, adsl::ErrorControl::Fec) + 1);
     CHECK(protocol::receive_burst(model::Band::O, packet, sizeof(packet), out) ==
           protocol::System::Unknown);
-    packet[0] = static_cast<uint8_t>(adsl::uplink_length(10));
+    packet[0] = static_cast<uint8_t>(adsl::uplink_length(10, adsl::ErrorControl::Fec));
     CHECK(protocol::receive_burst(model::Band::O, packet, adsl::kFrameBytes, out) ==
           protocol::System::Unknown);
 }
