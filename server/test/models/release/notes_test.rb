@@ -35,9 +35,9 @@ class Release::NotesTest < ActiveSupport::TestCase
   end
 
   test "a stable release's draft opens on the headings the briefing reads" do
-    workflow = Rails.root.join("../.github/workflows/release.yml").read
+    require Rails.root.join("../lib/release_draft").to_s
 
-    Release::Notes::NEWS_HEADINGS.each_value { |heading| assert_includes workflow, %("## #{heading}") }
+    assert_equal Release::Notes::NEWS_HEADINGS.values, ReleaseDraft::NEWS.keys
   end
 
   test "the technical changes link each pull request, and keep a line written by hand as it is" do
