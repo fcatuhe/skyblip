@@ -1,8 +1,8 @@
 ---
-title: "Allumer le skyBlip Go avec l’interrupteur général"
+title: "Allumer le skyBlip Go avec l'interrupteur général"
 nav_title: Mode câble
 slug: blog/mode-cable
-description: "Réglez le Go une fois. Avec la version 0.8.1, il démarre quand l’avion alimente sa prise USB et s’éteint cinq minutes après la coupure au sol."
+description: "Réglez le Go une fois. Avec la version 0.8.1, il démarre quand l'avion alimente sa prise USB et s'éteint cinq minutes après la coupure au sol."
 published_on: "2026-11-25"
 parent: blog
 updated_on: "2026-11-25"
@@ -44,7 +44,7 @@ updated_on: "2026-11-25"
   <p>Les cinq minutes servent quand vous coupez l&rsquo;interrupteur général pour laisser refroidir le démarreur. Rotax prévoit deux minutes de pause après dix secondes de démarreur sur le 912. Lycoming prévoit cinq minutes entre deux tentatives sur l&rsquo;IO-320. Nous avons vérifié sur banc le démarrage par USB d&rsquo;un Go+. Nous n&rsquo;avons pas encore mesuré la chute de tension sur le circuit 5&nbsp;V au démarrage du moteur.</p>
   <p>Si l&rsquo;alimentation USB disparaît en vol, le Go continue sur sa batterie. Le compte à rebours ne démarre qu&rsquo;une fois l&rsquo;avion au sol. Au parking, coupez l&rsquo;interrupteur général comme d&rsquo;habitude. Le cercle du radar affiche <span class="mono">OFF IN</span> au-dessus de <span class="mono">5 MIN</span>. Si le courant revient avant la fin, le compte à rebours disparaît et le Go continue de fonctionner. Sinon le voyant clignote brièvement trois fois en rouge et le Go s&rsquo;éteint. Vous n&rsquo;avez pas à attendre.</p>
   <figure class="shot">
-    <%= screen_image_tag "cable-off.png", alt: "Après la coupure de l’alimentation USB au sol, le cercle du radar affiche OFF IN au-dessus de 4 MIN" %>
+    <%= screen_image_tag "cable-off.png", alt: "Après la coupure de l'alimentation USB au sol, le cercle du radar affiche OFF IN au-dessus de 4 MIN" %>
     <figcaption>Pendant le compte à rebours, le Go fonctionne sur sa batterie.</figcaption>
   </figure>
 </section>
