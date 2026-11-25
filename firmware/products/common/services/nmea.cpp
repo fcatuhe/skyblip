@@ -56,15 +56,11 @@ void NmeaService::tick(uint32_t now_ms) {
         return;
     }
     drain();
-    if (passed_once_) {
-        const uint32_t since = now_ms - last_pass_ms_;
-        if (since < kMovingTargetRedrawPeriodMs) return;
-        if (context_.state.rf.dwell.burst_armed &&
-            since < kMovingTargetRedrawPeriodMs + kPassDeferralCeilingMs)
-            return;
-    }
+    note_whole_second(now_ms);
+    if (passed_once_ && !pass_due(now_ms)) return;
     last_pass_ms_ = now_ms;
     passed_once_ = true;
+    passed_second_s_ = landed_second_s_;
     run_pass(now_ms);
 }
 
@@ -72,8 +68,36 @@ uint32_t NmeaService::due_in_ms(uint32_t now_ms) const {
     if (!listening()) return runtime::kServiceRestCeilingMs;
     if (!passed_once_ || pass_sent_ < pass_bytes_) return runtime::kServicePassCeilingMs;
     const uint32_t since_ms = now_ms - last_pass_ms_;
-    if (since_ms >= kMovingTargetRedrawPeriodMs) return runtime::kServicePassCeilingMs;
-    return kMovingTargetRedrawPeriodMs - since_ms;
+    const uint32_t period_ms =
+        landed_second_s_ != passed_second_s_ ? kPassGapFloorMs : cadence_ms();
+    const uint32_t wait_ms = runtime::remaining_ms(since_ms, period_ms);
+    return wait_ms == 0 ? runtime::kServicePassCeilingMs : wait_ms;
+}
+
+void NmeaService::note_whole_second(uint32_t now_ms) {
+    const model::Ownship& second = context_.state.own_second;
+    if (!second.fix_valid || !second.utc_valid || second.utc_s == landed_second_s_) return;
+    landed_second_s_ = second.utc_s;
+    landed_at_ms_ = now_ms;
+}
+
+// INFO: fc 25nov26 an armed burst holds the pass as before, at most kPassDeferralCeilingMs
+bool NmeaService::pass_due(uint32_t now_ms) const {
+    const bool burst_armed = context_.state.rf.dwell.burst_armed;
+    const uint32_t since_ms = now_ms - last_pass_ms_;
+    if (landed_second_s_ != passed_second_s_) {
+        if (since_ms < kPassGapFloorMs) return false;
+        return !burst_armed || now_ms - landed_at_ms_ >= kPassDeferralCeilingMs;
+    }
+    if (since_ms < cadence_ms()) return false;
+    return !burst_armed || since_ms >= cadence_ms() + kPassDeferralCeilingMs;
+}
+
+uint32_t NmeaService::cadence_ms() const {
+    const model::Ownship& second = context_.state.own_second;
+    if (second.fix_valid && second.utc_valid)
+        return kMovingTargetRedrawPeriodMs + kWholeSecondWaitMs;
+    return kMovingTargetRedrawPeriodMs;
 }
 
 // INFO: fc 20nov26 the alarm sentence goes first and outside the per-pass cap, so a full sky never

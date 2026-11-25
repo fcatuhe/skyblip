@@ -263,6 +263,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | ADS-L and ALP-TAS key once a second, so a faster pass repeats a position and a slower one makes the map jump |
 | `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | core/traffic's freshness rule, so the tablet never holds a target longer than the device would alarm on it |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | a pass waits while own-ship's burst is armed, never longer than this, so the cadence stays a cadence |
+| `kWholeSecondWaitMs` | `gnss::kSolutionLatencyCeilingMs` = 250 | milliseconds | - | a whole second this late is lost, so the pass goes without it |
+| `kPassGapFloorMs` | 500 | milliseconds | Floor | two passes this close would send the tablet one second twice |
 | `kBarometerClimbWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
 | `kGnssClimbWindowMs` | 2000 (2 s) | milliseconds | Window | - |
 | `kBarometerMaxAgeMs` | `3 * boards::kBarometerPublishPeriodMs` | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
@@ -428,4 +430,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-283 constants over 26 folders.
+285 constants over 26 folders.

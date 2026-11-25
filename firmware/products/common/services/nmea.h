@@ -2,6 +2,7 @@
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_NMEA_H
 
 #include "core/events/link.h"
+#include "core/gnss/nmea.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/table.h"
 #include "products/common/services/config_service.h"
@@ -31,6 +32,12 @@ class NmeaService : public runtime::Service {
     // cadence stays a cadence
     static constexpr uint32_t kPassDeferralCeilingMs = 100;
 
+    // INFO: fc 25nov26 a whole second this late is lost, so the pass goes without it
+    static constexpr uint32_t kWholeSecondWaitMs = gnss::kSolutionLatencyCeilingMs;
+
+    // INFO: fc 25nov26 two passes this close would send the tablet one second twice
+    static constexpr uint32_t kPassGapFloorMs = 500;
+
     // INFO: nm 04aug26 the largest BLE frame: 251 bytes of link-layer payload, less 4 for L2CAP and
     // 3 for the notification header
     static constexpr int kFrameBytes = 244;
@@ -55,6 +62,9 @@ class NmeaService : public runtime::Service {
 
    private:
     bool listening() const;
+    void note_whole_second(uint32_t now_ms);
+    bool pass_due(uint32_t now_ms) const;
+    uint32_t cadence_ms() const;
     void run_pass(uint32_t now_ms);
     void emit_status(uint32_t now_ms);
     void emit_ownship();
@@ -78,6 +88,9 @@ class NmeaService : public runtime::Service {
     int pass_bytes_{0};
     int pass_sent_{0};
     uint32_t last_pass_ms_{0};
+    uint32_t landed_second_s_{0};
+    uint32_t landed_at_ms_{0};
+    uint32_t passed_second_s_{0};
     uint32_t link_drops_{0};
     int payload_{ports::kMinimumLinkPayloadBytes};
     // INFO: fc 20nov26 advances only past a target that went out, so a pass a link cut short
