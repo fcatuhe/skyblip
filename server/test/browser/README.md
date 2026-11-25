@@ -11,7 +11,7 @@ agent-browser --session simulator-check --cdp "$CDP" eval --stdin < server/test/
 
 The keyboard check sends all six flight keys from body focus, verifies typing and modifier guards, then removes the workbench to verify document-listener cleanup. It throws on any failed assertion, including the regression where only a non-focusable root received key events.
 
-Reopen the page before the scenario check because the keyboard check removes its workbench. The selected release must publish `skyblip-simulator-scenarios.json`, or `scenarios.json` up to v0.8.0, for this check.
+Reopen the page before the scenario check because the keyboard check removes its workbench. The selected release must publish `skyblip-simulator-scenarios.json` for this check.
 
 ```sh
 agent-browser --session simulator-check --cdp "$CDP" open http://127.0.0.1:8119/briefing/simulator

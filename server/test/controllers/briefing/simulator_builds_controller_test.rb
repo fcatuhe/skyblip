@@ -8,18 +8,18 @@ class Briefing::SimulatorBuildsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#simulator_build[src]"
   end
 
-  test "the frame offers the simulator of the newest main build that holds it" do
-    VCR.use_cassette("github/releases") do
+  test "the frame offers the simulator of the newest stable release that holds it" do
+    VCR.use_cassette("github/simulator") do
       with_config(simulator_build: nil) { get "/briefing/simulator_build" }
     end
 
     assert_response :success
     assert_select "turbo-frame#simulator_build [role=status]", count: 0
-    assert_match "dev-1765", response.body
+    assert_match "v0.8.1", response.body
   end
 
   test "the French simulator frame labels the Bravo control in French" do
-    VCR.use_cassette("github/releases") do
+    VCR.use_cassette("github/simulator") do
       with_config(simulator_build: nil) { get "/briefing/simulator_build", params: { locale: :fr } }
     end
 
