@@ -1,95 +1,42 @@
 import { Controller } from "@hotwired/stimulus"
-import { FEET_PER_METRE, FPM_PER_METRE_SECOND } from "#skyblip/geo"
+import { FEET_PER_METRE, FPM_PER_METRE_SECOND, KNOTS_PER_METRE_SECOND } from "#skyblip/geo"
 import { EQUIPMENT, addAircraft, airliner, callsign, nearbyAircraft } from "#skyblip/simulated_traffic"
+import { movePart } from "controllers/simulator/gauge"
 
 const MAX_CATCHUP_MS = 250
 const ACTIVATION_KEYS = [" ", "Enter"]
 
 const MM_PER_METRE = 1000
+const GRAVITY_M_S2 = 9.80665
 const signed = value => (Number(value) > 0 ? `+${value}` : `${value}`)
 const clamp = (value, limit) => Math.min(Math.max(value, -limit), limit)
 const degrees = radians => (radians * 180) / Math.PI
-
-const ASI_ZERO_DEG = 180
-const ASI_SPAN_DEG = 315
-const ASI_FULL_KT = 175
-const ALT_DEG_PER_HUNDRED_FT = 0.36
-const ALT_DEG_PER_THOUSAND_FT = 0.036
-const RATE_MARK_DEG = 20
-const STANDARD_RATE_DPS = 3
-const RATE_LIMIT_DEG = 45
-const SLIP_FULL_MG = 200
-const BALL_TRAVEL = 16
-const VSI_ZERO_DEG = -90
-const VSI_FULL_FPM = 2000
-const VSI_KNEE_FPM = 1000
-const VSI_KNEE_DEG = 90
-const VSI_OUTER_DEG = 80
-
-const vsiAngle = fpm => {
-  const rate = Math.min(Math.abs(fpm), VSI_FULL_FPM)
-  const inner = (Math.min(rate, VSI_KNEE_FPM) * VSI_KNEE_DEG) / VSI_KNEE_FPM
-  const outer =
-    (Math.max(rate - VSI_KNEE_FPM, 0) * VSI_OUTER_DEG) / (VSI_FULL_FPM - VSI_KNEE_FPM)
-  return VSI_ZERO_DEG + Math.sign(fpm) * (inner + outer)
-}
-const BANK_LIMIT_DEG = 60
-const PITCH_FULL_DEG = 20
-const GAUGE_RADIUS = 49
-
-const turned = (gauge, part, deg) =>
-  gauge.querySelector(part).setAttribute("transform", `rotate(${deg})`)
-
-const upright = (gauge, deg) => {
-  for (const numeral of gauge.querySelectorAll(".gauge-numeral"))
-    numeral.setAttribute(
-      "transform", `rotate(${deg}, ${numeral.getAttribute("x")}, ${numeral.getAttribute("y")})`
-    )
-}
+const radians = degrees => (degrees * Math.PI) / 180
 
 const AXES = {
   speed: {
     flown: (sim, kt) => sim.setSpeed(kt),
-    read: kt => `${kt} kt`,
-    paint: (gauge, kt) =>
-      turned(gauge, ".gauge-needle",
-             ASI_ZERO_DEG + (Math.min(kt, ASI_FULL_KT) * ASI_SPAN_DEG) / ASI_FULL_KT)
+    read: kt => `${kt} kt`
   },
   altitude: {
     flown: (sim, ft) => sim.setAltitude(Math.round(ft / FEET_PER_METRE)),
-    read: ft => `${ft} ft`,
-    paint: (gauge, ft) => {
-      turned(gauge, ".gauge-needle", (ft % 1000) * ALT_DEG_PER_HUNDRED_FT)
-      turned(gauge, ".gauge-hand", (ft % 10000) * ALT_DEG_PER_THOUSAND_FT)
-    }
+    read: ft => `${ft} ft`
   },
   track: {
     flown: (sim, deg) => sim.setTrack(deg),
-    read: deg => `${String(deg).padStart(3, "0")}°`,
-    paint: (gauge, deg) => {
-      turned(gauge, ".gauge-card", -deg)
-      upright(gauge, deg)
-    }
+    read: deg => `${String(deg).padStart(3, "0")}°`
   },
   turn: {
     flown: (sim, e1) => sim.setTurn(e1),
-    read: e1 => `${signed((e1 / 10).toFixed(1))} °/s`,
-    paint: (gauge, e1) =>
-      turned(gauge, ".gauge-plane",
-             clamp((e1 * RATE_MARK_DEG) / (10 * STANDARD_RATE_DPS), RATE_LIMIT_DEG))
+    read: e1 => `${signed((e1 / 10).toFixed(1))} °/s`
   },
   slip: {
     flown: (sim, mg) => sim.setSlip(mg),
-    read: mg => `${signed(mg)} mg`,
-    paints: "turn",
-    paint: (gauge, mg) => gauge.querySelector(".gauge-ball").setAttribute(
-      "transform", `translate(${(clamp(mg, SLIP_FULL_MG) * BALL_TRAVEL) / SLIP_FULL_MG}, 0)`
-    )
+    read: mg => `${signed(mg)} mg`
   },
   climb: {
     flown: (sim, fpm) => sim.setClimb(Math.round((fpm * MM_PER_METRE) / FPM_PER_METRE_SECOND)),
-    read: fpm => `${signed(fpm)} fpm`,
-    paint: (gauge, fpm) => turned(gauge, ".gauge-needle", vsiAngle(fpm))
+    read: fpm => `${signed(fpm)} fpm`
   }
 }
 
@@ -118,9 +65,8 @@ const TRAFFIC_NAMED_SHARE = 0.6
 const FLARM_SHARE = 0.25
 
 export default class extends Controller {
-  static targets = ["canvas", "status", "pad", "lamp", "charge", "bravo", "bravoControl",
-                    "horizonGauge", "attitudeReadout",
-                    ...Object.keys(AXES).flatMap(axis => [axis, `${axis}Readout`, `${axis}Gauge`])]
+  static targets = ["canvas", "status", "pad", "lamp", "charge", "bravo", "bravoControl", "part", "attitude", "attitudeReadout",
+                    ...Object.keys(AXES).flatMap(axis => [axis, `${axis}Readout`])]
   static values = { src: String, screens: Object }
 
   // INFO: fc 18nov26 a load superseded by another boot or a Turbo visit must not start the simulator
@@ -212,20 +158,18 @@ export default class extends Controller {
   }
 
   #show(axis, value) {
-    const { read, paint, paints } = AXES[axis]
-    this[`${axis}ReadoutTarget`].textContent = read(value)
-    paint(this[`${paints || axis}GaugeTarget`], value, this[`${axis}Target`])
+    this[`${axis}ReadoutTarget`].textContent = AXES[axis].read(value)
+    for (const part of this.partTargets) if (part.dataset.gaugeAxis === axis) movePart(part, value)
   }
 
   #attitude() {
-    const kt = Number(this.speedTarget.value)
-    const dps = Number(this.turnTarget.value) / 10
-    const fpm = Number(this.climbTarget.value)
-    const bank = clamp(degrees(Math.atan2(dps * kt, 1093)), BANK_LIMIT_DEG)
-    const pitch = clamp(degrees(Math.atan2(fpm * 10, kt * 1013)), PITCH_FULL_DEG)
-    this.horizonGaugeTarget.querySelector(".gauge-attitude").setAttribute(
-      "transform", `translate(0, ${(pitch * GAUGE_RADIUS) / PITCH_FULL_DEG}) rotate(${-bank})`
-    )
+    const speedMps = Number(this.speedTarget.value) / KNOTS_PER_METRE_SECOND
+    const turnRadS = radians(Number(this.turnTarget.value) / 10)
+    const climbMps = Number(this.climbTarget.value) / FPM_PER_METRE_SECOND
+    const { pixelsPerDegree, pitchLimit, bankLimit } = this.attitudeTarget.dataset
+    const bank = clamp(degrees(Math.atan2(turnRadS * speedMps, GRAVITY_M_S2)), Number(bankLimit))
+    const pitch = clamp(degrees(Math.atan2(climbMps, speedMps)), Number(pitchLimit))
+    this.attitudeTarget.setAttribute("transform", `translate(0, ${pitch * Number(pixelsPerDegree)}) rotate(${-bank})`)
     this.attitudeReadoutTarget.textContent = `${Math.round(Math.abs(bank))}\u00b0 ${bank < 0 ? "L" : "R"}`
   }
 

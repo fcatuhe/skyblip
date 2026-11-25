@@ -8,6 +8,35 @@ class SimulatorHelperTest < ActionView::TestCase
     assert_equal "/releases/v0.2.0/skyblip-simulator-embed.js", simulator_module_path("v0.2.0", Release::SimulatorFiles::CURRENT)
   end
 
+  # The altimeter's 9 sat at 330.6 deg while its needle pointed 324 deg at 900 ft, as one turn was laid over 980 ft.
+  test "every numeral of a needle dial sits where the needle points at its value" do
+    %w[speed altitude climb].each do |axis|
+      dial = dial(axis)
+      gauge_numerals(dial).each do |text, x, y|
+        value = Integer(text) * dial[:scale].fetch(:divisor, 1)
+        values = axis == "climb" && value.positive? ? [ value, -value ] : [ value ]
+        assert values.any? { |each| apart(law_position(gauge_law(dial, :needle), each), angle_of(x, y)) < 0.05 },
+               "#{axis} #{text} drawn at #{angle_of(x, y)}"
+      end
+    end
+  end
+
+  test "the track card brings each numeral under the index at its heading" do
+    dial = dial("track")
+    gauge_numerals(dial).each do |text, x, y|
+      heading = SimulatorHelper::GAUGE_CARDINALS.key(text) || Integer(text) * 10
+      assert_operator apart(angle_of(x, y) + law_position(gauge_law(dial, :card), heading), 0), :<, 0.05, text
+    end
+  end
+
+  test "the turn plane reaches the rate mark at a standard rate turn, and the ball stays in its tube" do
+    turn = dial("turn")
+
+    assert_equal turn[:rate][:mark_deg], law_position(gauge_law(turn, :plane), turn[:rate][:standard_dps_e1])
+    ball = gauge_law(turn, :ball)
+    assert_operator ball[:points].last.last + SimulatorHelper::BALL_RADIUS, :<=, SimulatorHelper::BALL_TUBE_HALF_WIDTH
+  end
+
   test "browser and node share app-owned protocol module names" do
     imports = JSON.parse(Rails.application.importmap.to_json(resolver: ApplicationController.helpers)).fetch("imports")
 
@@ -38,4 +67,15 @@ class SimulatorHelperTest < ActionView::TestCase
     assert_select "[data-dev-simulator-src-value='/releases/v0.2.0/skyblip-simulator-embed.js']", count: 1
     assert_select "script, style, [style], [onclick], [oninput], [onpointerdown]", count: 0
   end
+
+  private
+    def dial(axis) = SimulatorHelper::SIMULATOR_DIALS.find { it[:axis] == axis }
+    def angle_of(x, y) = (Math.atan2(x, -y) * 180 / Math::PI) % 360
+    def apart(a, b) = ((a - b) % 360).then { [ it, 360 - it ].min }
+
+    def law_position(law, value)
+      at = law[:cycle] ? value % law[:cycle] : value
+      (from_value, from_position), (to_value, to_position) = law[:points].each_cons(2).find { |(low, _), (high, _)| at.between?(low, high) }
+      from_position + (at - from_value) * (to_position - from_position).fdiv(to_value - from_value)
+    end
 end
