@@ -46,6 +46,14 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
     assert_select ".locale-switcher [aria-disabled=true]", text: "Français"
   end
 
+  # A request for /?locale=zz answered a 500, since I18n refuses a locale it does not know.
+  test "a locale the site does not speak, asked in the query, is ignored" do
+    get "/about", params: { locale: "zz" }
+
+    assert_response :success
+    assert_select "html[lang=en]"
+  end
+
   test "unknown and noncanonical content slugs are not recognized" do
     %w[/unknown /index /fr/index /fr/about /a-propos /fr/ads-l/nmea /fr/fr /fr/fr/a-propos].each do |path|
       assert_raises(ActionController::RoutingError, path) do
