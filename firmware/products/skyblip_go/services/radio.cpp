@@ -183,6 +183,9 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     plan.sync = protocol::kSharedSync;
     plan.sync_bits = protocol::kSharedSyncBits;
     plan.rx_bytes = protocol::kRxChipBytes;
+    plan.tx_sync = protocol::kAdslTxSync;
+    plan.tx_sync_bits = protocol::kAdslTxSyncBits;
+    plan.tx_preamble_chips = protocol::kAdslTxPreambleChips;
     plan.bitrate = adsl::kMBandChipRateBps;
     plan.deviation_hz = adsl::kMBandDeviationHz;
     plan.bandwidth_hz = adsl::kMBandChannelBandwidthHz;

@@ -189,18 +189,20 @@ uint8_t pulse_shape_index(uint16_t gaussian_bt_e2) {
     return sx1262::kGaussianBt1p0;
 }
 
-bool same_sync(const RadioConfig& left, const RadioConfig& right) {
-    if (left.sync_bits != right.sync_bits) return false;
-    const size_t bytes = (left.sync_bits + 7u) / 8u;
-    if (bytes == 0) return true;
-    return left.sync != nullptr && right.sync != nullptr &&
-           std::equal(left.sync, left.sync + bytes, right.sync);
+bool same_sync(const uint8_t* left, uint8_t left_bits, const uint8_t* right, uint8_t right_bits) {
+    if (left_bits != right_bits) return false;
+    if (left_bits == 0) return true;
+    const size_t bytes = (left_bits + 7u) / 8u;
+    return std::equal(left, left + bytes, right);
 }
 
 bool same_modem(const RadioConfig& left, const RadioConfig& right) {
     return left.bitrate == right.bitrate && left.deviation_hz == right.deviation_hz &&
            left.bandwidth_hz == right.bandwidth_hz && left.gaussian_bt_e2 == right.gaussian_bt_e2 &&
-           left.payload_bytes == right.payload_bytes && same_sync(left, right);
+           left.payload_bytes == right.payload_bytes &&
+           same_sync(left.sync, left.sync_bits, right.sync, right.sync_bits) &&
+           left.tx_preamble_chips == right.tx_preamble_chips &&
+           same_sync(left.tx_sync, left.tx_sync_bits, right.tx_sync, right.tx_sync_bits);
 }
 
 bool same_dwell(const RadioConfig& left, const RadioConfig& right) {
@@ -273,17 +275,19 @@ void Sx1262::configure_irq() {
 }
 
 void Sx1262::configure_frame(const RadioConfig& config) {
+    tx_framing_ = false;
     if (config.sync_bits == 0) return;
     write_register(sx1262::kSyncWordRegister, config.sync, (config.sync_bits + 7u) / 8u);
-    write_packet_parameters(config.payload_bytes);
+    write_packet_parameters(config.payload_bytes, sx1262::kPreambleChips, config.sync_bits);
 }
 
-void Sx1262::write_packet_parameters(uint8_t payload_bytes) {
+void Sx1262::write_packet_parameters(uint8_t payload_bytes, uint16_t preamble_chips,
+                                     uint8_t sync_bits) {
     uint8_t parameters[9] = {0};
-    parameters[0] = static_cast<uint8_t>(sx1262::kPreambleChips >> 8);
-    parameters[1] = static_cast<uint8_t>(sx1262::kPreambleChips);
+    parameters[0] = static_cast<uint8_t>(preamble_chips >> 8);
+    parameters[1] = static_cast<uint8_t>(preamble_chips);
     parameters[2] = sx1262::kPreambleDetect8Chips;
-    parameters[3] = config_.sync_bits;
+    parameters[3] = sync_bits;
     parameters[4] = sx1262::kAddressFilteringOff;
     parameters[5] = sx1262::kFixedLength;
     parameters[6] = payload_bytes;
@@ -296,6 +300,12 @@ void Sx1262::write_packet_parameters(uint8_t payload_bytes) {
 // INFO: wr 02aug26 DS 13.1: SetPacketType and SetRfFrequency need standby, so the mode is restored
 Status Sx1262::configure_radio(const RadioConfig& config) {
     if (!brought_up_) return Status::Down;
+    if (config.sync_bits > sx1262::kSyncWordBitsCeiling ||
+        (config.sync_bits != 0 && config.sync == nullptr) ||
+        config.tx_sync_bits > sx1262::kSyncWordBitsCeiling ||
+        (config.tx_sync_bits != 0 &&
+         (config.tx_sync == nullptr || config.tx_preamble_chips == 0 || config.sync_bits == 0)))
+        return Status::Invalid;
     if (holds(config)) return Status::Ok;
     const RadioMode was = mode_;
     if (hops_to(config)) return retune(config, was);
@@ -348,8 +358,10 @@ uint32_t Sx1262::tx_timeout_ticks(uint8_t bytes) const {
 
 uint32_t Sx1262::air_us(uint8_t bytes) const {
     const uint32_t bitrate = config_.bitrate != 0 ? config_.bitrate : 100000u;
-    const uint32_t bits =
-        sx1262::kPreambleChips + config_.sync_bits + static_cast<uint32_t>(bytes) * 8u;
+    const bool custom_tx = config_.tx_sync_bits != 0;
+    const uint16_t preamble = custom_tx ? config_.tx_preamble_chips : sx1262::kPreambleChips;
+    const uint8_t sync_bits = custom_tx ? config_.tx_sync_bits : config_.sync_bits;
+    const uint32_t bits = preamble + sync_bits + static_cast<uint32_t>(bytes) * 8u;
     return static_cast<uint32_t>(static_cast<uint64_t>(bits) * 1000000ULL / bitrate);
 }
 
@@ -365,7 +377,16 @@ Status Sx1262::stage_tx(const uint8_t* data, uint8_t bytes) {
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     if (mode_ != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok)
         return Status::Timeout;
-    if (packet_bytes_ != bytes) write_packet_parameters(bytes);
+    const bool custom_tx = config_.tx_sync_bits != 0;
+    const bool change_framing = custom_tx && !tx_framing_;
+    if (change_framing)
+        write_register(sx1262::kSyncWordRegister, config_.tx_sync,
+                       (config_.tx_sync_bits + 7u) / 8u);
+    if (packet_bytes_ != bytes || change_framing)
+        write_packet_parameters(bytes,
+                                custom_tx ? config_.tx_preamble_chips : sx1262::kPreambleChips,
+                                custom_tx ? config_.tx_sync_bits : config_.sync_bits);
+    tx_framing_ = custom_tx;
     const uint8_t head[2] = {sx1262::kWriteBuffer, 0};
     write_frame(head, sizeof(head), data, bytes);
     configure_irq();
@@ -387,10 +408,14 @@ Status Sx1262::key_tx() {
 Status Sx1262::start_receive() {
     if (!configured_) return Status::Invalid;
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
-    if (config_.sync_bits != 0 && packet_bytes_ != config_.payload_bytes) {
+    if (config_.sync_bits != 0 && (tx_framing_ || packet_bytes_ != config_.payload_bytes)) {
         if (mode_ != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok)
             return Status::Timeout;
-        write_packet_parameters(config_.payload_bytes);
+        if (tx_framing_)
+            configure_frame(config_);
+        else
+            write_packet_parameters(config_.payload_bytes, sx1262::kPreambleChips,
+                                    config_.sync_bits);
     }
     configure_irq();
     uint8_t continuous[3] = {0xFF, 0xFF, 0xFF};

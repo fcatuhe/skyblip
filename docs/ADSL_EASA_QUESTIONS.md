@@ -6,17 +6,17 @@ Each question keeps its reference once sent, and [skyblip.eu/ads-l/questions](ht
 
 | Ref | Clause | Status |
 |---|---|---|
-| SB-Q1 | F.2.2, the manufacturer prefix | to ask |
-| SB-Q2 | G.1.1 and G.1.16, a fix measured on a quarter and sent within 500 ms | to ask |
-| SB-Q3 | G.1.16, the age of a vertical rate | to ask |
-| SB-Q4 | C.2, C.2.5, C.5, G.1.16 and G.2.11, the transmit timing | to ask |
-| SB-Q5 | C.2.5, alternation after a burst that did not go out | to ask |
-| SB-Q6 | F.2.3, the ICAO address | to ask |
-| SB-Q7 | C.5 and F.2.1, payload 66 outside the direct slot, or Issue 3's callsign | to ask |
-| SB-Q8 | G.1.2, the flight state of a craft that can hover | to ask |
-| SB-Q9 | G.1.16 and G.1.17, velocity accuracy with no measured bound | to ask |
-| SB-Q10 | B.5, clients heard only through a relay | to ask |
-| SB-Q11 | Issue 1 G.1 and G.1.6, the absent vertical rate | to ask |
+| SB-Q1 | F.2.2, the manufacturer prefix | asked 25 November 2026 |
+| SB-Q2 | G.1.1 and G.1.16, a fix measured on a quarter and sent within 500 ms | asked 25 November 2026 |
+| SB-Q3 | G.1.16, the age of a vertical rate | asked 25 November 2026 |
+| SB-Q4 | C.2, C.2.5, C.5, G.1.16 and G.2.11, the transmit timing | asked 25 November 2026 |
+| SB-Q5 | C.2.5, alternation after a burst that did not go out | asked 25 November 2026 |
+| SB-Q6 | F.2.3, the ICAO address | asked 25 November 2026 |
+| SB-Q7 | C.5 and F.2.1, payload 66 outside the direct slot, or Issue 3's callsign | asked 25 November 2026 |
+| SB-Q8 | G.1.2, the flight state of a craft that can hover | asked 25 November 2026 |
+| SB-Q9 | G.1.16 and G.1.17, velocity accuracy with no measured bound | asked 25 November 2026 |
+| SB-Q10 | B.5, clients heard only through a relay | asked 25 November 2026 |
+| SB-Q11 | Issue 1 G.1 and G.1.6, the absent vertical rate | asked 25 November 2026 |
 
 ## SB-Q1. F.2.2: the manufacturer prefix in the high byte
 
