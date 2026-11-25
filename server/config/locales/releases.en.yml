@@ -13,7 +13,7 @@ en:
     controls:
       wake: Hold the lower button to switch it back on.
       traffic: Add traffic to the sky
-      keys: "Focus the Go with Tab or a click to fly with the arrow keys. Press Down to climb."
+      keys: "Point at the simulator with the mouse, or select the Go with Tab, to fly with the arrow keys. Press Down to climb."
       glass: The simulated e-paper panel of a skyBlip Go
       key: "The device button: press to open the menu of the page you are on, hold two seconds to switch off, hold it again to switch on"
       pad: "The capacitive pad: tap to change page, hold one second to come back to the radar"

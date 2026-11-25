@@ -13,7 +13,7 @@ fr:
     controls:
       wake: Maintenez le bouton du bas enfoncé pour le rallumer.
       traffic: Ajouter un trafic dans le ciel
-      keys: "Sélectionnez le Go avec Tab ou un clic pour piloter avec les flèches. Appuyez sur la flèche du bas pour monter."
+      keys: "Placez la souris sur le simulateur, ou sélectionnez le Go avec Tab, pour piloter avec les flèches. Appuyez sur la flèche du bas pour monter."
       glass: L'écran e-paper simulé d'un skyBlip Go
       key: "Le bouton de l'appareil : une pression ouvre le menu de la page affichée, un appui de deux secondes éteint, un nouvel appui rallume"
       pad: "Le pavé tactile : une tape change de page, un contact d'une seconde ramène le radar"

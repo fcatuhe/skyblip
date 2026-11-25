@@ -132,8 +132,7 @@ export default class extends Controller {
   }
 
   fly(event) {
-    if (!this.sim) return
-    if (event.metaKey || event.ctrlKey || event.altKey) return
+    if (!this.sim || !this.#meantForSimulator(event)) return
     if (event.key.toLowerCase() === TRAFFIC_KEY) {
       if (event.repeat) return
       event.preventDefault()
@@ -147,6 +146,15 @@ export default class extends Controller {
     const dial = this[`${axis}Target`]
     dial.value = Number(dial.value) + direction * Number(dial.step)
     this.#apply(axis)
+  }
+
+  #meantForSimulator(event) {
+    if (event.metaKey || event.ctrlKey || event.altKey || this.#takesArrowKeys(event.target)) return false
+    return this.element.matches(":hover") || this.element.contains(event.target)
+  }
+
+  #takesArrowKeys(target) {
+    return target.isContentEditable || target.matches("textarea, select, input:not([type=checkbox], [type=button], [type=submit], [type=reset])")
   }
 
   #apply(axis) {
