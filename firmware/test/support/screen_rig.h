@@ -67,22 +67,24 @@ struct ScreenRig {
         epd.begin();
     }
 
+    uint32_t now_ms{0};
+
     // The pass a service loop makes: the world's clock, then the service on it.
-    void tick(uint32_t now_ms) {
-        clock.set_milliseconds(now_ms);
-        screen.tick(now_ms);
+    void tick(uint32_t at_ms) {
+        clock.set_milliseconds(at_ms);
+        screen.tick(at_ms);
     }
 
     // One service tick per second, the render cadence.
-    void run_seconds(uint32_t& now_ms, int seconds) {
+    void run_seconds(int seconds) {
         for (int i = 0; i < seconds; i++) tick(now_ms += 1000);
     }
 
     // Forces a visible change every second, orthogonal to alarm level and traffic count.
-    void churn(uint32_t& now_ms, int seconds) { churn_at(now_ms, 1000, seconds); }
+    void churn(int seconds) { churn_at(1000, seconds); }
 
     // The same flip at the caller's cadence, for the policies measured in minutes.
-    void churn_at(uint32_t& now_ms, uint32_t step_ms, int times) {
+    void churn_at(uint32_t step_ms, int times) {
         for (int i = 0; i < times; i++) {
             state.flight.seconds += 60;
             tick(now_ms += step_ms);
@@ -94,7 +96,7 @@ struct ScreenRig {
     }
 
     // The pad held past the way home, a gesture read on the tick, not the release.
-    void long_touch(uint32_t& now_ms) {
+    void long_touch() {
         bus.input.push(events::ContactEvent{events::Contact::Pad, true, now_ms});
         tick(now_ms += 100);
         tick(now_ms += go::Controls::kLongTouchHoldMs);
@@ -103,7 +105,7 @@ struct ScreenRig {
     }
 
     // A press of the button, read on the release: the menu, then the row under the focus.
-    void press(uint32_t& now_ms) {
+    void press() {
         bus.input.push(events::ContactEvent{events::Contact::Button, true, now_ms});
         tick(now_ms += 100);
         bus.input.push(events::ContactEvent{events::Contact::Button, false, now_ms});
@@ -111,7 +113,7 @@ struct ScreenRig {
     }
 
     // The pad tapped: the next page along the walk, or the next row down a menu.
-    void tap(uint32_t& now_ms) {
+    void tap() {
         bus.input.push(events::ContactEvent{events::Contact::Pad, true, now_ms});
         tick(now_ms += 100);
         bus.input.push(events::ContactEvent{events::Contact::Pad, false, now_ms});
@@ -119,15 +121,14 @@ struct ScreenRig {
     }
 
     // Reached the way a thumb reaches it: the pad along the walk, then the menu row that opens it.
-    void show(uint32_t& now_ms, go::Page page) {
-        for (int i = 0; i < go::kPageCount && screen.page() != go::menu_owner(page); i++)
-            tap(now_ms);
+    void show(go::Page page) {
+        for (int i = 0; i < go::kPageCount && screen.page() != go::menu_owner(page); i++) tap();
         if (go::walked(page)) return;
-        press(now_ms);
+        press();
         const go::Menu menu = go::menu_for(go::menu_owner(page));
         for (int i = 0; i < menu.row_count && go::page_behind(screen.editor().focus()) != page; i++)
-            tap(now_ms);
-        press(now_ms);
+            tap();
+        press();
     }
 
     void alarm(traffic::Level level) {
@@ -145,7 +146,7 @@ struct ScreenRig {
     }
 
     // A target at a bearing, graded by hand, for the page to point at.
-    void threat(traffic::Level level, int32_t north_m, int32_t east_m, uint32_t now_ms) {
+    void threat(traffic::Level level, int32_t north_m, int32_t east_m, uint32_t at_ms) {
         model::AircraftObservation observation{};
         observation.address = kThreatAddress;
         observation.address_mapping_table = kThreatAddressMappingTable;
@@ -155,10 +156,10 @@ struct ScreenRig {
         observation.longitude_1e7 =
             state.own.longitude_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
         observation.altitude_m = to_metres(Millimetres(state.own.altitude_hae_mm)).value;
-        observation.received.at_s = now_ms / 1000;
-        observation.at_ms = now_ms;
+        observation.received.at_s = at_ms / 1000;
+        observation.at_ms = at_ms;
         observation.source = model::Source::AdslDirect;
-        state.traffic.update(observation, now_ms / 1000);
+        state.traffic.update(observation, at_ms / 1000);
         const int at = state.traffic.find(kThreatAddressMappingTable, kThreatAddress);
         REQUIRE(at >= 0);
         state.traffic.at(at)->alarm_level = level;

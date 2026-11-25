@@ -120,7 +120,9 @@ jobs:
         run: python3 scripts/check_tuning_names.py
       - name: the link registry is described, its generated files are current and the status writer matches it
         run: python3 scripts/check_link_registry.py
-      - name: the browser simulator binds only what it exports
+      - name: the diagnostics layout holds, its generated files are current and the decoded view matches it
+        run: python3 scripts/check_diagnostics_layout.py
+      - name: the browser simulator binds every export, and only those
         run: python3 scripts/check_simulator_exports.py
       # Dependabot proposes doctest and Zephyr in .github/pins, and the copies in use have to follow.
       - name: the vendored doctest and the Zephyr pin match .github/pins
@@ -359,10 +361,10 @@ jobs:
         with:
           name: browser-simulator
           path: |
-            firmware/build/browser/skyblip_simulator.js
-            firmware/build/browser/skyblip_simulator.wasm
-            firmware/build/browser/embed.js
-            firmware/build/browser/scenarios.json
+            firmware/build/browser/skyblip-simulator.js
+            firmware/build/browser/skyblip-simulator.wasm
+            firmware/build/browser/skyblip-simulator-embed.js
+            firmware/build/browser/skyblip-simulator-scenarios.json
           if-no-files-found: error
           retention-days: 1
 

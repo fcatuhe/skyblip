@@ -4,9 +4,9 @@
 </header>
 
 <p>
-  A coding agent reads skyBlip's insights, errors, events and units through the MCP server at
-  <span class="mono"><%= mcp_url %></span>, as the admin who connected it. It connects with OAuth, and asks for your approval
-  once a month. In Claude Code: <span class="mono">claude mcp add --transport http skyblip <%= mcp_url %></span>.
+  A coding agent reads skyBlip's insights, errors, events and units through the admin MCP server at
+  <span class="mono"><%= admin_mcp_url %></span>, as the admin who connected it. It connects with OAuth, and asks for your approval
+  once a month. In Claude Code: <span class="mono">claude mcp add --transport http skyblip-admin <%= admin_mcp_url %></span>.
 </p>
 
 <% if @grants.empty? %>

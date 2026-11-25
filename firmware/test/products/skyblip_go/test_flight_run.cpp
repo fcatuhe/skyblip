@@ -52,9 +52,7 @@ uint32_t arm_a_flight_run(simulator::Simulator& simulator) {
     return armed_ms + 1000;
 }
 
-void arm_flight_run(Rig& rig, uint32_t& now_ms) {
-    arm(rig, now_ms, diagnostics::Profile::FlightRun);
-}
+void arm_flight_run(Rig& rig) { arm(rig, diagnostics::Profile::FlightRun); }
 
 const go::Glass& glass(Rig& rig) { return rig.product.screen().framebuffer(); }
 
@@ -108,10 +106,10 @@ TEST_CASE("flight run: records the pair every 30 s, and its boot names the profi
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm_flight_run(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm_flight_run(rig);
     rig.run_for(65000);
-    stop(rig, rig.now_ms);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Power) == 2);
@@ -130,10 +128,10 @@ TEST_CASE("flight run: the radar flies, the flight log writes nothing, the gates
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     REQUIRE(rig.product.screen().page() == go::Page::Radar);
-    arm_flight_run(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 65);
+    arm_flight_run(rig);
+    taxi(rig, 65);
 
     CHECK(rig.state().flight.running);
     CHECK(rig.state().flight.seconds >= 60);
@@ -150,19 +148,19 @@ TEST_CASE("flight run: the radar flies, the flight log writes nothing, the gates
 TEST_CASE("flight run: the panel refreshes as a flown one does, and a parked one does not") {
     Rig parked;
     REQUIRE(parked.setup() == Status::Ok);
-    uint32_t parked_now_ms = 100;
-    taxi(parked, parked_now_ms, 3);
-    arm(parked, parked_now_ms, diagnostics::Profile::PowerRun);
+    parked.now_ms = 100;
+    taxi(parked, 3);
+    arm(parked, diagnostics::Profile::PowerRun);
     const uint32_t parked_from = parked.state().duty.panel_partial_refreshes;
-    taxi(parked, parked_now_ms, 130);
+    taxi(parked, 130);
 
     Rig flying;
     REQUIRE(flying.setup() == Status::Ok);
-    uint32_t flying_now_ms = 100;
-    taxi(flying, flying_now_ms, 3);
-    arm_flight_run(flying, flying_now_ms);
+    flying.now_ms = 100;
+    taxi(flying, 3);
+    arm_flight_run(flying);
     const uint32_t flying_from = flying.state().duty.panel_partial_refreshes;
-    taxi(flying, flying_now_ms, 130);
+    taxi(flying, 130);
 
     // the clock turns 0:00, 0:01 and 0:02, and FLIGHT replaces GROUND once
     CHECK(flying.state().duty.panel_partial_refreshes - flying_from >= 2);
@@ -174,13 +172,13 @@ TEST_CASE("flight run: a stop lands the glass, and leaves no flight time behind"
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm_flight_run(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 65);
+    taxi(rig, 3);
+    arm_flight_run(rig);
+    taxi(rig, 65);
     REQUIRE(rig.state().flight.running);
 
-    stop(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 2);
+    stop(rig);
+    taxi(rig, 2);
     CHECK_FALSE(rig.state().flight.running);
     CHECK_FALSE(rig.state().flight.time_valid);
     CHECK(rig.state().flight.seconds == 0);
@@ -194,9 +192,9 @@ TEST_CASE("flight run: a power run and a full capture leave the glass on the gro
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
         rig.now_ms = 100;
-        taxi(rig, rig.now_ms, 3);
-        arm(rig, rig.now_ms, profile);
-        taxi(rig, rig.now_ms, 5);
+        taxi(rig, 3);
+        arm(rig, profile);
+        taxi(rig, 5);
         CHECK_FALSE(rig.state().flight.running);
         CHECK(reads_in(glass(rig), "GROUND", 40, 120, 160, 160, 2));
     }

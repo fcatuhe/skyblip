@@ -1,22 +1,23 @@
 <section class="dev-tools dev-simulator" data-controller="dev-simulator"
          data-dev-simulator-src-value="<%= module_path %>"
-         data-dev-simulator-manifest-value="<%= local_assigns[:scenario_manifest_url] %>">
+         data-dev-simulator-manifest-value="<%= local_assigns[:scenario_manifest_url] %>"
+         data-action="keydown@document->dev-simulator#fly">
   <p class="dev-error" role="status" data-dev-simulator-target="error"></p>
-  <h1><b id="product_name">skyBlip&nbsp;Go</b>: device simulator <span>· real firmware, simulated sensors ·
+  <h1><b data-dev-simulator-target="productName">skyBlip&nbsp;Go</b>: device simulator <span>· real firmware, simulated sensors ·
     <%= link_to "Bluetooth console", briefing_console_path, data: { turbo_frame: "_top" } %></span></h1>
 
   <div class="layout">
-    <div class="device" id="device">
+    <div class="device" data-dev-simulator-target="device">
       <div class="sb-case">
-        <canvas role="img" aria-label="Firmware display" id="epd" class="sb-glass" width="200" height="200"></canvas>
+        <canvas role="img" aria-label="Firmware display" class="sb-glass" width="200" height="200" data-dev-simulator-target="glass"></canvas>
         <button class="sb-pad" aria-label="capacitive pad on the top edge, P0.11: tap it to page through radar, nearby and the six-pack or to walk the rows of a menu, touch it 1 s to come back to the radar, or to take a ghosted radar through black when you are already on it, or hold it through a 2 s press to switch off with a blank panel" title="capacitive pad on the top edge, P0.11: tap it to page through radar, nearby and the six-pack or to walk the rows of a menu, touch it 1 s to come back to the radar, or to take a ghosted radar through black when you are already on it, or hold it through a 2 s press to switch off with a blank panel"
-                data-dev-simulator-command-param="pad" data-action="pointerdown->dev-simulator#press pointerup->dev-simulator#release pointerleave->dev-simulator#release pointercancel->dev-simulator#release keydown->dev-simulator#press keyup->dev-simulator#release"></button>
+                data-dev-simulator-control-param="pad" data-action="pointerdown->dev-simulator#press pointerup->dev-simulator#release pointerleave->dev-simulator#release pointercancel->dev-simulator#release keydown->dev-simulator#press keyup->dev-simulator#release"></button>
         <button class="sb-key sb-key--reset" aria-label="RESET (button 1), P0.18 = nRESET: reboot" title="RESET (button 1), P0.18 = nRESET: reboot"
-                data-action="click->dev-simulator#control" data-dev-simulator-command-param="reset"></button>
+                data-action="dev-simulator#reset"></button>
         <button class="sb-key sb-key--action" aria-label="button 2, P1.10: a press opens the menu of the page on the glass and changes the focused row once inside, a hold of 2 s switches off" title="button 2, P1.10: a press opens the menu of the page on the glass and changes the focused row once inside, a hold of 2 s switches off"
-                data-dev-simulator-command-param="hold" data-action="pointerdown->dev-simulator#press pointerup->dev-simulator#release pointerleave->dev-simulator#release pointercancel->dev-simulator#release keydown->dev-simulator#press keyup->dev-simulator#release"></button>
-        <span class="sb-led sb-led--lamp" id="led_lamp" data-lamp="dark" title="the RGB lamp the firmware drives: green wink with a fix, blue wink without, red wink when the cell is low, red blink when critical, red flicker on a traffic alarm"></span>
-        <span class="sb-led sb-led--charge" id="led_charge" title="charge state: the charger drives this one, not the MCU"></span>
+                data-dev-simulator-control-param="button" data-action="pointerdown->dev-simulator#press pointerup->dev-simulator#release pointerleave->dev-simulator#release pointercancel->dev-simulator#release keydown->dev-simulator#press keyup->dev-simulator#release"></button>
+        <span class="sb-led sb-led--lamp" data-lamp="dark" data-dev-simulator-target="lamp" title="the RGB lamp the firmware drives: green wink with a fix, blue wink without, red wink when the cell is low, red blink when critical, red flicker on a traffic alarm"></span>
+        <span class="sb-led sb-led--charge" data-dev-simulator-target="charge" title="charge state: the charger drives this one, not the MCU"></span>
       </div>
       <div class="keymap">
         <div><b>top pad</b></div><div><code>P0.11</code></div><div>tap: next page or next row · long touch (1 s): radar, through black · held through a long press: off, blank glass</div>
@@ -24,51 +25,52 @@
         <div><b>left bottom</b></div><div><code>P1.10</code></div><div>press: this page's menu, then change the row · hold: off</div>
       </div>
       <div class="row">
-        <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="backlight">Backlight</button>
-        <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="power">Power</button>
+        <button data-action="dev-simulator#toggleBacklight">Backlight</button>
+        <button data-action="dev-simulator#togglePower">Power</button>
       </div>
-      <div class="hint" id="pagehint">page: -</div>
-      <div class="hint" id="refreshhint">glass: <b id="refreshstate">idle</b><span id="refreshcount"></span></div>
+      <div class="hint" data-dev-simulator-target="pageHint">page: -</div>
+      <div class="hint dev-refresh-hint">glass: <b data-dev-simulator-target="refreshState">idle</b><span data-dev-simulator-target="refreshCount"></span></div>
     </div>
 
     <div class="dev-panels">
-      <div class="panel">
+      <div class="panel" data-dev-simulator-target="devPanel">
         <h2>Own-ship (six-pack)</h2>
         <div class="sixpack">
           <div class="dial">
-            <header><label for="spd">GS KT</label><output id="spd_o">120 kt</output></header>
+            <header><label for="spd">GS KT</label><output data-dev-simulator-target="speedReadout">120 kt</output></header>
             <input type="range" id="spd" min="0" max="180" step="1" value="120"
-                   data-action="input->dev-simulator#control" data-dev-simulator-command-param="speed">
+                   data-dev-simulator-target="speed" data-dev-simulator-axis-param="speed" data-action="dev-simulator#steer">
           </div>
           <div class="dial">
-            <header><label for="sats">STATE</label><output id="sats_o">16 sats</output></header>
-            <input type="range" id="sats" min="0" max="32" value="16" data-action="input->dev-simulator#control" data-dev-simulator-command-param="sats">
-            <button id="fixbtn" data-action="click->dev-simulator#control" data-dev-simulator-command-param="toggleFix">Fix: ON</button>
+            <header><label for="sats">STATE</label><output data-dev-simulator-target="satellitesReadout">16 sats</output></header>
+            <input type="range" id="sats" min="0" max="32" value="16"
+                   data-dev-simulator-target="satellites" data-dev-simulator-axis-param="satellites" data-action="dev-simulator#steer">
+            <button data-dev-simulator-target="fixButton" data-action="dev-simulator#toggleFix">Fix: ON</button>
           </div>
           <div class="dial">
-            <header><label for="alt">ALT FT</label><output id="alt_o">4500 ft</output></header>
+            <header><label for="alt">ALT FT</label><output data-dev-simulator-target="altitudeReadout">4500 ft</output></header>
             <input type="range" id="alt" min="0" max="18000" step="100" value="4500"
-                   data-action="input->dev-simulator#control" data-dev-simulator-command-param="alt">
+                   data-dev-simulator-target="altitude" data-dev-simulator-axis-param="altitude" data-action="dev-simulator#steer">
           </div>
           <div class="dial">
-            <header><label for="trn">TURN D/S</label><output id="trn_o">+0.0 &deg;/s</output></header>
+            <header><label for="trn">TURN D/S</label><output data-dev-simulator-target="turnReadout">+0.0 &deg;/s</output></header>
             <input type="range" id="trn" min="-600" max="600" step="5" value="0"
-                   data-action="input->dev-simulator#control" data-dev-simulator-command-param="turn">
+                   data-dev-simulator-target="turn" data-dev-simulator-axis-param="turn" data-action="dev-simulator#steer">
           </div>
           <div class="dial">
-            <header><label for="trk">TRK</label><output id="trk_o">225&deg;</output></header>
+            <header><label for="trk">TRK</label><output data-dev-simulator-target="trackReadout">225&deg;</output></header>
             <input type="range" id="trk" min="0" max="359" value="225"
-                   data-action="input->dev-simulator#control" data-dev-simulator-command-param="track">
+                   data-dev-simulator-target="track" data-dev-simulator-axis-param="track" data-action="dev-simulator#steer">
           </div>
           <div class="dial">
-            <header><label for="clb">VS FPM</label><output id="clb_o">0 fpm</output></header>
+            <header><label for="clb">VS FPM</label><output data-dev-simulator-target="climbReadout">0 fpm</output></header>
             <input type="range" id="clb" min="-2000" max="2000" step="50" value="0"
-                   data-action="input->dev-simulator#control" data-dev-simulator-command-param="climb">
+                   data-dev-simulator-target="climb" data-dev-simulator-axis-param="climb" data-action="dev-simulator#steer">
           </div>
           <div class="dial">
-            <header><label for="slp">SLIP MG</label><output id="slp_o">0 mg</output></header>
+            <header><label for="slp">SLIP MG</label><output data-dev-simulator-target="slipReadout">0 mg</output></header>
             <input type="range" id="slp" min="-250" max="250" step="5" value="0"
-                   data-action="input->dev-simulator#control" data-dev-simulator-command-param="slip">
+                   data-dev-simulator-target="slip" data-dev-simulator-axis-param="slip" data-action="dev-simulator#steer">
           </div>
         </div>
         <div class="keymap dev-space-top">
@@ -89,78 +91,81 @@
           firmware the device uploads at boot, so the ball takes a few seconds to appear
           and then lags the slider the way a damped ball in a tube does.</div>
       </div>
-      <div class="panel">
+      <div class="panel" data-dev-simulator-target="devPanel">
         <h2>Air &amp; power</h2>
         <div class="ctl"><label for="air">Airmass</label>
-          <input type="range" id="air" min="9600" max="10500" step="5" value="10132" data-action="input->dev-simulator#control" data-dev-simulator-command-param="airmass">
-          <output id="air_o">1013.2 hPa</output></div>
+          <input type="range" id="air" min="9600" max="10500" step="5" value="10132"
+                 data-dev-simulator-target="airmass" data-dev-simulator-axis-param="airmass" data-action="dev-simulator#steer">
+          <output data-dev-simulator-target="airmassReadout">1013.2 hPa</output></div>
         <div class="ctl"><label for="bat">Cell</label>
-          <input type="range" id="bat" min="3200" max="4250" step="10" value="4050" data-action="input->dev-simulator#control" data-dev-simulator-command-param="battery">
-          <output id="bat_o">4.05 V</output></div>
+          <input type="range" id="bat" min="3200" max="4250" step="10" value="4050"
+                 data-dev-simulator-target="battery" data-dev-simulator-axis-param="battery" data-action="dev-simulator#steer">
+          <output data-dev-simulator-target="batteryReadout">4.05 V</output></div>
         <div class="row dev-space-bottom">
-          <button id="extbtn" data-action="click->dev-simulator#control" data-dev-simulator-command-param="toggleExternalPower">USB power: OFF</button>
+          <button data-dev-simulator-target="externalPowerButton" data-action="dev-simulator#toggleExternalPower">USB power: OFF</button>
         </div>
         <div class="hint">Airmass is the weather the BME280 sits in. The cell slider is the
           divider's millivolts: plug USB in and the
           same voltage reads a lower state of charge, because a charger holds the terminal
           above the cell.</div>
       </div>
-      <div class="panel" id="scenariopanel">
+      <div class="panel">
         <h2>Scenario</h2>
         <div class="row">
-          <select aria-label="Scenario" id="scenario" data-action="change->dev-simulator#control" data-dev-simulator-command-param="loadScenario" disabled>
+          <select aria-label="Scenario" data-dev-simulator-target="scenario" data-action="dev-simulator#loadScenario" disabled>
             <option value="">- none (free flight) -</option>
           </select>
         </div>
-        <p class="hint" id="scenariohint" role="status">Scenarios load with the firmware workbench.</p>
-        <div class="hint" id="modehint">mode: dev, every control visible</div>
+        <p class="hint" role="status" data-dev-simulator-target="scenarioHint">Scenarios load with the firmware workbench.</p>
+        <div class="hint" data-dev-simulator-target="modeHint">mode: dev, every control visible</div>
       </div>
-      <div class="panel">
+      <div class="panel" data-dev-simulator-target="devPanel">
         <h2>Traffic (real ADS-L / ALP-TAS frames)</h2>
         <div class="row">
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="addRandom">+ Aircraft</button>
-          <button class="warn" data-action="click->dev-simulator#control" data-dev-simulator-command-param="addThreat">+ Collision threat</button>
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="addWingman">+ Wingman</button>
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="clearTraffic">Clear</button>
+          <button data-action="dev-simulator#addTraffic">+ Aircraft</button>
+          <button class="warn" data-action="dev-simulator#addThreat">+ Collision threat</button>
+          <button data-action="dev-simulator#addWingman">+ Wingman</button>
+          <button data-action="dev-simulator#clearTraffic">Clear</button>
         </div>
         <div class="row dev-row-space">
           <label class="hint" for="tfc_system">new traffic is equipped with</label>
-          <select id="tfc_system">
+          <select id="tfc_system" data-dev-simulator-target="equipment">
             <option value="adsl" selected>ADS-L</option>
             <option value="alptas">ALP-TAS</option>
-            <option value="adsb" id="tfc_adsb" hidden>ADS-B, heard by Bravo</option>
+            <option value="adsb" data-dev-simulator-target="adsbOption" hidden>ADS-B, heard by Bravo</option>
           </select>
         </div>
         <div class="ctl dev-space-top"><label for="rng">Range</label>
-          <input type="range" id="rng" min="0" max="3" step="1" value="2" data-action="input->dev-simulator#control" data-dev-simulator-command-param="range">
-          <output id="rng_o">4 NM</output></div>
+          <input type="range" id="rng" min="0" max="3" step="1" value="2"
+                 data-dev-simulator-target="range" data-dev-simulator-axis-param="range" data-action="dev-simulator#steer">
+          <output data-dev-simulator-target="rangeReadout">4 NM</output></div>
         <div class="hint">Each aircraft is encoded as a real frame of its own system and
           decoded by the firmware's receive path: ADS-L scrambled + CRC'd, ALP-TAS
           encrypted the way the 2024 protocol does. Both are Manchester bursts on the
           same channels, framed by the one sync window the dwell arms.</div>
       </div>
-      <div class="panel" id="phonepanel" hidden>
+      <div class="panel" data-dev-simulator-target="devPanel phonePanel" hidden>
         <h2>skyBlip Bravo: its lamp and a phone's FLARM NMEA</h2>
         <p class="bravo-lamp">
-          <span class="dev-lamp" id="bravo_lamp" data-lamp="dark" aria-hidden="true"></span>
-          lamp: <b id="bravo_lamp_name">dark</b>
+          <span class="dev-lamp" data-lamp="dark" aria-hidden="true" data-dev-simulator-target="bravoLamp"></span>
+          lamp: <b data-dev-simulator-target="bravoLampName">dark</b>
         </p>
-        <div id="bravo_paired" hidden>
-          <p class="hint">The Go reads Bravo as <b id="bravo_state">-</b>. <span id="bravo_alarm"></span></p>
-          <div class="row" id="bravolinkrow">
-            <button id="bravolinkbtn" data-action="click->dev-simulator#control" data-dev-simulator-command-param="toggleBravoLink">Link to the Go: UP</button>
+        <div data-dev-simulator-target="bravoPaired" hidden>
+          <p class="hint">The Go reads Bravo as <b data-dev-simulator-target="bravoState">-</b>. <span data-dev-simulator-target="bravoAlarm"></span></p>
+          <div class="row" data-dev-simulator-target="bravoLinkRow">
+            <button data-dev-simulator-target="bravoLinkButton" data-action="dev-simulator#toggleBravoLink">Link to the Go: UP</button>
           </div>
         </div>
-        <div class="tape" id="phone">-</div>
+        <div class="tape" data-dev-simulator-target="phone">-</div>
         <div class="hint">Bravo has no screen: a phone EFB reads this stream. Each
           aircraft is a real DF17 squitter on 1090 MHz, heard by the modelled LR2021
           and decoded, assembled and gated by the firmware. ADS-B targets carry
           Source 1 in <code>$PFLAA</code>. Paired, Bravo also sends the Go each target
-          over the Bluetooth link, and the Go shows it under <code>B</code>. <span id="adsbhint"></span></div>
+          over the Bluetooth link, and the Go shows it under <code>B</code>. <span data-dev-simulator-target="adsbHint"></span></div>
       </div>
-      <div class="panel" id="bandpanel">
+      <div class="panel" data-dev-simulator-target="devPanel bandPanel">
         <h2>868 MHz band (one second)</h2>
-        <canvas role="img" aria-label="Radio traffic across the 868 MHz band" id="band" width="1000" height="96"></canvas>
+        <canvas role="img" aria-label="Radio traffic across the 868 MHz band" class="dev-band" width="1000" height="96" data-dev-simulator-target="band"></canvas>
         <div class="legend">
           <span><b class="tx">TX</b> own burst</span>
           <span><b class="rx">RX</b> heard</span>
@@ -168,13 +173,13 @@
           <span><b class="coll">COLL</b> overlapped</span>
         </div>
         <div class="row dev-space-top">
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="addAt" data-dev-simulator-value-param="300">+ traffic at 300 ms (uplink window)</button>
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="addAt" data-dev-simulator-value-param="420">+ at 420 ms (FLARM-era)</button>
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="addAt" data-dev-simulator-value-param="600">+ at 600 ms (868.2)</button>
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="addAt" data-dev-simulator-value-param="900">+ at 900 ms (868.4)</button>
-          <button data-action="click->dev-simulator#control" data-dev-simulator-command-param="addAt" data-dev-simulator-value-param="100">+ at 100 ms (slot 1 tail, RX only)</button>
+          <button data-action="dev-simulator#addTrafficAt" data-dev-simulator-phase-param="300">+ traffic at 300 ms (uplink window)</button>
+          <button data-action="dev-simulator#addTrafficAt" data-dev-simulator-phase-param="420">+ at 420 ms (FLARM-era)</button>
+          <button data-action="dev-simulator#addTrafficAt" data-dev-simulator-phase-param="600">+ at 600 ms (868.2)</button>
+          <button data-action="dev-simulator#addTrafficAt" data-dev-simulator-phase-param="900">+ at 900 ms (868.4)</button>
+          <button data-action="dev-simulator#addTrafficAt" data-dev-simulator-phase-param="100">+ at 100 ms (slot 1 tail, RX only)</button>
         </div>
-        <div class="tape" id="tape">-</div>
+        <div class="tape" data-dev-simulator-target="tape">-</div>
         <div class="hint">Every burst on the air, heard or not, with the frame
           decoded the way a receiver decodes it. A burst outside the dwell the
           firmware armed reads DEAF: that is a slot-map bug, visible. The upper
@@ -182,27 +187,16 @@
           still listen there. Between the dashed lines, 450..1000, is where our
           own bursts go.</div>
       </div>
-      <div class="panel">
+      <div class="panel" data-dev-simulator-target="devPanel">
         <h2>Decoded by the firmware</h2>
         <div class="tele">
-          <div>Fix</div><div id="t_fix">-</div>
-          <div>Sats</div><div id="t_sats">-</div>
-          <div>Position</div><div id="t_pos">-</div>
-          <div>Altitude</div><div id="t_alt">-</div>
-          <div>Speed</div><div id="t_spd">-</div>
-          <div>Track</div><div id="t_trk">-</div>
-          <div>Turn rate</div><div id="t_turn">-</div>
-          <div>Vert speed</div><div id="t_vs">-</div>
-          <div>Static pressure</div><div id="t_baro">-</div>
-          <div>Battery</div><div id="t_bat">-</div>
-          <div>Traffic</div><div id="t_tfc">-</div>
-          <div>Formation</div><div id="t_form">-</div>
-          <div>RX ok / bad</div><div id="t_rx">-</div>
-          <div>RX wait / type</div><div id="t_rxwait">-</div>
-          <div>RX sync / key</div><div id="t_rxsync">-</div>
-          <div>TX ok / lost</div><div id="t_tx">-</div>
-          <div>Dwell</div><div id="t_dwell">-</div>
-          <div>Alarm</div><div><span id="t_alarm" class="alarm a0">none</span></div>
+          <% { fix: "Fix", satellites: "Sats", position: "Position", altitude: "Altitude", speed: "Speed", track: "Track",
+               turn: "Turn rate", climb: "Vert speed", pressure: "Static pressure", battery: "Battery", traffic: "Traffic",
+               formation: "Formation", rx: "RX ok / bad", rx_wait: "RX wait / type", rx_sync: "RX sync / key", tx: "TX ok / lost",
+               dwell: "Dwell" }.each do |reading, label| %>
+            <div><%= label %></div><div data-dev-simulator-target="reading" data-reading="<%= reading %>">-</div>
+          <% end %>
+          <div>Alarm</div><div><span class="alarm a0" data-dev-simulator-target="alarm">none</span></div>
         </div>
       </div>
     </div>

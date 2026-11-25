@@ -323,6 +323,7 @@ constexpr bool on_the_wire(timing::NoTx value) {
         case timing::NoTx::Fix:
         case timing::NoTx::Utc:
         case timing::NoTx::Pps:
+        case timing::NoTx::Held:
             return true;
         case timing::NoTx::None:
             return false;
@@ -498,6 +499,7 @@ static_assert(code(timing::NoTx::Gnss) == 3, "no_tx gnss");
 static_assert(code(timing::NoTx::Fix) == 4, "no_tx fix");
 static_assert(code(timing::NoTx::Utc) == 5, "no_tx utc");
 static_assert(code(timing::NoTx::Pps) == 6, "no_tx pps");
+static_assert(code(timing::NoTx::Held) == 7, "no_tx held");
 static_assert(on_the_wire(timing::NoTx::Address), "no_tx");
 
 }

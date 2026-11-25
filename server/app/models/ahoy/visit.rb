@@ -8,6 +8,7 @@ class Ahoy::Visit < AnalyticsRecord
   belongs_to :user, optional: true
 
   scope :expired, -> { where(started_at: ...Rails.configuration.x.retention.ago) }
+  scope :activating, ->(unit) { where(id: Ahoy::Event.activating(unit).select(:visit_id)) }
 
   def self.prune
     expired.in_batches do |visits|

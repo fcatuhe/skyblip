@@ -1,0 +1,136 @@
+---
+title: "skyBlip y tu transpondedor, FLARM o ADS-L a bordo"
+nav_title: Tu propia aeronave
+slug: blog/tu-propia-aeronave
+description: "Un equipo en tu cabina es el tráfico más cercano. Cómo un Tango oculta tu transpondedor, qué pasa con un FLARM a bordo y en qué difiere la formación."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 de noviembre de 2026</p>
+  <h1>Cuando el Go oye su propia aeronave</h1>
+  <p class="lede">Una pulsación en tierra basta para que skyBlip deje de mostrar tu propio transpondedor como tráfico. Funciona con un Tango: un Go, el equipo de bolsillo con pantalla que transmite ADS-L y recibe ADS-L y FLARM, emparejado con un Bravo, el receptor ADS-B sin pantalla. En Pilot und Flugzeug, Frank preguntó si también podía ignorar un FLARM instalado a bordo y guardar perfiles para distintas aeronaves del club. Para el transpondedor no hacen falta perfiles. Para FLARM y ADS-L, depende de la dirección que transmitan.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Por qué importa</h2>
+  <h3>Tu transpondedor no debería aparecer como otra aeronave.</h3>
+  <p>El Go alerta de las aeronaves a menos de 3&nbsp;km en horizontal y 300&nbsp;m de diferencia de altitud. Bravo recibe tu transpondedor desde la misma cabina, con más fuerza que cualquier otro. Una estación de tierra OGN o skyPost también puede retransmitirte tu propia posición. Si el Go no conoce la dirección de tu aeronave, puede mostrarla como tráfico y alertarte de ella en vuelo.</p>
+</section>
+
+<section>
+  <h2 class="kicker">En tierra</h2>
+  <div class="feature">
+    <div>
+      <h3>Bravo identifica el transpondedor de tu aeronave.</h3>
+      <p>Pon el transpondedor en <span class="mono">ALT</span> antes de rodar. En <span class="mono">STBY</span> no transmite. Bravo identifica el transpondedor cuya señal se mantiene mucho más fuerte que las demás. Obtiene su dirección y, si recibe la identificación ADS-B, la matrícula y el tipo de aeronave. También identifica un transpondedor modo&nbsp;S sin ADS-B Out, aunque solo obtiene su dirección.</p>
+      <p>Desde el radar, pulsa el botón para abrir los ajustes y entra en <span class="mono">AIRCRAFT</span>. Arriba aparece lo que recibe Bravo. Debajo, lo que tiene guardado el Go. La matrícula aparece a triple altura para que puedas comprobarla. Pulsa el botón de <span class="mono">SET</span> para guardar el tipo, el indicativo y la dirección a la vez.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "aircraft-proposal.png", alt: "El menú AIRCRAFT: un bloque negro con LIGHT, D-EFLY a triple altura y ADS-B 3C4A21, sobre las filas TYPE LIGHT, CALLSIGN D-EABC y ADS-B 3C6586, con las teclas SET y NEXT" %>
+      <figcaption>Arriba, lo que recibe Bravo. Debajo, lo que guarda el Go.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Lo que cambia una pulsación</h2>
+  <h3>El Go deja de tratar esa dirección como tráfico.</h3>
+  <ul>
+    <li><strong>Tu aeronave desaparece del radar, de las alertas y de la lista de aeronaves cercanas.</strong> Mientras el Go tenga guardada esa dirección, la descarta venga de Bravo, de una estación de tierra o de un equipo FLARM o ADS-L que la transmita.</li>
+    <li><strong>El Go transmite ADS-L con la misma dirección OACI.</strong> Es lo que exige F.2.3 de la especificación ADS-L a una aeronave con transpondedor. Un receptor que reciba tanto tu ADS-B como tu ADS-L muestra una sola aeronave.</li>
+    <li><strong>Bravo también guarda la dirección.</strong> Sigue filtrando tu transpondedor aunque pierda el enlace con el Go.</li>
+    <li><strong>El Go impide guardar una dirección que contradiga a Bravo.</strong> Mientras Bravo identifique tu transpondedor, rechaza cualquier otra dirección que escribas en la fila <span class="mono">ADS-B</span>, como exige F.2.3. Para borrarla necesitas una segunda pulsación, tras el aviso <span class="mono">YOUR TRANSPONDER SHOWS AS TRAFFIC</span>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">Cambiar el Go de aeronave</h2>
+  <div class="feature feature--reverse">
+    <div>
+      <h3>Comprueba la nueva matrícula y pulsa el botón.</h3>
+      <p>Con un Tango no necesitas perfiles para cada aeronave con transpondedor. Si Bravo identifica un transpondedor distinto del guardado, el Go muestra un aviso sobre cualquier página, una vez por encendido. En esta pantalla, el Go tiene guardada D-EABC, pero ahora está en D-EFLY.</p>
+      <p>Pulsa <span class="mono">SET</span> para guardar la nueva aeronave. Si tocas el panel táctil, pasan los 30&nbsp;segundos de la cuenta atrás o Bravo deja de identificar el transpondedor, incluido al despegar, el aviso se cierra sin guardar nada.</p>
+      <p>Sin Bravo, escribe la dirección en la fila <span class="mono">ADS-B</span> del mismo menú. Es la dirección OACI de 24&nbsp;bits de la aeronave: seis dígitos hexadecimales asignados por su Estado de matrícula.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "aircraft-notice.png", alt: "El aviso BRAVO HEARS: LIGHT, D-EFLY a triple altura y ADS-B 3C4A21, una cuenta atrás CANCELS IN 24 S y las teclas SET y CLOSE" %>
+      <figcaption>El Go avisa del cambio una vez por encendido.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">En vuelo</h2>
+  <div class="feature">
+    <div>
+      <h3>Bravo solo propone una dirección en tierra.</h3>
+      <p>En vuelo, un compañero de formación a 10&nbsp;m puede recibirse con tanta fuerza como tu propio transpondedor. Guardar su dirección lo ocultaría del radar. Por eso, el menú indica <span class="mono">IN FLIGHT</span> y <span class="mono">BRAVO FINDS IT ON THE GROUND</span>, sin ofrecer <span class="mono">SET</span>.</p>
+      <p>Comprueba y guarda la dirección en tierra antes de volar en otra aeronave.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "aircraft-in-flight.png", alt: "El menú AIRCRAFT en vuelo: el bloque dice IN FLIGHT, BRAVO FINDS IT ON THE GROUND, sobre las filas TYPE, CALLSIGN y ADS-B, solo con la tecla NEXT" %>
+      <figcaption>En vuelo puedes consultar el menú, pero no aceptar una propuesta.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Vuelo en formación</h2>
+  <div class="feature feature--reverse">
+    <div>
+      <h3>El Go reconoce la formación por el movimiento relativo.</h3>
+      <p>En vuelo, el Go deja de anunciar una aeronave que se mantiene junto a ti. Debe estar a menos de 1.000&nbsp;m en horizontal y 100&nbsp;m de diferencia de altitud, y mantener su posición respecto a ti durante 6&nbsp;segundos, con un margen de 60&nbsp;m en horizontal y 30&nbsp;m en vertical. Una aeronave que despega contigo puede incorporarse sin una alerta inicial.</p>
+      <p>En lugar de sus símbolos, el radar dibuja un cuadrado alrededor del tuyo y muestra cuántos miembros hay en cada cuadrante. El contador <span class="mono">TRAFFIC</span> no los incluye. La lista de aeronaves cercanas sí los muestra.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "formation.png", alt: "El radar con tres aeronaves alrededor del círculo y, en el centro, un cuadrado alrededor del símbolo propio con la cifra 1 en su cuarto inferior derecho. TRAFFIC indica 3" %>
+      <figcaption>Un compañero de formación a 60&nbsp;m del ala derecha.</figcaption>
+    </figure>
+  </div>
+  <p>Reconocer una formación no equivale a ocultar tu propia aeronave:</p>
+  <ul>
+    <li><strong>La formación se detecta de nuevo en cada vuelo.</strong> Depende de la posición relativa. La dirección de tu aeronave queda guardada hasta que la cambies o la borres.</li>
+    <li><strong>Los miembros de la formación siguen visibles.</strong> Aparecen en el cuadrado y en la lista de aeronaves cercanas. Tu propio transpondedor no aparece en ninguno.</li>
+    <li><strong>Si un miembro se acerca a 3&nbsp;m/s o más en dos recepciones seguidas,</strong> el Go vuelve a evaluarlo como tráfico. La dirección guardada de tu aeronave sigue excluida.</li>
+    <li><strong>La formación requiere conocer la altitud de la otra aeronave.</strong> Termina cuando aterrizas.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">FLARM y ADS-L a bordo, hoy</h2>
+  <h3>Si transmiten la dirección OACI guardada, ya quedan ocultos.</h3>
+  <p>El filtro usa la dirección, no el tipo de radio. Un FLARM configurado con la dirección OACI de la aeronave queda oculto en cuanto el Go guarda esa dirección. Lo mismo ocurre con un equipo ADS-L que la transmita. Así, un Tango puede ocultar tanto el transpondedor como el FLARM de la aeronave del club. Un Go sin Bravo también los oculta si escribes la dirección.</p>
+  <p>Un FLARM que transmite su propio identificador FLARM todavía no tiene ese filtro por dirección. En tierra no provoca alertas, porque el Go no evalúa el tráfico hasta que vuelas. Al despegar juntos, se incorpora como miembro de la formación: sin aviso y representado en el cuadrado. Si enciendes el Go en vuelo, puede alertarte de ese FLARM hasta que mantenga su posición relativa durante 6&nbsp;segundos.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Lo que viene</h2>
+  <h3>Proponer también el FLARM o ADS-L que llevas a bordo.</h3>
+  <p>La sugerencia de Frank es buena: ofrecer para un equipo FLARM o ADS-L a bordo una propuesta que puedas aceptar con una pulsación, como hace Bravo con el transpondedor. Todavía no lo hemos implementado y no hay una fecha prevista. Gracias, Frank, por plantearlo.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Fuentes</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2, F.2.3.
+      <span class="support">La dirección OACI que emite una aeronave con transpondedor, y los ajustes incoherentes que un equipo debe rechazar.</span>
+    </li>
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, noviembre de 2026.
+      <span class="support">La pregunta de Frank a la que responde este artículo.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

@@ -1,7 +1,7 @@
 ---
 title: "Flugverkehr in Ihrer Nähe, im Taschenformat"
 description: "Senden Sie Ihre Position per ADS-L und sehen Sie ADS-L- und FLARM-Verkehr mit skyBlip Go. Ab 68 €, ohne Abo."
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
@@ -16,26 +16,41 @@ updated_on: "2026-11-18"
   </figure>
 </header>
 
-<section id="journey" class="band band--tint">
-  <h2 class="section-title">Vom Ausprobieren bis zum ersten Flug</h2>
-  <p class="section-intro">Ob Leichtflugzeug, Ultraleicht, Segelflugzeug oder Gleitschirm: Wir begleiten Sie Schritt für Schritt.</p>
-  <div class="journey">
-    <ol class="journey-steps">
-      <li>
-        <h3><%= link_to_page "skyblip-go", label: "Ausprobieren" %></h3>
-        <p>Testen Sie das Radar im Simulator.</p>
-      </li>
-      <li>
-        <h3><%= link_to_page "buy", label: "Gerät kaufen" %></h3>
-        <p>Das Gerät ist im Handel erhältlich. Die Software ist kostenlos.</p>
-      </li>
-      <li>
-        <h3><%= link_to_page "install", label: "Installieren" %></h3>
-        <p>Mit Briefing direkt im Browser.</p>
-      </li>
-    </ol>
-    <p class="journey-end"><strong>Jetzt sind Sie startklar.</strong> Der Leitfaden <%= link_to_page "guides", label: "Erste Schritte" %> zeigt Ihnen das Wichtigste.</p>
+<section id="who" class="band band--tint">
+  <h2 class="section-title">Gemacht für <span class="highlight">die Art, wie Sie fliegen</span></h2>
+  <div class="resource-cards">
+    <article>
+      <h3>Ein Verein mit seiner Flotte</h3>
+      <p>Fünfzehn Flugzeuge, keines ausgerüstet, und ein eingebautes Gerät kostet pro Flugzeug mehrere hundert Euro, noch ohne Einbau durch die Werkstatt. Ein paar Go am Schlüsselbrett decken jedes Flugzeug in der Luft ab. Jeder hält mit einer Ladung den ganzen Tag.</p>
+      <p><%= link_to_page "blog/club-fleet", label: "Wie ein Verein sie teilt" %></p>
+    </article>
+    <article>
+      <h3>Ein Pilot, der fremde Flugzeuge fliegt</h3>
+      <p>Samstags das Vereinsflugzeug, sonntags das eines Freundes, im Urlaub ein Charterflugzeug, und keines ist gleich ausgerüstet. Ein Tango in der Flugtasche zeigt ADS-L, FLARM und ADS-B auf demselben Radar, in jedem Cockpit.</p>
+      <p><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
+    </article>
+    <article>
+      <h3>Ein kleines Cockpit ohne freien Platz</h3>
+      <p>Ein Ultraleicht, ein Oldtimer-Nachbau oder ein Eigenbau mit vollem Instrumentenbrett und ohne Steckdose. Go passt in eine Hand, läuft mit seinem Akku und bleibt in voller Sonne lesbar.</p>
+      <p><%= link_to_page "mount", label: "Im Cockpit befestigen" %></p>
+    </article>
+    <article>
+      <h3>Ein Flugplatz mit Segelflugbetrieb</h3>
+      <p>Segelflugzeuge und Schleppmaschinen haben FLARM. Go zeigt sie auf seinem Radar an und gibt die Richtung des Luftfahrzeugs an, das sich nähert, ohne eigenes FLARM.</p>
+      <p><%= link_to_page "features", label: "skyBlip Go" %></p>
+    </article>
+    <article>
+      <h3>Ein Flugzeug mit Transponder</h3>
+      <p>Die Flugsicherung sieht Ihren Transponder, ein Ultraleicht mit nur ADS-L oder FLARM aber nicht. Go ergänzt ADS-L unter der Adresse Ihres Flugzeugs und zeigt Ihnen auch den FLARM-Verkehr.</p>
+      <p><%= link_to_page "blog/who-sees-ads-l", label: "Wer sieht was" %></p>
+    </article>
+    <article>
+      <h3>Ein SafeSky-Nutzer ohne Netz</h3>
+      <p>SafeSky wird blind, wo der Mobilfunk endet, und genau dort fliegt die Leichtfliegerei. Go arbeitet ohne Netz von Luftfahrzeug zu Luftfahrzeug, neben der App, die Sie schon nutzen.</p>
+      <p><%= link_to_page "blog/network-or-radio", label: "Netz oder Funk" %></p>
+    </article>
   </div>
+  <p class="signature"><%= link_to_page "compare", label: "Mit eingebauten und anderen Geräten vergleichen" %></p>
 </section>
 
 <section id="where-to-look" class="band">
@@ -115,7 +130,29 @@ updated_on: "2026-11-18"
       »Sicherheit ist keine Premiumfunktion. Unsere Sicherheitsfunktionen für die Freizeitfliegerei und den Luftsport bleiben quelloffen und kostenlos.«
     </blockquote>
   </div>
-  <p class="signature"><%= link_to_page "buy", label: "Geräte und Preise ansehen", class: "button button--primary" %> · <%= link_to_page "about", label: "Unser Versprechen lesen" %></p>
+  <p class="signature"><%= link_to_page "buy", label: "Geräte und Preise ansehen", class: "button button--primary" %> · <%= link_to_page "about", label: "Unser Versprechen lesen", anchor: "pledge" %></p>
+</section>
+
+<section id="journey" class="band band--tint">
+  <h2 class="section-title">Vom Ausprobieren bis zum ersten Flug</h2>
+  <p class="section-intro">Ob Leichtflugzeug, Ultraleicht, Segelflugzeug oder Gleitschirm: Wir begleiten Sie Schritt für Schritt.</p>
+  <div class="journey">
+    <ol class="journey-steps">
+      <li>
+        <h3><%= link_to_page "skyblip-go", label: "Ausprobieren" %></h3>
+        <p>Testen Sie das Radar im Simulator.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "buy", label: "Gerät kaufen" %></h3>
+        <p>Das Gerät ist im Handel erhältlich. Die Software ist kostenlos.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "install", label: "Installieren" %></h3>
+        <p>Mit Briefing direkt im Browser.</p>
+      </li>
+    </ol>
+    <p class="journey-end"><strong>Jetzt sind Sie startklar.</strong> Der Leitfaden <%= link_to_page "guides", label: "Erste Schritte" %> zeigt Ihnen das Wichtigste.</p>
+  </div>
 </section>
 
 <section id="questions" class="band">
@@ -123,7 +160,15 @@ updated_on: "2026-11-18"
   <div class="faq">
     <details>
       <summary>Wer sieht mich?</summary>
-      <p>Wer Ihre ADS-L-Signale empfangen kann, sieht die Position, die Ihr Go sendet. Go empfängt FLARM, sendet es aber nicht. Bravo sendet Ihre Position nicht.</p>
+      <p>Wer Ihre ADS-L-Signale empfangen kann, sieht die Position, die Ihr Go sendet. Go empfängt FLARM, sendet es aber nicht. Bravo sendet Ihre Position nicht. Das Radar der Flugsicherung zeigt kein ADS-L an. Behalten Sie den Transponder, den Ihr Luftraum vorschreibt.</p>
+    </details>
+    <details>
+      <summary>Warum ADS-L und nicht ADS-B?</summary>
+      <p>ADS-L sendet mit 25&nbsp;mW. Deshalb hält ein Taschengerät mit seinem Akku einen Tag durch, und es braucht keine Zulassung. ADS-B braucht einen zugelassenen Transponder mit 70&nbsp;W oder mehr, und tragbares ADS-B darf in der EU nicht senden. Mit Bravo sehen Sie trotzdem Luftfahrzeuge mit ADS-B. <%= link_to_page "blog/why-ads-l", label: "Warum ADS-L" %>.</p>
+    </details>
+    <details>
+      <summary>Ich nutze schon SafeSky. Warum noch ein Go?</summary>
+      <p>SafeSky braucht Mobilfunk. Go arbeitet ohne ihn von Luftfahrzeug zu Luftfahrzeug und macht Sie für jeden ADS-L-Empfänger in Ihrer Nähe sichtbar. Beide arbeiten nebeneinander. <%= link_to_page "blog/network-or-radio", label: "Netz oder Funk" %>.</p>
     </details>
     <details>
       <summary>Sehe ich Luftfahrzeuge mit Transponder?</summary>
@@ -145,5 +190,24 @@ updated_on: "2026-11-18"
       <summary>Kann ich die Originalsoftware wieder installieren?</summary>
       <p>Ja. skyBlip lässt das Programm zur Softwareinstallation unverändert. Laden Sie die Originalsoftware für den T-Echo oder den X1 aus dem Internet herunter, um sie neu zu installieren.</p>
     </details>
+  </div>
+  <p class="signature">Weitere Antworten auf den Seiten zu <%= link_to_page "features", label: "Go", anchor: "questions" %>, <%= link_to_page "skyblip-bravo", label: "Bravo", anchor: "questions" %> und <%= link_to_page "skyblip-tango", label: "Tango", anchor: "questions" %>.</p>
+</section>
+
+<section id="resources" class="band band--tint">
+  <h2 class="section-title">Mehr erfahren</h2>
+  <div class="resource-cards">
+    <article>
+      <h3><%= link_to_page "guides", label: "Anleitungen" %></h3>
+      <p>Installieren Sie Ihr Gerät, lesen Sie Radar und LED, befestigen Sie es im Cockpit und sehen Sie, wie sich die Geräte jede Sekunde den Funk teilen.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "blog", label: "Blog" %></h3>
+      <p>Ausführlichere Antworten auf die Fragen, die Piloten uns in Foren stellen: ADS-L oder ADS-B, Netz oder Funk, Taschengerät oder Einbau.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "compare", label: "Vergleich" %></h3>
+      <p>skyBlip neben AERO Tracker, PowerFLARM, Funke TM350 und SafeSky: was jedes Gerät sendet, empfängt und kostet.</p>
+    </article>
   </div>
 </section>

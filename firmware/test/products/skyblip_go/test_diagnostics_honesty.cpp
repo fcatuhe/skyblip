@@ -46,7 +46,8 @@ struct ServiceRig {
     uint8_t aircraft_type{go::kAircraftTypeLight};
     common::OwnshipService ownship{context, aircraft_type};
     uint32_t aircraft_address{};
-    go::TrafficService traffic{context, bus.rf, aircraft_address};
+    traffic::VersionTable versions{};
+    go::TrafficService traffic{context, bus.rf, aircraft_address, versions};
 
     ServiceRig() { recorder.arm(); }
 
@@ -139,16 +140,15 @@ TEST_CASE(
 TEST_CASE(
     "diagnostics screen: the page recorded is the one the alarm put up, not the one it replaced") {
     ScreenRig rig;
-    uint32_t now_ms = 0;
     rig.recorder.arm();
-    rig.run_seconds(now_ms, 3);
+    rig.run_seconds(3);
     rig.screen.next_page();
-    rig.run_seconds(now_ms, 2);
+    rig.run_seconds(2);
     REQUIRE(rig.screen.page() != go::Page::Radar);
     drained(rig.recorder);
 
     rig.alarm(go::ScreenService::kAlarmTakesGlass);
-    rig.tick(now_ms += 1000);
+    rig.tick(rig.now_ms += 1000);
 
     diagnostics::Screen screen{};
     REQUIRE(last_of(drained(rig.recorder), screen));

@@ -20,6 +20,11 @@ module AnalyticsTestHelper
     visit
   end
 
+  def activate(visit, unit, browser:, after: 1.minute)
+    Ahoy::Event.create!(name: "unit_activated", visit_id: visit.id, time: visit.started_at + after,
+                        properties: { "unit_id" => unit.id, "device" => unit.slug, "browser" => browser })
+  end
+
   def click(visit, href, text: nil, section: nil, page: "/buy", after: 1.second)
     Ahoy::Event.create!(name: "$click", visit_id: visit.id, time: visit.started_at + after,
                         properties: { "tag" => "a", "page" => page, "section" => section, "text" => text, "href" => href }.compact)

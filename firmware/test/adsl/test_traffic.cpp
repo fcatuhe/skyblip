@@ -1,6 +1,7 @@
 // ADS-L 4 SRD-860 issue 2 G.1: every Traffic payload field, at the offset and in the code printed.
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <initializer_list>
 #include <vector>
 
@@ -30,6 +31,35 @@ uint32_t field(const uint8_t* payload, int offset, int width) {
     return value;
 }
 
+// G.1.7's altitude, fourteen bits at payload offset 72, and G.1.15's GVA, two at 115.
+constexpr uint32_t kAltitudeInvalid = 0x3FFF;
+uint32_t altitude_code(const adsl::Packet& packet) { return field(payload_of(packet), 72, 14); }
+uint32_t vertical_accuracy_code(const adsl::Packet& packet) {
+    return field(payload_of(packet), 115, 2);
+}
+
+// The Traffic bursts a Go sends from after_ms on, once its L76K's GSA reads as the case sets it.
+std::vector<adsl::Packet> flown_from_gsa(const std::function<void(models::L76k&)>& gsa,
+                                         uint32_t after_ms) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(60);
+    const uint32_t now_ms = past_settling(simulator);
+    gsa(simulator.world().gnss());
+    run_on(simulator, now_ms, after_ms);
+    simulator.world().air().clear();
+    run_on(simulator, now_ms + after_ms + simulator::Simulator::kStepMs, 10000);
+    std::vector<adsl::Packet> packets;
+    for (const simulator::AirRecord& record :
+         records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+        adsl::Packet packet{};
+        REQUIRE(packet_of(record, packet));
+        packets.push_back(packet);
+    }
+    return packets;
+}
+
 model::Ownship flying() {
     model::Ownship own{};
     own.fix_valid = true;
@@ -41,6 +71,8 @@ model::Ownship flying() {
     own.speed_mm_s = 120 * 1000;
     own.climb_mm_s = 10000;
     own.track_cdeg = 9000;
+    own.speed_valid = true;
+    own.track_valid = true;
     own.hdop_e2 = 90;
     own.vdop_e2 = 150;
     own.flight_state = 2;
@@ -52,6 +84,30 @@ adsl::Packet traffic_packet() {
     protocol::from_own(packet, flying(), 0x123456, 6, 4);
     return packet;
 }
+
+// The Traffic bursts a Go flying at speed_kt sends once its L76K's RMC reads as the case sets it.
+std::vector<adsl::Packet> flown_from_rmc(int32_t speed_kt,
+                                         const std::function<void(models::L76k&)>& rmc) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(speed_kt);
+    const uint32_t now_ms = past_settling(simulator);
+    rmc(simulator.world().gnss());
+    run_on(simulator, now_ms, 1000);
+    simulator.world().air().clear();
+    run_on(simulator, now_ms + 1000 + simulator::Simulator::kStepMs, 15000);
+    std::vector<adsl::Packet> packets;
+    for (const simulator::AirRecord& record :
+         records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+        adsl::Packet packet{};
+        REQUIRE(packet_of(record, packet));
+        packets.push_back(packet);
+    }
+    return packets;
+}
+
+uint32_t ground_speed_code(const adsl::Packet& packet) { return field(payload_of(packet), 64, 8); }
 
 }  // namespace
 
@@ -252,6 +308,69 @@ TEST_CASE(
     CHECK(observation.position_valid);
 }
 
+// The control for the 2D GSA and the missing GSA cases below: the same flight, its GSA left alone.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: a receiver whose GSA says 3D sends its altitude and its GVA") {
+    const std::vector<adsl::Packet> packets = flown_from_gsa([](models::L76k&) {}, 1000);
+    CHECK(packets.size() >= 8);
+    for (const adsl::Packet& packet : packets) {
+        CHECK(altitude_code(packet) != kAltitudeInvalid);
+        CHECK(vertical_accuracy_code(packet) != 0);
+    }
+}
+
+// The L76K documents VDOP up to 99.0 and not that it leaves it empty in 2D, so a VDOP proved no 3D.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: a receiver whose GSA says 2D sends the altitude as 0x3FFF" *
+          doctest::test_suite("main")) {
+    const std::vector<adsl::Packet> packets =
+        flown_from_gsa([](models::L76k& chip) { chip.solves_height = false; }, 1000);
+    CHECK(packets.size() >= 8);
+    for (const adsl::Packet& packet : packets) {
+        CHECK(altitude_code(packet) == kAltitudeInvalid);
+        CHECK(vertical_accuracy_code(packet) == 0);
+    }
+}
+
+// A 3D mode the receiver stopped reporting used to vouch for every solution after it.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: a solution that came with no GSA sends no altitude") {
+    const std::vector<adsl::Packet> packets =
+        flown_from_gsa([](models::L76k& chip) { chip.gsa_every = 0; }, 1000);
+    CHECK(packets.size() >= 8);
+    for (const adsl::Packet& packet : packets) {
+        CHECK(altitude_code(packet) == kAltitudeInvalid);
+        CHECK(vertical_accuracy_code(packet) == 0);
+    }
+}
+
+// GSA came every other solution, so the one solved between a 3D GSA and a 2D one kept its height.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: the first solution after the receiver loses its height has none") {
+    for (const uint32_t flip_phase_ms : {50u, 250u, 450u, 550u, 750u, 950u}) {
+        CAPTURE(flip_phase_ms);
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(60);
+        uint32_t now_ms = past_settling(simulator);
+        while (now_ms % 1000 != flip_phase_ms)
+            simulator.step(now_ms += simulator::Simulator::kStepMs);
+        models::L76k& chip = simulator.world().gnss();
+        chip.solves_height = false;
+        run_on(simulator, now_ms + simulator::Simulator::kStepMs, 3000);
+        int two_d = 0;
+        for (const simulator::AirRecord& record :
+             records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+            adsl::Packet packet{};
+            REQUIRE(packet_of(record, packet));
+            const models::L76k::Solved* solved = solution_named(chip, packet, record.at_us);
+            REQUIRE(solved != nullptr);
+            if (solved->at_ms <= now_ms) continue;
+            CHECK(altitude_code(packet) == kAltitudeInvalid);
+            CHECK(vertical_accuracy_code(packet) == 0);
+            two_d++;
+        }
+        CHECK(two_d >= 2);
+    }
+}
+
 // The Go used to transmit the receiver's last height as valid when it had only a 2D fix.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
     model::Ownship own = flying();
@@ -263,9 +382,46 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude a
     CHECK(packet.has_speed());
 }
 
+// The L76K leaves RMC's speed empty "in case of an invalid value", and the Go sent it as 0 m/s.
+TEST_CASE("ADS-L.4.SRD860.G.1.8: a fix whose receiver reports no ground speed sends it as 0xFF" *
+          doctest::test_suite("main")) {
+    const std::vector<adsl::Packet> packets =
+        flown_from_rmc(60, [](models::L76k& chip) { chip.emit_speed = false; });
+    CHECK(packets.size() >= 10);
+    for (const adsl::Packet& packet : packets) {
+        CHECK(ground_speed_code(packet) == 0xFFu);
+        CHECK(packet.flight_state != static_cast<uint8_t>(flight::FlightState::Ground));
+    }
+}
+
+// A measured standstill is a speed, and past the encodable 236 m/s the clause saturates.
+TEST_CASE("ADS-L.4.SRD860.G.1.8: 0.00 kn goes as 0x00, and 1001 kn as 236 m/s or more, 0xFE") {
+    const auto as_reported = [](models::L76k&) {};
+    const std::vector<adsl::Packet> parked = flown_from_rmc(0, as_reported);
+    CHECK_FALSE(parked.empty());
+    for (const adsl::Packet& packet : parked) CHECK(ground_speed_code(packet) == 0x00u);
+
+    const std::vector<adsl::Packet> fast = flown_from_rmc(1001, as_reported);
+    CHECK(fast.size() >= 10);
+    for (const adsl::Packet& packet : fast) CHECK(ground_speed_code(packet) == 0xFEu);
+}
+
+// G.1.10 has no invalid track code: with no course, only a speed of zero or invalid says so.
+TEST_CASE("ADS-L.4.SRD860.G.1.10: a fix whose receiver reports no course sends its speed as 0xFF") {
+    const auto no_course = [](models::L76k& chip) { chip.emit_course = false; };
+    const std::vector<adsl::Packet> moving = flown_from_rmc(60, no_course);
+    CHECK(moving.size() >= 10);
+    for (const adsl::Packet& packet : moving) CHECK(ground_speed_code(packet) == 0xFFu);
+
+    const std::vector<adsl::Packet> parked = flown_from_rmc(0, no_course);
+    CHECK_FALSE(parked.empty());
+    for (const adsl::Packet& packet : parked) CHECK(ground_speed_code(packet) == 0x00u);
+}
+
 // The clause calls the track invalid when the speed is, so nothing may fly a target along it.
 TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown along its track") {
     adsl::Packet packet = traffic_packet();
+    packet.set_protocol_version(1);
     packet.set_speed_invalid();
     packet.set_track_c9(256);
 
@@ -282,6 +438,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
 
     // A ground speed of zero is the clause's other invalid track, and it moves no further.
     adsl::Packet parked = traffic_packet();
+    parked.set_protocol_version(1);
     parked.set_speed_q(0);
     parked.set_track_c9(256);
     model::AircraftObservation still{};

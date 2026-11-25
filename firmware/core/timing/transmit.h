@@ -37,26 +37,28 @@ class Transmitter {
         uint32_t frequency_hz{0};
         Payload payload{Payload::Position};
         bool over_budget{false};
-        // INFO: fc 18nov26 a position owed here whose solution would be too old on air, at at_ms
+        // INFO: fc 22nov26 a position owed here whose fix or climb would be too old on air, at
+        // at_ms
         bool stale{false};
-        // INFO: fc 19nov26 drawn again because its fix came after the instant first drawn
+        // INFO: fc 22nov26 drawn again because its fix or climb came after the instant first drawn
         bool redrawn{false};
     };
 
-    // INFO: fc 19nov26 a fix in hand before every instant, for a caller that names no arrival
-    static constexpr int32_t kFixInHandEarlyMs = -1000000;
+    // INFO: fc 22nov26 navigation in hand before every instant, for a caller that names no arrival
+    static constexpr int32_t kNavigationInHandEarlyMs = -1000000;
     // INFO: fc 19nov26 a redrawn instant leaves the channel check its listen before it
     static constexpr int kRedrawLeadMs = static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000);
 
     void configure(uint32_t address) { address_ = address; }
 
-    // INFO: fc 20nov26 fix_lag_ms is the fix's lag behind the top of utc_s, negative inside it
+    // INFO: fc 22nov26 navigation_lag_ms is the older of fix and climb behind utc_s, negative
+    // inside it
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
-                    int32_t fix_lag_ms, Payload payload,
-                    int32_t fix_in_hand_ms = kFixInHandEarlyMs) const;
+                    int32_t navigation_lag_ms, Payload payload,
+                    int32_t navigation_in_hand_ms = kNavigationInHandEarlyMs) const;
     // INFO: fc 13nov26 the first burst the dwell owes, in Payload order
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
-                    int32_t fix_lag_ms) const;
+                    int32_t navigation_lag_ms) const;
 
     void sent(uint32_t utc_s, uint32_t now_ms, Payload payload = Payload::Position);
 
@@ -83,6 +85,8 @@ class Transmitter {
     // INFO: fc 17nov26 the dwell's window cut to the direct slot, or past it for the name
     static Window window_of(Payload payload, int slot);
     static int last_instant(Payload payload, int slot);
+    // INFO: fc 22nov26 C.5 ends it in its window, G.1.16 within 500 ms of a position's fix
+    static int last_key(Payload payload, int slot, int32_t fix_lag_ms);
     // INFO: fc 13nov26 the turn utc_s acts for: its own, or the one a retry in it is for
     uint32_t turn_of(Payload payload, uint32_t utc_s, bool airborne) const;
     // INFO: fc 14nov26 EN 300 220-1 5.21.3.2 3): a deferral's draw, hashed from address and instant
@@ -98,8 +102,8 @@ class Transmitter {
     // INFO: fc 20nov26 hashed on address and second, so two aircraft never collide every second
     int instant_in(Payload payload, int slot, uint32_t utc_s) const;
     // INFO: fc 19nov26 drawn like instant_in over what of the window the late fix leaves
-    std::optional<int> redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,
-                                  int32_t fix_in_hand_ms) const;
+    std::optional<int> redrawn_in(int slot, uint32_t utc_s, int32_t navigation_lag_ms,
+                                  int32_t navigation_in_hand_ms) const;
 
     AirTime air_time_{};
     uint32_t address_{0};
@@ -114,6 +118,9 @@ class Transmitter {
 
 static_assert(PoliteAccess::kCcaLeadUs <= static_cast<uint32_t>(kSwitchLeadMs) * 1000,
               "the channel check before a window's first instant listens in the switch's lead");
+static_assert(Transmitter::kRedrawLeadMs <
+                  static_cast<int>(Transmitter::kAirTimeMs) + kCompletionAllowanceMs - kKeyToDoneMs,
+              "a position redrawn past its window's last instant still keys, late");
 static_assert(Transmitter::kCycleS == Transmitter::kStatusPeriodS &&
                   Transmitter::kCycleS == 2 * adsl::kGroundReportPeriodS,
               "one cycle holds G.2.11's Status period and two of G.1.16's ground periods");

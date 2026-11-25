@@ -3,12 +3,19 @@ es:
   nav:
     label: "Sitio web"
     devices: "Dispositivos"
+    open: "Abrir el menú"
+    close: "Cerrar el menú"
   cta:
     prompt: "¿Quieres probarlo ahora o comprar uno?"
     try: "Pruébalo en línea"
     try_note: "el software en tu navegador"
     get: "Compra el dispositivo"
     get_note: "un Go desde 68 €, sin suscripción"
+  pager:
+    label: "Anterior y siguiente"
+    previous: "Anterior"
+    next: "Siguiente"
+    place: "%{position} de %{count}"
   simulator:
     with_bravo: "Con Bravo (skyBlip Tango)"
     keys:
@@ -142,3 +149,9 @@ es:
       radar: "skyBlip Go, ADS-L y FLARM: pantalla de radar con tres aeronaves a tu alrededor, cada una con su trayectoria de un minuto"
       bravo: "skyBlip Bravo: el Seeed SenseCAP MeshTracker X1, una carcasa negra del tamaño de una tarjeta que recibe ADS-B en 1090 MHz"
       tango: "skyBlip Tango: un skyBlip Go y un Seeed SenseCAP MeshTracker X1, uno al lado del otro. Emparejados muestran ADS-B, ADS-L y FLARM en un solo radar"
+  llms:
+    intro: "skyBlip es de código abierto, sin suscripción y sin cuenta. Los enlaces de abajo llevan a la versión Markdown de cada página. Cada página de skyblip.eu responde en Markdown en su dirección seguida de `.md`, o a una petición que acepta `text/markdown`. Una página aún sin traducir aparece aquí en inglés. [llms-full.txt](%{full}) reúne todas estas páginas en un solo archivo, y [feed.atom](%{feed}) las lista por el día de su último cambio. El servidor MCP de skyBlip, %{mcp}, lista, busca y lee las mismas páginas, sin cuenta."
+    full_intro: "Todas las páginas de skyblip.eu en español, una tras otra, cada una bajo su dirección. Una página aún sin traducir aparece aquí en inglés."
+    source_code: "Código fuente"
+    source_code_description: "el firmware y este sitio web, con licencia MIT."
+    other_languages: "Otros idiomas"

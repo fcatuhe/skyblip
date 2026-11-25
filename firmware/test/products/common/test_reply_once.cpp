@@ -32,13 +32,13 @@ TEST_CASE("link: a pressed command is answered pending once, and a dump sends ea
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 5);
+    taxi(rig, 5);
     rig.platform.link().declare_payload_bytes(64);
     go::DiagnosticsCollector<Go>().step(rig.product, rig.now_ms);
     rig.platform.link().sent.clear();
 
     rig.send("{\"command\":\"diagnostics\"}");
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     const std::vector<std::string> dump = config_frames(rig);
     REQUIRE(count_of(dump, "\"more\":true") > 1);
     for (size_t at = 1; at < dump.size(); at++) {
@@ -49,6 +49,6 @@ TEST_CASE("link: a pressed command is answered pending once, and a dump sends ea
 
     rig.platform.link().sent.clear();
     rig.send("{\"command\":\"capture\",\"profile\":\"full\"}");
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     CHECK(count_of(config_frames(rig), "\"pending\":true") == 1);
 }

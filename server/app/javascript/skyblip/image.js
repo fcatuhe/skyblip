@@ -102,6 +102,11 @@ export function versionText({ major, minor, revision, build }) {
   return `${major}.${minor}.${revision}+${build}`;
 }
 
+export function versionName(text, release) {
+  const version = release ? parseVersion(text) : null;
+  return version ? `v${version.major}.${version.minor}.${version.revision}` : text;
+}
+
 export function parseVersion(text) {
   const match = /^(\d+)\.(\d+)\.(\d+)(?:[.+](\d+))?$/.exec(text || '');
   if (!match) return null;

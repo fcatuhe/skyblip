@@ -12,7 +12,8 @@ constexpr int kUplinkSlotStartMs = 200;
 constexpr int kUplinkSlotEndMs = 450;
 constexpr int kDirectStartMs = 450;
 constexpr int kDirectEndMs = 1000;
-// INFO: fc 28sep26 §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms
+// INFO: fc 22nov26 §C.2 at 100 kchip/s: 32 chips before sync, 32 sync, 16 length and 384 packet
+// make 4.64 ms
 constexpr uint32_t kAirTimeMs = 5;
 // INFO: fc 18nov26 G.1.16 nav age, from the PVT fix to the instant the burst goes on air
 constexpr int32_t kFixMaxAgeMs = 500;

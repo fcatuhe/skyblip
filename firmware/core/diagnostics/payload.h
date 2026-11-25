@@ -23,10 +23,6 @@
 
 namespace skyblip::diagnostics {
 
-enum class Profile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2 };
-
-constexpr uint8_t kBootFlagProfileRecorded = 1u << 2;
-
 struct Boot {
     uint32_t capabilities{0};
     uint32_t firmware_build{0};
@@ -38,11 +34,6 @@ struct Boot {
     Profile profile{Profile::Full};
     bool profile_recorded{false};
 };
-
-// INFO: fc 15nov26 bit 2 was alarm_enabled until alarm_setting replaced it, so it stays clear
-constexpr uint8_t kConfigFlagMetric = 1u << 3;
-constexpr uint8_t kConfigFlagBatteryTrimManual = 1u << 4;
-constexpr uint8_t kConfigFlagAlarmSettingRecorded = 1u << 5;
 
 struct Config {
     uint32_t address{0};
@@ -58,13 +49,6 @@ struct Config {
     bool metric{false};
     bool battery_trim_manual{false};
 };
-
-constexpr uint8_t kGnssFlagFixValid = 1u << 2;
-constexpr uint8_t kGnssFlagResidualValid = 1u << 3;
-constexpr uint8_t kGnssFlagPpsLocked = 1u << 4;
-constexpr uint8_t kGnssFlagGeoidMeasured = 1u << 5;
-constexpr uint8_t kGnssFlagTxSettled = 1u << 6;
-constexpr uint8_t kGnssFlagLevelsFresh = 1u << 7;
 
 struct Gnss {
     uint16_t solution_phase_ms{0};
@@ -85,9 +69,6 @@ struct Gnss {
     bool levels_fresh{false};
 };
 
-constexpr uint8_t kPpsFlagLocked = 1u << 2;
-constexpr uint8_t kPpsFlagUtcValid = 1u << 3;
-
 struct Pps {
     uint32_t interval_us{0};
     int32_t error_us{0};
@@ -97,28 +78,6 @@ struct Pps {
     bool locked{false};
     bool utc_valid{false};
 };
-
-constexpr uint8_t kBurstFlagAddressValid = 1u << 2;
-constexpr uint8_t kBurstFlagRssiValid = 1u << 3;
-constexpr uint8_t kBurstFlagAirborne = 1u << 4;
-constexpr uint8_t kBurstFlagTxSpanValid = 1u << 5;
-constexpr uint8_t kBurstFlagCallsign = 1u << 6;
-constexpr uint8_t kBurstFlagStatus = 1u << 7;
-
-enum class Refusal : uint8_t {
-    None = 0,
-    OverBudget = 1,
-    Unarmed = 2,
-    GateClosed = 3,
-    OffSchedule = 4,
-    HeldForFix = 5
-};
-
-constexpr uint8_t kDwellFlagTxAllowed = 1u << 2;
-constexpr uint8_t kDwellFlagOwnTxDwell = 1u << 3;
-constexpr uint8_t kDwellFlagListenOnly = 1u << 4;
-constexpr uint8_t kDwellFlagArmed = 1u << 5;
-constexpr uint8_t kDwellFlagBurstArmed = 1u << 6;
 
 struct Dwell {
     uint32_t frequency_hz{0};
@@ -137,11 +96,6 @@ struct Dwell {
     bool burst_armed{false};
 };
 
-constexpr uint8_t kFlightFlagFixValid = 1u << 2;
-constexpr uint8_t kFlightFlagRolling = 1u << 3;
-constexpr uint8_t kFlightFlagClimbValid = 1u << 4;
-constexpr uint8_t kFlightFlagTxSettled = 1u << 5;
-
 struct Flight {
     int32_t speed_mm_s{0};
     int32_t climb_mm_s{0};
@@ -155,13 +109,6 @@ struct Flight {
     bool climb_valid{false};
     bool tx_settled{false};
 };
-
-constexpr uint8_t kPowerFlagCharging = 1u << 2;
-constexpr uint8_t kPowerFlagExternalPower = 1u << 3;
-constexpr uint8_t kPowerFlagBatteryValid = 1u << 4;
-constexpr uint8_t kPowerFlagDieValid = 1u << 5;
-// INFO: fc 30sep26 bit 6 was caution until the level carried Low, and is never reused
-// INFO: fc 05oct26 bit 7 and payload bytes 13-14 were the learned trim, and are never reused
 
 struct Power {
     uint16_t cell_mv{0};
@@ -179,10 +126,6 @@ struct Power {
     bool die_valid{false};
 };
 
-constexpr uint8_t kBarometerFlagActive = 1u << 2;
-constexpr uint8_t kBarometerFlagTemperatureValid = 1u << 3;
-constexpr uint8_t kBarometerFlagClimbAdopted = 1u << 4;
-
 struct Barometer {
     uint32_t pressure_mpa{0};
     int32_t altitude_mm{0};
@@ -192,10 +135,6 @@ struct Barometer {
     bool temperature_valid{false};
     bool climb_adopted{false};
 };
-
-constexpr uint8_t kMotionFlagSlipValid = 1u << 2;
-constexpr uint8_t kMotionFlagGLoadValid = 1u << 3;
-constexpr uint8_t kMotionFlagFitted = 1u << 4;
 
 struct Motion {
     int16_t slip_mg{0};
@@ -211,8 +150,6 @@ struct Motion {
     bool fitted{false};
 };
 
-constexpr uint8_t kContactFlagDown = 1u << 2;
-
 struct Contact {
     uint32_t at_ms{0};
     uint32_t held_ms{0};
@@ -220,18 +157,6 @@ struct Contact {
     uint8_t gesture{0};
     bool down{false};
 };
-
-enum class LinkAction : uint8_t {
-    Up = 0,
-    Down = 1,
-    ClaimTaken = 2,
-    ClaimReleased = 3,
-    Received = 4,
-    Sent = 5,
-    Dropped = 6
-};
-
-constexpr uint8_t kLinkFlagClaimHeld = 1u << 2;
 
 struct Link {
     uint16_t link_session{0};
@@ -244,14 +169,6 @@ struct Link {
     events::MtuExchangeStarter mtu_exchange_started_by{events::MtuExchangeStarter::None};
     bool claim_held{false};
 };
-
-constexpr uint8_t kTrafficFlagAssessed = 1u << 2;
-constexpr uint8_t kTrafficFlagDismissed = 1u << 3;
-constexpr uint8_t kTrafficFlagInFormation = 1u << 4;
-constexpr uint8_t kTrafficFlagPositionValid = 1u << 5;
-// INFO: fc 11nov26 records before bit 6 wrote 0 for an unknown altitude, so bit 6 vouches for bit 7
-constexpr uint8_t kTrafficFlagAltitudeRecorded = 1u << 6;
-constexpr uint8_t kTrafficFlagRelativeAltitudeValid = 1u << 7;
 
 struct Traffic {
     uint32_t address{0};
@@ -270,8 +187,6 @@ struct Traffic {
     bool relative_altitude_valid{false};
 };
 
-constexpr uint8_t kWriteFlagPending = 1u << 2;
-
 struct Write {
     uint32_t waited_ms{0};
     uint16_t phase_ms{0};
@@ -282,10 +197,6 @@ struct Write {
     power::DurableWrite kind{power::DurableWrite::Settings};
     bool pending{false};
 };
-
-constexpr uint8_t kScreenFlagBacklight = 1u << 2;
-constexpr uint8_t kScreenFlagPowered = 1u << 3;
-constexpr uint8_t kScreenFlagHolding = 1u << 4;
 
 struct Screen {
     uint32_t since_page_shown_ms{0};
@@ -326,11 +237,6 @@ struct Duty {
     uint32_t annunciator_ms{0};
 };
 
-enum class SwitchKind : uint8_t { Retune = 0, Hop = 1, ToOBand = 2, ToMBand = 3, Wake = 4 };
-
-constexpr uint8_t kSwitchFlagArmedAhead = 1u << 2;
-constexpr uint8_t kSwitchFlagLate = 1u << 3;
-
 struct Switch {
     uint32_t to_hz{0};
     int32_t margin_us{0};
@@ -339,25 +245,6 @@ struct Switch {
     SwitchKind change{SwitchKind::Retune};
     bool armed_ahead{false};
     bool late{false};
-};
-
-// INFO: fc 17nov26 a code names the service, not its loop position, so every product decodes alike
-enum class LoopService : uint8_t {
-    Config = 0,
-    Ownship = 1,
-    Power = 2,
-    Radio = 3,
-    Traffic = 4,
-    Alarm = 5,
-    Nmea = 6,
-    FlightLog = 7,
-    Capture = 8,
-    Screen = 9,
-    BoardPoll = 10,
-    Bravo = 11,
-    Adsb = 12,
-    Button = 13,
-    Peer = 14,
 };
 
 struct Loop {
@@ -370,13 +257,6 @@ struct Loop {
     LoopService worst_service{LoopService::Config};
     uint8_t worst_tick_ms{0};
 };
-
-constexpr uint8_t kAdsbFlagVersionValid = 1u << 2;
-constexpr uint8_t kAdsbFlagGvaValid = 1u << 3;
-constexpr uint8_t kAdsbFlagPressureAltitudeValid = 1u << 4;
-constexpr uint8_t kAdsbFlagHeightDifferenceValid = 1u << 5;
-constexpr uint8_t kAdsbFlagGnssRelativeAltitudeValid = 1u << 6;
-constexpr uint8_t kAdsbFlagPressureRelativeAltitudeValid = 1u << 7;
 
 struct Adsb {
     uint32_t address{0};

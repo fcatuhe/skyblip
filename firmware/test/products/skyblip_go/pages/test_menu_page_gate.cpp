@@ -18,26 +18,24 @@ namespace {
 // core/flight decides what a fix stream means, and the companion link's gate
 // reads what it decided. Standing still is on the ground; five seconds of
 // believed motion is airborne.
-void on_ground(Rig& rig, uint32_t& now_ms) {
+void on_ground(Rig& rig) {
     push_fix(rig, 0, 0);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
 }
 
-void airborne(Rig& rig, uint32_t& now_ms) {
+void airborne(Rig& rig) {
     for (int i = 0; i < 14; i++) {
         push_fix(rig, 50000, 1200);
-        rig.run(now_ms, now_ms + 500);
-        now_ms += 500;
+        rig.run_for(500);
     }
 }
 
-void hold_button(Rig& rig, uint32_t& now_ms, uint32_t held_ms, bool down = true) {
+void hold_button(Rig& rig, uint32_t held_ms, bool down = true) {
     rig.platform.board_gpio().button_down = down;
-    const uint32_t until = now_ms + held_ms;
-    for (; now_ms <= until; now_ms += 50) {
-        rig.platform.clock().set_milliseconds(now_ms);
-        rig.product.run_pass(now_ms);
+    const uint32_t until = rig.now_ms + held_ms;
+    for (; rig.now_ms <= until; rig.now_ms += 50) {
+        rig.platform.clock().set_milliseconds(rig.now_ms);
+        rig.product.run_pass(rig.now_ms);
     }
 }
 
@@ -50,9 +48,9 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    on_ground(rig, rig.now_ms);
-    open_menu(rig, rig.now_ms);
-    focus_on(rig, rig.now_ms, go::MenuRow::Alarm);
+    on_ground(rig);
+    open_menu(rig);
+    focus_on(rig, go::MenuRow::Alarm);
     const go::Alarm volume = rig.settings().alarm;
 
     // A phone asks to overwrite the firmware while the pilot is tapping a value
@@ -103,11 +101,11 @@ TEST_CASE("product: a long press in the middle of an edit still switches the dev
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    open_menu(rig, rig.now_ms);
-    focus_on(rig, rig.now_ms, go::MenuRow::Alarm);
+    open_menu(rig);
+    focus_on(rig, go::MenuRow::Alarm);
     const go::Alarm volume = rig.settings().alarm;
 
-    hold_button(rig, rig.now_ms, power::kLongPressHoldMs + 300);
+    hold_button(rig, power::kLongPressHoldMs + 300);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK_FALSE(rig.product.screen().powered());
@@ -124,7 +122,7 @@ TEST_CASE("product: the alarm can be turned up in the air, where a phone is refu
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
     rig.settings().alarm = go::Alarm::Soft;
-    airborne(rig, rig.now_ms);
+    airborne(rig);
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Airborne);
 
     // The companion app cannot: an unattended phone rewriting the whole struct
@@ -137,12 +135,12 @@ TEST_CASE("product: the alarm can be turned up in the air, where a phone is refu
     // The pilot, on the glass, can. Presence is the thing the phone lacks, and
     // an alarm that is too quiet under a headset is a thing you find out about
     // in the air.
-    open_menu(rig, rig.now_ms);
-    focus_on(rig, rig.now_ms, go::MenuRow::Alarm);
-    change(rig, rig.now_ms);
-    change(rig, rig.now_ms);
-    change(rig, rig.now_ms);
-    run_past_the_write_settle(rig, rig.now_ms);
+    open_menu(rig);
+    focus_on(rig, go::MenuRow::Alarm);
+    change(rig);
+    change(rig);
+    change(rig);
+    run_past_the_write_settle(rig);
     CHECK(rig.settings().alarm == go::Alarm::Loud);
 
     go::Settings stored{};

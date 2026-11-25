@@ -46,7 +46,7 @@ STRANGER = 0x3F0001
 
 FIX_AT = 1_789_000_000
 
-VERDICTS = {name: code for code, name in enumerate(records.VERDICT)}
+VERDICTS = {name: code for code, name in enumerate(records.ENUMS["verdict"])}
 
 QUARTER_WAVE_ANTENNA = "ANT-868-CW-QW-SMA"
 

@@ -30,12 +30,11 @@ void hear(Rig& rig, int32_t north_m, bool altitude_sent) {
     transmitter.latitude_1e7 +=
         static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     transmitter.speed_mm_s = 0;
-    transmitter.vdop_e2 = 150;
+    transmitter.vdop_e2 = altitude_sent ? 150 : 0;
 
     adsl::Packet packet;
     protocol::from_own(packet, transmitter, kAddress, /*address_mapping_table=*/6,
                        /*aircraft_category=*/4);
-    if (!altitude_sent) packet.set_altitude_invalid();
     packet.scramble();
     packet.set_crc();
 
@@ -51,11 +50,10 @@ void hear(Rig& rig, int32_t north_m, bool altitude_sent) {
     rig.product.bus().rf.push(event);
 }
 
-void hear_for(Rig& rig, uint32_t& now_ms, int32_t north_m, int seconds,
-              bool altitude_sent = false) {
+void hear_for(Rig& rig, int32_t north_m, int seconds, bool altitude_sent = false) {
     for (int second = 0; second < seconds; second++) {
         hear(rig, north_m, altitude_sent);
-        fly(rig, now_ms, 1);
+        fly(rig, 1);
     }
 }
 
@@ -105,18 +103,17 @@ struct Written {
 Written written_past(bool altitude_sent) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
     rig.product.diagnostics().arm();
-    fly(rig, now_ms, 20);
+    fly(rig, 20);
     REQUIRE(rig.product.capture().capturing());
     REQUIRE(rig.product.flight_log().recording());
 
-    hear_for(rig, now_ms, 1500, 4, altitude_sent);
+    hear_for(rig, 1500, 4, altitude_sent);
     REQUIRE(rig.state().alarm_level == traffic::Level::Advisory);
-    rig.seconds(now_ms, 40, 0, 900);
+    rig.seconds(40, 0, 900);
     REQUIRE_FALSE(rig.product.flight_log().recording());
     rig.product.diagnostics().disarm();
-    rig.seconds(now_ms, 4, 0, 900);
+    rig.seconds(4, 0, 900);
     REQUIRE_FALSE(rig.product.capture().capturing());
 
     Written out;
@@ -155,11 +152,11 @@ TEST_CASE("unknown altitude: a target that sends its altitude is written as know
 TEST_CASE("unknown altitude: an advisory on distance, a PFLAU with no vertical, and no PFLAA") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms, 3);
+    fly(rig, 3);
     rig.raise_link();
-    fly(rig, rig.now_ms, 1);
+    fly(rig, 1);
 
-    hear_for(rig, rig.now_ms, 1500, 4);
+    hear_for(rig, 1500, 4);
     REQUIRE(rig.state().traffic.count() == 1);
     CHECK(rig.state().alarm_level == traffic::Level::Advisory);
 
@@ -179,9 +176,9 @@ TEST_CASE("unknown altitude: a ring on the radar and two dashes on nearby" *
           doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms, 3);
+    fly(rig, 3);
 
-    hear_for(rig, rig.now_ms, 5000, 3);
+    hear_for(rig, 5000, 3);
     REQUIRE(rig.state().traffic.count() == 1);
     REQUIRE(rig.state().alarm_level == traffic::Level::None);
     REQUIRE(rig.product.screen().page() == go::Page::Radar);
@@ -189,7 +186,7 @@ TEST_CASE("unknown altitude: a ring on the radar and two dashes on nearby" *
     CHECK_FALSE(blip_anywhere(rig.product.screen().framebuffer(), ui::Vertical::Level));
 
     rig.show(go::Page::Nearby);
-    hear_for(rig, rig.now_ms, 5000, 2);
+    hear_for(rig, 5000, 2);
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
     const int dashes_x = go::kNearbyRelativeAltitudeEnd - 2 * ui::kCellWidth * go::kNearbyScale;
     CHECK(reads_at(rig.product.screen().framebuffer(), dashes_x, go::kNearbyFirstRowY, "--",

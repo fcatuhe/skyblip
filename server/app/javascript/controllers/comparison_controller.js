@@ -4,6 +4,7 @@ import { Chart, SAVED_ZOOMS, TileStore, tilesAround } from "#skyblip/chart"
 import { gdl90Frames } from "#skyblip/gdl90"
 import { hasPosition } from "#skyblip/geo"
 import { nmeaLines, parseNmea } from "#skyblip/nmea"
+import { hex } from "#skyblip/link"
 import { hasWebSerial, openSerial } from "#skyblip/serial"
 import { drawTimeline } from "#skyblip/timeline"
 import { TrafficPicture } from "#skyblip/traffic"
@@ -274,8 +275,4 @@ function statusOf(status) {
   if (status.kind === "pflau") return `PFLAU: ${status.rx} heard, GPS ${status.gps}, alarm ${status.alarmLevel}`
   if (status.kind === "heartbeat") return `Heartbeat: GPS ${status.gpsValid ? "valid" : "invalid"}, UTC ${status.utcValid ? "valid" : "invalid"}`
   return "-"
-}
-
-function hex(bytes) {
-  return [...bytes].map(byte => byte.toString(16).padStart(2, "0")).join("")
 }

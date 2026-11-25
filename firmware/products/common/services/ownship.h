@@ -63,6 +63,7 @@ class OwnshipService : public runtime::Service {
     bool opens_second(const gnss::GnssSolution& solution);
     void publish_solution_phase(uint32_t now_ms);
     void anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms);
+    bool relabels(int32_t off_ms, bool fixed);
     static uint32_t latency_ceiling_ms(const gnss::GnssSolution& solution);
     static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
     void apply_barometer(const events::BarometerSample& sample, uint32_t now_ms);
@@ -73,11 +74,8 @@ class OwnshipService : public runtime::Service {
     void update_residual(const model::Ownship& previous);
     static gnss::Convergence convergence_of(const model::Ownship& own);
     static bool height_solved(const model::Ownship& own);
-    void adopt_climb(int32_t climb_mm_s, uint32_t now_ms);
+    void adopt_climb(int32_t climb_mm_s, uint32_t at_ms, uint32_t now_ms);
     void withdraw_climb();
-    static bool climb_from_altitude_mm(int32_t altitude_mm, uint32_t now_ms, uint32_t window_ms,
-                                       int32_t& reference_altitude_mm, uint32_t& reference_ms,
-                                       int32_t& out_climb_mm_s);
     bool barometer_heard_within_max_age(uint32_t now_ms) const;
 
     flight::SlipBall ball_{};
@@ -93,12 +91,17 @@ class OwnshipService : public runtime::Service {
     gnss::Acquisition acquisition_{};
     model::Ownship second_{};
     uint32_t opened_s_{0};
+    // INFO: fc 22nov26 how far the last timely fixed whole second named its edge off, 0 when on it
+    int32_t label_step_ms_{0};
+    // INFO: fc 22nov26 the part's stamps stepped back since a whole second last named its own edge
+    bool relabeled_{false};
+    // INFO: fc 23nov26 a timely fix named its edge off before any step back, as a late part does
+    bool off_unmarked_{false};
     bool second_opened_{false};
-    int32_t gnss_reference_altitude_mm_{0};
-    uint32_t gnss_reference_ms_{0};
-    int32_t barometer_reference_altitude_mm_{0};
-    uint32_t barometer_reference_ms_{0};
+    flight::ClimbWindow gnss_climb_{kGnssClimbWindowMs};
+    flight::ClimbWindow barometer_climb_{kBarometerClimbWindowMs};
     uint32_t barometer_heard_ms_{0};
+    uint32_t barometer_recorded_ms_{0};
     bool barometer_active_{false};
     uint32_t turn_reference_ms_{0};
     int32_t turn_reference_track_cdeg_{0};
@@ -106,10 +109,15 @@ class OwnshipService : public runtime::Service {
     uint32_t pps_recorded_ms_{0};
     uint32_t motion_recorded_ms_{0};
 
-    static constexpr uint32_t kBarometerClimbWindowMs = flight::kClimbWindowFloorMs;
+    // INFO: fc 22nov26 the one second the BME280's 6 cm/s of noise was measured over
+    static constexpr uint32_t kBarometerClimbWindowMs = 1000;
     static constexpr uint32_t kGnssClimbWindowMs = 2000;
-    // INFO: fc 23sep26 three missed samples: a barometer that went silent hands the climb back
+    // INFO: fc 23sep26 three seconds unheard: a barometer that went silent hands the climb back
     static constexpr uint32_t kBarometerMaxAgeMs = 3 * boards::kBarometerPublishPeriodMs;
+    // INFO: fc 22nov26 a climb whose source fell silent this long leaves the glass as well
+    static constexpr uint32_t kClimbMaxAgeMs = kBarometerMaxAgeMs;
+    // INFO: fc 22nov26 one record a second from samples a quarter apart, each a pass late or early
+    static constexpr uint32_t kBarometerRecordFloorMs = 875;
     // INFO: fc 20sep26 an edge is a record, and a second that brought none is the record saying so
     static constexpr uint32_t kPpsRecordPeriodMs = 1000;
     // INFO: fc 20sep26 the hub reports faster than the filters behind it move, in whole seconds

@@ -25,33 +25,30 @@ constexpr size_t kNotifyHeadBytes = 3;
 constexpr int32_t kTaxiMmS = 0;
 constexpr int32_t kFieldAltitudeM = 300;
 
-void pass_gap(Rig& rig, uint32_t& now_ms) {
-    rig.run(now_ms, now_ms + kPassGapMs);
-    now_ms += kPassGapMs;
-}
+void pass_gap(Rig& rig) { rig.run_for(kPassGapMs); }
 
 // The central comes up on whatever the Go asked to connect to, as a Bravo in range answers.
-void answer_connect(Rig& rig, uint32_t& now_ms) {
-    pass_gap(rig, now_ms);
+void answer_connect(Rig& rig) {
+    pass_gap(rig);
     rig.platform.central().come_up(comms::kPeerPayloadFloorBytes);
-    pass_gap(rig, now_ms);
+    pass_gap(rig);
 }
 
 // The BRAVO page's walk without the glass: scan, hear the one Bravo, pick it, connect.
-void start_pairing(Rig& rig, uint32_t& now_ms) {
+void start_pairing(Rig& rig) {
     go::BravoService& service = rig.product.bravo();
-    service.begin_pairing(now_ms);
-    pass_gap(rig, now_ms);
+    service.begin_pairing(rig.now_ms);
+    pass_gap(rig);
     rig.platform.central().hear(kBravoAddress, kBravoName);
-    pass_gap(rig, now_ms);
-    service.pair(0, now_ms);
-    answer_connect(rig, now_ms);
+    pass_gap(rig);
+    service.pair(0, rig.now_ms);
+    answer_connect(rig);
     if (service.step() != go::BravoStep::Waiting) __builtin_trap();
 }
 
-void start_paired(Rig& rig, uint32_t& now_ms) {
+void start_paired(Rig& rig) {
     rig.settings().bravo = kBravoAddress;
-    answer_connect(rig, now_ms);
+    answer_connect(rig);
     if (!rig.platform.central().up()) __builtin_trap();
 }
 
@@ -62,19 +59,16 @@ void notify(Rig& rig, const uint8_t* bytes, size_t byte_count) {
         std::string(reinterpret_cast<const char*>(bytes), byte_count));
 }
 
-void reconnect(Rig& rig, uint32_t& now_ms) {
+void reconnect(Rig& rig) {
     rig.platform.central().drop();
-    answer_connect(rig, now_ms);
+    answer_connect(rig);
 }
 
-size_t act(Rig& rig, uint32_t& now_ms, const uint8_t* input, size_t left) {
+size_t act(Rig& rig, const uint8_t* input, size_t left) {
     switch (input[0]) {
-        case 'S': rig.second(now_ms, kTaxiMmS, kFieldAltitudeM); return 1;
-        case 'W':
-            rig.run(now_ms, now_ms + kSecondMs);
-            now_ms += kSecondMs;
-            return 1;
-        case 'D': reconnect(rig, now_ms); return 1;
+        case 'S': rig.second(kTaxiMmS, kFieldAltitudeM); return 1;
+        case 'W': rig.run_for(kSecondMs); return 1;
+        case 'D': reconnect(rig); return 1;
         case 'U': rig.product.bravo().unpair(); return 1;
         case 'N': break;
         default: return 1;
@@ -84,7 +78,7 @@ size_t act(Rig& rig, uint32_t& now_ms, const uint8_t* input, size_t left) {
     const size_t frame_bytes =
         declared < left - kNotifyHeadBytes ? declared : left - kNotifyHeadBytes;
     notify(rig, input + kNotifyHeadBytes, frame_bytes);
-    pass_gap(rig, now_ms);
+    pass_gap(rig);
     return kNotifyHeadBytes + frame_bytes;
 }
 
@@ -94,15 +88,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     if (size == 0) return 0;
     Rig rig(kNoGlass);
     if (rig.setup() != Status::Ok) __builtin_trap();
-    uint32_t now_ms = 0;
-    rig.second(now_ms, kTaxiMmS, kFieldAltitudeM);
+    rig.second(kTaxiMmS, kFieldAltitudeM);
     if (data[0] & kPairedFlag)
-        start_paired(rig, now_ms);
+        start_paired(rig);
     else
-        start_pairing(rig, now_ms);
+        start_pairing(rig);
 
     size_t at = 1;
     for (int action = 0; action < kMaxActions && at < size; action++)
-        at += act(rig, now_ms, data + at, size - at);
+        at += act(rig, data + at, size - at);
     return 0;
 }

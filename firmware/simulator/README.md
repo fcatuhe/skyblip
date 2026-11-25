@@ -11,7 +11,7 @@ The simulator runs a real product on the host platform, inside a world that driv
 
 Each aircraft is placed north and east of where own-ship was when it was added, then flies over the ground on its own, so two manoeuvring aircraft describe one encounter. `Air` logs every burst, heard or not, and decides whether the radio hears one by where it was tuned when the burst started, so a slot-timing bug shows on the tape as `Deaf`. A step is `UnitSimulator::kStepMs`, 5 ms, finer than the guard on the O to M edge.
 
-The Go's L76K is brought up as on a T-Echo: met at 9600, raised to 115200 and set to solve twice a second, on `.000` and `.500` of its UTC, which the host PPS puts on the clock's whole second. The host GNSS port retunes only once `Simulator::setup()` says a world ticks the receiver, because a product rig feeds fixes onto the bus instead. A case can set `models::L76k`'s latency after a solution, 0 unless it asks for the 70 ms SoftRF measured, read what it `solved()`, stall the wire, have it answer, refuse or hang on a sub-second `$PCAS02`, hang until RESET_N is pulsed, or lose UTC.
+The Go's L76K is brought up as on a T-Echo: met at 9600, raised to 115200 and set to solve twice a second, on `.000` and `.500` of its UTC, which the host PPS puts on the clock's whole second. The host GNSS port retunes only once `Simulator::setup()` says a world ticks the receiver, because a product rig feeds fixes onto the bus instead. A case can set `models::L76k`'s latency after a solution, 0 unless it asks for the 70 ms SoftRF measured, read what it `solved()`, stall the wire, have it answer, refuse or hang on a sub-second `$PCAS02`, hang until RESET_N is pulsed, lose UTC, or leave RMC's speed or course empty.
 
 ## A Go paired with a Bravo
 
@@ -42,7 +42,7 @@ Airborne, the position carries the pressure altitude the world's airmass gives t
 
 The world does not model:
 
-- **path loss at 1090 MHz:** every squitter lands at -70 dBm;
+- **path loss at 1090 MHz:** every squitter lands at -70 dBm, except the aircraft's own transponder at -20 dBm;
 - **garbling:** two squitters that overlap are both heard;
 - **DF18:** Bravo receives DF17 only (`protocols/adsb/README.md`);
 - **aircraft status, target state and operational status,** TC 28, 29 and 31, so Bravo never learns an aircraft's ADS-B version or GVA.
@@ -61,6 +61,9 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - An aircraft's `"system"` is `adsl_direct`, `alptas`, `adsl_uplink`, or `adsb` for ADS-B Out alone.
 - `"adsb": 1` adds ADS-B Out to an 868 MHz system. Such an aircraft sends its ICAO address under table 5 on ADS-L too, as ADS-L F.2.3 asks of a unit beside a transponder.
 - `"on_ground": 1` sends surface positions, and `"pressure_only": 1` sends no GNSS-baro difference.
+- `"aboard": 1` makes an ADS-B aircraft the transponder of the aircraft a Bravo flies in. Its squitters land at -20 dBm, loud enough for Bravo to name it (`../products/skyblip_bravo/README.md`, Own transponder). Place it at `north_m`, `east_m` and `up_m` 0, with own-ship's speed and track.
+- `"address"` gives an aircraft its 24-bit address, in decimal since JSON has no hex. Left out, the world numbers the aircraft from 0x300001.
+- An aircraft's `"callsign"` is the name it puts on air, in its ADS-L name or its ADS-B identification. ADS-B sends letters and digits only, so a registration goes without its dash: `DEFLY`.
 - `"category"` is the emitter category, `A0` to `C7`, in the shorthand of `core/protocol/README.md`: the letter is the identification's type code, A for 4, B for 3 and C for 2, and the digit is the category. Any other value refuses the file.
 - `"phase_ms"` and `"slot"` pin where in the second, and on which M-band channel, an aircraft transmits. Left out, it picks its own instant as a conforming transmitter does.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
@@ -69,6 +72,15 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 
 ## The browser
 
-`frontends/browser.cpp` builds one WASM module with a Go, a Bravo and a pair. Loading a scenario picks the unit it names, and every shared export reads that one. The Go's glass, its 868 MHz tape and its radio counters read the Go alone or the paired Go. `simulator_product`, `simulator_nmea_count`, `simulator_nmea_line`, `simulator_adsb_heard`, `simulator_adsb_aircraft` and `simulator_bravo_lamp` give the workbench what Bravo has instead of a glass: its lamp and the stream a phone EFB reads. Paired, `simulator_bravo_state` says what the Go makes of Bravo, `simulator_bravo_follows` whether Bravo plays the Go's calls, and `simulator_set_bravo_link` loses the link or brings it back. `scripts/check_simulator_exports.py` checks that `web/embed.js` binds only exported names.
+`make -C firmware browser` writes the four files every release carries for the browser into `build/browser/`. They are named `skyblip-simulator*` because the one module flies every product.
 
-`simulator_draw_prompt` draws the Go's confirm page for the prompt a phone raised, so the briefing shows the question as the glass shows it, with no copy of the page in HTML. `world/prompt_glass.cpp` names each prompt the way the briefing names its task: `set`, `dfu`, `recovery`, `power_off`, `erase_log`, `gnss_cold_start`, `register`, `capture` or `pair`. It words a `dfu`, a `pair` and a `set` with the functions the Go words its own prompts with, and every other prompt takes the Go's own title and detail. `embed.js` paints it with `paintPrompt`, which returns the page's words in reading order for the canvas's label, since a screen reader cannot read pixels, or null for a prompt the Go never raises.
+| File | What it is |
+|---|---|
+| `skyblip-simulator.wasm` | the firmware and its world, compiled by Emscripten from `frontends/browser.cpp` |
+| `skyblip-simulator.js` | the loader Emscripten generates for the WASM |
+| `skyblip-simulator-embed.js` | `web/embed.js`, the module the pages and `server/bin/screenshots` import: it loads the WASM and names its exports |
+| `skyblip-simulator-scenarios.json` | every `../scenarios/*.json` in one file, bundled by `scripts/simulator_scenarios.rb` |
+
+`frontends/browser.cpp` builds one WASM module with a Go, a Bravo and a pair. Loading a scenario picks the unit it names, and every shared export reads that one. The Go's glass, its 868 MHz tape and its radio counters read the Go alone or the paired Go. `simulator_product`, `simulator_nmea_count`, `simulator_nmea_line`, `simulator_adsb_heard`, `simulator_adsb_aircraft` and `simulator_bravo_lamp` give the workbench what Bravo has instead of a glass: its lamp and the stream a phone EFB reads. Paired, `simulator_bravo_state` says what the Go makes of Bravo, `simulator_bravo_follows` whether Bravo plays the Go's calls, and `simulator_set_bravo_link` loses the link or brings it back. `scripts/check_simulator_exports.py` checks that `web/embed.js` binds every export and no other name.
+
+`simulator_draw_prompt` draws the Go's confirm page for the prompt a phone raised, so the briefing shows the question as the glass shows it, with no copy of the page in HTML. `world/prompt_glass.cpp` names each prompt the way the briefing names its task: `set`, `dfu`, `recovery`, `power_off`, `erase_log`, `gnss_cold_start`, `register`, `capture` or `pair`. It words a `dfu`, a `pair` and a `set` with the functions the Go words its own prompts with, and every other prompt takes the Go's own title and detail. `web/embed.js` paints it with `paintPrompt`, which returns the page's words in reading order for the canvas's label, since a screen reader cannot read pixels, or null for a prompt the Go never raises.

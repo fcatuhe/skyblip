@@ -17,6 +17,21 @@
   </ul>
 <% end %>
 
+<% if @visitor.activations.any? %>
+  <ul class="admin-visitor-activations" aria-label="<%= t("analytics.visitor.activations") %>">
+    <% @visitor.activations.each do |activation| %>
+      <li>
+        <%= t("analytics.visitor.activated") %>
+        <span class="mono"><%= link_to activation.device || t("analytics.unknown"), admin_unit_path(activation.unit_id) %></span>
+        <%= l(activation.time, format: "%b %-d, %H:%M") %>
+        <% if activation.browser %>
+          &middot; <span class="mono"><%= link_to support_code(activation.browser), admin_events_path(browser: activation.browser) %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
 <dl class="admin-metrics">
   <div>
     <dt><%= t("analytics.visitor.first_seen") %></dt>

@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
-import { hasWebBluetooth, joinFleet } from "#skyblip/fleet"
+import { bluetoothReadiness, joinFleet } from "#skyblip/fleet"
+import { browserSupport } from "#skyblip/readiness"
 import { tangoGroups } from "#skyblip/tango"
 import { battery, newsOf, seen, shortName } from "controllers/briefing/facts"
 import { stayAwake } from "controllers/briefing/wake"
@@ -63,7 +64,8 @@ export default class extends Controller {
   }
 
   #render() {
-    const bluetooth = hasWebBluetooth()
+    const readiness = bluetoothReadiness()
+    const bluetooth = readiness.ready
     const units = this.fleet.units.filter(unit => unit.remembered || unit.slug.startsWith("activate-"))
     const known = this.fleet.remembered.length > 0
     stayAwake(units.some(unit => unit.state?.phase === "uploading"))
@@ -77,10 +79,10 @@ export default class extends Controller {
     this.connectNewTarget.hidden = !bluetooth || settingUp
     // INFO: fc 17nov26 a browser that knows no device most likely holds a new one, so setting it up comes first
     this.connectNewTarget.classList.toggle("button-app--quiet", this.variantValue === "home")
-    this.setUpTarget.hidden = !bluetooth || settingUp || this.variantValue !== "home"
+    this.setUpTarget.hidden = !(bluetooth || browserSupport() === "usb") || settingUp || this.variantValue !== "home"
     this.setUpTarget.classList.toggle("button-app--quiet", known)
     if (this.variantValue === "home") {
-      this.unsupportedTarget.hidden = bluetooth
+      this.unsupportedTarget.hidden = bluetooth || readiness.fixable
       this.firstTarget.hidden = !bluetooth || units.length > 0
       this.titleTarget.hidden = units.length === 0
     }

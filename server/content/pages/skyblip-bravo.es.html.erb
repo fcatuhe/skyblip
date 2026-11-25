@@ -9,7 +9,7 @@ product:
   currency: USD
   image: pages/skyblip-bravo/seeed-x1.avif
 description: "Bravo detecta transpondedores Mode S y ADS-B. Envía el tráfico ADS-B a tu aplicación de navegación o al radar del Go."
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <%= render "shared/device_tabs" %>
@@ -35,8 +35,42 @@ updated_on: "2026-11-18"
   <p>¿Ya tienes un Go? Emparéjalo con Bravo para formar un Tango. El Go muestra tráfico ADS-B, ADS-L y FLARM en el mismo radar. Sigue transmitiendo tu posición en ADS-L.</p>
 </section>
 
-<section id="buy" class="band band--tint">
+<section id="questions" class="band band--tint">
+  <h2 class="section-title">Lo que preguntan los pilotos sobre Bravo</h2>
+  <div class="faq">
+    <details>
+      <summary>¿Bravo transmite mi posición?</summary>
+      <p>No. Bravo solo escucha en 1090&nbsp;MHz. Para que te vean en ADS-L, añade un Go. Para que te vea el control de tránsito aéreo, necesitas un transpondedor. <%= link_to_page "blog/who-sees-ads-l", label: "Quién recibe tu posición y qué tráfico ves" %>.</p>
+    </details>
+    <details>
+      <summary>¿A qué distancia ve las aeronaves ADS-B?</summary>
+      <p>A decenas de millas náuticas, a veces cerca de cien. Los transpondedores ADS-B transmiten con decenas o cientos de vatios, así que su señal llega lejos.</p>
+    </details>
+    <details>
+      <summary>¿Y las aeronaves con Mode S pero sin ADS-B?</summary>
+      <p>Bravo las detecta, pero una respuesta Mode S no lleva posición. Estamos midiendo cómo se relaciona la intensidad de su señal con la distancia. Así podremos indicar estas aeronaves en el Go y en las aplicaciones de navegación sin falsas alarmas.</p>
+    </details>
+    <details>
+      <summary>¿Puede un solo dispositivo sin pantalla hacer también ADS-L y FLARM?</summary>
+      <p>Hoy no. El X1 tiene una sola radio, que Bravo mantiene en 1090&nbsp;MHz. Podríamos escribir una versión que transmita ADS-L y reciba ADS-L y FLARM en el X1, pero no podría recibir ADS-B a la vez. Un Go con su pantalla apenas es más grande que el X1: colócalo con la antena hacia arriba y usa su pantalla solo para los ajustes.</p>
+    </details>
+    <details>
+      <summary>¿Recibe UAT en 978&nbsp;MHz?</summary>
+      <p>No. UAT es el ADS-B de la aviación ligera en Estados Unidos y no está abierto en Europa. Bravo recibe el ADS-B en 1090&nbsp;MHz que se usa en todo el mundo. <%= link_to_page "blog/why-ads-l", label: "Por qué ADS-L en lugar de ADS-B" %>.</p>
+    </details>
+    <details>
+      <summary>¿Qué aplicaciones muestran su tráfico?</summary>
+      <p>Las aplicaciones de navegación que leen el tráfico por Bluetooth, como SDVFR Next y SkyDemon. Si lo emparejas con un Go, el tráfico aparece en el radar del Go, que lo pasa a tus aplicaciones.</p>
+    </details>
+    <details>
+      <summary>Mi propio transpondedor aparece como tráfico. ¿Qué hago?</summary>
+      <p>Introduce la dirección OACI de tu avión en Briefing, o deja que Bravo te proponga la que oye en tierra con tu transpondedor en ALT. Bravo oculta entonces tu propio avión. <%= link_to_page "install", label: "Configura la dirección de tu transpondedor", anchor: "transponder" %>.</p>
+    </details>
+  </div>
+</section>
+
+<section id="buy" class="band">
   <h2 class="section-title">¿Buscas un MeshTracker X1?</h2>
   <p>Compra el dispositivo e instala el software skyBlip Bravo. El software de fábrica del X1 no recibe ADS-B.</p>
-  <p id="install" class="signature"><%= link_to_page "buy", label: "Consulta dónde comprar el MeshTracker X1", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Instala skyBlip Bravo" %></p>
+  <p id="install" class="signature"><%= link_to_page "buy", label: "Consulta dónde comprar el MeshTracker X1", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Instala skyBlip Bravo" %> · <%= link_to_page "compare", label: "Compara con otros sistemas" %></p>
 </section>

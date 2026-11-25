@@ -169,4 +169,19 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
       post activation_registrations_path, params: signed_registration(@challenge), as: :json
     end
   end
+
+  # The analytics tie a visitor to the units it activated and to its briefing journal through this one event.
+  test "an activation is tracked on the browser's visit with its unit and support code, and a refusal is not" do
+    Ahoy.api_only = false
+    briefing = { "X-Briefing-Browser" => "5G3GRZ31", "User-Agent" => "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36" }
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: briefing
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: briefing
+
+    unit = Unit.find_by!(device_id: vectors["device_id"])
+    activation = Ahoy::Event.find_sole_by(name: "unit_activated")
+    assert_equal({ "unit_id" => unit.id, "device" => "go-000003", "browser" => "5G3GRZ31" }, activation.properties)
+    assert_equal [ activation.visit ], Ahoy::Visit.activating(unit).to_a
+  ensure
+    Ahoy.api_only = true
+  end
 end

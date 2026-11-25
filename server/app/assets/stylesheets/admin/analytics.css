@@ -137,7 +137,7 @@
 
   .admin-pager [rel="next"] { margin-inline-start: auto; }
 
-  .admin-visitor-users { padding-inline-start: var(--space-inline-m); margin-block: 0 var(--space-m); }
+  .admin-visitor-users, .admin-visitor-activations { padding-inline-start: var(--space-inline-m); margin-block: 0 var(--space-m); }
 
   .admin-legend {
     margin-block-start: var(--space-2xl);

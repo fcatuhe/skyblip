@@ -44,6 +44,8 @@ class DiagnosticsCollector {
         snapshot.charge = product.power().charge_condition();
         snapshot.charge_warnings = product.power().charge_warnings();
 
+        snapshot.failed_writes = product.config_link().failed_writes();
+
         Group::collect(product, snapshot, now_ms);
         product.capture().describe(snapshot);
         snapshot.refreshes++;

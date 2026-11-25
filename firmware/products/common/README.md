@@ -32,7 +32,7 @@ A shared service reads the parts fitted from `context.roles.capabilities`, so a 
 
 ## Own pressure altitude
 
-`OwnshipService::apply_barometer()` turns each barometer sample into a pressure altitude on the standard atmosphere with `flight::pressure_to_altitude_mm`, and derives the barometric climb from it. It publishes `pressure_altitude_mm`, `pressure_altitude_at_ms` and `pressure_altitude_valid` on `Ownship`, and `tick()` clears the flag once no sample has arrived for `kBarometerMaxAgeMs`. The Go publishes it from its BME280 and Bravo from its SPA06. Its only reader is an ADS-B target that sends a pressure altitude and no GNSS height (`../../core/flight/extrapolate.cpp`).
+`OwnshipService::apply_barometer()` turns each barometer sample into a pressure altitude on the standard atmosphere with `flight::pressure_to_altitude_mm`, and derives the barometric climb from it, over the second behind each sample and dated by the sample (`flight::ClimbWindow`). A climb no source renews for `kClimbMaxAgeMs` is withdrawn, so a barometer that dies with no fix to fall back on leaves no climb on the glass or the air. It publishes `pressure_altitude_mm`, `pressure_altitude_at_ms` and `pressure_altitude_valid` on `Ownship`, and `tick()` clears the flag once no sample has arrived for `kBarometerMaxAgeMs`. The Go publishes it from its BME280 and Bravo from its SPA06. Its only reader is an ADS-B target that sends a pressure altitude and no GNSS height (`../../core/flight/extrapolate.cpp`).
 
 ## The NMEA stream
 
@@ -52,7 +52,7 @@ A product owns its settings struct, its blob and its link keys. A shared service
 - `TrafficSettings` (`traffic_settings.h`): the aircraft address the traffic table refuses, 0 while unset.
 - `CaptureSettings` is not references. A `diagnostics::Config` record carries values worked out from settings, such as `metric` from the Go's `Units`, so the product implements `describe()` and the capture calls it at each `Config` record. The Go's is `../skyblip_go/capture_settings.h`.
 
-`settings_store.h` is the seam between the config link and a product's settings. The product owns the struct, its layout and its link keys, and reads a blob of another layout version as defaults. The link owns when the blob is read and written: the durable-write window, the power rule, a newer layout kept for a reverted image, and the copy kept for a revert. A blob wider than `ConfigLinkService::kBlobBytes`, 64 bytes, counts as a failed write. Only a store with no settings at all is a fresh unit. A read the store fails, which `ports::KeyValueStore` answers `Down` for a flash error, starts the unit on defaults and says so, as an unreadable layout does.
+`settings_store.h` is the seam between the config link and a product's settings. The product owns the struct, its layout and its link keys, and reads a blob of another layout version as defaults. The link owns when the blob is read and written: the durable-write window, the power rule, a newer layout kept for a reverted image, and the copy kept for a revert. A blob wider than `ConfigLinkService::kBlobBytes`, 64 bytes, counts as a failed write. The dump's system group carries the count as `failed_writes`, the one place a change the flash did not keep shows. Only a store with no settings at all is a fresh unit. A read the store fails, which `ports::KeyValueStore` answers `Down` for a flash error, starts the unit on defaults and says so, as an unreadable layout does.
 
 ### When the settings are written
 

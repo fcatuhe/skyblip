@@ -40,6 +40,8 @@ adsl::Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
     own.longitude_1e7 = 81234500;
     own.altitude_hae_mm = 1234000;
     own.speed_mm_s = 45000;  // 180 quarter-m/s on the wire
+    own.speed_valid = true;
+    own.track_valid = true;
     own.hdop_e2 = 90;
     own.flight_state = 2;
     adsl::Packet packet{};

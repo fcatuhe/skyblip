@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "protocols/adsl/packet.h"
+#include "protocols/common/crc.h"
 #include "protocols/common/xxtea.h"
 
 namespace skyblip::adsl {
@@ -15,12 +16,6 @@ constexpr uint8_t kPayloadTypeTrafficUplink = 0x04;
 constexpr int64_t kCycleMs = int64_t{kTimestampCycleS} * 1000;
 constexpr int kQuartersPerCycle = static_cast<int>(kCycleMs / kTimestampQuarterMs);
 constexpr uint8_t kReservedBits = 0xC0;
-
-int count_of(int length) {
-    for (int count = 0; count <= kUplinkMaxTargets; count++)
-        if (uplink_length(count) == length) return count;
-    return -1;
-}
 
 void scramble(uint8_t* data, int bytes, bool forward) {
     uint32_t words[(kUplinkHeaderBytes + uplink_payload_bytes(kUplinkMaxTargets)) / 4];
@@ -81,7 +76,7 @@ Status Uplink::encode(uint32_t sender_address, uint8_t sender_table, const Packe
     codeword_of(covered, covered_bytes, no_parity, codeword);
     reed_solomon_.encode(codeword, codeword + ReedSolomon255::kDataBytes);
 
-    packet[0] = static_cast<uint8_t>(uplink_length(count));
+    packet[0] = static_cast<uint8_t>(uplink_length(count, ErrorControl::Fec));
     std::memcpy(packet + 1, covered, static_cast<size_t>(covered_bytes));
     std::memcpy(packet + 1 + covered_bytes, codeword + ReedSolomon255::kDataBytes,
                 ReedSolomon255::kParityBytes);
@@ -93,22 +88,19 @@ Status Uplink::decode(const uint8_t* packet, size_t bytes, Packet* traffic, int 
     statistics = UplinkStatistics{};
     if (bytes < 1) return Status::Invalid;
     const int length = packet[0];
-    const int count = count_of(length);
-    if (count < 0 || static_cast<size_t>(length) + 1 > bytes) return Status::Invalid;
-    const int covered_bytes = length - ReedSolomon255::kParityBytes;
-    const int pad = ReedSolomon255::kDataBytes - covered_bytes;
+    const UplinkLayout layout = uplink_layout(length);
+    if (layout.records < 0 || static_cast<size_t>(length) + 1 > bytes) return Status::Invalid;
+    const int count = layout.records;
+    const int covered_bytes = length - uplink_parity_bytes(layout.mode);
 
-    uint8_t codeword[ReedSolomon255::kCodewordBytes];
-    codeword_of(packet + 1, covered_bytes, packet + 1 + covered_bytes, codeword);
-    const int corrected = reed_solomon_.decode(codeword);
+    uint8_t covered[ReedSolomon255::kDataBytes];
+    const int corrected = correct(packet + 1, covered_bytes, layout.mode, covered);
     if (corrected < 0) return Status::Crc;
-    for (int i = 0; i < pad; i++)
-        if (codeword[i] != 0) return Status::Crc;
     statistics.corrected = corrected;
 
-    uint8_t* covered = codeword + pad;
     const uint8_t header = covered[0];
-    if ((header & Packet::kErrorControlFec) == 0) return Status::Invalid;
+    const bool fec_named = (header & Packet::kErrorControlFec) != 0;
+    if (fec_named != (layout.mode == ErrorControl::Fec)) return Status::Invalid;
     if ((header & Packet::kProtocolVersionMask) > Packet::kMaxProtocolVersion)
         return Status::Unsupported;
     const uint8_t key_index =
@@ -138,6 +130,25 @@ Status Uplink::decode(const uint8_t* packet, size_t bytes, Packet* traffic, int 
     }
     statistics.targets = kept;
     return Status::Ok;
+}
+
+int Uplink::correct(const uint8_t* sent, int covered_bytes, ErrorControl mode,
+                    uint8_t* covered) const {
+    if (mode == ErrorControl::Crc) {
+        const size_t checked = static_cast<size_t>(covered_bytes) + kUplinkCrcBytes;
+        if (wire::crc24_check(sent, checked) != 0) return -1;
+        std::memcpy(covered, sent, static_cast<size_t>(covered_bytes));
+        return 0;
+    }
+    const int pad = ReedSolomon255::kDataBytes - covered_bytes;
+    uint8_t codeword[ReedSolomon255::kCodewordBytes];
+    codeword_of(sent, covered_bytes, sent + covered_bytes, codeword);
+    const int corrected = reed_solomon_.decode(codeword);
+    if (corrected < 0) return -1;
+    for (int i = 0; i < pad; i++)
+        if (codeword[i] != 0) return -1;
+    std::memcpy(covered, codeword + pad, static_cast<size_t>(covered_bytes));
+    return corrected;
 }
 
 size_t encode_o_band(const uint8_t* packet, uint8_t* out) {

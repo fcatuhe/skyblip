@@ -246,3 +246,23 @@ TEST_CASE("l76k: a stamp that jumps back by more than a replay could is publishe
     REQUIRE(gnss.poll(1250));
     CHECK(gnss.solution().utc_ms == 0);
 }
+
+// A leap second's repeated second, or a cold start's UTC step, is the only sign the label moved.
+TEST_CASE("l76k: the pair after a stamp at or behind the last published says it was relabeled") {
+    ScriptedWire wire;
+    parts::L76k gnss(ports::SolutionRate::Half, wire);
+    wire.say(gga("123520.500", 1000) + rmc("123520.500"));
+    REQUIRE(gnss.poll(1000));
+    CHECK_FALSE(gnss.solution().relabeled);
+    wire.say(gga("123520.500", 1005) + rmc("123520.500"));
+    CHECK_FALSE(gnss.poll(1250));
+    wire.say(gga("123521.000", 1010) + rmc("123521.000"));
+    REQUIRE(gnss.poll(1500));
+    CHECK(gnss.solution().relabeled);
+    wire.say(gga("123521.500", 1015) + rmc("123521.500"));
+    REQUIRE(gnss.poll(1750));
+    CHECK_FALSE(gnss.solution().relabeled);
+    wire.say(gga("123503.500", 1020) + rmc("123503.500"));
+    REQUIRE(gnss.poll(2000));
+    CHECK(gnss.solution().relabeled);
+}

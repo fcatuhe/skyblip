@@ -1,0 +1,454 @@
+{
+  "title": "skyBlip diagnostics record layout (v1)",
+  "description": "The one place the diagnostics record layout is written. scripts/diagnostics_layout.py generates from it the firmware's type codes, payload offsets, flag bits and enum codes (firmware/core/diagnostics/layout.h), the test that pins each mirrored C++ enum to its codes (firmware/test/core/diagnostics/test_diagnostics_mirrors.cpp), and the decoder tables of scripts/blip_records.py and server/app/javascript/skyblip/diagnostics.js. scripts/check_diagnostics_layout.py fails when a generated file differs from what the generator writes, and holds schemas/diagnostics_log.v1.schema.json, the decoded view, to the names here. A record is 24 bytes: type, flags, into_ms, at_s and a 16-byte payload, which a field's at counts from. Flag bits 0 and 1 belong to the envelope, so a type's own flags take bits 2 to 7. A field's kind is one of u8, i8, u16, i16, u24, u32 and i32, read little-endian; enum8, a byte decoded through the named enum, where a code the enum does not hold decodes as its number; code8, a byte holding the named enum's code, decoded as the number; bits, width bits of one byte from bit shift up; flag, a flag bit decoded as a boolean; and vouch, a flag bit read only to vouch for another field. scale multiplies the decoded number. valid_when names a flag of the same type: the field is left out when that flag reads false, and kept when the flag is itself left out. A retired field is decoded from older captures and never written, and nothing reuses its bytes or bits. The decoders write a type's fields in the order listed. A type code and an enum code are never renumbered, because a capture outlives the firmware that wrote it, so a new type or member takes the next free code. An enum is declared by layout.h, mirrors a C++ enum member by member, or names the codes of a product's own enum, which the product's tests pin.",
+  "types": [
+    {"name": "boot", "code": 1, "fields": [
+      {"name": "capabilities", "kind": "u32", "at": 0},
+      {"name": "firmware_build", "kind": "u32", "at": 4},
+      {"name": "firmware_revision", "kind": "u16", "at": 8},
+      {"name": "firmware_major", "kind": "u8", "at": 10},
+      {"name": "firmware_minor", "kind": "u8", "at": 11},
+      {"name": "reset", "kind": "enum8", "at": 12, "enum": "reset"},
+      {"name": "image_state", "kind": "enum8", "at": 13, "enum": "image_state"},
+      {"name": "profile", "kind": "enum8", "at": 14, "enum": "profile", "valid_when": "profile_recorded"},
+      {"name": "profile_recorded", "kind": "vouch", "bit": 2}
+    ]},
+    {"name": "config", "code": 2, "fields": [
+      {"name": "address", "kind": "u32", "at": 0},
+      {"name": "battery_offset_mv", "kind": "i16", "at": 4},
+      {"name": "frequency_trim_e1_ppm", "kind": "i16", "at": 6},
+      {"name": "aircraft_type", "kind": "u8", "at": 8},
+      {"name": "address_mapping_table", "kind": "u8", "at": 9},
+      {"name": "alarm_volume", "kind": "u8", "at": 10, "retired": true},
+      {"name": "settings_version", "kind": "u8", "at": 11},
+      {"name": "tx_power_dbm", "kind": "i8", "at": 12},
+      {"name": "pa_rated_dbm", "kind": "i8", "at": 13},
+      {"name": "alarm_setting", "kind": "enum8", "at": 14, "enum": "alarm_setting", "valid_when": "alarm_setting_recorded"},
+      {"name": "alarm_enabled", "kind": "flag", "bit": 2, "retired": true},
+      {"name": "metric", "kind": "flag", "bit": 3},
+      {"name": "battery_trim_manual", "kind": "flag", "bit": 4},
+      {"name": "alarm_setting_recorded", "kind": "vouch", "bit": 5}
+    ]},
+    {"name": "gnss", "code": 3, "fields": [
+      {"name": "solution_phase_ms", "kind": "u16", "at": 0},
+      {"name": "residual_m", "kind": "u16", "at": 2},
+      {"name": "hdop_e2", "kind": "u16", "at": 4},
+      {"name": "vdop_e2", "kind": "u16", "at": 6},
+      {"name": "stage_s", "kind": "u16", "at": 8},
+      {"name": "satellites", "kind": "u8", "at": 10},
+      {"name": "satellites_in_view", "kind": "u8", "at": 11},
+      {"name": "fix_mode", "kind": "u8", "at": 12},
+      {"name": "reject", "kind": "enum8", "at": 13, "enum": "reject"},
+      {"name": "stage", "kind": "enum8", "at": 14, "enum": "stage"},
+      {"name": "fix_valid", "kind": "flag", "bit": 2},
+      {"name": "residual_valid", "kind": "flag", "bit": 3},
+      {"name": "pps_locked", "kind": "flag", "bit": 4},
+      {"name": "geoid_measured", "kind": "flag", "bit": 5},
+      {"name": "tx_settled", "kind": "flag", "bit": 6},
+      {"name": "levels_fresh", "kind": "flag", "bit": 7}
+    ]},
+    {"name": "pps", "code": 4, "fields": [
+      {"name": "interval_us", "kind": "u32", "at": 0},
+      {"name": "error_us", "kind": "i32", "at": 4},
+      {"name": "samples", "kind": "u32", "at": 8},
+      {"name": "holdover_events", "kind": "u16", "at": 12},
+      {"name": "since_edge_ms", "kind": "u16", "at": 14},
+      {"name": "locked", "kind": "flag", "bit": 2},
+      {"name": "utc_valid", "kind": "flag", "bit": 3}
+    ]},
+    {"name": "burst", "code": 5, "fields": [
+      {"name": "address", "kind": "u32", "at": 0},
+      {"name": "tx_keyed_us", "kind": "u16", "at": 4},
+      {"name": "tx_span_us", "kind": "u16", "at": 6},
+      {"name": "verdict", "kind": "enum8", "at": 8, "enum": "verdict"},
+      {"name": "source", "kind": "enum8", "at": 9, "enum": "source"},
+      {"name": "band", "kind": "enum8", "at": 10, "enum": "band"},
+      {"name": "channel", "kind": "u8", "at": 11},
+      {"name": "bytes", "kind": "u8", "at": 12},
+      {"name": "rssi_dbm", "kind": "i8", "at": 13},
+      {"name": "key_offset_s", "kind": "i8", "at": 14},
+      {"name": "tx_stage_margin_us", "kind": "i8", "at": 15, "scale": 10},
+      {"name": "address_valid", "kind": "flag", "bit": 2},
+      {"name": "rssi_valid", "kind": "flag", "bit": 3},
+      {"name": "airborne", "kind": "flag", "bit": 4},
+      {"name": "tx_span_valid", "kind": "flag", "bit": 5},
+      {"name": "callsign", "kind": "flag", "bit": 6},
+      {"name": "status", "kind": "flag", "bit": 7}
+    ]},
+    {"name": "dwell", "code": 6, "fields": [
+      {"name": "frequency_hz", "kind": "u32", "at": 0},
+      {"name": "start_ms", "kind": "u16", "at": 4},
+      {"name": "end_ms", "kind": "u16", "at": 6},
+      {"name": "phase_ms", "kind": "u16", "at": 8},
+      {"name": "duty_permille", "kind": "u16", "at": 10},
+      {"name": "state", "kind": "enum8", "at": 12, "enum": "slot_state"},
+      {"name": "band", "kind": "enum8", "at": 13, "enum": "band"},
+      {"name": "refusal", "kind": "enum8", "at": 14, "enum": "refusal"},
+      {"name": "noise_dbm", "kind": "i8", "at": 15},
+      {"name": "tx_allowed", "kind": "flag", "bit": 2},
+      {"name": "own_tx_dwell", "kind": "flag", "bit": 3},
+      {"name": "listen_only", "kind": "flag", "bit": 4},
+      {"name": "armed", "kind": "flag", "bit": 5},
+      {"name": "burst_armed", "kind": "flag", "bit": 6}
+    ]},
+    {"name": "flight", "code": 7, "fields": [
+      {"name": "speed_mm_s", "kind": "i32", "at": 0},
+      {"name": "climb_mm_s", "kind": "i32", "at": 4},
+      {"name": "altitude_msl_m", "kind": "i16", "at": 8},
+      {"name": "hdop_e2", "kind": "u16", "at": 10},
+      {"name": "vdop_e2", "kind": "u16", "at": 12},
+      {"name": "declared", "kind": "enum8", "at": 14, "enum": "flight_state"},
+      {"name": "confirmed", "kind": "enum8", "at": 15, "enum": "flight_state"},
+      {"name": "fix_valid", "kind": "flag", "bit": 2},
+      {"name": "rolling", "kind": "flag", "bit": 3},
+      {"name": "climb_valid", "kind": "flag", "bit": 4},
+      {"name": "tx_settled", "kind": "flag", "bit": 5}
+    ]},
+    {"name": "power", "code": 8, "fields": [
+      {"name": "cell_mv", "kind": "u16", "at": 0},
+      {"name": "supply_warnings", "kind": "u16", "at": 2},
+      {"name": "implausible", "kind": "u16", "at": 4},
+      {"name": "charge_warnings", "kind": "u16", "at": 6},
+      {"name": "die_dc", "kind": "i16", "at": 8},
+      {"name": "percent", "kind": "u8", "at": 10},
+      {"name": "power_level", "kind": "enum8", "at": 11, "enum": "power_level"},
+      {"name": "charge", "kind": "enum8", "at": 12, "enum": "charge"},
+      {"name": "trim_offset_mv", "kind": "i16", "at": 13, "retired": true},
+      {"name": "sample_offset_mv", "kind": "i8", "at": 15},
+      {"name": "charging", "kind": "flag", "bit": 2},
+      {"name": "external_power", "kind": "flag", "bit": 3},
+      {"name": "battery_valid", "kind": "flag", "bit": 4},
+      {"name": "die_valid", "kind": "flag", "bit": 5},
+      {"name": "caution", "kind": "flag", "bit": 6, "retired": true},
+      {"name": "trim_learned", "kind": "flag", "bit": 7, "retired": true}
+    ]},
+    {"name": "barometer", "code": 9, "fields": [
+      {"name": "pressure_mpa", "kind": "u32", "at": 0},
+      {"name": "altitude_mm", "kind": "i32", "at": 4},
+      {"name": "climb_mm_s", "kind": "i32", "at": 8},
+      {"name": "temperature_dc", "kind": "i16", "at": 12},
+      {"name": "active", "kind": "flag", "bit": 2},
+      {"name": "temperature_valid", "kind": "flag", "bit": 3},
+      {"name": "climb_adopted", "kind": "flag", "bit": 4}
+    ]},
+    {"name": "motion", "code": 10, "fields": [
+      {"name": "slip_mg", "kind": "i16", "at": 0},
+      {"name": "normal_mg", "kind": "i16", "at": 2},
+      {"name": "lateral_mg", "kind": "i16", "at": 4},
+      {"name": "longitudinal_mg", "kind": "i16", "at": 6},
+      {"name": "most_normal_mg", "kind": "i16", "at": 8},
+      {"name": "least_normal_mg", "kind": "i16", "at": 10},
+      {"name": "imu_error", "kind": "u8", "at": 12},
+      {"name": "sensor_error", "kind": "u8", "at": 13},
+      {"name": "slip_valid", "kind": "flag", "bit": 2},
+      {"name": "gload_valid", "kind": "flag", "bit": 3},
+      {"name": "fitted", "kind": "flag", "bit": 4}
+    ]},
+    {"name": "contact", "code": 11, "fields": [
+      {"name": "at_ms", "kind": "u32", "at": 0},
+      {"name": "held_ms", "kind": "u32", "at": 4},
+      {"name": "contact", "kind": "enum8", "at": 8, "enum": "contact"},
+      {"name": "gesture", "kind": "u8", "at": 9},
+      {"name": "down", "kind": "flag", "bit": 2}
+    ]},
+    {"name": "link", "code": 12, "fields": [
+      {"name": "link_session", "kind": "u16", "at": 0},
+      {"name": "payload_bytes", "kind": "u16", "at": 2},
+      {"name": "frame_bytes", "kind": "u16", "at": 4},
+      {"name": "holder", "kind": "u16", "at": 6},
+      {"name": "drops", "kind": "u16", "at": 8},
+      {"name": "action", "kind": "enum8", "at": 10, "enum": "link_action"},
+      {"name": "endpoint", "kind": "enum8", "at": 11, "enum": "endpoint"},
+      {"name": "mtu_exchange_started_by", "kind": "enum8", "at": 12, "enum": "mtu_exchange_starter"},
+      {"name": "claim_held", "kind": "flag", "bit": 2}
+    ]},
+    {"name": "traffic", "code": 13, "fields": [
+      {"name": "address", "kind": "u32", "at": 0},
+      {"name": "distance_m", "kind": "u16", "at": 4},
+      {"name": "bearing_deg", "kind": "u16", "at": 6},
+      {"name": "relative_altitude_m", "kind": "i16", "at": 8, "valid_when": "relative_altitude_valid"},
+      {"name": "closing_mps", "kind": "i16", "at": 10},
+      {"name": "alarm", "kind": "code8", "at": 12, "enum": "alarm_level"},
+      {"name": "source", "kind": "enum8", "at": 13, "enum": "source"},
+      {"name": "rssi_dbm", "kind": "i8", "at": 14},
+      {"name": "tracked", "kind": "u8", "at": 15},
+      {"name": "assessed", "kind": "flag", "bit": 2},
+      {"name": "dismissed", "kind": "flag", "bit": 3},
+      {"name": "in_formation", "kind": "flag", "bit": 4},
+      {"name": "position_valid", "kind": "flag", "bit": 5},
+      {"name": "relative_altitude_valid", "kind": "flag", "bit": 7, "valid_when": "altitude_recorded"},
+      {"name": "altitude_recorded", "kind": "vouch", "bit": 6}
+    ]},
+    {"name": "write", "code": 14, "fields": [
+      {"name": "waited_ms", "kind": "u32", "at": 0},
+      {"name": "phase_ms", "kind": "u16", "at": 4},
+      {"name": "requests", "kind": "u16", "at": 6},
+      {"name": "writes", "kind": "u16", "at": 8},
+      {"name": "forced", "kind": "u16", "at": 10},
+      {"name": "placement", "kind": "enum8", "at": 12, "enum": "placement"},
+      {"name": "kind", "kind": "enum8", "at": 13, "enum": "write_kind"},
+      {"name": "pending", "kind": "flag", "bit": 2}
+    ]},
+    {"name": "screen", "code": 15, "fields": [
+      {"name": "since_page_shown_ms", "kind": "u32", "at": 0},
+      {"name": "page", "kind": "u8", "at": 4},
+      {"name": "mode", "kind": "u8", "at": 5},
+      {"name": "prompt", "kind": "u8", "at": 6},
+      {"name": "alarm", "kind": "code8", "at": 7, "enum": "alarm_level"},
+      {"name": "render_us", "kind": "u32", "at": 8},
+      {"name": "present_us", "kind": "u32", "at": 12},
+      {"name": "backlight", "kind": "flag", "bit": 2},
+      {"name": "powered", "kind": "flag", "bit": 3},
+      {"name": "holding", "kind": "flag", "bit": 4}
+    ]},
+    {"name": "gap", "code": 16, "fields": [
+      {"name": "dropped", "kind": "u32", "at": 0},
+      {"name": "span_ms", "kind": "u32", "at": 4},
+      {"name": "total", "kind": "u32", "at": 8},
+      {"name": "capacity", "kind": "u16", "at": 12}
+    ]},
+    {"name": "end", "code": 17, "fields": [
+      {"name": "records", "kind": "u32", "at": 0},
+      {"name": "dropped", "kind": "u32", "at": 4}
+    ]},
+    {"name": "duty", "code": 18, "fields": [
+      {"name": "panel_partial_refreshes", "kind": "u16", "at": 0},
+      {"name": "panel_full_refreshes", "kind": "u16", "at": 2},
+      {"name": "backlight_ms", "kind": "u16", "at": 4},
+      {"name": "rx_armed_ms", "kind": "u16", "at": 6},
+      {"name": "tx_keyed_ms", "kind": "u16", "at": 8},
+      {"name": "ble_connected_ms", "kind": "u16", "at": 10},
+      {"name": "annunciator_ms", "kind": "u16", "at": 12}
+    ]},
+    {"name": "switch", "code": 19, "fields": [
+      {"name": "to_hz", "kind": "u32", "at": 0},
+      {"name": "margin_us", "kind": "i32", "at": 4},
+      {"name": "took_us", "kind": "u16", "at": 8},
+      {"name": "gap_us", "kind": "u16", "at": 10},
+      {"name": "change", "kind": "enum8", "at": 12, "enum": "switch_kind"},
+      {"name": "armed_ahead", "kind": "flag", "bit": 2},
+      {"name": "late", "kind": "flag", "bit": 3}
+    ]},
+    {"name": "loop", "code": 20, "fields": [
+      {"name": "passes", "kind": "u16", "at": 0},
+      {"name": "busy_ms", "kind": "u16", "at": 2},
+      {"name": "worst_pass_us", "kind": "u32", "at": 4},
+      {"name": "worst_pass_phase_ms", "kind": "u16", "at": 8},
+      {"name": "worst_gap_ms", "kind": "u16", "at": 10},
+      {"name": "worst_gap_phase_ms", "kind": "u16", "at": 12},
+      {"name": "worst_service", "kind": "enum8", "at": 14, "enum": "loop_service"},
+      {"name": "worst_tick_ms", "kind": "u8", "at": 15}
+    ]},
+    {"name": "adsb", "code": 21, "fields": [
+      {"name": "address", "kind": "u24", "at": 0},
+      {"name": "adsb_version", "kind": "bits", "at": 3, "shift": 0, "width": 3, "valid_when": "adsb_version_valid"},
+      {"name": "gva", "kind": "bits", "at": 3, "shift": 3, "width": 2, "valid_when": "gva_valid"},
+      {"name": "pressure_altitude_ft", "kind": "i32", "at": 4, "valid_when": "pressure_altitude_valid"},
+      {"name": "height_difference_ft", "kind": "i16", "at": 8, "valid_when": "height_difference_valid"},
+      {"name": "height_difference_age_ms", "kind": "i16", "at": 10, "valid_when": "height_difference_valid"},
+      {"name": "gnss_relative_altitude_m", "kind": "i16", "at": 12, "valid_when": "gnss_relative_altitude_valid"},
+      {"name": "pressure_relative_altitude_m", "kind": "i16", "at": 14, "valid_when": "pressure_relative_altitude_valid"},
+      {"name": "adsb_version_valid", "kind": "flag", "bit": 2},
+      {"name": "gva_valid", "kind": "flag", "bit": 3},
+      {"name": "pressure_altitude_valid", "kind": "flag", "bit": 4},
+      {"name": "height_difference_valid", "kind": "flag", "bit": 5},
+      {"name": "gnss_relative_altitude_valid", "kind": "flag", "bit": 6},
+      {"name": "pressure_relative_altitude_valid", "kind": "flag", "bit": 7}
+    ]}
+  ],
+  "enums": {
+    "reset": {"mirrors": {"type": "power::ResetReason", "header": "core/power/reset_reason.h"},
+      "values": [
+        {"name": "UNKNOWN", "code": 0, "mirrors": "Unknown"},
+        {"name": "POWER ON", "code": 1, "mirrors": "PowerOn"},
+        {"name": "RESET PIN", "code": 2, "mirrors": "Pin"},
+        {"name": "BROWNOUT", "code": 3, "mirrors": "Brownout"},
+        {"name": "SOFT RESET", "code": 4, "mirrors": "Software"},
+        {"name": "WATCHDOG", "code": 5, "mirrors": "Watchdog"},
+        {"name": "CPU LOCKUP", "code": 6, "mirrors": "Lockup"},
+        {"name": "CHARGER WAKE", "code": 7, "mirrors": "ChargerWake"},
+        {"name": "BUTTON WAKE", "code": 8, "mirrors": "LowPowerWake"},
+        {"name": "DEBUGGER", "code": 9, "mirrors": "Debug"}
+      ]},
+    "image_state": {"mirrors": {"type": "dfu::ImageState", "header": "core/dfu/update.h"},
+      "values": [
+        {"name": "confirmed", "code": 0, "mirrors": "Confirmed"},
+        {"name": "probation", "code": 1, "mirrors": "Probation"},
+        {"name": "reverted", "code": 2, "mirrors": "Reverted"},
+        {"name": "refused", "code": 3, "mirrors": "Refused"}
+      ]},
+    "profile": {"declared": true,
+      "values": [
+        {"name": "full", "code": 0},
+        {"name": "power_run", "code": 1},
+        {"name": "flight_run", "code": 2}
+      ]},
+    "alarm_setting": {
+      "values": [
+        {"name": "off", "code": 0},
+        {"name": "visual", "code": 1},
+        {"name": "soft", "code": 2},
+        {"name": "loud", "code": 3}
+      ]},
+    "reject": {"mirrors": {"type": "gnss::FixReject", "header": "core/gnss/validity.h"},
+      "values": [
+        {"name": "NONE", "code": 0, "mirrors": "None"},
+        {"name": "NO SOLUTION", "code": 1, "mirrors": "NoSolution"},
+        {"name": "NO RMC", "code": 2, "mirrors": "MissingRmc"},
+        {"name": "NO GGA", "code": 3, "mirrors": "MissingGga"},
+        {"name": "STALE", "code": 4, "mirrors": "Stale"},
+        {"name": "NO DATE", "code": 5, "mirrors": "NoDate"},
+        {"name": "JUMP", "code": 6, "mirrors": "Jump"}
+      ]},
+    "stage": {"mirrors": {"type": "gnss::Stage", "header": "core/gnss/acquisition.h"},
+      "values": [
+        {"name": "silent", "code": 0, "mirrors": "Silent"},
+        {"name": "blind", "code": 1, "mirrors": "Blind"},
+        {"name": "solving", "code": 2, "mirrors": "Solving"},
+        {"name": "fixed", "code": 3, "mirrors": "Fixed"}
+      ]},
+    "verdict": {"mirrors": {"type": "radio::Verdict", "header": "core/radio/log.h"},
+      "values": [
+        {"name": "transmitted", "code": 0, "mirrors": "Transmitted"},
+        {"name": "lost", "code": 1, "mirrors": "Lost"},
+        {"name": "held", "code": 2, "mirrors": "Held"},
+        {"name": "unarmed", "code": 3, "mirrors": "Unarmed"},
+        {"name": "received", "code": 4, "mirrors": "Received"},
+        {"name": "named", "code": 5, "mirrors": "Named"},
+        {"name": "bad_crc", "code": 6, "mirrors": "BadCrc"},
+        {"name": "unframed", "code": 7, "mirrors": "Unframed"},
+        {"name": "miskeyed", "code": 8, "mirrors": "Miskeyed"},
+        {"name": "undecoded", "code": 9, "mirrors": "Undecoded"},
+        {"name": "unsupported", "code": 10, "mirrors": "Unsupported"},
+        {"name": "unattempted", "code": 11, "mirrors": "Unattempted"},
+        {"name": "declared", "code": 12, "mirrors": "Declared"},
+        {"name": "deferred", "code": 13, "mirrors": "Deferred"},
+        {"name": "forced", "code": 14, "mirrors": "Forced"},
+        {"name": "busy", "code": 15, "mirrors": "Busy"}
+      ]},
+    "source": {"mirrors": {"type": "model::Source", "header": "core/model/aircraft.h"},
+      "values": [
+        {"name": "adsl_direct", "code": 0, "mirrors": "AdslDirect"},
+        {"name": "adsl_uplink", "code": 1, "mirrors": "AdslUplink"},
+        {"name": "alptas", "code": 2, "mirrors": "Alptas"},
+        {"name": "own", "code": 3, "mirrors": "Own"},
+        {"name": "adsb", "code": 4, "mirrors": "Adsb"}
+      ]},
+    "band": {"mirrors": {"type": "model::Band", "header": "core/model/band.h"},
+      "values": [
+        {"name": "M", "code": 0, "mirrors": "M"},
+        {"name": "O", "code": 1, "mirrors": "O"}
+      ]},
+    "slot_state": {"mirrors": {"type": "timing::SlotState", "header": "core/timing/slot.h"},
+      "values": [
+        {"name": "uplink_rx_o_band", "code": 0, "mirrors": "UplinkRxOBand"},
+        {"name": "switch_o_band_to_m_band", "code": 1, "mirrors": "SwitchOBandToMBand"},
+        {"name": "slot0", "code": 2, "mirrors": "Slot0"},
+        {"name": "hop", "code": 3, "mirrors": "Hop"},
+        {"name": "slot1", "code": 4, "mirrors": "Slot1"},
+        {"name": "switch_m_band_to_o_band", "code": 5, "mirrors": "SwitchMBandToOBand"}
+      ]},
+    "refusal": {"declared": true,
+      "values": [
+        {"name": "none", "code": 0},
+        {"name": "over_budget", "code": 1},
+        {"name": "unarmed", "code": 2},
+        {"name": "gate_closed", "code": 3},
+        {"name": "off_schedule", "code": 4},
+        {"name": "held_for_fix", "code": 5}
+      ]},
+    "flight_state": {"mirrors": {"type": "flight::FlightState", "header": "core/flight/state.h"},
+      "values": [
+        {"name": "unknown", "code": 0, "mirrors": "Unknown"},
+        {"name": "on_ground", "code": 1, "mirrors": "Ground"},
+        {"name": "airborne", "code": 2, "mirrors": "Airborne"}
+      ]},
+    "power_level": {"mirrors": {"type": "power::PowerLevel", "header": "core/power/cutoff.h"},
+      "values": [
+        {"name": "unknown", "code": 0, "mirrors": "Unknown"},
+        {"name": "normal", "code": 1, "mirrors": "Normal"},
+        {"name": "critical", "code": 2, "mirrors": "Critical"},
+        {"name": "flat", "code": 3, "mirrors": "Flat"},
+        {"name": "low", "code": 4, "mirrors": "Low"}
+      ]},
+    "charge": {"mirrors": {"type": "power::ChargeCondition", "header": "core/power/charging.h"},
+      "values": [
+        {"name": "unknown", "code": 0, "mirrors": "Unknown"},
+        {"name": "ok", "code": 1, "mirrors": "Ok"},
+        {"name": "too_cold", "code": 2, "mirrors": "TooCold"},
+        {"name": "too_hot", "code": 3, "mirrors": "TooHot"}
+      ]},
+    "contact": {"mirrors": {"type": "events::Contact", "header": "core/events/input.h"},
+      "values": [
+        {"name": "button", "code": 0, "mirrors": "Button"},
+        {"name": "pad", "code": 1, "mirrors": "Pad"}
+      ]},
+    "link_action": {"declared": true,
+      "values": [
+        {"name": "up", "code": 0},
+        {"name": "down", "code": 1},
+        {"name": "claim_taken", "code": 2},
+        {"name": "claim_released", "code": 3},
+        {"name": "received", "code": 4},
+        {"name": "sent", "code": 5},
+        {"name": "dropped", "code": 6}
+      ]},
+    "mtu_exchange_starter": {"mirrors": {"type": "events::MtuExchangeStarter", "header": "core/events/link.h"},
+      "values": [
+        {"name": "none", "code": 0, "mirrors": "None"},
+        {"name": "central", "code": 1, "mirrors": "Central"},
+        {"name": "unit", "code": 2, "mirrors": "Unit"},
+        {"name": "both", "code": 3, "mirrors": "Both"}
+      ]},
+    "endpoint": {"mirrors": {"type": "events::Endpoint", "header": "core/events/link.h"},
+      "values": [
+        {"name": "config", "code": 0, "mirrors": "Config"},
+        {"name": "nmea", "code": 1, "mirrors": "Nmea"},
+        {"name": "log", "code": 2, "mirrors": "Log"},
+        {"name": "peer", "code": 3, "mirrors": "Peer"}
+      ]},
+    "placement": {"mirrors": {"type": "timing::DurableWriteVerdict", "header": "core/timing/durable_write.h"},
+      "values": [
+        {"name": "idle", "code": 0, "mirrors": "Idle"},
+        {"name": "hold", "code": 1, "mirrors": "Hold"},
+        {"name": "place", "code": 2, "mirrors": "Place"},
+        {"name": "forced", "code": 3, "mirrors": "Forced"}
+      ]},
+    "write_kind": {"mirrors": {"type": "power::DurableWrite", "header": "core/power/cutoff.h"},
+      "values": [
+        {"name": "settings", "code": 0, "mirrors": "Settings"},
+        {"name": "flight_record", "code": 1, "mirrors": "FlightRecord"}
+      ]},
+    "switch_kind": {"declared": true,
+      "values": [
+        {"name": "retune", "code": 0},
+        {"name": "hop", "code": 1},
+        {"name": "to_o_band", "code": 2},
+        {"name": "to_m_band", "code": 3},
+        {"name": "wake", "code": 4}
+      ]},
+    "loop_service": {"description": "A code names the service, not its place in the loop, so every product decodes alike.", "declared": true,
+      "values": [
+        {"name": "config", "code": 0},
+        {"name": "ownship", "code": 1},
+        {"name": "power", "code": 2},
+        {"name": "radio", "code": 3},
+        {"name": "traffic", "code": 4},
+        {"name": "alarm", "code": 5},
+        {"name": "nmea", "code": 6},
+        {"name": "flight_log", "code": 7},
+        {"name": "capture", "code": 8},
+        {"name": "screen", "code": 9},
+        {"name": "board_poll", "code": 10},
+        {"name": "bravo", "code": 11},
+        {"name": "adsb", "code": 12},
+        {"name": "button", "code": 13},
+        {"name": "peer", "code": 14}
+      ]},
+    "alarm_level": {"mirrors": {"type": "traffic::Level", "header": "core/traffic/alarm.h"},
+      "values": [
+        {"name": "none", "code": 0, "mirrors": "None"},
+        {"name": "advisory", "code": 1, "mirrors": "Advisory"}
+      ]}
+  }
+}

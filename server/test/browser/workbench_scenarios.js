@@ -1,8 +1,8 @@
 (async () => {
   const workbench = document.querySelector("[data-controller=dev-simulator][data-mode]")
   if (!workbench) throw new Error("Open /briefing/simulator and wait for the firmware workbench to boot")
-  const menu = workbench.querySelector("#scenario")
-  if (menu.disabled) throw new Error(workbench.querySelector("#scenariohint").textContent || "Scenarios are not ready")
+  const menu = workbench.querySelector("[data-dev-simulator-target=scenario]")
+  if (menu.disabled) throw new Error(workbench.querySelector("[data-dev-simulator-target=scenarioHint]").textContent || "Scenarios are not ready")
 
   const url = new URL(workbench.dataset.devSimulatorManifestValue, location.href).href
   const downloads = performance.getEntriesByType("resource").filter(entry => entry.name === url)

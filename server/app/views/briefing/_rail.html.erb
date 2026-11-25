@@ -6,6 +6,8 @@
       fleet_activation_value: briefing_activation_path,
       fleet_setup_value: briefing_setup_path
     } do %>
+  <%= render "briefing/bluetooth_check" %>
+
   <% if variant == "home" %>
     <div class="fleet-unsupported" data-fleet-target="unsupported" hidden>
       <h1><%= t("briefing.devices.no_bluetooth_title") %></h1>

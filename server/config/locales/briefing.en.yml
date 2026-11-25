@@ -30,6 +30,23 @@ en:
       no_bluetooth: "This browser cannot connect to Bluetooth devices. Chrome and Edge support Bluetooth on Android, Windows, macOS and Linux."
       copy_link: Copy the link
       copied: Copied
+    bluetooth_check:
+      title: Switch on Bluetooth in this browser
+      hint: "Briefing reaches your devices over Bluetooth, to connect, set up and update them. Each line says Done once it works."
+      ok: Done
+      missing: To do
+      unknown: Checked once Web Bluetooth is on
+      optional: Optional
+      flag: Turn on Web Bluetooth
+      flag_how: "Chrome keeps it off on Linux. Copy this address into the address bar, set Web Bluetooth to Enabled, then click Relaunch."
+      adapter: Turn on Bluetooth
+      adapter_how: "Turn on Bluetooth in the computer's settings. A computer without Bluetooth needs a USB Bluetooth adapter. Or open Briefing on an Android phone."
+      adapter_linux: "On Linux, also start the Bluetooth service:"
+      remember: Reconnect your devices by themselves
+      remember_how: "Copy this address into the address bar, set it to Enabled, then click Relaunch. Briefing then reconnects the devices it knows without showing the list."
+    copy_code:
+      copy: Copy
+      copied: Copied
     unit:
       menu: Disconnect or forget
       connect: Connect
@@ -142,6 +159,14 @@ en:
         connect: Connect
         aircraft: Your aircraft
       start: "Plug your Go or Bravo into this computer with a USB cable. Briefing installs skyBlip on it, then connects to it."
+      phone_ahead: "Bluetooth is off or missing on this computer. Install from it anyway. The last step shows a code that carries the setup to your phone."
+      linux:
+        title: On Linux, before you start
+        bluetooth_first: "Turn on Web Bluetooth with the steps on this page first. Chrome restarts to apply it, and the last step connects over Bluetooth."
+        dialout: "Let your user open the device's USB port, then log out and back in:"
+        dialout_note: "Already done on this computer? Skip it. On Arch Linux, the group is uucp."
+        snap: "Using Chromium from the Snap Store? Let it see USB drives:"
+        drive: "Not in the window? Open the drive once in your file manager so Linux mounts it, then choose it in the side panel."
       install: Install
       connect_running: Connect it over Bluetooth
       drive: "%{name} restarted as a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
@@ -158,12 +183,28 @@ en:
       keep_plugged: Keep it plugged in. This takes a few seconds.
       installed: "Installed. Last step: connect %{name} over Bluetooth."
       installed_trusted: "Installed. Last step: connect %{name} over Bluetooth. It trusts this browser, so it asks for no button press."
+      connect_after_flag: "Or turn on Web Bluetooth with the steps on this page. Once Chrome has restarted, open Your devices and connect it from there."
+      connect_after_adapter: "Or turn on Bluetooth with the steps on this page, and Connect appears here."
+      installed_no_bluetooth: "Installed. This computer cannot reach %{name} over Bluetooth, so finish the setup on your phone."
+      resumed: "skyBlip is installed on %{name}. Connect it from this phone to finish the setup."
+      resumed_no_bluetooth: "skyBlip is installed on %{name}, but this browser cannot connect over Bluetooth. Open this page in Chrome on an Android phone, or on a computer with Bluetooth."
+      another: "Install another device"
+      handoff:
+        code: "Code that opens this setup on your phone"
+        scan: "Scan this code with the camera of an Android phone, and open the link in Chrome. Briefing opens on this step: choose %{name} in the list."
+        type: "No camera? Open skyblip.eu/setup in Chrome on the phone."
+      phone:
+        installed: "Installed skyBlip from a computer? Switch the device on, then connect it from this phone to finish the setup."
+        connect: "Connect it"
+        list: "In the list, a new Go is named activate, four characters, then skyBlip. A Bravo is named skyBlip Bravo and four characters."
+        new_title: "New device?"
+        new: "skyBlip installs from a computer with a USB cable, in Chrome or Edge. Open skyblip.eu/setup on the computer. Without Bluetooth, it shows a code that brings you back to this phone."
       connect: Connect
       choose_in_list: "Choose %{name} in the list."
       activating: "Activating %{name}."
       confirm_activation: Press the Go's button to activate it.
       the_device: the device
-      unsupported_phone: "Install from a computer first, in Chrome or Edge. This phone then sets up and updates your devices over Bluetooth."
+      unsupported_phone: "This browser cannot connect to your devices over Bluetooth. Install from a computer, in Chrome or Edge, then connect from that computer or from Chrome on an Android phone."
       unsupported_other: Installing over USB needs Chrome or Edge on a computer.
       by_hand_link: Install it by hand instead
       guide_go: New to the Go? Read its first steps.
@@ -187,6 +228,7 @@ en:
       port_closed: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge. A unit already running skyBlip lists no USB port: connect it over Bluetooth."
       port_failed: "The USB port could not be opened:"
       port_busy: "Another program is using the device. Close it, then click Install again."
+      port_busy_linux: "Another program is using the device, or Linux does not let this browser open it. Close any program using it. If none is, run sudo usermod -aG dialout $USER in a terminal (the group is uucp on Arch Linux), log out and back in, then click Install again."
       other_board: "This board does not run skyBlip. skyBlip runs on a LilyGO T-Echo or T-Echo Plus, and on a Seeed MeshTracker X1."
       not_drive: "That is not the drive. Choose the drive named TECHOBOOT or X1."
       drive_denied: "Briefing needs permission to save to the drive. Choose it again, and click Allow or Save changes."
@@ -291,7 +333,6 @@ en:
         airborne: Airborne
         unknown: No GPS fix yet
       track:
-        release: release
         development: development
       running: "%{version}, %{track}"
       firmware_current: up to date

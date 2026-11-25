@@ -6,19 +6,21 @@ This directory holds the host tooling. The Python scripts run on the standard li
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| `blip_diagnostics_layout.py` | the diagnostics decoder tables `diagnostics_layout.py` generates. Never edit it by hand |
 | [`blip_ndjson.py`](blip_ndjson.py) | the NDJSON a fetch writes and `decode` reads: the session notes, the torn tail and the summary |
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
 | [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the press's verdict |
 | [`blip_fetch.py`](blip_fetch.py) | `blip.py fetch`: offload a store to NDJSON, resuming where a dead fetch stopped |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec, with the names `schemas/link.v1.json` gives its numbers |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`. The C++ opens with `// clang-format off`, so the generator alone decides its layout |
+| [`diagnostics_layout.py`](diagnostics_layout.py) | write the C++ header, the C++ mirrors test and the Python and JavaScript decoder tables generated from `schemas/diagnostics_layout.v1.json` |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build a board's drag-and-drop install image, refusing to write outside its factory bootloader window |
 | `build_local.sh` | build the device images of the products it is given, `skyblip_go` by default, off a committed ref, from a bare machine |
 | `build_image.sh` | build, sign and check one product's images in a ready workspace. `build_local.sh`, CI and a release share it |
 | `make_wordmark.py` | rasterise the wordmark into `firmware/ui/widgets/wordmark.cpp` |
-| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator |
+| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `skyblip-simulator-scenarios.json` each release carries for the simulator |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones |
 | `firmware_tree.rb` | print the firmware version `firmware/VERSION` holds (`version firmware`) or every product that declares a board, as JSON (`products firmware`), for the workflows and `build_image.sh` |
 | `release_files.rb` | stage a production release from its images, as `dev_release.rb` stages a pre-release: each product's images named after the version, the simulator, one `NOTICE.md` with every license text, `PROTOCOLS.md` and `SHA256SUMS` |
@@ -46,7 +48,7 @@ macOS goes through CoreBluetooth and asks for Bluetooth permission the first tim
 
 - `./scripts/blip.py stream --seconds 30` subscribes to Nordic UART (`6e400003`), reassembles lines as the browser client does, and prints each NMEA sentence with a host timestamp. A sentence with a bad checksum is flagged, never dropped.
 - `./scripts/blip.py command '{"command":"diagnostics"}'` writes one command, as JSON with the registry's full names, to the config endpoint (`69c21302`) and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A multi-frame reply ends when a frame stops saying `"more": true`. A command the unit asks about on its glass, such as `gnss_cold_start`, is answered `pending`, and `blip.py` holds the link up to 35 s for the press, because the unit cancels a prompt whose link drops.
-- `./scripts/blip.py protocols` prints each radio protocol stack the unit carries with its version, as `ADS-L 0.1.0`.
+- `./scripts/blip.py protocols` prints each radio protocol stack the unit carries with its version, as `ADS-L 0.8.0`.
 - `./scripts/blip.py --name "skyBlip Bravo" capture power_run` arms a capture with the profile `full`, `power_run` or `flight_run`, and `capture stop` stops it. The unit asks for a press, on its glass or its lamp, and `blip.py` waits up to 35 s for the verdict.
 
 `blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains needs no edit here. Its decoder and encoder refuse what the unit's own refuse, as `schemas/link.v1.vectors.json` lists, and `blip.py` stops on a `FrameError` instead of guessing.
@@ -148,7 +150,7 @@ A third unit at the top of TXACC would sit 2 dB higher, and whether the assertio
 
 ## The decoders
 
-`blip_records.py` holds one table per record type, a tuple of `(name, codec)` pairs where a codec is a closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Add a record type as one entry in `DIAGNOSTICS_TYPES`, and a field as one pair. The tables match `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp` byte for byte, and take their names from `schemas/diagnostics_log.v1.schema.json`. `test_blip.py` holds them to the schema, and to the bytes the firmware writes in `schemas/diagnostics_log.v1.vectors.json`.
+`schemas/diagnostics_layout.v1.json` is the one place a diagnostics record is laid out: each type's code, and each field's offset or flag bit, its kind and its enum. To add a record type or a field, add it there, run `python3 scripts/diagnostics_layout.py`, then write it in the type's `record_of()` (`firmware/core/diagnostics/`) and describe it in `schemas/diagnostics_log.v1.schema.json`, the decoded view. Add the type's record to `schemas/diagnostics_log.v1.vectors.json` too. The generator writes `blip_diagnostics_layout.py`, which `blip_records.py` turns into `DIAGNOSTICS_TYPES`, one `(name, codec)` pair per field. `check_diagnostics_layout.py` fails when a generated file is stale or the schema disagrees with the layout, and `test_blip.py` holds the decoders to the bytes the firmware writes in the vectors. The flight log tables in `blip_records.py` are still written by hand, and match `firmware/core/flight/log_record.cpp` byte for byte.
 
 ```python
 import blip_ndjson as ndjson

@@ -6,6 +6,7 @@
 #include "doctest/doctest.h"
 #include "test/support/anchored_clock.h"
 #include "test/support/armings_rig.h"
+#include "test/support/rf_pass_rig.h"
 
 using namespace skyblip;
 
@@ -97,6 +98,33 @@ TEST_CASE("rf: a position whose .500 fix comes after .810 is lost, and counted a
     CHECK(position_tx_at_us(armings) == 0);
     CHECK(armings.state.air.tx_redrawn_for_fix == 0);
     CHECK(armings.state.air.tx_held_for_fix == 1);
+}
+
+// The pinned case: serial 1 drawn on A past .490 waits for its .500 fix, in hand at .808.
+TEST_CASE("rf: a position redrawn to .811, past A's last instant, keys and ends inside its slot") {
+    Pass pass;
+    REQUIRE(pass.begin() == Status::Ok);
+    pass.state.activation.serial = 1;
+    pass.state.own.fix_at_ms = 2000;
+    pass.state.own.fix_in_hand_ms = 2070;
+    pass.pass_on_fix(2420000);
+    pass.pass_on_fix(2450000);
+    pass.pass_on_fix(2600000);
+    REQUIRE_FALSE(pass.state.rf.dwell.burst_armed);
+
+    pass.state.own.fix_at_ms = 2500;
+    pass.state.own.fix_in_hand_ms = 2808;
+    pass.pass_on_fix(2809000);
+    pass.executor_until(2812000, 1);
+    pass.chip.signal_tx_done();
+    pass.pass_on_fix(2817000);
+
+    CHECK(pass.first_tx_us == 2811000);
+    // C.5's slot and G.1.16's age of the .500 fix both end at 3000 ms, C.2's frame is 4640 us.
+    CHECK(pass.first_tx_us + 4640 <= 3000000);
+    CHECK(pass.state.air.tx_redrawn_for_fix == 1);
+    CHECK(pass.state.air.tx_ok == 1);
+    CHECK(pass.state.air.tx_lost == 0);
 }
 
 // The pinned case: drawn at .48x, deferred past 490 ms on a busy channel, and missed for its age.

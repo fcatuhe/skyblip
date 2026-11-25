@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Fail if the browser simulator's JavaScript binds a C export that does not exist.
+"""Fail if the browser simulator's JavaScript and the firmware's exports disagree.
 
     python3 scripts/check_simulator_exports.py
 
 firmware/simulator/web/embed.js binds firmware exports through cwrap() by C name, and
 the names resolve only when a page loads the module, so a rename in
 firmware/simulator/frontends/browser.cpp would otherwise break only in the browser.
+An export embed.js never binds is code no page can reach, so it fails too.
 """
 import os
 import re
@@ -19,9 +20,10 @@ EXPORT = re.compile(r"KEEPALIVE\b[^(;{]*?\b(simulator_\w+)\s*\(")
 BINDING = re.compile(r"\bcall\(\s*'(simulator_\w+)'")
 
 
-def unbound(root=ROOT):
+def mismatches(root=ROOT):
     exports = set(EXPORT.findall(read(root, BROWSER)))
-    return sorted(set(BINDING.findall(read(root, EMBED))) - exports)
+    bindings = set(BINDING.findall(read(root, EMBED)))
+    return sorted(bindings - exports), sorted(exports - bindings)
 
 
 def read(root, relative):
@@ -30,12 +32,14 @@ def read(root, relative):
 
 
 def main():
-    missing = unbound()
+    missing, unbound = mismatches()
     for name in missing:
         report(f"{EMBED}: binds {name}, which {BROWSER} does not export")
-    if missing:
+    for name in unbound:
+        report(f"{BROWSER}: exports {name}, which {EMBED} never binds")
+    if missing or unbound:
         return 1
-    report("OK: every C name embed.js binds is exported by browser.cpp.")
+    report("OK: embed.js binds every C name browser.cpp exports, and no other.")
     return 0
 
 
