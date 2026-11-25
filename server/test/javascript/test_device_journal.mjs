@@ -60,6 +60,20 @@ test('an upload the unit refused once it landed is told with what it found in sl
   );
 });
 
+// The unit's acknowledgement names no profile, so the start of the task is the one place the journal can say which capture was armed.
+test('a capture is told with the profile the page asked for', async () => {
+  airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 }));
+  const journal = recorder();
+  const fleet = new Fleet({ journal });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.capture);
+  unit.updater.orderCapture('power_run');
+  await settled(fleet, () => journal.named('device.task_started').length);
+  unit.disconnect();
+
+  assert.deepEqual(journal.named('device.task_started').map(({ task, profile }) => ({ task, profile })), [{ task: 'capture', profile: 'power_run' }]);
+});
+
 // A pilot who asks for help is read back from the journal, so a connection says what the unit was like.
 test('a connection is told once, with what the device runs and holds', async () => {
   airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300, settings: 'prior', variant: 'plus' }));

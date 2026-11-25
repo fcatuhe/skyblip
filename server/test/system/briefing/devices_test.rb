@@ -257,13 +257,16 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
 
       page.execute_script("#{unit("3F2A")}.press()")
       assert_selector ".unit-message.is-good", text: "Armed. The LED blinks twice every 3 s"
-      assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture"
-      assert_button "Arm", disabled: true
+      assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture for 1 min"
+      assert_no_select "Profile"
+      assert_no_button "Arm"
 
       click_button "Stop the capture"
       page.execute_script("#{unit("3F2A")}.press()")
       assert_selector ".unit-message.is-good", text: "Stopped. The LED is back to its single blink."
       assert_equal false, page.evaluate_script("#{unit("3F2A")}.capturing")
+      assert_select "Profile"
+      assert_no_button "Stop the capture"
     end
   end
 
@@ -274,14 +277,31 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       within("[data-unit-target=capture]") do
         assert_selector "[data-unit-target=captureState]",
           text: "Nothing is recording. A full capture keeps 32 min, a power run or a flight run 120 h. Starting one erases 3 stored flights."
+        assert_no_button "Stop the capture"
         select "Power run", from: "Profile"
         click_button "Arm"
       end
       assert_glass "CAPTURE"
       page.execute_script("#{unit("00012A")}.press()")
-      assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture: 960 records so far. The device keeps the last 120 h of it."
-      assert_button "Arm", disabled: true
+      assert_selector "[data-unit-target=captureState]",
+        text: /\ARecording a Power run capture for 1 min, started \d\d:\d\d\. 960 records at the last read\. The device keeps the last 120 h of it\.\z/
+      assert_no_button "Arm"
+      assert_button "Stop the capture"
       assert_no_button "Fetch and send"
+    end
+  end
+
+  # A page opened on a unit that already records once showed the first profile, Full, beside a power run.
+  test "a capture that runs when the page connects says which, and offers only its stop" do
+    in_range a_bravo(capturing: true, capture: "power_run")
+    on_the_shelf do
+      connect_device
+      within("[data-unit-target=capture]") do
+        assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture for 1 min, started"
+        assert_no_select "Profile"
+        assert_no_button "Arm"
+        assert_button "Stop the capture", disabled: false
+      end
     end
   end
 

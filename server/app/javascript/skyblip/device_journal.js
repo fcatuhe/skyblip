@@ -75,6 +75,7 @@ export class DeviceWitness {
   #started(state) {
     const task = taskOf(state.task);
     this.#task = { task, since: this.#now(), confirmed: false };
+    if (task === 'capture') return ['device.task_started', { task, profile: state.asked?.profile }];
     if (task !== 'install') return ['device.task_started', { task }];
     this.#install = { since: this.#now(), from: state.running };
     const { file, advice, upgrade } = state;
