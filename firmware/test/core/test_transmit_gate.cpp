@@ -18,6 +18,7 @@ Requirements all_met() {
     met.settled = true;
     met.utc = true;
     met.pps = true;
+    met.positions = true;
     return met;
 }
 
@@ -43,6 +44,7 @@ TEST_CASE("transmit gate: each requirement unmet names its own reason, the first
     CHECK(first_unmet(without(&Requirements::fix)) == NoTx::Fix);
     CHECK(first_unmet(without(&Requirements::utc)) == NoTx::Utc);
     CHECK(first_unmet(without(&Requirements::pps)) == NoTx::Pps);
+    CHECK(first_unmet(without(&Requirements::positions)) == NoTx::Held);
     CHECK(first_unmet(Requirements{}) == NoTx::Address);
     Requirements deaf_and_lost = without(&Requirements::radio);
     deaf_and_lost.pps = false;
@@ -56,6 +58,7 @@ TEST_CASE("transmit gate: the reasons are one word each, spelled in full") {
     CHECK(std::string(to_string(NoTx::Fix)) == "FIX");
     CHECK(std::string(to_string(NoTx::Utc)) == "UTC");
     CHECK(std::string(to_string(NoTx::Pps)) == "PPS");
+    CHECK(std::string(to_string(NoTx::Held)) == "HELD");
     CHECK(std::string(to_string(NoTx::None)).empty());
 }
 
@@ -161,4 +164,21 @@ TEST_CASE("transmit gate: a failure that changes reason keeps its hold and names
     judge_between(gate, without(&Requirements::pps), 60050, 65000);
     judge_between(gate, without(&Requirements::fix), 65050, 70050);
     CHECK(gate.shown() == NoTx::Fix);
+}
+
+// The gate stays open on held positions, so the bursts resume the moment a fix dates them again.
+TEST_CASE("transmit gate: positions held name HELD, shown 10 s later, and the gate stays open" *
+          doctest::test_suite("main")) {
+    TransmitGate gate;
+    judge_between(gate, all_met(), 0, 20000);
+    REQUIRE(gate.on_air());
+
+    const Requirements held = without(&Requirements::positions);
+    judge_between(gate, held, 20050, 30000);
+    CHECK(gate.transmits());
+    CHECK_FALSE(gate.on_air());
+    CHECK(gate.unmet() == NoTx::Held);
+    CHECK(gate.shown() == NoTx::None);
+    judge_between(gate, held, 30050, 30100);
+    CHECK(gate.shown() == NoTx::Held);
 }

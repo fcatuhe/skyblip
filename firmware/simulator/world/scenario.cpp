@@ -91,6 +91,7 @@ bool adsb_from(const json::Reader& reader, protocol::System system, AdsbOut& ads
     adsb.fitted = system == protocol::System::Unknown || integer_or(reader, "adsb", 0) != 0;
     adsb.on_ground = integer_or(reader, "on_ground", 0) != 0;
     adsb.pressure_only = integer_or(reader, "pressure_only", 0) != 0;
+    adsb.aboard = integer_or(reader, "aboard", 0) != 0;
     char category[8] = {0};
     return !reader.read_string("category", category, sizeof(category)) ||
            category_from(category, adsb);
@@ -151,6 +152,8 @@ bool parse_scenario(const char* json, int bytes, Scenario& parsed) {
         if (reader.read_string("system", buffer, sizeof(buffer)))
             aircraft.system = system_from(buffer);
         if (!adsb_from(reader, aircraft.system, aircraft.adsb)) return false;
+        aircraft.address = static_cast<uint32_t>(integer_or(reader, "address", 0));
+        if (reader.read_string("callsign", buffer, sizeof(buffer))) aircraft.callsign = buffer;
         aircraft.north_m = static_cast<double>(integer_or(reader, "north_m", 0));
         aircraft.east_m = static_cast<double>(integer_or(reader, "east_m", 0));
         aircraft.up_m = static_cast<double>(integer_or(reader, "up_m", 0));

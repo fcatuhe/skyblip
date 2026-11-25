@@ -1,6 +1,6 @@
 <form class="unit-capture" data-unit-target="capture" data-action="submit->unit#armCapture" aria-labelledby="unit-capture-title" hidden>
   <h2 class="unit-label" id="unit-capture-title"><%= t("briefing.capture.title") %></h2>
-  <p class="unit-capture-state" role="status" data-unit-target="captureState" hidden></p>
+  <p class="unit-capture-state" data-unit-target="captureState"></p>
   <fieldset class="unit-fields" data-unit-target="captureFields">
     <div class="field">
       <label for="unit-capture-profile"><%= t("briefing.capture.profile") %></label>
@@ -16,7 +16,7 @@
   <p class="unit-message" role="status" data-unit-target="captureMessage" hidden></p>
   <div class="unit-capture-actions">
     <button type="submit" class="button-app" data-unit-target="captureArm" data-label="<%= t("briefing.capture.arm") %>" disabled><%= t("briefing.capture.arm") %></button>
-    <button type="button" class="button-app button-app--text" data-unit-target="captureStop" data-action="unit#stopCapture" disabled><%= t("briefing.capture.stop") %></button>
+    <button type="button" class="button-app" data-unit-target="captureStop" data-action="unit#stopCapture" hidden><%= t("briefing.capture.stop") %></button>
   </div>
 
   <div class="unit-capture-send" data-unit-target="captureSendSection" hidden>

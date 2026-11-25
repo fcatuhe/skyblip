@@ -91,6 +91,7 @@ model::AircraftObservation over_adsl_without_altitude(const model::AircraftObser
     packet.aircraft_category = sent.aircraft_category;
     packet.set_latitude_1e7(sent.latitude_1e7);
     packet.set_longitude_1e7(sent.longitude_1e7);
+    packet.set_protocol_version(1);
     packet.set_altitude_invalid();
     packet.set_speed_q(sent.speed_q);
     model::AircraftObservation heard{};

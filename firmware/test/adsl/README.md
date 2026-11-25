@@ -12,6 +12,7 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the area's page under 
 |---|---|
 | `test_general.cpp` | A.1 to A.5, and the performance appendix |
 | `test_overview.cpp` | B.1 to B.6 |
+| `test_overview_flown.cpp`, this half only | B.5 over the bursts a simulated Go flies beside other clients |
 | `test_physical.cpp` | C.1 to C.5 |
 | `test_datalink.cpp` | D.1 to D.3 |
 | `test_network.cpp` | E.1 to E.4.2 |

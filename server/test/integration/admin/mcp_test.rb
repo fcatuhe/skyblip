@@ -151,6 +151,8 @@ class Admin::McpTest < ActionDispatch::IntegrationTest
     assert response.parsed_body.dig("result", "isError")
     call_tool("get_analytics", { start_on: "last week" }, token:)
     assert response.parsed_body.dig("result", "isError")
+    capped = JSON.parse(call_tool("get_analytics", { start_on: "2026-02-10", end_on: "0001-01-01" }, token:))
+    assert_equal [ (Date.new(2026, 2, 10) - Analytics::MAX_DAYS).iso8601, "2026-02-10" ], capped["filters"].values_at("start_on", "end_on")
   end
 
   # The agent goes from the visitors who activated to a unit and the briefing journal that activated it, and back.
@@ -167,14 +169,15 @@ class Admin::McpTest < ActionDispatch::IntegrationTest
     assert_equal [ "pilot" ], JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:)).sole["activated_by"]
   end
 
-  # An admin demoted after connecting an agent reads nothing more through it.
-  test "an agent whose admin was demoted reads nothing" do
+  # An admin demoted after connecting an agent reads nothing more through it, even once promoted again.
+  test "an agent whose admin was demoted is disconnected for good" do
     token = connect(client_id: CLAUDE_CODE).fetch("access_token")
     users(:francois).update! role: :user
+    users(:francois).update! role: :admin
 
     call_tool("list_events", {}, token:)
 
-    assert response.parsed_body.dig("result", "isError")
+    assert_response :unauthorized
     assert_not Event.exists?(name: "event.listed")
   end
 end

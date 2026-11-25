@@ -125,6 +125,29 @@ TEST_CASE("product: the first fix re-anchors a clock an unfixed stamp anchored a
     CHECK(rig.state().own.fix_dated);
 }
 
+// A leap second, or a cold start correcting its UTC, names one second twice while the edges count
+// on.
+TEST_CASE(
+    "product: two timely whole seconds a second behind, after a stamp stepped back, re-anchor") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    for (uint32_t second = 1; second <= 3; second++)
+        for (uint32_t half = 0; half < 2; half++) solve(rig, second, half, 0, updates);
+    REQUIRE(rig.state().clock.utc_s == kBaseUtcS + 3);
+
+    deliver(rig, Solution{4, 0, 0, kLatencyMs, true, -1, 0, false, true}, updates);
+    deliver(rig, Solution{4, 500, 0, kLatencyMs, true, -1}, updates);
+    CHECK(rig.state().clock.utc_s == kBaseUtcS + 4);
+    CHECK(rig.state().own.fix_at_ms == 3500);
+
+    deliver(rig, Solution{5, 0, 0, kLatencyMs, true, -1}, updates);
+    deliver(rig, Solution{5, 500, 0, kLatencyMs, true, -1}, updates);
+    CHECK(rig.state().clock.utc_s == kBaseUtcS + 4);
+    CHECK(rig.state().clock.utc_anchor_fixed);
+    CHECK(rig.state().own.fix_at_ms == 5500);
+}
+
 // At 9600 the fix burst alone is 333 ms of line, so a timely fix lands about 400 ms after its edge.
 TEST_CASE("product: a fix inside its part's own delivery time anchors the clock, at 9600 too") {
     Rig rig{kBarometerByHand};

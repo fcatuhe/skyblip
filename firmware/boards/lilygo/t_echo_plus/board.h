@@ -174,23 +174,23 @@ class TEchoPlus {
         if (barometer_due(clock, now_ms - last_barometer_ms_)) {
             last_barometer_ms_ = now_ms;
             barometer_quarter_ = 0;
-            trigger_barometer(now_ms, true);
-        } else if (unpublished_barometer_due(clock, now_ms)) {
+            trigger_barometer(now_ms);
+        } else if (quarter_barometer_due(clock, now_ms)) {
             barometer_quarter_ = clock.since_edge_ms / kBarometerConversionPeriodMs;
-            trigger_barometer(now_ms, false);
+            trigger_barometer(now_ms);
         }
     }
 
-    void trigger_barometer(uint32_t now_ms, bool published) {
+    void trigger_barometer(uint32_t now_ms) {
         barometer_triggered_ms_ = now_ms;
-        barometer_published_ = published;
         barometer_converting_ = platform_.trigger_barometer();
         if (!barometer_converting_) barometer_faults_++;
     }
 
+    // INFO: fc 22nov26 G.1.16: every conversion is read, so the newest pressure is a quarter old
     void collect_barometer(uint32_t now_ms) {
         platform::BarometerReading reading{};
-        if (barometer_published_ && platform_.read_barometer(reading)) {
+        if (platform_.read_barometer(reading)) {
             barometer_converting_ = false;
             bus_.barometer.push(events::BarometerSample{
                 reading.pressure_mpa,
@@ -200,10 +200,10 @@ class TEchoPlus {
         }
         if (now_ms - barometer_triggered_ms_ < kBarometerConversionCeilingMs) return;
         barometer_converting_ = false;
-        if (barometer_published_) barometer_faults_++;
+        barometer_faults_++;
     }
 
-    bool unpublished_barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
+    bool quarter_barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!clock.pps_locked)
             return now_ms - barometer_triggered_ms_ >= kBarometerConversionPeriodMs;
         const uint32_t quarter = clock.since_edge_ms / kBarometerConversionPeriodMs;
@@ -266,14 +266,18 @@ class TEchoPlus {
    private:
     static constexpr uint32_t kBarometerConversionsPerSecond =
         kBarometerPublishPeriodMs / kBarometerConversionPeriodMs;
+    static constexpr uint32_t kBarometerMeasurementMs =
+        (parts::Bme280::kMeasurementUs + 999) / 1000;
 
     uint32_t barometer_due_in_ms(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!ports::has(capabilities_, ports::Capability::Barometer))
             return runtime::kServiceRestCeilingMs;
-        if (barometer_converting_ && barometer_published_) return runtime::kServicePassCeilingMs;
-        if (barometer_converting_)
-            return runtime::remaining_ms(now_ms - barometer_triggered_ms_,
-                                         kBarometerConversionCeilingMs);
+        // INFO: fc 22nov26 a conversion is read once it can be done, then on each pass until it is
+        if (barometer_converting_) {
+            const uint32_t converting_ms = now_ms - barometer_triggered_ms_;
+            return converting_ms < kBarometerMeasurementMs ? kBarometerMeasurementMs - converting_ms
+                                                           : runtime::kServicePassCeilingMs;
+        }
         const uint32_t published_ms =
             boards::barometer_due_in_ms(clock, now_ms - last_barometer_ms_);
         const uint32_t period_ms = kBarometerConversionPeriodMs;
@@ -467,7 +471,6 @@ class TEchoPlus {
     uint32_t barometer_quarter_{0};
     uint32_t barometer_faults_{0};
     bool barometer_converting_{false};
-    bool barometer_published_{false};
 };
 
 }  // namespace skyblip::boards

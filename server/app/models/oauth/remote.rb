@@ -3,7 +3,10 @@ require "net/http"
 module OAuth::Remote
   TIMEOUT = 5
   MAX_BYTES = 16.kilobytes
-  UNREADABLE = [ Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, Net::HTTPBadResponse ].freeze
+  UNREADABLE = [
+    Timeout::Error, SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError,
+    Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Zlib::Error
+  ].freeze
 
   class Unreadable < StandardError; end
 

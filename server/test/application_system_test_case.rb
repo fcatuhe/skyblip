@@ -33,11 +33,17 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
         Stimulus.getControllerForElementAndIdentifier(element, identifier) !== null))
   JS
 
+  # INFO: fc 25nov26 a browser's first page compiles every module before Stimulus connects, which takes seconds on a busy machine
+  COLD_BROWSER_WAIT = 10
+
+  cattr_accessor :browser_warm, default: false
+
   # INFO: fc 14nov26 Stimulus imports the controllers after the load event, so a test acting at once meets a page that ignores it
   def visit(...)
     super
-    page.document.synchronize do
+    page.document.synchronize(browser_warm ? Capybara.default_max_wait_time : COLD_BROWSER_WAIT) do
       raise Capybara::ExpectationNotMet, "Stimulus has not connected every controller" unless page.evaluate_script(STIMULUS_CONNECTED)
     end
+    self.browser_warm = true
   end
 end

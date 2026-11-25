@@ -136,6 +136,50 @@ TEST_CASE("rf: a forced burst keys on a held channel at its instant") {
     while (executor.events.pop(event)) CHECK(event.type != events::RfEventType::Busy);
 }
 
+TEST_CASE("rf: a forced burst still misses if it cannot key by its deadline") {
+    Executor executor;
+    REQUIRE(executor.rf.begin() == Status::Ok);
+    executor.chip.rssi_dbm = kHeldDbm;
+    auto dwell = executor.plan(450000, kInstantUs, /*forced=*/true);
+    dwell.tx_last_key_us = kInstantUs + 500;
+    REQUIRE(executor.rf.arm(dwell) == Status::Ok);
+    executor.run(450, 595);
+    executor.run_us(kInstantUs + 600, kInstantUs + 600);
+
+    CHECK_FALSE(executor.keyed());
+    CHECK(executor.radio.mode() == parts::RadioMode::Rx);
+    events::RfEvent event{};
+    REQUIRE(executor.events.pop(event));
+    CHECK(event.type == events::RfEventType::Missed);
+    CHECK(event.tx_at_us == kInstantUs);
+    CHECK(event.keyed_at_us == 0);
+    CHECK_FALSE(executor.events.pop(event));
+}
+
+// The executor's own ceiling, apart from the last key instant, which this burst is far from.
+TEST_CASE("rf: a burst keys up to 5 ms past its instant, forced or not, and misses from there") {
+    for (const bool forced : {false, true}) {
+        for (const uint64_t late_us : {4900u, 5000u}) {
+            CAPTURE(forced);
+            CAPTURE(late_us);
+            Executor executor;
+            REQUIRE(executor.rf.begin() == Status::Ok);
+            executor.chip.rssi_dbm = kQuietDbm;
+            auto dwell = executor.plan(450000, kInstantUs, forced);
+            dwell.tx_last_key_us = kInstantUs + 50000;
+            REQUIRE(executor.rf.arm(dwell) == Status::Ok);
+            executor.run(450, 595);
+            executor.run_us(kInstantUs + late_us, kInstantUs + late_us);
+
+            const bool late = late_us == 5000;
+            CHECK(executor.keyed() == !late);
+            events::RfEvent event{};
+            CHECK(executor.events.pop(event) == late);
+            if (late) CHECK(event.type == events::RfEventType::Missed);
+        }
+    }
+}
+
 // The silence after a forced burst reaches a burst the service already handed over.
 TEST_CASE("rf: a burst withdrawn before its instant never keys, one already keyed stays") {
     Executor executor;
@@ -210,7 +254,7 @@ TEST_CASE("rf: a jammed site defers every airborne position, and reports the flo
     CHECK(pass.radio_service.noise_floor().level_dbm() == timing::NoiseFloor::kSeedDbm);
 
     pass.chip.rssi_dbm = -50;  // a neighbour sitting on the channel, 55 dB over the floor
-    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) pass.whole_pass(now_us);
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 1000) pass.whole_pass(now_us);
 
     CHECK_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
     CHECK(pass.state.air.tx_deferred > 0);

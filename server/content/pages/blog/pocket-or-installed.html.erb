@@ -58,6 +58,10 @@ updated_on: "2026-11-25"
 </section>
 
 <section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
   <h2 class="kicker">Sources</h2>
   <ul class="sources">
     <li>
@@ -75,7 +79,6 @@ updated_on: "2026-11-25"
       <span class="support">The exchange this post answers.</span>
     </li>
   </ul>
-  <p><%= link_to_page "blog/club-fleet", class: "cta cta--previous" %></p>
 </section>
 
 <section class="band">

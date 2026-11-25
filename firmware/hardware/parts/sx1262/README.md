@@ -2,6 +2,10 @@
 
 The Semtech SX1262 radio, driven over `io::Spi` and `io::Gpio` by `Sx1262`, with `model.h` standing in for the chip on the host. The opcodes, registers and their arguments live in the `sx1262::` namespace beside the driver, cited by section of the datasheet (DS) where they are used.
 
+The Go stages TX in STDBY_XOSC. It writes seven sync register bytes in one WriteRegister command (DS 13.2.1). The configured 56 bits fit the 64-bit GFSK limit (DS Table 13-54). The SX1262 sends eight hardware preamble chips before the register. The register starts with `D5 55 99` and follows it with the Manchester sync word. The leading `11` isolates the hardware's eight chips from the seven `01` repetitions that precede the two `1001` markers, regardless of the hardware preamble's phase. The FIFO contains the Manchester length and packet. The driver restores the 16-bit shared receive sync and usual receive parameters before starting RX again.
+
+The model puts the preamble ahead of the sync and FIFO on transmit. The model can emit either alternating phase. Its sync matcher hears a peer with five repetitions after the driver restores receive, but the model does not implement the silicon preamble detector. An SDR capture still needs to confirm the transmit chip stream and the interval from the end of CCA to first RF energy. Minimum-preamble reception still needs a hardware test.
+
 ## Names
 
 The constants are spelled in full. Where the datasheet spells one differently, this is the pair.

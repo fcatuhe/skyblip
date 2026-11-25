@@ -67,8 +67,8 @@ device.noticed:
 device.task_started:
   group: Devices
   from: browser
-  keys: [task, version, full, key, sha, advice, upgrade]
-  says: The app asked a device to do something that needs its approval, an install, a recovery, a settings save or a capture, with for an install the version, whether the file is the full image, the first four bytes of the key that signed it as `key`, the first eight bytes of its SHA-256 as `sha`, the image the device needs and whether it is newer.
+  keys: [task, profile, version, full, key, sha, advice, upgrade]
+  says: The app asked a device to do something that needs its approval, an install, a recovery, a settings save or a capture, with for a capture the `profile`, `full`, `power_run`, `flight_run` or `stop`, and for an install the version, whether the file is the full image, the first four bytes of the key that signed it as `key`, the first eight bytes of its SHA-256 as `sha`, the image the device needs and whether it is newer.
   answers: How often pilots install, save settings or arm a capture, and with which files.
 device.task_ended:
   group: Devices

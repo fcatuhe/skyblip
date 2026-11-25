@@ -36,7 +36,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Aircraft with a transponder</h2>
   <h3>Give those aircraft their own Go.</h3>
   <p>An aircraft that transmits Mode S or ADS-B should transmit ADS-L under the same ICAO address, so receivers know both signals come from one aircraft. The ADS-L specification asks for it. That address belongs to the aircraft, not the pilot, so a Go shared between aircraft would need a new address before each flight.</p>
-  <p>The simplest rule: one Go per transponder-equipped aircraft, its address set once in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, and shared Go for the aircraft without a transponder. A Bravo paired with the Go can read the address from the transponder on the ground, so nobody types it.</p>
+  <p>The simplest rule: one Go per transponder-equipped aircraft, its address set once in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, and shared Go for the aircraft without a transponder. A Bravo paired with the Go can read the address from the transponder on the ground, so nobody types it. Moved to another aircraft, a Tango proposes the new address, and one press stores it: <%= link_to_page "blog/own-aircraft", label: "how it looks on the Go" %>.</p>
 </section>
 
 <section>
@@ -48,7 +48,10 @@ updated_on: "2026-11-25"
 <section>
   <h2 class="kicker">Before you buy</h2>
   <p>Go is an uncertified aid to lookout. It does not replace a transponder where one is required, and it does not transmit FLARM. Our <%= link_to_page "compare", label: "comparison" %> sets it beside installed units, and the <%= link_to_page "buy", label: "buying guide" %> lists sellers in five countries.</p>
-  <p><%= link_to_page "blog/network-or-radio", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/pocket-or-installed", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
 </section>
 
 <section class="band">

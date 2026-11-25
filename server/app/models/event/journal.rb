@@ -5,11 +5,13 @@ class Event::Journal
   PATH = %r{\A(?:[a-z][a-z0-9+.-]*://[^/?#]*)?(/[^?#\s]*)}i
   ASSET_DIGEST = /-\h{8,}(?=\.js\z)/
   ENTRIES = 100
+  # INFO: fc 20nov26 a JSON number has no size, and every counter the firmware or the browser sends fits in a JavaScript number
+  NUMBERS = -(2**53 - 1)..(2**53 - 1)
   OLDEST = 30.days
 
   WORDS = %w[navigation control kind error controller filter phase product running track image imu settings trust flight power_level
              key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language
-             sha reason staged_key unit_key bootloader_keys device_id variant firmware board kind].freeze
+             sha reason staged_key unit_key bootloader_keys device_id variant firmware board kind profile].freeze
   COUNTS = %w[load_ms line column connect_ms linked_ms battery_percent lasted_ms sent_bytes total_bytes request_error boots
               probation_boots browser_major bluetooth_tag usb_vendor usb_product hw_model write_ms code].freeze
   FLAGS = %w[bluetooth standalone online storage mobile returned expected swap_powered activated charging full upgrade confirmed report release trusted saved].freeze
@@ -64,8 +66,8 @@ class Event::Journal
     end
 
     def told(properties, keys)
-      if properties.respond_to?(:to_h)
-        properties.to_h.stringify_keys.slice(*keys).to_h { |key, value| [ key.to_sym, kept(key, value) ] }.compact
+      if properties.is_a?(Hash)
+        properties.stringify_keys.slice(*keys).to_h { |key, value| [ key.to_sym, kept(key, value) ] }.compact
       else
         {}
       end
@@ -74,7 +76,7 @@ class Event::Journal
     def kept(key, value)
       case key
       when *WORDS then value.to_s.first(100) if value.is_a?(String)
-      when *COUNTS then Integer(value, exception: false)
+      when *COUNTS then Integer(value, exception: false).then { it if number?(it) }
       when *FLAGS then value if value == true || value == false
       when *TEXTS.keys then value.to_s.truncate(TEXTS[key]) if value.is_a?(String)
       when *PATHS then path_of(value)
@@ -84,9 +86,9 @@ class Event::Journal
     end
 
     def dump_of(value)
-      if value.respond_to?(:to_h)
-        value.to_h.stringify_keys.select { |group, _| group.match?(DUMP_NAME) }.first(DUMP_GROUPS).to_h do |group, fields|
-          [ group, fields.respond_to?(:to_h) ? dump_fields(fields.to_h.stringify_keys) : {} ]
+      if value.is_a?(Hash)
+        value.stringify_keys.select { |group, _| group.match?(DUMP_NAME) }.first(DUMP_GROUPS).to_h do |group, fields|
+          [ group, fields.is_a?(Hash) ? dump_fields(fields.stringify_keys) : {} ]
         end
       end
     end
@@ -97,11 +99,14 @@ class Event::Journal
 
     def dump_value(field)
       case field
-      when Integer, true, false then field
+      when Integer then field if number?(field)
+      when true, false then field
       when String then field.first(40)
-      when Array then field.grep(Integer).first(16)
+      when Array then field.select { number?(it) }.first(16)
       end
     end
+
+    def number?(value) = value.is_a?(Integer) && NUMBERS.cover?(value)
 
     def path_of(url) = (url[PATH, 1]&.first(300) if url.is_a?(String))
 

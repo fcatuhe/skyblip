@@ -159,6 +159,7 @@
       later(() => closed.forEach(listener => listener()));
     }
 
+    // INFO: fc 25nov26 the frame is queued once this resolves, so a unit that awaits its answer before dropping the link never loses it
     async reply(fields) {
       const [{ encodeFrame }] = await modules();
       const whole = encodeFrame(fields);
@@ -298,7 +299,7 @@
       await this.reply({ command: 'diagnostics', group: 'system', part: 0, more: true, uptime_s: 120, reset: 'power_on' });
       return this.reply({
         command: 'diagnostics', group: 'capture', part: 1, more: false, armed: Boolean(this.capturing),
-        ...(this.capturing ? { profile: this.capture } : {}), session: this.capturing ? 1785628800 : 0, records: this.capturing ? 960 : 0,
+        ...(this.capturing ? { profile: this.capture } : {}), session: this.capturing ? 60 : 0, records: this.capturing ? 960 : 0,
         records_dropped: 0, sectors: 0, keeps_s: this.capturing ? 433500 : 0, takes_sectors: 170, evicts_flights: this.evictsFlights,
         keeps_full_s: 1926, keeps_power_run_s: 433500,
       });
@@ -366,7 +367,7 @@
         return this.acknowledge(true, 'dfu');
       }
       if (task === 'recovery') {
-        this.acknowledge(true, 'recovery');
+        await this.acknowledge(true, 'recovery');
         return later(() => this.drop(), 50);
       }
       if (task === 'register') return this.register();
@@ -510,12 +511,12 @@
       return { off: this.reached };
     }
 
-    installed(readImage, versionText) {
+    async installed(readImage, versionText) {
       this.windowOpen = false;
       const image = readImage(this.slot);
       if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
       this.landed = image;
-      this.acknowledge(true, 'install');
+      await this.acknowledge(true, 'install');
       later(() => this.reboot(this.approved), 50);
     }
 

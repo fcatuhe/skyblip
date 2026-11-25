@@ -11,6 +11,11 @@ fr:
     try_note: "le logiciel dans votre navigateur"
     get: "S'équiper"
     get_note: "un Go à partir de 68 €, sans abonnement"
+  pager:
+    label: "Précédent et suivant"
+    previous: "Précédent"
+    next: "Suivant"
+    place: "%{position} sur %{count}"
   simulator:
     with_bravo: "Avec Bravo (skyBlip Tango)"
     keys:

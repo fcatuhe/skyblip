@@ -11,6 +11,11 @@ en:
     try_note: "the software in your browser"
     get: "Get one"
     get_note: "a Go from €68, no subscription"
+  pager:
+    label: "Previous and next"
+    previous: "Previous"
+    next: "Next"
+    place: "%{position} of %{count}"
   simulator:
     with_bravo: "With Bravo (skyBlip Tango)"
     keys:

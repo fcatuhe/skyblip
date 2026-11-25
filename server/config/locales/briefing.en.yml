@@ -92,7 +92,7 @@ en:
       arm: Arm
       stop: Stop the capture
       idle: Nothing is recording.
-      running: "Recording a %{profile} capture: %{records} records so far. The device keeps the last %{keeps} of it."
+      running: "Recording a %{profile} capture for %{elapsed}, started %{since}. %{records} records at the last read. The device keeps the last %{keeps} of it."
       price: "A full capture keeps %{full}, a power run or a flight run %{run}."
       erases:
         one: "Starting one erases 1 stored flight."

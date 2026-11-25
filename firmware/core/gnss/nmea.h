@@ -8,8 +8,8 @@
 
 namespace skyblip::gnss {
 
-// INFO: fc 20nov26 many receivers omit GGA's geoid separation or send 0, so we assume 46 m, EGM96
-// over central Europe
+// INFO: fc 22nov26 some receivers omit GGA's geoid separation, so we assume 46 m, EGM96 over
+// central Europe
 constexpr int32_t kDefaultGeoidSeparationMm = 46000;
 
 // INFO: fc 20nov26 a GGA cut short still checksums, so moshe-braner's 40-byte floor refuses it
@@ -52,19 +52,26 @@ struct GnssSolution {
     // INFO: fc 19sep26 what the receiver resolves, not what the wire carries: RMC fields 7 and 8
     int32_t speed_mm_s{0};
     int32_t track_cdeg{0};
+    // INFO: fc 22nov26 the L76K leaves SOG or COG empty when it has none, and empty is not 0
+    bool speed_valid{false};
+    bool track_valid{false};
     uint32_t utc_s{0};
     // INFO: fc 18nov26 the milliseconds of RMC's hhmmss.sss: at 2 Hz they name the quarter solved
     uint16_t utc_ms{0};
     uint16_t hdop_e2{0};
-    // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution
+    // INFO: fc 22nov26 vertical DOP in hundredths, GSA field 17, zero unless fix_mode is 3D
     uint16_t vdop_e2{0};
     uint16_t pps_latency_ms{0};
     // INFO: fc 18nov26 the drain that closed it closed an older pair too: the host was late
     bool backlogged{false};
+    // INFO: fc 22nov26 since the last solution the part named a stamp at or behind one already
+    // published
+    bool relabeled{false};
     // INFO: fc 18nov26 the part's start plus line time at the live rate, 0 when unknown
     uint16_t delivery_ms{0};
     uint8_t satellites{0};
     uint8_t fix_quality{0};
+    // INFO: fc 22nov26 the best of the GSA set after this solution's GGA, 0 when it brought none
     uint8_t fix_mode{0};
     bool altitude_msl_valid{false};
     bool altitude_hae_valid{false};

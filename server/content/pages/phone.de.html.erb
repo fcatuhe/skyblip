@@ -23,6 +23,7 @@ updated_on: "2026-11-25"
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>: zuerst das Produkt, dann die 24-Bit-Adresse, die das Gerät bei der <%= link_to "Aktivierung", briefing_activation_path %> erhalten hat. Sie müssen nichts koppeln und keinen Code eingeben. Go sendet den Verkehr als FLARM-NMEA-Datenstrom über beide seriellen Bluetooth-Verbindungsarten, nach denen Navigationssoftware sucht. Die App, mit der Sie bereits fliegen, findet ihn dadurch.
       </p>
+      <p>Über dieselbe Bluetooth-Verbindung sendet der Go auch jede Sekunde seine GPS-Position. Wenn Ihre Navigations-App den Go als Quelle nutzt, erhält sie die Position auch auf einem iPad ohne GPS. <%= link_to_page "blog/gps-to-tablet", label: "Wie der Go Position und Verkehr an Ihr Tablet sendet" %>.</p>
       <p>
         Das Tablet am Steuerhorn, das Smartphone in der Tasche und das iPad Ihres Passagiers zeigen denselben Verkehr. Nur eine App kann gleichzeitig Einstellungen ändern. Die erste, die eine Einstellung speichert, behält dieses Recht, bis sie die Verbindung trennt. Die zweite erfährt, welche App es gerade hat.
       </p>
@@ -96,5 +97,6 @@ updated_on: "2026-11-25"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

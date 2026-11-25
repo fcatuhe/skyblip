@@ -45,6 +45,8 @@ model::Ownship own_from_gnss(const char* rmc, const char* gga, const char* gsa) 
     own.altitude_hae_mm = solution.altitude_hae_mm;
     own.speed_mm_s = solution.speed_mm_s;
     own.track_cdeg = solution.track_cdeg;
+    own.speed_valid = solution.speed_valid;
+    own.track_valid = solution.track_valid;
     own.vdop_e2 = solution.vdop_e2;
     own.utc_s = solution.utc_s;
     own.satellites = solution.satellites;

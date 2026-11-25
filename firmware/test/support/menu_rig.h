@@ -26,6 +26,8 @@ inline void push_fix(Rig& rig, int32_t speed_mm_s, int32_t altitude_msl_m) {
     gnss::GnssSolution solution{};
     solution.fix_valid = true;
     solution.speed_mm_s = speed_mm_s;
+    solution.speed_valid = true;
+    solution.track_valid = true;
     solution.altitude_msl_mm = altitude_msl_m * 1000;
     solution.sentences = 1;
     rig.product.bus().gnss.push(solution);

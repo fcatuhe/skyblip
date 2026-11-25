@@ -33,16 +33,6 @@ constexpr auto kStatusCrcSyndromes =
         return wire::crc24_check(frame, Packet::kStatusDataBytes);
     });
 
-constexpr bool known_length(uint8_t data_bytes) {
-    return data_bytes == Packet::kDataBytes || data_bytes == Packet::kStatusDataBytes;
-}
-
-uint8_t nearer_length(uint8_t length_heard) {
-    const int to_status = __builtin_popcount(length_heard ^ Packet::kStatusDataBytes);
-    const int to_traffic = __builtin_popcount(length_heard ^ Packet::kDataBytes);
-    return to_status < to_traffic ? Packet::kStatusDataBytes : Packet::kDataBytes;
-}
-
 // INFO: fc 18nov26 past a 16-byte burst no transmitter is heard, so most of those chips are marked
 constexpr int kTailMarkedCeiling = 16;
 
@@ -150,7 +140,7 @@ int Packet::correct(const uint8_t* erasures, int max_erasures, uint8_t data_byte
 wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
                      uint8_t data_bytes) {
     out.reset();
-    if (!known_length(data_bytes)) return wire::Status::Invalid;
+    if (!Packet::supports_data_bytes(data_bytes)) return wire::Status::Invalid;
     __builtin_memcpy(out.data, frame, data_bytes);
     if (out.correct(erasures, 6, data_bytes) < 0) return wire::Status::Crc;
     if (data_bytes < Packet::kDataBytes)
@@ -164,25 +154,35 @@ wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
     return out.data_bytes() == data_bytes ? wire::Status::Ok : wire::Status::Invalid;
 }
 
-// INFO: fc 18nov26 a frame both lengths read is refused, since no byte under the CRC says which
+bool length_allows(uint8_t length_heard, uint8_t length_erasures, uint8_t data_bytes) {
+    constexpr int kLengthErasuresCeiling = 2;
+    return __builtin_popcount(length_erasures) <= kLengthErasuresCeiling &&
+           ((length_heard ^ data_bytes) & ~length_erasures) == 0;
+}
+
 wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
-                              Packet& out) {
-    const uint8_t nearer = nearer_length(length_heard);
-    const uint8_t other =
-        nearer == Packet::kDataBytes ? Packet::kStatusDataBytes : Packet::kDataBytes;
-    Packet at_other;
-    const wire::Status heard = receive_at(frame, erasures, nearer, out);
-    const wire::Status other_heard = receive_at(frame, erasures, other, at_other);
-    if (heard == wire::Status::Ok && other_heard == wire::Status::Ok) {
+                              uint8_t length_erasures, Packet& out) {
+    const bool short_allowed =
+        length_allows(length_heard, length_erasures, Packet::kStatusDataBytes);
+    const bool long_allowed = length_allows(length_heard, length_erasures, Packet::kDataBytes);
+    if (!short_allowed && !long_allowed) {
         out.reset();
         return wire::Status::Invalid;
     }
-    if (heard == wire::Status::Ok) return heard;
-    if (other_heard == wire::Status::Ok) {
-        out = at_other;
-        return other_heard;
+    if (!short_allowed) return receive_at(frame, erasures, Packet::kDataBytes, out);
+
+    const wire::Status short_result = receive(frame, erasures, out, Packet::kStatusDataBytes);
+    if (!long_allowed) return short_result;
+
+    Packet long_packet;
+    const wire::Status long_result = receive_at(frame, erasures, Packet::kDataBytes, long_packet);
+    if (long_result != wire::Status::Ok) return short_result;
+    if (short_result == wire::Status::Ok) {
+        out.reset();
+        return wire::Status::Invalid;
     }
-    return heard;
+    out = long_packet;
+    return wire::Status::Ok;
 }
 
 // INFO: fc 20nov26 G.1.14 NACp thresholds, where code 0 is "unknown or HFOM >= 0.5 NM"
@@ -213,7 +213,7 @@ bool issue2_category(uint8_t aircraft_category) {
 uint8_t lowest_version(const Packet& packet) {
     if (!packet.is_position()) return Packet::kProtocolVersionIssue2;
     const bool issue2_codes =
-        !packet.has_altitude() || !packet.has_speed() || !packet.has_climb() ||
+        packet.has_issue2_motion_marker() ||
         packet.field(Packet::kLatitudeField) == Packet::kPositionInvalidCode ||
         packet.field(Packet::kLongitudeField) == Packet::kPositionInvalidCode ||
         packet.field(Packet::kLatitudeField) == Packet::kIssue1PositionInvalidCode ||

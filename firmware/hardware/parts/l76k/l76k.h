@@ -74,12 +74,11 @@ class L76k : public ports::Gnss {
     static constexpr int kRateCommandCount = 2;
     static constexpr const char* kRateCommands[kRateCommandCount] = {
         "$PCAS02,500*1A\r\n",
-        "$PCAS03,,,2,,,,,,,,,,,*30\r\n",
+        "$PCAS03,,,1,,,,,,,,,,,*33\r\n",
     };
-    // INFO: fc 19nov26 the second sentence above keeps GSA, and the VDOP it carries, once a second
-    static constexpr uint8_t kGsaPeriodSolutions = 2;
-    static_assert(kGsaPeriodSolutions * kSolutionPeriodMs == kFactorySolutionPeriodMs,
-                  "GSA keeps the once a second it had at the factory rate");
+    // INFO: fc 22nov26 ADS-L G.1.7: GSA every solution, so each says itself whether it solved
+    // height
+    static constexpr uint8_t kGsaPeriodSolutions = 1;
 
     // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.15 asks us to claim
     static constexpr bool kGsaEnabled = true;
@@ -257,6 +256,7 @@ class L76k : public ports::Gnss {
     void watch_cadence(uint32_t now_ms);
     void rate_failed(uint32_t now_ms);
     bool newer_than_published(int32_t stamp_ms) const;
+    bool behind_published(int32_t stamp_ms) const;
 
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
@@ -297,6 +297,7 @@ class L76k : public ports::Gnss {
     uint32_t verify_unstamped_{0};
     uint32_t verify_steps_{0};
     int32_t published_stamp_ms_{-1};
+    bool relabeled_{false};
     int baud_index_{0};
     uint32_t baud_before_raise_{kFactoryBaudRate};
     uint8_t baud_tried_{1};

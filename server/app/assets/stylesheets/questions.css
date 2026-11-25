@@ -1,0 +1,42 @@
+@layer components {
+  .questions details {
+    border-block-start: 1px solid var(--card-border);
+    padding-block: var(--space-m);
+  }
+
+  .questions details:last-of-type { border-block-end: 1px solid var(--card-border); }
+
+  .questions summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: var(--space-inline-m);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .questions summary::-webkit-details-marker { display: none; }
+
+  .questions summary > * { grid-column: 1; }
+
+  .questions summary::after {
+    content: "";
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: center;
+    inline-size: 0.6em;
+    block-size: 0.6em;
+    border-inline-end: 2px solid var(--blip);
+    border-block-end: 2px solid var(--blip);
+    transform: rotate(45deg);
+  }
+
+  .questions details[open] summary::after { transform: rotate(-135deg); }
+
+  .questions summary .kicker { margin-block-end: var(--space-xs); }
+
+  .questions summary .kicker a { color: inherit; }
+
+  .questions summary h3 { margin-block-end: var(--space-xs); }
+
+  .questions details[open] summary { margin-block-end: var(--space-m); }
+}

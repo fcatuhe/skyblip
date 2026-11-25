@@ -31,6 +31,7 @@ const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploading', 'installing']);
 // INFO: fc 11nov26 an install restarts the device in about thirty seconds, and a full image writes the hub for up to a minute more
 const RETURN_WITHIN_MS = 120_000;
+const BOOT_SECONDS_WRAP = 2 ** 32 / 1000;
 export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
@@ -115,13 +116,15 @@ function upgradeOf({ file, running }) {
 }
 
 // INFO: fc 15nov26 the dump's capture group, absent on a unit with no capture flash
-export function captureOf(dump) {
+export function captureOf(dump, now = Date.now()) {
   const group = dump?.capture;
   if (!group) return null;
+  const armed = group.armed === true;
   return {
-    armed: group.armed === true,
+    armed,
     profile: group.profile ?? null,
     session: group.session ?? 0,
+    startedAt: armed ? startedAtOf(group.session ?? 0, dump.system?.uptime_s, now) : null,
     records: group.records ?? 0,
     keeps: group.keeps_s ?? 0,
     takesSectors: group.takes_sectors ?? 0,
@@ -129,6 +132,17 @@ export function captureOf(dump) {
     keepsFull: group.keeps_full_s ?? 0,
     keepsPowerRun: group.keeps_power_run_s ?? 0,
   };
+}
+
+// INFO: fc 25nov26 a session is named by the UTC second it opened, or by the second since boot, which wraps with the 32-bit millisecond clock
+function startedAtOf(session, uptime, now) {
+  if (uptime === undefined) return null;
+  if (session >= BOOT_SECONDS_WRAP) return session * 1000;
+  return now - Math.round(((uptime - session + BOOT_SECONDS_WRAP) % BOOT_SECONDS_WRAP) * 1000);
+}
+
+function percentOf({ sent, total }) {
+  return Math.floor(100 * sent / total);
 }
 
 function settlingOf({ phase, image }) {
@@ -615,15 +629,20 @@ export class Updater {
   async #sendImage(total) {
     for (;;) {
       try {
-        return await upload(this.#smp, this.#image, this.#sha, this.#uploadPacketBytes(), sent => {
-          this.#set({ progress: { sent, total } });
-        });
+        return await upload(this.#smp, this.#image, this.#sha, this.#uploadPacketBytes(), sent => this.#progressed(sent, total));
       } catch (error) {
         const smaller = SMALLER_WRITES.find(size => size < this.#writeBytes);
         if (!(error instanceof SmpWriteRejected) || !this.#device || !smaller) throw error;
         this.#writeBytes = smaller;
       }
     }
+  }
+
+  // INFO: fc 25nov26 every state change redraws each page open on the fleet, so the upload reports once per percent, not once per chunk
+  #progressed(sent, total) {
+    const shown = this.#state.progress;
+    if (shown && percentOf(shown) === percentOf({ sent, total })) return;
+    this.#set({ progress: { sent, total } });
   }
 
   #uploadPacketBytes() {

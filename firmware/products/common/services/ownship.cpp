@@ -22,11 +22,14 @@ flight::FlightState OwnshipService::flight_state_from(const model::Ownship& own,
     sample.speed_mm_s = own.speed_mm_s;
     sample.hdop_e2 = own.hdop_e2;
     sample.fix_valid = own.fix_valid;
+    sample.speed_valid = own.speed_valid;
     return flight_.update(sample, now_ms);
 }
 
 void OwnshipService::tick(uint32_t now_ms) {
     barometer_active_ = barometer_heard_within_max_age(now_ms);
+    const model::Ownship& own = context_.state.own;
+    if (own.climb_valid && now_ms - own.climb_at_ms > kClimbMaxAgeMs) withdraw_climb();
     gnss::GnssSolution solution{};
     while (context_.bus.gnss.pop(solution)) apply_solution(solution, now_ms);
 
@@ -96,8 +99,11 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.geoid_measured = solution.geoid_measured;
     own.speed_mm_s = solution.speed_mm_s;
     own.track_cdeg = solution.track_cdeg;
+    own.speed_valid = solution.speed_valid;
+    own.track_valid = solution.track_valid;
     own.hdop_e2 = solution.hdop_e2;
     own.vdop_e2 = solution.vdop_e2;
+    own.altitude_hae_valid = height_solved(own);
     own.utc_s = solution.utc_s;
     own.utc_ms = solution.utc_ms;
     const Dated dated = solution_instant(solution, now_ms);
@@ -111,18 +117,17 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     // INFO: fc 18nov26 a withdrawal on any quarter withdraws the whole second the EFB and log read
     if (!own.fix_valid) context_.state.own_second.fix_valid = false;
     if (!own.utc_valid) context_.state.own_second.utc_valid = false;
+    relabeled_ = relabeled_ || solution.relabeled;
     anchor_utc_s(solution, now_ms);
     publish_solution_phase(now_ms);
 
     int32_t climb_mm_s = 0;
     const bool height_fixed = own.fix_valid && height_solved(own);
-    if (!height_fixed) gnss_reference_ms_ = 0;
+    if (!height_fixed) gnss_climb_.reset();
     const bool climb_valid =
-        height_fixed &&
-        climb_from_altitude_mm(solution.altitude_hae_mm, now_ms, kGnssClimbWindowMs,
-                               gnss_reference_altitude_mm_, gnss_reference_ms_, climb_mm_s);
+        height_fixed && gnss_climb_.observe(solution.altitude_hae_mm, own.fix_at_ms, climb_mm_s);
     if (!barometer_active_) {
-        if (climb_valid) adopt_climb(climb_mm_s, now_ms);
+        if (climb_valid) adopt_climb(climb_mm_s, own.fix_at_ms, now_ms);
         if (!height_fixed) withdraw_climb();
     }
 
@@ -259,17 +264,36 @@ void OwnshipService::update_residual(const model::Ownship& previous) {
 
 // INFO: fc 16sep26 a sentence names the second its own edge opened, and only that edge dates it
 // | 18nov26 and an anchor a timely fix set is replaced only by another
+// | 22nov26 or by two in a row naming their edge a whole second off once the stamps stepped back
 void OwnshipService::anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms) {
     timing::ClockState& clock = context_.state.clock;
     if (!dates_the_edge(solution, clock) || solution.backlogged) return;
     if (gnss::named_quarter_ms(solution.utc_ms) != 0) return;
     const uint32_t edge_ms = static_cast<uint32_t>(clock.pps_edge_us / 1000);
-    if (context_.state.own.fix_at_ms - edge_ms != solution.utc_ms) return;
     const bool fixed = solution.fix_valid && now_ms - edge_ms < latency_ceiling_ms(solution);
+    const int32_t off_ms =
+        static_cast<int32_t>(context_.state.own.fix_at_ms - edge_ms - solution.utc_ms);
+    if (!relabels(off_ms, fixed)) return;
     if (clock.utc_anchor_fixed && !fixed) return;
     clock.utc_s = solution.utc_s;
     clock.utc_edge_us = clock.pps_edge_us;
     clock.utc_anchor_fixed = fixed;
+}
+
+// INFO: fc 22nov26 a part turning a second late looks the same at the edge, but its stamps never
+// step back
+bool OwnshipService::relabels(int32_t off_ms, bool fixed) {
+    if (off_ms == 0) {
+        label_step_ms_ = 0;
+        relabeled_ = false;
+        off_unmarked_ = false;
+        return true;
+    }
+    off_unmarked_ = off_unmarked_ || (fixed && !relabeled_);
+    const bool stepped = fixed && relabeled_ && !off_unmarked_ && off_ms % 1000 == 0;
+    const bool confirmed = stepped && label_step_ms_ == off_ms;
+    label_step_ms_ = stepped && !confirmed ? off_ms : 0;
+    return confirmed;
 }
 
 // INFO: fc 18nov26 the stated 250 ms, or the part's own start and line time when its port is slower
@@ -322,19 +346,19 @@ void OwnshipService::apply_barometer(const events::BarometerSample& sample, uint
     context_.state.own.pressure_altitude_mm = pressure_altitude_mm;
     context_.state.own.pressure_altitude_at_ms = sample.at_ms;
     context_.state.own.pressure_altitude_valid = true;
-    if (!barometer_heard_within_max_age(now_ms)) barometer_reference_ms_ = 0;
+    if (!barometer_heard_within_max_age(now_ms)) barometer_climb_.reset();
     barometer_heard_ms_ = now_ms == 0 ? 1 : now_ms;
     barometer_active_ = true;
     int32_t climb_mm_s = 0;
-    const bool adopted = climb_from_altitude_mm(
-        pressure_altitude_mm, sample.at_ms, kBarometerClimbWindowMs,
-        barometer_reference_altitude_mm_, barometer_reference_ms_, climb_mm_s);
-    if (adopted) adopt_climb(climb_mm_s, now_ms);
+    const bool adopted = barometer_climb_.observe(pressure_altitude_mm, sample.at_ms, climb_mm_s);
+    if (adopted) adopt_climb(climb_mm_s, sample.at_ms, now_ms);
     record_barometer(sample, pressure_altitude_mm, climb_mm_s, adopted, now_ms);
 }
 
 void OwnshipService::record_barometer(const events::BarometerSample& sample, int32_t altitude_mm,
                                       int32_t climb_mm_s, bool adopted, uint32_t now_ms) {
+    if (now_ms - barometer_recorded_ms_ < kBarometerRecordFloorMs) return;
+    barometer_recorded_ms_ = now_ms;
     if (!context_.diagnostics.armed()) return;
     diagnostics::Barometer value{};
     value.pressure_mpa = sample.pressure_mpa;
@@ -390,9 +414,11 @@ void OwnshipService::publish_inertial(uint32_t now_ms) {
     flying_ = flying;
 }
 
-void OwnshipService::adopt_climb(int32_t climb_mm_s, uint32_t now_ms) {
+void OwnshipService::adopt_climb(int32_t climb_mm_s, uint32_t at_ms, uint32_t now_ms) {
     model::Ownship& own = context_.state.own;
     own.climb_mm_s = climb_mm_s;
+    own.climb_at_ms = at_ms;
+    own.climb_in_hand_ms = now_ms;
     own.climb_valid = true;
     indicated_climb_.observe(climb_mm_s, now_ms);
     context_.state.indicated.climb_mm_s = indicated_climb_.value();
@@ -433,23 +459,6 @@ void OwnshipService::publish_turn(int16_t turn_cdps, uint32_t now_ms) {
 
 bool OwnshipService::barometer_heard_within_max_age(uint32_t now_ms) const {
     return barometer_heard_ms_ != 0 && now_ms - barometer_heard_ms_ <= kBarometerMaxAgeMs;
-}
-
-bool OwnshipService::climb_from_altitude_mm(int32_t altitude_mm, uint32_t now_ms,
-                                            uint32_t window_ms, int32_t& reference_altitude_mm,
-                                            uint32_t& reference_ms, int32_t& out_climb_mm_s) {
-    if (reference_ms == 0) {
-        reference_ms = now_ms == 0 ? 1 : now_ms;
-        reference_altitude_mm = altitude_mm;
-        return false;
-    }
-    if (now_ms - reference_ms < window_ms) return false;
-
-    const bool measured = flight::climb_mm_s_from_altitude(altitude_mm, reference_altitude_mm,
-                                                           now_ms - reference_ms, out_climb_mm_s);
-    reference_ms = now_ms;
-    reference_altitude_mm = altitude_mm;
-    return measured;
 }
 
 }  // namespace skyblip::common

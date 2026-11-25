@@ -66,4 +66,26 @@ class Content::PageTest < ActiveSupport::TestCase
     assert_equal "/fr/guides", guide.parent.url_path
     assert_nil Content::Page.find("guides", locale: :fr).parent
   end
+
+  test "blog posts read oldest first, in their own language" do
+    posts = Content::Page.find_by(base_slug: "blog/club-fleet", locale: :fr).reading_order
+
+    assert_equal posts.map(&:published_on).sort, posts.map(&:published_on)
+    assert_equal "blog/why-ads-l", posts.first.base_slug
+    assert_equal [ :fr ], posts.map(&:locale).uniq
+  end
+
+  test "guides read in the order the guides index lists them" do
+    radar = Content::Page.find("radar", locale: :en)
+
+    assert_equal %w[mount go-first-steps bravo-first-steps radar instruments displays controls power phone radio timing gps traffic], radar.reading_order.map(&:base_slug)
+    assert_equal 4, radar.reading_position
+    assert_equal "bravo-first-steps", radar.previous_page.base_slug
+    assert_equal "instruments", radar.next_page.base_slug
+  end
+
+  test "the first page of a section has nothing before it, and the last nothing after it" do
+    assert_nil Content::Page.find("ads-l/registry", locale: :en).previous_page
+    assert_nil Content::Page.find("traffic", locale: :en).next_page
+  end
 end

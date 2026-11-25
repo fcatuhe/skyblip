@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   constraints ->(request) { request.original_fullpath.match?(%r{\A/[^?]+/(\?|\z)}) } do
-    get "*path", format: false, to: redirect { |_params, request| request.original_fullpath.sub(%r{/+(\?|\z)}, '\\1') }
+    get "*path", format: false, to: redirect { |_params, request| request.fullpath }
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

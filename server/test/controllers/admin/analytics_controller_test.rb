@@ -60,6 +60,34 @@ class Admin::AnalyticsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".admin-chips a", text: /Browser: Firefox/
   end
 
+  test "falls back to the last thirty days when a date does not parse" do
+    freeze_time
+
+    get admin_analytics_path(filters: { start_on: "abc", end_on: "2026-02-31" })
+
+    assert_response :success
+    assert_select ".admin-period input[name='filters[start_on]'][value=?]", 30.days.ago.to_date.iso8601
+    assert_select ".admin-period input[name='filters[end_on]'][value=?]", Date.current.iso8601
+  end
+
+  test "swaps a reversed period" do
+    browse [ [ "/", 0 ] ], visitor: "pilot", started_at: Time.utc(2026, 2, 4, 10)
+
+    get admin_analytics_path(filters: { start_on: "2026-02-10", end_on: "2026-02-01" })
+
+    assert_select ".admin-period input[name='filters[start_on]'][value=?]", "2026-02-01"
+    assert_select ".admin-period input[name='filters[end_on]'][value=?]", "2026-02-10"
+    assert_select ".analytics-chart__mark", 10
+  end
+
+  test "caps the period at the days analytics are kept" do
+    get admin_analytics_path(filters: { start_on: "0001-01-01", end_on: "2026-02-10" })
+
+    assert_response :success
+    assert_select ".admin-period input[name='filters[start_on]'][value=?]", (Date.new(2026, 2, 10) - Analytics::MAX_DAYS).iso8601
+    assert_select ".admin-period input[name='filters[end_on]'][value=?]", "2026-02-10"
+  end
+
   # As in Plausible, a click on an outbound link filters the overview and its visitors to the visits that clicked it.
   test "the outbound links count their clicks, and one filters the overview to the visits that clicked it" do
     go = "https://link.amazon/B00EaKI0W"

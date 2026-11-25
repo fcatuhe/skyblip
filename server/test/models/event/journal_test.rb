@@ -25,6 +25,14 @@ class Event::JournalTest < ActiveSupport::TestCase
     assert_equal({ "key" => "88A4BEF5", "bootloader_keys" => "212602F2 88A4BEF5", "track" => "release" }, Event.sole.payload)
   end
 
+  test "a capture's start keeps the profile the page asked for" do
+    Event::Journal.new(browser: BROWSER, entries: [
+      entry("device.task_started", properties: { task: "capture", profile: "power_run" })
+    ]).record
+
+    assert_equal({ "task" => "capture", "profile" => "power_run" }, Event.sole.payload)
+  end
+
   # A pilot's phone posts its journal again until it is answered, and a beacon may land twice.
   test "an entry that arrives twice is kept once" do
     journal = Event::Journal.new(browser: BROWSER, entries: [ entry("device.connected") ])
@@ -75,6 +83,19 @@ class Event::JournalTest < ActiveSupport::TestCase
     unit = Unit.find_by!(device_id: "0a0b0c0d0e0f1011")
     assert_equal [ "bravo", "bravo-1234" ], [ unit.product, unit.slug ]
     assert_equal [ [ "0.2.0+950", "read" ] ], unit.firmwares.pluck(:version, :source)
+  end
+
+  # A JSON number has no size, and the firmware's counters and the browser's all fit in a JavaScript number.
+  test "a number larger than a counter can hold is dropped" do
+    huge = 10**400
+    Event::Journal.new(browser: BROWSER, entries: [
+      entry("device.diagnosed", properties: { dump: { radio: { rx_ok: 4_294_967_295, noise_dbm: -105, tx_ok: huge, rssi: [ 1, huge, -huge, 1.5 ] } } }),
+      entry("device.connected", properties: { connect_ms: huge.to_s })
+    ]).record
+
+    diagnosed, connected = Event.order(:id).map(&:payload)
+    assert_equal({ "radio" => { "rx_ok" => 4_294_967_295, "noise_dbm" => -105, "rssi" => [ 1 ] } }, diagnosed["dump"])
+    assert_equal({}, connected)
   end
 
   private

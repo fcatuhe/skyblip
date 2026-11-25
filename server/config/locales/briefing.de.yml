@@ -92,7 +92,7 @@ de:
       arm: Aufzeichnung vorbereiten
       stop: Aufzeichnung stoppen
       idle: Keine Aufzeichnung aktiv.
-      running: "Aufzeichnung mit Profil %{profile}: bisher %{records} Datensätze. Das Gerät behält die letzten %{keeps}."
+      running: "Aufzeichnung mit Profil %{profile} seit %{elapsed}, Start: %{since}. Beim letzten Auslesen %{records} Datensätze. Das Gerät behält die letzten %{keeps}."
       price: "Das Profil Vollständig hält %{full} fest. Die Profile Stromverbrauch und Flug halten %{run} fest."
       erases:
         one: "Der Start löscht 1 gespeicherten Flug."
