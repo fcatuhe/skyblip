@@ -103,6 +103,7 @@ Rails.application.routes.draw do
     scope module: :content, as: :content, format: false do
       resource :llms, only: :show, path: "llms.txt", defaults: { format: :text }
       resource :llms_full, only: :show, path: "llms-full.txt", controller: :llms_full, defaults: { format: :text }
+      resource :feed, only: :show, path: "feed.atom", defaults: { format: :atom }
     end
 
     draw :content

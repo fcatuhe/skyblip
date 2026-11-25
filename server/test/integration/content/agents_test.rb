@@ -84,6 +84,21 @@ class Content::AgentsTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Source: https://skyblip.eu/about\n"
   end
 
+  test "each language has an Atom feed of its pages, latest change first, that every page links" do
+    get "/fr/feed.atom"
+
+    assert_response :success
+    assert_equal "application/atom+xml", response.media_type
+    feed = Nokogiri::XML(response.body).remove_namespaces!
+    updated = feed.xpath("//entry/updated").map(&:text)
+    assert_equal Content::Page.read_in(:fr).size, updated.size
+    assert_equal updated.sort.reverse, updated
+    assert_equal "https://skyblip.eu/fr/a-propos.md", feed.at_xpath("//entry[id='https://skyblip.eu/fr/a-propos']/link[@type='text/markdown']/@href").text
+
+    get "/fr/a-propos"
+    assert_select "link[rel=alternate][type='application/atom+xml'][href=?]", "https://skyblip.eu/fr/feed.atom"
+  end
+
   test "llms-full.txt holds every English page but the legal notice" do
     get "/llms-full.txt"
 
