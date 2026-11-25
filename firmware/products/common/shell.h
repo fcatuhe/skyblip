@@ -52,6 +52,9 @@ class Shell {
             product_.alarm_.sign_on();
         const Status loop = product_.loop_.setup();
         product_.state_.started = loop == Status::Ok;
+        // INFO: fc 25nov26 an install restarts the unit, so the image it boots never saw the cable
+        if (product_.config_link_.config().image_state() != dfu::ImageState::Confirmed)
+            cable_.arm();
         return loop;
     }
 
@@ -163,9 +166,10 @@ class Shell {
         std::optional<uint32_t>& off_in_ms = product_.state_.power.cable_off_in_ms;
         off_in_ms.reset();
         if (product_.power_switch() != power::Switch::Cable) return;
-        const bool airborne =
-            product_.state_.flight.confirmed_state == flight::FlightState::Airborne;
-        if (cable_.gone(now_ms, product_.state_.power.battery.external_power, airborne))
+        const bool kept_on =
+            product_.state_.flight.confirmed_state == flight::FlightState::Airborne ||
+            product_.config_link_.config().updating();
+        if (cable_.gone(now_ms, product_.state_.power.battery.external_power, kept_on))
             shutdown_.request(power::ShutdownReason::CableGone, now_ms);
         off_in_ms = cable_.off_in_ms(now_ms);
     }

@@ -21,8 +21,9 @@ constexpr uint8_t off_in_min(uint32_t off_in_ms) {
 // INFO: fc 26nov26 a cable lost in flight costs the cell, never the transmitter: README.md
 class CableWatch {
    public:
-    bool gone(uint32_t now_ms, bool external_power, bool airborne);
+    bool gone(uint32_t now_ms, bool external_power, bool kept_on);
     std::optional<uint32_t> off_in_ms(uint32_t now_ms) const;
+    void arm() { seen_ = true; }
 
    private:
     std::optional<uint32_t> gone_since_ms_{};

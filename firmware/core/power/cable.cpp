@@ -2,9 +2,9 @@
 
 namespace skyblip::power {
 
-bool CableWatch::gone(uint32_t now_ms, bool external_power, bool airborne) {
+bool CableWatch::gone(uint32_t now_ms, bool external_power, bool kept_on) {
     if (external_power) seen_ = true;
-    if (external_power || !seen_ || airborne) {
+    if (external_power || !seen_ || kept_on) {
         gone_since_ms_.reset();
         return false;
     }
