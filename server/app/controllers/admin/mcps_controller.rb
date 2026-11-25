@@ -22,5 +22,5 @@ class Admin::McpsController < ActionController::API
         token_verifier: OAuth::Token, required_scopes: [ OAuth::SCOPE ], resource_metadata: OAuth.protected_resource)
     end
 
-    def server = MCP::Server.new(name: "skyblip-admin", title: "skyBlip admin", instructions: INSTRUCTIONS, tools: TOOLS, icons:)
+    def server = MCP::Server.new(name: "skyblip-admin", title: "skyBlip admin", instructions: INSTRUCTIONS, tools: TOOLS, icons: ICONS)
 end

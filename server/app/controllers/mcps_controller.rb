@@ -1,6 +1,10 @@
 class McpsController < ActionController::API
   include ModelContextProtocol
 
+  NAME = "eu.skyblip/website"
+  VERSION = "1.0.0"
+  TITLE = "skyBlip"
+  DESCRIPTION = "Search and read skyblip.eu in five languages: skyBlip's ADS-L traffic devices, guides and blog."
   TOOLS = [ Content::ListPagesTool, Content::SearchPagesTool, Content::GetPageTool ].freeze
   INSTRUCTIONS = "skyBlip is open-source electronic conspicuity for recreational flying and air sports: skyBlip Go transmits " \
                  "its pilot's position in ADS-L, receives ADS-L and FLARM traffic and shows where to look, skyBlip Bravo receives " \
@@ -18,7 +22,7 @@ class McpsController < ActionController::API
     end
 
     def server
-      MCP::Server.new(name: "skyblip", title: "skyBlip", instructions: INSTRUCTIONS, tools: TOOLS, icons:,
-        website_url: Rails.configuration.x.public_url)
+      MCP::Server.new(name: NAME, version: VERSION, title: TITLE, description: DESCRIPTION, instructions: INSTRUCTIONS,
+        tools: TOOLS, icons: ICONS, website_url: Rails.configuration.x.public_url)
     end
 end
