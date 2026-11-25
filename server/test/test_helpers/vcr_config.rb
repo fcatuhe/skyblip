@@ -33,11 +33,9 @@ VCR.configure do |config|
     interaction.response.headers["Location"] = [ location.split("?").first ] if presigned.(location)
     interaction.request.uri = interaction.request.uri.split("?").first if presigned.(interaction.request.uri)
 
-    body = interaction.response.body
-    stand_in = if interaction.response.headers["Content-Type"]&.first == "application/gzip" && body.present?
-      RecordedGeoliteArchive.tar_gz
-    elsif body.match?(/\A\h{64}\s+GeoLite2-City_\d+\.tar\.gz\s*\z/)
-      RecordedGeoliteArchive.sha256
+    stand_in = case interaction.request.uri
+    when %r{/GeoLite2-City_\d+\.tar\.gz\z} then RecordedGeoliteArchive.tar_gz
+    when %r{/GeoLite2-City_\d+\.tar\.gz\.sha256\z} then RecordedGeoliteArchive.sha256
     end
     if stand_in
       interaction.response.body = stand_in
