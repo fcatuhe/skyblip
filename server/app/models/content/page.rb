@@ -31,7 +31,7 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
     slugs = translated.map(&:base_slug)
     untranslated = all.select { it.locale == I18n.default_locale && slugs.exclude?(it.base_slug) }
 
-    (translated + untranslated).sort_by(&:url_path)
+    (translated + untranslated).sort_by { it.base_slug == "index" ? "" : it.to_param }
   end
 
   def url_path

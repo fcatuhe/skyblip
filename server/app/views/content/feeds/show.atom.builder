@@ -6,11 +6,12 @@ atom_feed id: Content.canonical_url(content_feed_path), root_url: Content.canoni
   feed.author { it.name "skyBlip" }
 
   @pages.each do |page|
-    feed.entry page, id: page.canonical_url, url: page.canonical_url,
+    feed.entry page, id: page.canonical_url, url: false,
       published: page.published_on&.to_time(:utc), updated: page.updated_on.to_time(:utc) do |entry|
+      entry.link rel: "alternate", type: "text/html", href: page.canonical_url, hreflang: page.locale
+      entry.link rel: "alternate", type: "text/markdown", href: page.markdown_url, hreflang: page.locale
       entry.title page.title
       entry.summary page.description
-      entry.link rel: "alternate", type: "text/markdown", href: page.markdown_url
     end
   end
 end
