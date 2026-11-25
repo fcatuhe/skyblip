@@ -4,14 +4,14 @@ nav_title: Power
 description: "Charge skyBlip Go over USB-C. Understand low-battery warnings, BATTERY EMPTY, shutdown and why the e-paper screen keeps its image when off."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>It says what it is doing, even off.</h1>
+  <h1>Switch on, charge and switch off the Go</h1>
   <p class="lede">
-    What the device says before it has a position, when it is off, and when its battery runs out.
+    Recognise the GPS and battery messages, and know when the device is off.
   </p>
 </section>
 
@@ -20,24 +20,23 @@ updated_on: "2026-11-19"
 
   <div class="feature">
     <div>
-      <h3 id="waiting">It says <span class="highlight">what it is waiting for</span>.</h3>
+      <h3 id="waiting">Wait for <span class="highlight">the first GPS position</span>.</h3>
       <p>
-        One press turns it on and opens the traffic display. Until it has a
-        position, the ring says so. The word below it tells you how far
-        the receiver has got: <span class="mono">GPS OFF</span> when it is
+        Press the button to switch the device on and open the radar. Until it has a
+        position, the ring says so. The message below the ring shows the
+        GPS receiver&rsquo;s status: <span class="mono">GPS OFF</span> when it is
         silent, <span class="mono">MOVE OUT</span> when it sends position
         solutions with no date yet, and <span class="mono">FINDS FIX</span>
         once it reads a date from a satellite.
       </p>
       <p>
         That tells you whether to wait or carry the device into the open.
-        It announces its first position, and the display
-        starts showing the sky around you.
+        The device announces its first position. The radar then shows the traffic around you.
       </p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring shows NO FIX and, below it, the receiver's progress" %>
-      <figcaption>Waiting for the sky</figcaption>
+      <figcaption>Waiting for the first GPS position</figcaption>
     </figure>
   </div>
 
@@ -67,24 +66,18 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="flat-battery">When the battery runs out, <span class="highlight">the screen says so</span>.</h3>
       <p>
-        At 3.2&nbsp;V the device switches itself off. Its last message tells you why.
-        You pressed nothing, so only the screen can explain the shutdown.
-        Without that message, it would look as though the device had crashed or
-        failed. The button stops working at the same moment, because a press
-        would only bring the battery back to the same cutoff voltage.
+        At 3.2&nbsp;V the device switches itself off. Its last message says the battery is empty. You pressed nothing, so the screen is the only explanation for the shutdown. Without that message, it could look as though the device had crashed or failed. The button stops responding at the same moment, because pressing it would bring the battery back to the same cutoff voltage.
       </p>
       <p>
-        Plug in the cable to use the device again. That single action
-        wakes the electronics without starting the device and puts the logo back:
-        the device is off again and charging. The next press starts
-        it. If the battery ran out on a shelf, the device left no message.
+        Plug in the cable to use the device again. The cable alone
+        changes nothing on the screen: the charger&rsquo;s red light shows the
+        battery filling. A press with the cable in starts the device,
+        whatever the battery reads, and clears the message. If the battery ran out on a shelf, the device left no message.
         In that case, pressing the button displays the same flat-battery message.
       </p>
       <p>
-        The device remembers this the next time it starts. Its self test reads
-        <span class="mono">WAS EMPTY</span> beside the voltage. A phone that
-        connects during that startup is told the same, so a device
-        that went dark does not come back as if nothing happened.
+        At the next startup, the self test reports the flat-battery shutdown with
+        <span class="mono">WAS EMPTY</span> beside the voltage. A phone that connects during that startup receives the same information, so a device that went dark does not come back as if nothing happened.
       </p>
     </div>
     <figure class="shot">
@@ -100,9 +93,9 @@ updated_on: "2026-11-19"
       </thead>
       <tbody>
         <tr><th>Press the button</th><td>starts, unless the battery is under 3.4&nbsp;V with no charger connected. In that case, the screen says <span class="mono">BATTERY EMPTY</span></td></tr>
-        <tr><th>Press after a flat-battery shutdown</th><td>does nothing. The screen already says why it stopped. Connect the cable to use the device again</td></tr>
-        <tr><th>Plug the charger in</th><td>charges and stays off. Connecting a cable in a flight bag does not tell it to transmit</td></tr>
-        <tr><th>Plug the charger into a device with a flat battery</th><td>charges and stays off. The logo replaces <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Press after a flat-battery shutdown</th><td>does nothing. The screen already says the battery is empty. Connect the cable to recharge the device so you can use it again</td></tr>
+        <tr><th>Plug the charger in</th><td>charges and stays off. Connecting a cable in a flight bag does not make it transmit</td></tr>
+        <tr><th>Plug the charger into a device with a flat battery</th><td>charges and stays off. <span class="mono">BATTERY EMPTY</span> stays on the screen until the next press</td></tr>
         <tr><th>Hold the button and plug the charger in</th><td>starts and charges</td></tr>
         <tr><th>Press <span class="mono">RESET</span></th><td>restarts. Press twice inside half a second to start the USB bootloader, which lets you install firmware over USB</td></tr>
       </tbody>
@@ -115,11 +108,7 @@ updated_on: "2026-11-19"
 
   <h3 id="cell">Why the battery lasts the day.</h3>
   <p class="lede">
-    Switching off takes a sequence of steps, not a sudden power cut. Their order
-    matters. The external flash memory is told to sleep while it still has
-    power to receive the command. After the power cut, that command does
-    nothing. The memory would then draw its full standby current all night
-    while the device sits in a bag looking switched off.
+    Shutdown follows several steps in a fixed order. Before cutting power, the device puts its external flash memory to sleep. After the power cut, the memory could no longer receive that command. It would then draw its full standby current all night while the device sits in a bag looking switched off.
   </p>
   <p class="lede">
     The radio and sensors account for the rest of the power use. In the air, the device transmits once a
@@ -136,11 +125,11 @@ updated_on: "2026-11-19"
     <li>The light blinks and never stays on continuously</li>
   </ul>
 
-  <h3 id="gauge">What the gauge will not do.</h3>
+  <h3 id="gauge">Read the battery gauge.</h3>
   <p class="lede">
-    It uses two voltage curves, not one. During charging, the terminal voltage is above the
-    battery&rsquo;s own voltage. The same reading then means a much emptier battery,
-    and the percentage says which curve it read.
+    With the cable in, the device measures the USB supply, not the battery.
+    It therefore shows no percentage. The percentage is
+    worked out on battery only.
   </p>
   <p class="lede">
     It never walks backwards, and a 14&nbsp;dBm transmission that briefly lowers the voltage does not

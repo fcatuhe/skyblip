@@ -1,16 +1,16 @@
 ---
 title: "Why ADS-L, when ADS-B and UAT already exist?"
 nav_title: Why ADS-L
-description: "ADS-B needs a certified transponder, UAT is not open in Europe, and ADS-L runs on a battery. Why skyBlip chose ADS-L, and where ADS-B still fits."
+description: "Transmitting ADS-B needs a certified transponder. UAT is not open in Europe. ADS-L runs on a battery. Why skyBlip chose it and where ADS-B fits."
 published_on: "2026-10-26"
 parent: blog
-updated_on: "2026-10-26"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 26 October 2026</p>
-  <h1>Why ADS-L, when ADS-B and UAT already exist?</h1>
-  <p class="lede">Pilots ask us this often: why build on ADS-L rather than ADS-B, a world standard with certified equipment, or UAT, which the United States uses for light aircraft? The answer comes down to power, paperwork and price. ADS-B keeps its place, and the two meet in the cockpit.</p>
+  <h1>Why ADS-L rather than ADS-B or UAT?</h1>
+  <p class="lede">Pilots ask us this often: why build on ADS-L rather than ADS-B, a world standard with certified equipment, or UAT, which the United States uses for light aircraft? The answer comes down to power, paperwork and price. ADS-B keeps its place. Both kinds of traffic can appear on the same cockpit screen.</p>
 </section>
 
 <section>
@@ -39,14 +39,14 @@ updated_on: "2026-10-26"
 <section>
   <h2 class="kicker">Where each one fits</h2>
   <h3>ADS-B for those who fly with airliners, ADS-L for those who fly low.</h3>
-  <p>We see the landscape settling this way:</p>
+  <p>We think the systems will be used this way:</p>
   <ul>
     <li><strong>ADS-B</strong> for commercial and heavier aviation, and for any aircraft that flies in controlled airspace, where air traffic control and TCAS read it.</li>
     <li><strong>ADS-L</strong> for light aviation, air sports and drones, in uncontrolled airspace at low level and in U-space, where SERA.6005(c) already lists it as a way to be electronically conspicuous.</li>
     <li><strong>Both</strong> for pilots who fly in both worlds and are ready to install ADS-B out and in.</li>
   </ul>
-  <p>The two do not talk to each other by radio. A Garmin GTX&nbsp;345 does not hear a Go, and a Go does not hear a GTX&nbsp;345. They meet in the receiver. skyBlip Bravo listens on 1090&nbsp;MHz, and paired with a Go it shows ADS-B, ADS-L and FLARM traffic on one radar. That pair is <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. With it, ADS-B aircraft show up tens of nautical miles away, sometimes close to a hundred, because their transmitters are so strong.</p>
-  <p>Ground stations can close the rest of the gap. ADS-L includes an uplink from the ground, which can relay ADS-B traffic, and weather, to ADS-L receivers. Few stations transmit it yet, and France has almost none. Our <%= link_to_page "roadmap", label: "skyPost stations" %> are meant to add some.</p>
+  <p>The two systems are not directly compatible over radio. A Garmin GTX&nbsp;345 does not receive a Go&rsquo;s signal, and a Go on its own does not receive a GTX&nbsp;345&rsquo;s signal. The receiver brings both kinds of traffic together. skyBlip Bravo listens on 1090&nbsp;MHz, and paired with a Go it shows ADS-B, ADS-L and FLARM traffic on one radar. That pair is <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. With it, ADS-B aircraft show up tens of nautical miles away, sometimes close to a hundred, because their transmitters are so strong.</p>
+  <p>Ground stations can close the rest of the gap. ADS-L includes an uplink from the ground, which can relay ADS-B traffic, and weather, to ADS-L receivers. Few stations transmit it yet, and France has almost none. Our <%= link_to_page "roadmap", label: "skyPost stations" %> are intended to extend that coverage.</p>
 </section>
 
 <section>

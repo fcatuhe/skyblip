@@ -2,28 +2,28 @@
 title: "Guides et premiers pas avec skyBlip Go et Bravo"
 nav_title: Guides
 slug: guides
-description: "Installez votre Go ou Bravo, puis repérez les commandes, lisez les voyants et retrouvez les réglages utiles pour votre premier vol."
+description: "Installez skyBlip sur votre Go ou Bravo. Repérez les commandes, lisez les voyants et retrouvez les réglages utiles avant votre premier vol."
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
   <h1>Trouvez le bon guide pour votre Go ou votre Bravo</h1>
-  <p class="page-hero-subtitle">Vous venez de recevoir votre boîtier&nbsp;? <%= link_to_page "install", label: "Commencez par l'installer" %>. Si le Briefing vous indique que l&rsquo;appareil est prêt, ouvrez le guide pour votre appareil.</p>
+  <p class="page-hero-subtitle">Vous venez de recevoir votre boîtier&nbsp;? <%= link_to_page "install", label: "Installez skyBlip" %>. Si le Briefing indique que votre Go ou votre Bravo est prêt, ouvrez son guide de premiers pas.</p>
 </header>
 
 <section id="install" class="band">
-  <h2 class="section-title">Installer</h2>
+  <h2 class="section-title">Installer le logiciel et fixer le boîtier</h2>
   <div class="guide-cards">
     <article>
       <%= screen_image_tag "self-test.png", alt: "La page autotest, avec le nom et le résultat du test de chaque composant, dont TEMP NRF52840 marqué NOT FOUND" %>
       <h3><%= link_to_page "install", label_type: :nav %></h3>
-      <p>Installez skyBlip sur votre Go ou votre Bravo depuis votre navigateur. À chaque démarrage, le Go vérifie sa radio, son GPS et son baromètre, et ne fonctionne pas sans eux.</p>
+      <p>Installez skyBlip sur votre Go ou votre Bravo depuis votre navigateur. À chaque démarrage, le Go vérifie sa radio, son GPS et son baromètre. Il ne fonctionne pas sans eux.</p>
     </article>
     <article>
       <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ sur un LilyGO T-Echo Plus blanc, à côté de la pince crabe à poignée orange qui le tient sur l'auvent", class: "guide-photo" %>
       <h3><%= link_to_page "mount", label_type: :nav %></h3>
-      <p>Clipsez un Go ou un Go+ sur une rotule fixée à l&rsquo;auvent, avec les pièces que nous avons testées, placez son antenne, et suspendez Bravo à sa dragonne.</p>
+      <p>Clipsez un Go ou un Go+ sur une rotule fixée à l&rsquo;auvent et placez son antenne. Retrouvez les pièces que nous avons testées et la façon de suspendre Bravo par sa dragonne.</p>
     </article>
   </div>
 </section>
@@ -42,7 +42,7 @@ updated_on: "2026-11-20"
       <p>Repérez le bouton et le voyant. Retrouvez le trafic dans votre application de navigation ou sur le Go associé.</p>
     </article>
   </div>
-  <p class="signature">Avec un Tango, ouvrez les deux guides. Le Go affiche le trafic et Bravo complète ce qu&rsquo;il reçoit.</p>
+  <p class="signature">Avec un Tango, ouvrez les deux guides. Le Go affiche le trafic et Bravo complète ce que le Go reçoit.</p>
 </section>
 
 <section class="band">
@@ -77,7 +77,7 @@ updated_on: "2026-11-20"
     <article>
       <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil qui s'est éteint parce que sa batterie est vide" %>
       <h3><%= link_to_page "power" %></h3>
-      <p>Découvrez ce qu&rsquo;il attend au parking, à quoi il ressemble éteint, et comment la batterie prévient quand elle se vide.</p>
+      <p>Reconnaissez l&rsquo;écran d&rsquo;un Go éteint et ses alertes à mesure que la batterie se vide. Découvrez aussi ce qu&rsquo;il attend au parking.</p>
     </article>
     <article>
       <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation à l'écran" %>
@@ -93,36 +93,23 @@ updated_on: "2026-11-20"
     <article>
       <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
-      <p>Une radio utilise quatre créneaux par seconde et reçoit les signaux de deux systèmes dans le même créneau.</p>
+      <p>Une seule radio utilise quatre créneaux par seconde. Dans un même créneau, elle reçoit les signaux de deux systèmes.</p>
     </article>
     <article>
       <%= render "shared/cycle", compact: true %>
       <h3><%= link_to_page "timing" %></h3>
-      <p>Le numéro de série choisit les secondes d&rsquo;un cycle de 20&nbsp;s, la parité de la seconde choisit le canal, et un tirage refait chaque seconde choisit la milliseconde.</p>
+      <p>Le numéro de série détermine les secondes utilisées dans un cycle de 20&nbsp;s. Le canal est choisi selon que la seconde est paire ou impaire. Un nouveau tirage choisit la milliseconde à chaque seconde.</p>
     </article>
     <article>
       <%= render "shared/flight_state", compact: true %>
       <h3><%= link_to_page "gps" %></h3>
-      <p>Un point qui doit se stabiliser et arriver avant 450&nbsp;ms, l&rsquo;impulsion qui ouvre chaque seconde, et le vol décidé à partir de la seule vitesse sol.</p>
+      <p>La position doit se stabiliser et arriver avant 450&nbsp;ms. Une impulsion marque le début de chaque seconde. Le Go détermine s&rsquo;il est en vol à partir de la seule vitesse sol.</p>
     </article>
     <article>
       <%= render "shared/advisory_ring", compact: true %>
       <h3><%= link_to_page "traffic" %></h3>
-      <p>Un seul anneau d&rsquo;avis de 3&nbsp;km et 300&nbsp;m, aucun avis au sol, six messages manqués pour oublier une cible, et le vol en formation.</p>
+      <p>Le Go donne des avis de trafic dans un seul anneau de 3&nbsp;km et 300&nbsp;m. Il ne donne aucun avis au sol et oublie une cible après six messages manqués. Le guide aborde aussi le vol en formation.</p>
     </article>
   </div>
-</section>
-
-<section class="band band--tint">
-  <h2 class="section-title">Pour les curieux</h2>
-  <div class="resource-cards">
-    <article>
-      <h3><%= link_to_page "see-and-avoid" %></h3>
-      <p>Les chiffres publiés sur le principe «&nbsp;voir et éviter&nbsp;» portent sur le champ de vision, le secteur balayé, la taille apparente d&rsquo;un aéronef et le temps de réaction.</p>
-    </article>
-    <article>
-      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
-      <p>Découvrez le projet skyBlip Panel pour les écrans de bord et les stations skyPost pour relayer du trafic autour d&rsquo;un terrain.</p>
-    </article>
-  </div>
+  <p class="signature">D&rsquo;autres questions&nbsp;? Retrouvez dans le <%= link_to_page "blog", label_type: :nav %> nos réponses aux pilotes des forums et notre comparaison avec d&rsquo;autres systèmes.</p>
 </section>

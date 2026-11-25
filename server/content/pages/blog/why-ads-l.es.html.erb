@@ -2,16 +2,16 @@
 title: "¿Por qué ADS-L si ya existen ADS-B y UAT?"
 nav_title: Por qué ADS-L
 slug: blog/por-que-ads-l
-description: "ADS-B exige un transpondedor certificado, UAT no está abierto en Europa y ADS-L funciona con batería. Por qué skyBlip eligió ADS-L y dónde encaja ADS-B."
+description: "Emitir en ADS-B exige un transpondedor certificado. UAT no está abierto en Europa. ADS-L funciona con batería. La elección de skyBlip y el papel de ADS-B."
 published_on: "2026-10-26"
 parent: blog
-updated_on: "2026-10-26"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 26 de octubre de 2026</p>
-  <h1>¿Por qué ADS-L, si ya existen ADS-B y UAT?</h1>
-  <p class="lede">Los pilotos nos lo preguntan a menudo: ¿por qué basarse en ADS-L y no en ADS-B, un estándar mundial con equipos certificados, o en UAT, que Estados Unidos usa para la aviación ligera? La respuesta se reduce a energía, trámites y precio. ADS-B conserva su lugar, y los dos se encuentran en la cabina.</p>
+  <h1>¿Por qué ADS-L en lugar de ADS-B o UAT?</h1>
+  <p class="lede">Los pilotos nos lo preguntan a menudo: ¿por qué basarse en ADS-L y no en ADS-B, un estándar mundial con equipos certificados, o en UAT, que Estados Unidos usa para la aviación ligera? La respuesta se reduce a energía, trámites y precio. ADS-B conserva su lugar. El tráfico de ambos sistemas puede aparecer en la misma pantalla de la cabina.</p>
 </section>
 
 <section>
@@ -40,14 +40,14 @@ updated_on: "2026-10-26"
 <section>
   <h2 class="kicker">Dónde encaja cada uno</h2>
   <h3>ADS-B para quien vuela con aviones de línea, ADS-L para quien vuela bajo.</h3>
-  <p>Así vemos cómo se ordena el panorama:</p>
+  <p>Creemos que los usos se repartirán así:</p>
   <ul>
     <li><strong>ADS-B</strong> para la aviación comercial y la más pesada, y para cualquier aeronave que vuele en espacio aéreo controlado, donde lo leen el control aéreo y el TCAS.</li>
     <li><strong>ADS-L</strong> para la aviación ligera, los deportes aéreos y los drones, en espacio aéreo no controlado a baja altura y en el U-space, donde SERA.6005(c) ya lo cita como medio para ser visible por medios electrónicos.</li>
     <li><strong>Los dos</strong> para los pilotos que vuelan en ambos mundos y están dispuestos a instalar ADS-B Out e In.</li>
   </ul>
-  <p>Los dos no se hablan por radio. Un Garmin GTX&nbsp;345 no oye un Go, y un Go no oye un GTX&nbsp;345. Se encuentran en el receptor. skyBlip Bravo escucha en 1090&nbsp;MHz y, emparejado con un Go, muestra el tráfico ADS-B, ADS-L y FLARM en un mismo radar. Esa pareja es <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Con ella, las aeronaves ADS-B aparecen a decenas de millas náuticas, a veces cerca de cien, porque sus transmisores son muy potentes.</p>
-  <p>Las estaciones terrestres pueden cerrar el resto del hueco. ADS-L incluye un enlace ascendente desde tierra, que puede retransmitir el tráfico ADS-B, y la meteorología, a los receptores ADS-L. Todavía pocas estaciones lo transmiten, y Francia casi no tiene ninguna. Nuestras <%= link_to_page "roadmap", label: "estaciones skyPost" %> deben añadir algunas.</p>
+  <p>Los dos sistemas no son directamente compatibles por radio. Un Garmin GTX&nbsp;345 no recibe la señal de un Go, y un Go por sí solo no recibe la de un GTX&nbsp;345. El receptor es el que reúne el tráfico de ambos. skyBlip Bravo escucha en 1090&nbsp;MHz y, emparejado con un Go, muestra el tráfico ADS-B, ADS-L y FLARM en un mismo radar. Esa pareja es <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Con ella, las aeronaves ADS-B aparecen a decenas de millas náuticas, a veces cerca de cien, porque sus transmisores son muy potentes.</p>
+  <p>Las estaciones terrestres pueden cerrar el resto del hueco. ADS-L incluye un enlace ascendente desde tierra, que puede retransmitir el tráfico ADS-B, y la meteorología, a los receptores ADS-L. Todavía pocas estaciones lo transmiten, y Francia casi no tiene ninguna. Nuestras <%= link_to_page "roadmap", label: "estaciones skyPost" %> deben ampliar esa cobertura.</p>
 </section>
 
 <section>

@@ -3,6 +3,8 @@ en:
   nav:
     label: "Site"
     devices: "Devices"
+    open: "Open the menu"
+    close: "Close the menu"
   cta:
     prompt: "Want to try it now, or get one?"
     try: "Try it online"

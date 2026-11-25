@@ -5,13 +5,13 @@ nav_title: "Primeros pasos con Bravo"
 description: "Enciende Bravo, interpreta su luz y ve el tráfico ADS-B en tu aplicación o en el radar del Go."
 parent: guides
 share_image: bravo
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Bravo, un botón y una luz.</h1>
-  <p class="lede">skyBlip Bravo te avisa cuando se acerca tráfico ADS-B y lo envía a tu aplicación de navegación. Bravo solo recibe. No transmite tu posición.</p>
+  <p class="lede">skyBlip Bravo te avisa cuando se acerca tráfico ADS-B. Lo envía a tu aplicación de navegación. En cuanto al tráfico aéreo, Bravo solo recibe: no transmite tu posición.</p>
 </section>
 
 <section>
@@ -31,15 +31,15 @@ updated_on: "2026-11-18"
       <tbody>
         <tr><th>Pulsa con el dispositivo apagado</th><td>Se enciende con un pulso verde y una vibración.</td></tr>
         <tr><th>Pulsa durante un parpadeo rojo rápido</th><td>Silencia la alerta, también en el Go emparejado mientras estén conectados.</td></tr>
-        <tr><th>Pulsa durante un parpadeo verde rápido</th><td>Autoriza un ajuste o una actualización solicitados por un móvil o Briefing. Si no pulsas, la solicitud caduca a los 30 segundos.</td></tr>
+        <tr><th>Pulsa durante un parpadeo verde rápido</th><td>Autoriza el ajuste o la actualización que solicita un móvil o Briefing. Si no pulsas, la solicitud caduca a los 30 segundos.</td></tr>
         <tr><th>Pulsa durante un parpadeo azul rápido</th><td>Empareja Bravo con el Go que lo ha solicitado.</td></tr>
         <tr><th>Mantén pulsado 2&nbsp;s</th><td>Se apaga con tres pulsos rojos que también notas como vibraciones.</td></tr>
-        <tr><th>Mantén pulsado, enchufa el USB-C y no sueltes el botón</th><td>Al cabo de unos 3 segundos, el LED encima del botón se pone blanco. El X1 se convierte en una unidad USB llamada X1 para instalar el firmware a mano. Briefing solo lo pide si no puede reiniciar Bravo por sí mismo.</td></tr>
+        <tr><th>Mantén pulsado, enchufa el USB-C y no sueltes el botón</th><td>Al cabo de unos 3 segundos, el LED encima del botón se pone blanco. El X1 aparece como una unidad USB llamada X1 para instalar skyBlip a mano. Briefing solo lo pide si no puede reiniciar Bravo por sí mismo.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p>Si empiezas a pulsar antes de que llegue una solicitud, no la respondes. Una pulsación larga tampoco responde a una solicitud. El navegador que instaló Bravo cambia ajustes, lo actualiza y lo empareja sin pedirte que pulses. Los demás navegadores piden confirmación.</p>
+  <p>Para responder a una solicitud, pulsa después de que llegue. Mantener pulsado el botón nunca la autoriza. El navegador que instaló Bravo puede cambiar sus ajustes, actualizarlo y emparejarlo con un Go sin pedirte que pulses. Los demás navegadores te piden que pulses para cambiar sus ajustes o actualizarlo, y no pueden emparejarlo.</p>
 
   <div class="feature">
     <div>
@@ -61,10 +61,10 @@ updated_on: "2026-11-18"
         <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Azul, parpadeo rápido</th><td>Un Go solicita emparejarse.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Dos destellos cada 3&nbsp;s</th><td>Hay una captura de diagnóstico preparada. El color sigue indicando si hay posición.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Roja, cada 3&nbsp;s</th><td>Batería baja.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Roja, cada 600&nbsp;ms</th><td>Batería crítica. Si la batería está llena, no responde el receptor de tráfico o el de satélites y Bravo no arranca.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Roja, cada 600&nbsp;ms</th><td>Batería crítica. Si la batería está llena, este parpadeo indica que no responde un receptor de tráfico o el receptor de satélites. En ese caso, Bravo no arranca.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Tres pulsos rojos con vibración</th><td>Se está apagando. Después no hay luz.</td></tr>
         <tr><th>Sin luz</th><td>Apagado.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Blanca fija</th><td>El X1 es una unidad USB para instalar el firmware.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Blanca fija</th><td>El X1 aparece como una unidad USB para instalar skyBlip.</td></tr>
       </tbody>
     </table>
   </div>
