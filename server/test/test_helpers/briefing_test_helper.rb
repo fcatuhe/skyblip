@@ -11,8 +11,8 @@ module BriefingTestHelper
     end
 
     # INFO: fc 24nov26 the headless browser reports the platform it runs on, so a test that depends on it names one
-    def in_chrome_on(platform)
-      client_hints platform:, mobile: false, brands: [ { brand: "Chromium", version: "142" }, { brand: "Google Chrome", version: "142" } ]
+    def in_chrome_on(platform, mobile: false)
+      client_hints platform:, mobile:, brands: [ { brand: "Chromium", version: "142" }, { brand: "Google Chrome", version: "142" } ]
     end
 
     def in_firefox = client_hints(nil)

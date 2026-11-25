@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { DRIVE_FILE, Installer, USB_VENDORS, browserSupport } from '#skyblip/installer';
+import { DRIVE_FILE, Installer, USB_VENDORS } from '#skyblip/installer';
 import { LAYOUTS, RECORD_BYTES, parseUf2, readSpan, recordPage, trustRecord } from '#skyblip/uf2';
 import { FakeNode } from './fake_meshtastic.mjs';
 import { releaseUf2 } from './fake_uf2.mjs';
@@ -238,11 +238,4 @@ test('a restart that cuts the write or the close once the last block lands is an
     assert.deepEqual({ phase: unit.state.phase, notice: unit.state.notice }, { phase: 'installed', notice: null }, restartIn);
     assert.match(recorded.find(([name]) => name === 'installer.wrote')[1].detail, /state had changed/);
   }
-});
-
-test('installing needs Web Serial and the folder chooser, which only Chrome and Edge on a computer have', () => {
-  assert.equal(browserSupport({ navigator: { serial: {} }, showDirectoryPicker: () => {} }), 'usb');
-  assert.equal(browserSupport({ navigator: { userAgentData: { mobile: true } } }), 'phone');
-  assert.equal(browserSupport({ navigator: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' } }), 'phone');
-  assert.equal(browserSupport({ navigator: { userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0' } }), 'other');
 });

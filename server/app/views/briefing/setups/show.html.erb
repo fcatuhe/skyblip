@@ -3,9 +3,11 @@
 <%= tag.div class: "unit unit--setup", data: {
       controller: "setup",
       setup_devices_value: "#{briefing_root_path}/devices",
-      setup_activation_value: briefing_activation_path,
       setup_setup_value: briefing_setup_path,
       setup_partner_value: @partner,
+      setup_installed_value: @handoff&.product,
+      setup_tag_value: @handoff&.tag,
+      setup_handoff_value: briefing_setup_handoff_path,
       setup_challenges_value: activation_challenges_path,
       setup_registrations_value: activation_registrations_path,
       setup_glass_outlet: ".glass-prompt"
@@ -22,6 +24,7 @@
 
   <section class="setup-step" data-setup-target="panel" data-panel="start">
     <p class="unit-lede"><%= t("briefing.setup.start") %></p>
+    <p class="setup-ahead" data-setup-target="phoneAhead" hidden><%= t("briefing.setup.phone_ahead") %></p>
     <section class="setup-linux" data-setup-target="linux" aria-labelledby="setup-linux-title" hidden>
       <h2 id="setup-linux-title"><%= t("briefing.setup.linux.title") %></h2>
       <ol class="setup-linux-steps">
@@ -69,10 +72,31 @@
 
   <section class="setup-step" data-setup-target="panel" data-panel="connect" hidden>
     <p class="unit-lede" data-setup-target="connectText"></p>
+    <figure class="setup-handoff" data-setup-target="handoff" hidden>
+      <img data-setup-target="handoffCode" alt="<%= t("briefing.setup.handoff.code") %>" width="176" height="176">
+      <figcaption>
+        <p data-setup-target="handoffText"></p>
+        <p class="note"><%= t("briefing.setup.handoff.type") %></p>
+      </figcaption>
+    </figure>
     <div class="app-actions">
       <button type="button" class="button-app" data-setup-target="connect" data-action="setup#connectInstalled"><%= t("briefing.setup.connect") %></button>
+      <button type="button" class="button-app button-app--quiet" data-setup-target="another" data-action="setup#another" hidden><%= t("briefing.setup.another") %></button>
     </div>
     <p class="note" data-setup-target="connectHint"></p>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="phone" hidden>
+    <p class="unit-lede"><%= t("briefing.setup.phone.installed") %></p>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="connectPhone" data-action="setup#connectRunning"><%= t("briefing.setup.phone.connect") %></button>
+    </div>
+    <p class="note"><%= t("briefing.setup.phone.list") %></p>
+    <section class="setup-ahead" aria-labelledby="setup-phone-new">
+      <h2 id="setup-phone-new"><%= t("briefing.setup.phone.new_title") %></h2>
+      <p><%= t("briefing.setup.phone.new") %></p>
+      <p class="note"><%= link_to_page "install", label: t("briefing.setup.by_hand_link"), anchor: "si-quelque-chose-bloque" %></p>
+    </section>
   </section>
 
   <section class="setup-step" data-setup-target="panel" data-panel="finish" hidden>
@@ -134,7 +158,13 @@
 
   <section class="setup-step" data-setup-target="panel" data-panel="unsupported" hidden>
     <p class="unit-lede" data-setup-target="unsupportedText"></p>
-    <p class="note"><%= link_to_page "install", label: t("briefing.setup.by_hand_link"), anchor: "si-quelque-chose-bloque" %></p>
+    <div class="app-actions" data-setup-target="copyLink" hidden>
+      <button type="button" class="button-app button-app--quiet" data-controller="copy-to-clipboard" data-action="copy-to-clipboard#copy"
+              data-copy-to-clipboard-content-value="<%= request.url %>" data-copy-to-clipboard-success-class="is-copied">
+        <span class="when-idle"><%= t("briefing.devices.copy_link") %></span><span class="when-copied"><%= t("briefing.devices.copied") %></span>
+      </button>
+    </div>
+    <p class="note" data-setup-target="byHandLink"><%= link_to_page "install", label: t("briefing.setup.by_hand_link"), anchor: "si-quelque-chose-bloque" %></p>
   </section>
 
   <div class="unit-message" role="status" data-setup-target="message" hidden>

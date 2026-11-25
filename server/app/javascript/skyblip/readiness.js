@@ -9,6 +9,18 @@ export function onChromium(navigator) {
   return Boolean(navigator?.userAgentData?.brands?.some(({ brand }) => brand === 'Chromium'));
 }
 
+function hasUsbInstall(scope = globalThis) {
+  return Boolean(scope.navigator?.serial && typeof scope.showDirectoryPicker === 'function');
+}
+
+// INFO: fc 25nov26 Samsung Internet on Android has both APIs, yet its port chooser closes empty at once, so a phone or tablet never installs
+export function browserSupport(scope = globalThis) {
+  const agent = scope.navigator?.userAgentData;
+  const mobile = Boolean(agent?.mobile) || ['Android', 'iOS'].includes(agent?.platform) || /Android|iPhone|iPad/.test(scope.navigator?.userAgent ?? '');
+  if (mobile) return 'phone';
+  return hasUsbInstall(scope) ? 'usb' : 'other';
+}
+
 // INFO: fc 24nov26 Chrome ships Web Bluetooth on Linux behind a flag, and getAvailability() says only whether an adapter is present
 export class BluetoothReadiness {
   #navigator;
