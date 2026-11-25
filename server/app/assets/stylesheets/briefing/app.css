@@ -118,11 +118,6 @@
     margin: 0;
   }
 
-  .app-foot {
-    margin-block: var(--space-xl) 0;
-    font-size: var(--text-s);
-  }
-
   .button-app {
     display: inline-grid;
     place-items: center;

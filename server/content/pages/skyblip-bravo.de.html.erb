@@ -9,7 +9,7 @@ product:
   currency: USD
   image: pages/skyblip-bravo/seeed-x1.avif
 description: "Bravo erkennt Mode-S- und ADS-B-Transponder. Es leitet ADS-B-Verkehr an Ihre Navigations-App oder an das Radar des Go weiter."
-updated_on: "2026-11-24"
+updated_on: "2026-11-25"
 ---
 
 <%= render "shared/device_tabs" %>
@@ -40,7 +40,7 @@ updated_on: "2026-11-24"
   <div class="faq">
     <details>
       <summary>Sendet Bravo meine Position?</summary>
-      <p>Nein. Bravo hört nur auf 1090&nbsp;MHz. Um per ADS-L gesehen zu werden, ergänzen Sie einen Go. Um von der Flugsicherung gesehen zu werden, brauchen Sie einen Transponder.</p>
+      <p>Nein. Bravo hört nur auf 1090&nbsp;MHz. Um per ADS-L gesehen zu werden, ergänzen Sie einen Go. Um von der Flugsicherung gesehen zu werden, brauchen Sie einen Transponder. <%= link_to_page "blog/who-sees-ads-l", label: "Wer Ihre Position empfängt und welchen Verkehr Sie sehen" %>.</p>
     </details>
     <details>
       <summary>Wie weit sieht Bravo Luftfahrzeuge mit ADS-B?</summary>
@@ -56,7 +56,7 @@ updated_on: "2026-11-24"
     </details>
     <details>
       <summary>Empfängt Bravo UAT auf 978&nbsp;MHz?</summary>
-      <p>Nein. UAT ist das ADS-B der Leichtfliegerei in den USA und in Europa nicht zugelassen. Bravo empfängt ADS-B auf 1090&nbsp;MHz, das weltweit genutzt wird.</p>
+      <p>Nein. UAT ist das ADS-B der Leichtfliegerei in den USA und in Europa nicht zugelassen. Bravo empfängt ADS-B auf 1090&nbsp;MHz, das weltweit genutzt wird. <%= link_to_page "blog/why-ads-l", label: "Warum ADS-L statt ADS-B" %>.</p>
     </details>
     <details>
       <summary>Welche Apps zeigen seinen Verkehr an?</summary>
@@ -72,5 +72,5 @@ updated_on: "2026-11-24"
 <section id="buy" class="band">
   <h2 class="section-title">Suchen Sie einen MeshTracker X1?</h2>
   <p>Kaufen Sie das Gerät und installieren Sie die Software von skyBlip Bravo. Die mitgelieferte Software des X1 empfängt kein ADS-B.</p>
-  <p id="install" class="signature"><%= link_to_page "buy", label: "Bezugsquellen für den MeshTracker X1 ansehen", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "skyBlip Bravo installieren" %></p>
+  <p id="install" class="signature"><%= link_to_page "buy", label: "Bezugsquellen für den MeshTracker X1 ansehen", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "skyBlip Bravo installieren" %> · <%= link_to_page "compare", label: "Mit anderen Systemen vergleichen" %></p>
 </section>

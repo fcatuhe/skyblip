@@ -4,7 +4,7 @@ nav_title: ADS-L questions
 description: "skyBlip's open questions to EASA on ADS-L Issue 2, grouped by theme, with the source clauses, current firmware behaviour and answer status."
 published_on: "2026-11-14"
 parent: ads-l
-updated_on: "2026-11-19"
+updated_on: "2026-11-23"
 ---
 
 <section>
@@ -12,6 +12,32 @@ updated_on: "2026-11-19"
   <h1>Our open questions on ADS-L Issue 2.</h1>
   <p class="lede">These are the questions skyBlip puts to EASA on ADS-L 4 SRD-860 Issue 2, where the text leaves a reading open. Each theme quotes the clause, records what our firmware does today and says whether the question has been sent and answered. Until EASA answers, Go flies the reading described here.</p>
   <p>skyBlip is open-source electronic conspicuity equipment for general aviation. skyBlip Go transmits and receives ADS-L. skyBlip Bravo receives ADS-B on 1090&nbsp;MHz and transmits nothing. Paired with a Go, on the ground, Bravo can name the transponder it takes for the aircraft&rsquo;s own.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The manufacturer prefix</h2>
+  <h3>Does F.2.2 put the manufacturer address fields in the wrong order?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.B.3, &ldquo;Bit and Byte Order&rdquo;</strong>, says:</p>
+  <blockquote>
+    <p>The following principles apply unless noted otherwise. [&hellip;] Bit numbering: Bits are counted from least significant bit to most significant bit, where the counting starts with zero (0).</p>
+  </blockquote>
+  <p>Clause <strong>ADS-L.4.SRD860.F.2.2, &ldquo;Sender Address&rdquo;</strong>, says:</p>
+  <blockquote>
+    <p>Entries 9 and higher of the address mapping table imply a further structuring of the address:</p>
+  </blockquote>
+  <p>The table that follows gives the Manufacturer prefix at offset 0, width 8 bits, and the Base address at offset 8, width 16 bits. The clause continues:</p>
+  <blockquote>
+    <p>The combination AMT page + manufacturer prefix shall be uniquely assigned to only one manufacturer. The manufacturer shall use the remaining 16-bit base address space as densely as possible.</p>
+  </blockquote>
+  <p>Read with B.3, the prefix occupies address bits 0 to 7 and the base address bits 8 to 23. Prefix <code>0xAB</code> with base address <code>0x1234</code> therefore gives address <code>0x1234AB</code>. The outer table follows the same rule: the Address Mapping Table (AMT) entry at offset 0 occupies the sender field&rsquo;s low 6 bits, with the 24-bit address above it.</p>
+  <p>We think the manufacturer sub-table has its fields in the wrong order. It appears to list them most significant first, against B.3, without stating an exception. Calling the field a prefix suggests the leading byte. ICAO allocates 24-bit aircraft addresses in blocks defined by their leading bits, and FLARM IDs are commonly written with a leading byte such as <code>DD</code>.</p>
+  <p>The registry&rsquo;s uniqueness rule depends on every manufacturer using the same byte. On one AMT page, a manufacturer with prefix <code>0x00</code> in the low byte sends base address <code>0x0101</code> as <code>0x010100</code>. Another with prefix <code>0x01</code> in the high byte sends base address <code>0x0100</code> as <code>0x010100</code>. Two aircraft then share the same AMT and address despite holding different prefixes.</p>
+  <p>The ADS-L registry assigned skyBlip manufacturer page 49, AMT entry 58 and prefix 0 on 5 October 2026. skyblip.eu assigns each Go a 16-bit serial at activation, densely from 1. Go puts prefix <code>0x00</code> in the high byte, address bits 16 to 23, and the serial in bits 0 to 15. Serial <code>0x012A</code> sends address <code>0x00012A</code>. This follows the conventional reading of a prefix, not the table as written. Read with B.3, that address has prefix <code>0x2A</code> and base address <code>0x0001</code>. Under the literal reading, each Go&rsquo;s prefix is the low byte of its serial, so units spread across prefixes on page 49 that the registry did not assign to skyBlip. Go keeps the high byte until EASA answers. A change that follows the text as written is prepared and waits for that answer: prefix in bits 0 to 7, serial in bits 8 to 23, and serial <code>0x012A</code> sent as <code>0x012A00</code>.</p>
+  <ol>
+    <li><p><strong>Is the manufacturer prefix intended to occupy the high byte, address bits 16 to 23, with the base address in bits 0 to 15?</strong></p></li>
+    <li><p><strong>If so, could a corrigendum or the next issue correct the offsets to base address at 0 and manufacturer prefix at 16?</strong> Alternatively, F.2.2 could state its exception to B.3 explicitly. If the low byte is intended, saying so in the clause would keep manufacturers from reading it two ways.</p></li>
+  </ol>
+  <p class="note">Not sent yet.</p>
 </section>
 
 <section>
@@ -120,7 +146,7 @@ updated_on: "2026-11-19"
     <li>
       <strong>EASA</strong> &middot;
       <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2.
-      <span class="support">C.2.5, C.5, F.2.1, F.2.3, G.1.1, G.1.2, G.1.16 and G.1.17, quoted above.</span>
+      <span class="support">B.3, C.2.5, C.5, F.2.1, F.2.2, F.2.3, G.1.1, G.1.2, G.1.16 and G.1.17, quoted above.</span>
     </li>
     <li>
       <strong>skyBlip firmware</strong> &middot;

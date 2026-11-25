@@ -14,6 +14,7 @@ class OAuth::Grant < ApplicationRecord
   scope :latest_first, -> { order(updated_at: :desc) }
   scope :lapsed, -> { where.missing(:tokens).where(updated_at: ...LAPSE.ago) }
   scope :expired, -> { where(approved_at: ...APPROVAL_LIFETIME.ago) }
+  scope :elsewhere, -> { where.not(resource: OAuth.resource) }
 
   after_destroy_commit -> do
     Rails.event.notify "oauth_grant.ended", grant_id: id, client_id:, age_seconds: (Time.current - created_at).round,

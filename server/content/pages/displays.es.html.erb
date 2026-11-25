@@ -2,25 +2,25 @@
 title: "Pantallas del Go y modos del radar"
 slug: pantallas
 nav_title: "Pantallas"
-description: "Consulta todas las pantallas de skyBlip Go, desde el tráfico hasta el diagnóstico. Compara PLOT ALL y PLOT TO SCALE con las mismas situaciones de tráfico."
+description: "Consulta las pantallas de skyBlip Go, del radar al diagnóstico. Compara PLOT ALL y PLOT TO SCALE con las mismas situaciones de tráfico."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Todas las pantallas tal como las dibuja el Go.</h1>
+  <h1>Las pantallas tal como las dibuja el Go.</h1>
   <p class="lede">
-    Cada imagen muestra los 200&times;200 píxeles que dibuja el
-    <%= link_to_page "skyblip-go", label: "simulador", anchor: "simulator" %>, configurado en ese estado y capturado píxel a píxel. Cuando cambia una pantalla en el dispositivo, hacemos otra captura.
+    Cada imagen reproduce píxel a píxel los 200&times;200 píxeles del
+    <%= link_to_page "skyblip-go", label: "simulador", anchor: "simulator" %>, colocado en la situación que se muestra. Cuando cambia una pantalla en el dispositivo, hacemos otra captura.
   </p>
 </section>
 
 <section>
   <h2 class="kicker" id="both-ways">Los dos modos del radar</h2>
   <p class="lede">
-    <span class="mono">PLOT</span> en el menú de ajustes permite dibujar el radar de dos maneras. <span class="mono">ALL</span>, la primera opción y la predeterminada de fábrica, reduce el círculo y coloca las aeronaves que quedan fuera en la banda que lo rodea, en su dirección. <span class="mono">TO SCALE</span> coloca cada símbolo donde corresponde según la escala del círculo y omite lo que queda fuera de la pantalla. Las tres situaciones siguientes se han capturado en ambos modos con el mismo firmware.
+    El ajuste <span class="mono">PLOT</span>, en el menú de ajustes, ofrece dos modos de radar. <span class="mono">ALL</span> es la primera opción y la predeterminada en un dispositivo nuevo. En este modo, el círculo se reduce. Las aeronaves que quedan fuera aparecen en la banda que lo rodea, en su dirección. <span class="mono">TO SCALE</span> muestra las aeronaves a la escala del círculo. Las que quedan más allá de los bordes de la pantalla no se muestran. Las tres situaciones siguientes se han capturado en ambos modos con el mismo firmware.
   </p>
 
   <div class="plot" data-controller="plot" data-plot-view-value="both">
@@ -50,8 +50,8 @@ updated_on: "2026-11-20"
     <div class="plot-situation">
       <h3 id="past-the-ring">Tráfico fuera del círculo.</h3>
       <p>
-        Una aeronave se acerca desde cinco millas por delante, un grupo de tres está a ocho millas por delante y a la derecha y otra está a once millas a la izquierda. Con
-        <span class="mono">ALL</span>, todas aparecen en la banda. El grupo comparte un símbolo con el número 3. La línea que indica dónde estará en un minuto la aeronave que se acerca ya entra en el círculo. A escala, solo la aeronave de delante aparece en pantalla.
+        Una aeronave se acerca a cinco millas por delante de ti. Un grupo de tres está a ocho millas por delante y a la derecha, y otra aeronave está a once millas a la izquierda. Con
+        <span class="mono">ALL</span>, todas aparecen en la banda. El grupo comparte un símbolo con el número 3. La línea de la aeronave que se acerca ya entra en el círculo y termina en su posición prevista dentro de un minuto. A escala, de esas aeronaves solo aparece en pantalla la que está delante.
       </p>
       <div class="shots">
         <figure class="shot plot-all">
@@ -83,7 +83,7 @@ updated_on: "2026-11-20"
     </div>
   </div>
 
-  <p><%= link_to_page "radar", label: "Cómo leer la banda exterior", anchor: "every-aircraft", class: "cta cta--next" %></p>
+  <p><%= link_to_page "radar", label: "Cómo leer los símbolos de la banda exterior", anchor: "every-aircraft", class: "cta cta--next" %></p>
 </section>
 
 <section>
@@ -130,11 +130,11 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-blank.png", alt: "Campo del indicativo con el primer carácter en blanco, la barra debajo y ERASE para el botón" %>
-      <figcaption>El primer carácter en blanco</figcaption>
+      <figcaption>Un espacio como primer carácter</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Menú de aeronave tras la pulsación, con la fila CALLSIGN seleccionada y el valor NONE" %>
-      <figcaption>Una pulsación después</figcaption>
+      <figcaption>Sin indicativo, una pulsación después</figcaption>
     </figure>
   </div>
   <p>
@@ -172,11 +172,11 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="on-the-ground">En tierra y con el Go apagado</h2>
+  <h2 class="kicker" id="on-the-ground">Sin posición, batería baja o dispositivo apagado</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "Pantalla del radar sin posición: el círculo vacío muestra NO FIX y, debajo, el estado del receptor" %>
-      <figcaption>A la espera de señal</figcaption>
+      <figcaption>A la espera de posición</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "low-battery.png", alt: "Pantalla del radar en vuelo con batería baja: BAT y el porcentaje dentro del círculo, en lugar del texto de estado" %>
@@ -201,7 +201,7 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="asked">Pide confirmación en pantalla.</h2>
+  <h2 class="kicker" id="asked">Confirmación y recuperación</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "confirm.png", alt: "Solicitud de autorización de los ajustes enviados por el móvil: SETTINGS bajo el símbolo grande, el cambio solicitado, CANCELS IN con los segundos restantes, ACCEPT para el botón y CANCEL para el panel táctil" %>
@@ -209,7 +209,7 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "recovery.png", alt: "Pantalla de recuperación: RECOVERY bajo el símbolo grande, el nombre de la unidad USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET y START para el botón" %>
-      <figcaption>Listo para el gestor de arranque USB</figcaption>
+      <figcaption>Recuperación por USB</figcaption>
     </figure>
   </div>
   <p>
@@ -220,12 +220,12 @@ updated_on: "2026-11-20"
 <section>
   <h2 class="kicker">Notas técnicas</h2>
 
-  <h3 id="screen">Por qué funciona así la pantalla.</h3>
+  <h3 id="screen">Cómo funciona la pantalla.</h3>
   <p class="lede">
     La pantalla es un panel de tinta electrónica de 1,54&Prime; y 200&times;200 píxeles. Conserva la última imagen sin corriente y no gasta energía en mantenerla. Por eso el logotipo indica que el dispositivo está apagado y conviene dejar la pantalla en blanco al guardarlo.
   </p>
   <p class="lede">
-    En vuelo, cada imagen usa una actualización parcial. Una actualización completa hace parpadear la pantalla en blanco y negro durante un segundo y medio. Ocurre dos veces por sesión, al encender y al apagar. Un cambio de pantalla usa un solo barrido negro. El parpadeo de la alerta, una vez por segundo, es el límite del panel, no un ritmo que hayamos elegido. Se puede actualizar más deprisa, pero alternar así una zona negra grande deja una marca permanente en la pantalla.
+    En vuelo, cada imagen usa una actualización parcial. La actualización completa hace parpadear la pantalla en blanco y negro durante un segundo y medio. Ocurre dos veces por sesión, al encender y al apagar. Al cambiar de pantalla, esta pasa una sola vez a negro. La alerta parpadea una vez por segundo para respetar el límite del panel, no porque hayamos elegido ese ritmo. Se puede actualizar más deprisa, pero hacer parpadear una zona negra grande a ese ritmo deja una marca permanente en la pantalla.
   </p>
 
   <ul class="points">

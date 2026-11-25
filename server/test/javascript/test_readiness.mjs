@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { BluetoothReadiness, onDesktopLinux } from '#skyblip/readiness';
+import { BluetoothReadiness, browserSupport, onDesktopLinux } from '#skyblip/readiness';
 
 const CHROME = [{ brand: 'Chromium', version: '142' }, { brand: 'Google Chrome', version: '142' }];
 
@@ -75,4 +75,21 @@ test('only a desktop Linux counts as Linux', () => {
   assert.equal(onDesktopLinux({ userAgentData: { platform: 'Chrome OS' } }), false);
   assert.equal(onDesktopLinux({ userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8)' }), false);
   assert.equal(onDesktopLinux({ userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Firefox/140.0' }), true);
+});
+
+test('installing needs Web Serial and the folder chooser, which only Chrome and Edge on a computer have', () => {
+  assert.equal(browserSupport({ navigator: { serial: {} }, showDirectoryPicker: () => {} }), 'usb');
+  assert.equal(browserSupport({ navigator: { userAgentData: { mobile: true } } }), 'phone');
+  assert.equal(browserSupport({ navigator: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' } }), 'phone');
+  assert.equal(browserSupport({ navigator: { userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0' } }), 'other');
+});
+
+// Samsung Internet on an Android tablet offered Install, and its port chooser closed empty within 17 ms, six times over.
+test('a phone or a tablet installs from a computer, even when its browser has Web Serial and the folder chooser', () => {
+  const usb = { serial: {} };
+  const scope = navigator => ({ navigator: { ...usb, ...navigator }, showDirectoryPicker: () => {} });
+  assert.equal(browserSupport(scope({ userAgentData: { mobile: false, platform: 'Android' } })), 'phone');
+  assert.equal(browserSupport(scope({ userAgentData: { mobile: true, platform: 'Android' } })), 'phone');
+  assert.equal(browserSupport(scope({ userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 SamsungBrowser/30.0 Safari/537.36' })), 'phone');
+  assert.equal(browserSupport(scope({ userAgentData: { mobile: false, platform: 'Windows' } })), 'usb');
 });

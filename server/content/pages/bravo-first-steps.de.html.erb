@@ -5,13 +5,13 @@ slug: bravo-erste-schritte
 description: "Schalten Sie Bravo ein, lesen Sie die LED und sehen Sie ADS-B-Verkehr in Ihrer App oder auf dem Radar des Go."
 parent: guides
 share_image: bravo
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Bravo: eine Taste und eine LED.</h1>
-  <p class="lede">skyBlip Bravo warnt Sie vor näher kommendem ADS-B-Verkehr und leitet ihn an Ihre Navigations-App weiter. Bravo empfängt nur. Es sendet Ihre Position nicht.</p>
+  <p class="lede">skyBlip Bravo warnt Sie vor näher kommendem ADS-B-Verkehr. Es leitet ihn an Ihre Navigations-App weiter. Bei den Flugverkehrssignalen empfängt Bravo nur: Es sendet Ihre Position nicht.</p>
 </section>
 
 <section>
@@ -31,15 +31,15 @@ updated_on: "2026-11-18"
       <tbody>
         <tr><th>Taste bei ausgeschaltetem Gerät drücken</th><td>Schaltet das Gerät mit einem grünen Lichtimpuls und einer kurzen Vibration ein.</td></tr>
         <tr><th>Taste bei raschem roten Flackern drücken</th><td>Schaltet die Warnung stumm, bei bestehender Verbindung auch am gekoppelten Go.</td></tr>
-        <tr><th>Taste bei schnellem grünen Blinken drücken</th><td>Bestätigt eine Änderung oder ein Update vom Smartphone oder von Briefing. Ohne Bestätigung läuft die Anfrage nach 30 Sekunden ab.</td></tr>
+        <tr><th>Taste bei schnellem grünen Blinken drücken</th><td>Bestätigt die Einstellungsänderung oder das Update, das ein Smartphone oder Briefing anfordert. Ohne Tastendruck läuft die Anfrage nach 30 Sekunden ab.</td></tr>
         <tr><th>Taste bei schnellem blauen Blinken drücken</th><td>Koppelt Bravo mit dem Go, der die Anfrage gesendet hat.</td></tr>
         <tr><th>Taste 2&nbsp;s halten</th><td>Schaltet das Gerät mit drei roten Lichtimpulsen und spürbaren Vibrationen aus.</td></tr>
-        <tr><th>Taste halten, USB-C anschließen und weiter halten</th><td>Nach etwa 3 Sekunden leuchtet die LED über der Taste weiß. Der X1 erscheint als USB-Laufwerk namens X1, auf dem Sie die Firmware von Hand installieren können. Briefing fordert Sie nur dazu auf, wenn es Bravo nicht selbst neu starten kann.</td></tr>
+        <tr><th>Taste halten, USB-C anschließen und weiter halten</th><td>Nach etwa 3 Sekunden leuchtet die LED über der Taste weiß. Der X1 erscheint als USB-Laufwerk namens X1, auf dem Sie skyBlip von Hand installieren können. Briefing fordert Sie nur dazu auf, wenn es Bravo nicht selbst neu starten kann.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p>Haben Sie die Taste schon vor der Anfrage gedrückt, zählt das nicht als Antwort. Langes Drücken beantwortet keine Anfrage. Der Browser, mit dem Sie Bravo installiert haben, kann Einstellungen ändern, Updates installieren und das Gerät koppeln, ohne dass Sie die Taste drücken. Andere Browser fragen nach.</p>
+  <p>Drücken Sie die Taste erst nach Eingang der Anfrage, um sie zu bestätigen. Gedrückthalten bestätigt keine Anfrage. Der Browser, mit dem Sie Bravo installiert haben, kann Einstellungen ändern, Updates installieren und Bravo mit einem Go koppeln, ohne dass Sie die Taste drücken. Andere Browser verlangen für Einstellungsänderungen und Updates einen Tastendruck. Sie können Bravo nicht mit einem Go koppeln.</p>
 
   <div class="feature">
     <div>
@@ -61,10 +61,10 @@ updated_on: "2026-11-18"
         <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blau, schnelles Blinken</th><td>Ein Go möchte sich koppeln.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Zweimaliges Blinken alle 3&nbsp;s</th><td>Eine Diagnoseaufzeichnung ist vorgemerkt. Die Farbe zeigt weiterhin den Positionsstatus.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rot, alle 3&nbsp;s</th><td>Akkustand niedrig.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rot, alle 600&nbsp;ms</th><td>Akkustand kritisch. Ist der Akku voll, antwortet ein Verkehrs- oder Satellitenempfänger nicht. Bravo nimmt den Betrieb nicht auf.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rot, alle 600&nbsp;ms</th><td>Akkustand kritisch. Bei vollem Akku bedeutet dieses Blinken, dass ein Verkehrsempfänger oder der Satellitenempfänger nicht antwortet. Bravo nimmt dann den Betrieb nicht auf.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Drei rote Lichtimpulse mit Vibration</th><td>Das Gerät schaltet sich aus. Die LED erlischt.</td></tr>
         <tr><th>Dunkel</th><td>Aus.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Weißes Dauerlicht</th><td>Der X1 ist ein USB-Laufwerk zur Firmwareinstallation.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Weißes Dauerlicht</th><td>Der X1 erscheint als USB-Laufwerk zur Installation von skyBlip.</td></tr>
       </tbody>
     </table>
   </div>
