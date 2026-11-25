@@ -66,7 +66,7 @@
           <td class="mono"><%= unit.device_id %></td>
           <td class="mono"><%= unit.active_key&.public_key&.first(8) || "none" %></td>
           <td><%= unit.keys.count(&:pending?) %></td>
-          <td class="mono"><%= unit_firmware(unit)&.version %></td>
+          <td class="mono"><%= unit_version(unit_firmware(unit)) %></td>
           <td><%= unit_build(unit_firmware(unit)) %></td>
           <td><%= firmware_source(unit_firmware(unit)) %></td>
           <td><%= l unit.activated_at, format: "%b %-d, %Y" if unit.activated_at %></td>
