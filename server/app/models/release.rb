@@ -88,7 +88,7 @@ class Release
 
   def self.download(tag, file)
     return local_file(file) if tag == LOCAL_TAG
-    raise NotFound unless TAG.match?(tag) && FILE.match?(file)
+    raise NotFound unless TAG.match?(tag) && FILE.match?(file) && published.any? { it.tag == tag && it.assets.include?(file) }
 
     uri = URI("https://github.com/#{REPOSITORY}/releases/download/#{tag}/#{file}")
     request(uri, downloads: true).body

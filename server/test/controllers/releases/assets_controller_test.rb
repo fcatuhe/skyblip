@@ -2,8 +2,8 @@ require "test_helper"
 
 class Releases::AssetsControllerTest < ActionDispatch::IntegrationTest
   test "firmware is fetched through our origin and has immutable caching" do
-    VCR.use_cassette("github/firmware") do
-      get "/releases/dev-1765/skyblip-go-dev-1765.signed.bin"
+    VCR.use_cassette("github/releases") do
+      VCR.use_cassette("github/firmware") { get "/releases/dev-1765/skyblip-go-dev-1765.signed.bin" }
     end
 
     assert_response :success
@@ -34,6 +34,16 @@ class Releases::AssetsControllerTest < ActionDispatch::IntegrationTest
     [ "/releases/main/config.yml", "/releases/dev-1005/console.html", "/releases/dev-1005/evil.js" ].each do |path|
       get path
       assert_response :not_found
+    end
+  end
+
+  # Each download holds a thread while GitHub answers, so a name no release holds must cost no fetch.
+  test "a tag or a file no published release holds is refused without a download" do
+    VCR.use_cassette("github/releases", allow_playback_repeats: true) do
+      [ "/releases/dev-9999/skyblip-go-dev-9999.signed.bin", "/releases/dev-1765/skyblip-go-dev-1764.signed.bin" ].each do |path|
+        get path
+        assert_response :not_found
+      end
     end
   end
 end
