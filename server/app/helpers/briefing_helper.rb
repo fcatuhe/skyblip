@@ -23,6 +23,10 @@ module BriefingHelper
     end
   end
 
+  def version_name(release)
+    release.stable? ? release.tag : release.version
+  end
+
   def aircraft_address_hint(slug)
     t("settings.aircraft_address_hints.#{slug.split("-").first}")
   end

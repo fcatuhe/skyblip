@@ -1,0 +1,97 @@
+---
+title: "ADS-L: Wer sieht Sie, welchen Verkehr sehen Sie?"
+nav_title: Wer ADS-L sieht
+slug: blog/wer-sieht-ads-l
+description: "Flugsicherung, FLARM, GTX 345, OGN-Stationen: Wer das ADS-L eines Go empfängt und welchen Verkehr Go und Bravo empfangen, Band für Band."
+published_on: "2026-11-02"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 2. November 2026</p>
+  <h1>ADS-L: Wer sieht Sie und welchen Verkehr sehen Sie?</h1>
+  <p class="lede">Drei Fragen kommen jedes Mal, wenn wir Piloten skyBlip zeigen. Sieht die Flugsicherung ADS-L auf ihrem Radar? Sieht mein GTX&nbsp;345 einen Go? Welche Bänder empfängt skyBlip? Hier sind die Antworten, Band für Band und Empfänger für Empfänger.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Band für Band</h2>
+  <h3>Vier Frequenzen, vier Gerätefamilien.</h3>
+  <div class="table-scroll">
+    <table class="prose">
+      <thead>
+        <tr><th>Frequenz</th><th>Wer sie nutzt</th><th>skyBlip</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>1090&nbsp;MHz</th><td>Transponder mit ADS-B, Mode S und Mode A/C, weltweit</td><td>Bravo empfängt ADS-B und erkennt Mode S. Er sendet nichts.</td></tr>
+        <tr><th>978&nbsp;MHz</th><td>UAT, das ADS-B der Leichtflugzeuge in den USA</td><td>Wird nicht empfangen. UAT ist in Europa nicht freigegeben.</td></tr>
+        <tr><th>868,2 und 868,4&nbsp;MHz</th><td>ADS-L, FLARM und OGN-Tracker im gemeinsam genutzten Kurzstreckenband</td><td>Go sendet ADS-L und empfängt ADS-L und FLARM.</td></tr>
+        <tr><th>869,525&nbsp;MHz</th><td>ADS-L-Uplink von Bodenstationen und PilotAware</td><td>Go hört den ADS-L-Uplink. PilotAware empfängt er nicht.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Go empfängt auch kein FANET, das Protokoll der Gleitschirmflieger, und nicht das eigene Format der OGN-Tracker. Go sendet nur ADS-L, und Bravo sendet nichts.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Wer einen Go sieht</h2>
+  <h3>ADS-L-Empfänger sehen Sie. Die Flugsicherung und Transponder nicht.</h3>
+  <div class="table-scroll">
+    <table class="prose">
+      <thead>
+        <tr><th>Empfänger</th><th>Sieht einen Go?</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Ein anderer Go oder jedes ADS-L-Gerät</th><td>Ja, von Luftfahrzeug zu Luftfahrzeug, ohne Netz.</td></tr>
+        <tr><th>Ein FLARM-Gerät</th><td>Manche. FLARM schreibt, dass die meisten Geräte mit nur einem Funkmodul ADS-L schlecht oder gar nicht empfangen, weil sie zwischen FLARM und ADS-L wechseln. FLARM hat dabei Vorrang.</td></tr>
+        <tr><th>Eine OGN-Bodenstation</th><td>Ja, in Reichweite. Apps, die OGN-Daten nutzen, etwa SafeSky oder die OGN-Karten, können Sie dann anzeigen.</td></tr>
+        <tr><th>Ein U-Space-Dienstleister</th><td>Ja. Dafür wurde ADS-L geschrieben: Die Spezifikation macht Luftfahrzeuge »für U-Space-Dienstleister elektronisch sichtbar«.</td></tr>
+        <tr><th>Das Radar der Flugsicherung</th><td>Nein. Das Radar liest Transponder. Führen Sie den Transponder mit, den Ihr Luftraum verlangt.</td></tr>
+        <tr><th>Ein Transponder mit ADS-B In, etwa ein GTX&nbsp;345, oder ein TCAS</th><td>Nein. Sie hören nur auf 1090&nbsp;MHz.</td></tr>
+        <tr><th>Die SafeSky-App allein</th><td>Nur über das Netz, wenn eine Bodenstation Sie gehört hat.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>ADS-L macht Sie also nicht für den Fluglotsen sichtbar. Piloten in Ihrer Nähe mit einem passenden Empfänger und U-Space-Dienstleister können damit Ihre Position empfangen. Deshalb hoffen wir auch, dass FLARM-Nutzer ADS-L einschalten: FLARM verkauft das Senden von ADS-L als Lizenz für seine PowerFLARM-Geräte und liefert es beim neuen PowerFLARM Flex mit.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Was ein Go sieht</h2>
+  <h3>ADS-L und FLARM direkt, ADS-B mit einem Bravo.</h3>
+  <ul>
+    <li><strong>ADS-L</strong> von jedem Gerät, das es sendet.</li>
+    <li><strong>FLARM</strong>, damit Segelflugzeuge und Schleppflugzeuge auf dem Radar erscheinen. Go liest FLARM, sendet es aber nie, denn zum Senden von FLARM braucht man eine Lizenz von FLARM.</li>
+    <li><strong>ADS-B</strong> über einen gekoppelten <%= link_to_page "skyblip-bravo", label: "Bravo" %>. Verkehrsflugzeuge, Geschäftsreiseflugzeuge, Hubschrauber und Leichtflugzeuge mit ADS-B-Transponder erscheinen schon aus Dutzenden nautischen Meilen.</li>
+    <li><strong>Mode S ohne ADS-B</strong>: Bravo erkennt diese Transponder, aber sie senden keine Position. Wir messen, wie die Signalstärke mit der Entfernung zusammenhängt, um sie auf dem Go und in Navigations-Apps zu melden.</li>
+    <li><strong>Vom Boden weitergeleiteter Verkehr</strong>, wo eine Station den ADS-L-Uplink sendet.</li>
+  </ul>
+  <p>Diese Empfangssysteme zeigen Ihnen kein Luftfahrzeug, das nichts sendet. Das ist die größte Lücke jedes Systems, und deshalb halten wir den Preis fürs Senden so niedrig wie möglich.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Quellen</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, Issue 2, Einleitung und Subpart C.
+      <span class="support">Der Zweck von ADS-L und seine Kanäle im M-Band und im O-Band.</span>
+    </li>
+    <li>
+      <strong>FLARM</strong> &middot;
+      <a href="https://www.flarm.com/en/general-aviation/electronic-conspicuity-and-ads-l/">ADS-L and FASST-CH</a>, abgerufen am 2. November 2026.
+      <span class="support">»Der Empfang von ADS-L ist in der Regel nicht oder nur eingeschränkt möglich« bei Geräten mit einem Funkmodul, und die Geräte, die es mit ADS-L gibt.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot; <%= link_to_page "radio", label: "Die Funksekunde" %>.
+      <span class="support">Wie Go ein Funkmodul zwischen ADS-L, FLARM und dem Uplink vom Boden aufteilt.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

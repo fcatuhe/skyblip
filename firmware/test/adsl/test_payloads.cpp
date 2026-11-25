@@ -1,5 +1,6 @@
 // ADS-L 4 SRD-860 issue 2 G.2 to G.5: the Status, Traffic Uplink, FIS-B and Remote ID payloads.
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -16,10 +17,13 @@
 #include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/settings.h"
 #include "protocols/adsb/squitter.h"
+#include "protocols/adsl/test/conformance/reference.h"
+#include "protocols/adsl/uplink.h"
 #include "protocols/common/bit_field.h"
 #include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
 #include "simulator/world/adsb_out.h"
+#include "test/support/product_rig.h"
 #include "test/support/simulator_run.h"
 #include "test/support/tango.h"
 
@@ -144,6 +148,37 @@ adsl::Packet status_beside_transponder(uint32_t aircraft_address, uint32_t heard
                         settings::kSkyblipAddressMappingTable,
                         tango.go.product.radio().status_report());
     return packet;
+}
+
+// An aircraft 2 m above own-ship, north of it, as a ground station relays its Traffic this second.
+adsl::Packet relayed_near(Rig& rig, uint32_t address, int32_t north_m) {
+    const model::Ownship& own = rig.state().own;
+    adsl::Traffic traffic = adsl::conformance::reference_traffic();
+    traffic.address = address;
+    traffic.timestamp = adsl::timestamp_code(own.utc_s + 1, timing::kGroundEmitStartMs);
+    traffic.latitude_1e7 = own.latitude_1e7 + north_m * 90;
+    traffic.longitude_1e7 = own.longitude_1e7;
+    traffic.altitude_m = own.altitude_hae_mm / 1000 + 2;
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+    return packet;
+}
+
+// C.4.3's sync word, then the packet, into the O-band dwell the Go armed for the Uplink slot.
+bool hear_uplink(Rig& rig, const uint8_t* packet, int bytes) {
+    uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0x2D, 0xD4};
+    std::memcpy(burst + 2, packet, static_cast<size_t>(bytes));
+    rig.push_timed_fix(25000, 900);
+    const uint32_t at_ms = rig.now_ms + timing::kGroundEmitStartMs;
+    rig.run(rig.now_ms, rig.now_ms + 200);
+    rig.platform.clock().set_milliseconds(at_ms);
+    rig.product.run_pass(at_ms);
+    const bool heard = rig.platform.chips().radio.receive_air(
+        burst, static_cast<uint16_t>(2 + bytes), false, -92, adsl::kUplinkChipRateBps);
+    rig.run(at_ms + 10, rig.now_ms + 950);
+    rig.now_ms += 1000;
+    rig.utc_offset_s++;
+    return heard;
 }
 
 }  // namespace
@@ -371,4 +406,33 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target arrives with its whole Traffic p
     CHECK(out[0].climb_valid);
     CHECK(out[0].climb_e8 == -20);
     CHECK(out[0].track_c9 == 300);
+}
+
+// The packets come from reference.h's oracle, and the radio reads 230 bytes past the sync word.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.3: a Traffic Uplink sent with the CRC is drawn, with one record or ten" *
+    doctest::test_suite("main")) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds(3, 25000, 900);
+    adsl::Packet traffic[adsl::kUplinkMaxTargets];
+    uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
+
+    traffic[0] = relayed_near(rig, 0x3C2000, 1500);
+    const int one = adsl::conformance::spec_uplink(traffic, 1, 0x01, false, packet);
+    CHECK(one == 29);
+    REQUIRE(hear_uplink(rig, packet, one));
+    CHECK(rig.state().air.uplink_bad == 0);
+    CHECK(rig.state().air.uplink_targets == 1);
+    CHECK(rig.state().traffic.find(adsl::kAddressTableFlarm, 0x3C2000) >= 0);
+
+    for (int i = 0; i < adsl::kUplinkMaxTargets; i++)
+        traffic[i] = relayed_near(rig, 0x3C2100 + static_cast<uint32_t>(i), 500 + 300 * i);
+    const int ten = adsl::conformance::spec_uplink(traffic, 10, 0x01, false, packet);
+    CHECK(ten == 201);
+    REQUIRE(hear_uplink(rig, packet, ten));
+    CHECK(rig.state().air.uplink_frames == 2);
+    CHECK(rig.state().air.uplink_bad == 0);
+    CHECK(rig.state().air.uplink_targets == 11);
+    CHECK(rig.state().traffic.count() == 11);
 }

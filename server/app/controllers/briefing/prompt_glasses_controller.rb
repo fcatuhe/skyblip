@@ -1,6 +1,6 @@
 class Briefing::PromptGlassesController < Briefing::ApplicationController
   def show
-    redirect_to release_asset_path(Release.prompt_glass_tag, "embed.js", locale: nil)
+    redirect_to release_asset_path(*Release.prompt_glass_embed, locale: nil)
   rescue Release::Unavailable => error
     Rails.logger.warn(error.message)
     head :service_unavailable

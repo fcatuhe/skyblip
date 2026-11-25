@@ -11,9 +11,9 @@ class ReleaseFilesTest < Minitest::Test
     within do |images, simulator, source, release|
       ReleaseFiles.new(images).stage(into: release, name: "dev-1010", simulator:, source:)
 
-      assert_equal %w[NOTICE.md SHA256SUMS embed.js scenarios.json skyblip-bravo-dev-1010.signed.bin skyblip-bravo-dev-1010.uf2
+      assert_equal %w[NOTICE.md SHA256SUMS skyblip-bravo-dev-1010.signed.bin skyblip-bravo-dev-1010.uf2
                       skyblip-go-dev-1010.full.signed.bin skyblip-go-dev-1010.signed.bin skyblip-go-dev-1010.uf2
-                      skyblip_simulator.js skyblip_simulator.wasm], Dir.children(release).sort
+                      skyblip-simulator-embed.js skyblip-simulator-scenarios.json skyblip-simulator.js skyblip-simulator.wasm], Dir.children(release).sort
       assert_equal "skyblip-go base image\n", File.read(File.join(release, "skyblip-go-dev-1010.signed.bin"))
       assert_checksums release
     end
@@ -86,7 +86,7 @@ class ReleaseFilesTest < Minitest::Test
 
   # Every image artifact lands in one directory, so a file no product build writes is refused rather than ignored.
   def test_a_file_no_product_build_writes_is_refused
-    %w[skyblip-go.signed.bin.orig embed.js].each do |planted|
+    %w[skyblip-go.signed.bin.orig skyblip-simulator-embed.js].each do |planted|
       within do |images, _simulator, _source, _release|
         File.write(File.join(images, planted), "planted\n")
         error = assert_raises(ArgumentError) { ReleaseFiles.new(images) }

@@ -1,7 +1,7 @@
 ---
 title: "Nearby traffic, in your pocket"
 description: "Transmit your position in ADS-L and see ADS-L and FLARM traffic with skyBlip Go. From €68, with no subscription."
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
@@ -16,26 +16,41 @@ updated_on: "2026-11-18"
   </figure>
 </header>
 
-<section id="journey" class="band band--tint">
-  <h2 class="section-title">From the first try to your first flight</h2>
-  <p class="section-intro">Whether you fly a light aircraft, a microlight, a glider or a paraglider, we&rsquo;ll guide you at each step.</p>
-  <div class="journey">
-    <ol class="journey-steps">
-      <li>
-        <h3><%= link_to_page "skyblip-go", label: "Try it" %></h3>
-        <p>Try the radar in the simulator.</p>
-      </li>
-      <li>
-        <h3><%= link_to_page "buy", label: "Get one" %></h3>
-        <p>An off-the-shelf device. The software is free.</p>
-      </li>
-      <li>
-        <h3><%= link_to_page "install", label: "Install it" %></h3>
-        <p>From your browser, with Briefing.</p>
-      </li>
-    </ol>
-    <p class="journey-end"><strong>You&rsquo;re ready to fly.</strong> The <%= link_to_page "guides", label: "first steps guide" %> shows you the essentials.</p>
+<section id="who" class="band band--tint">
+  <h2 class="section-title">Made for the way <span class="highlight">you fly</span></h2>
+  <div class="resource-cards">
+    <article>
+      <h3>A club with a fleet</h3>
+      <p>Fifteen aircraft, none equipped, and an installed unit costs hundreds of euros each before the engineer. A few Go on the key shelf cover every aircraft in the air. Each lasts the day on one charge.</p>
+      <p><%= link_to_page "blog/club-fleet", label: "How a club shares them" %></p>
+    </article>
+    <article>
+      <h3>A pilot who flies other people&rsquo;s aircraft</h3>
+      <p>The club&rsquo;s on Saturday, a friend&rsquo;s on Sunday, a rental on holiday, none equipped the same. A Tango in the flight bag shows ADS-L, FLARM and ADS-B on the same radar in every cockpit.</p>
+      <p><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
+    </article>
+    <article>
+      <h3>A small cockpit with no room left</h3>
+      <p>A microlight, a vintage replica or a homebuilt with a full panel and no power socket. Go fits in a hand, runs on its battery and stays readable in full sun.</p>
+      <p><%= link_to_page "mount", label: "Mount it in the cockpit" %></p>
+    </article>
+    <article>
+      <h3>A field shared with gliders</h3>
+      <p>Gliders and tugs carry FLARM. Go shows them on its radar and gives the direction of the one closing in, without a FLARM of your own.</p>
+      <p><%= link_to_page "features", label: "skyBlip Go" %></p>
+    </article>
+    <article>
+      <h3>An aircraft with a transponder</h3>
+      <p>Air traffic control sees your transponder, but a microlight with only ADS-L or FLARM does not. Go adds ADS-L under your aircraft&rsquo;s own address, and shows you the FLARM traffic too.</p>
+      <p><%= link_to_page "blog/who-sees-ads-l", label: "Who sees what" %></p>
+    </article>
+    <article>
+      <h3>A SafeSky user far from the network</h3>
+      <p>SafeSky goes blind where mobile coverage ends, which is where light aircraft fly. Go works from aircraft to aircraft with no network, beside the app you already use.</p>
+      <p><%= link_to_page "blog/network-or-radio", label: "Network or radio" %></p>
+    </article>
   </div>
+  <p class="signature"><%= link_to_page "compare", label: "Compare with installed and other devices" %></p>
 </section>
 
 <section id="where-to-look" class="band">
@@ -128,7 +143,29 @@ updated_on: "2026-11-18"
       &quot;Safety isn&rsquo;t a premium feature. Our safety features for recreational flying and air sports stay open source and free.&quot;
     </blockquote>
   </div>
-  <p class="signature"><%= link_to_page "buy", label: "See the hardware and prices", class: "button button--primary" %> · <%= link_to_page "about", label: "Read our pledge" %></p>
+  <p class="signature"><%= link_to_page "buy", label: "See the hardware and prices", class: "button button--primary" %> · <%= link_to_page "about", label: "Read our pledge", anchor: "pledge" %></p>
+</section>
+
+<section id="journey" class="band band--tint">
+  <h2 class="section-title">From the first try to your first flight</h2>
+  <p class="section-intro">Whether you fly a light aircraft, a microlight, a glider or a paraglider, we&rsquo;ll guide you at each step.</p>
+  <div class="journey">
+    <ol class="journey-steps">
+      <li>
+        <h3><%= link_to_page "skyblip-go", label: "Try it" %></h3>
+        <p>Try the radar in the simulator.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "buy", label: "Get one" %></h3>
+        <p>An off-the-shelf device. The software is free.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "install", label: "Install it" %></h3>
+        <p>From your browser, with Briefing.</p>
+      </li>
+    </ol>
+    <p class="journey-end"><strong>You&rsquo;re ready to fly.</strong> The <%= link_to_page "guides", label: "first steps guide" %> shows you the essentials.</p>
+  </div>
 </section>
 
 <section id="questions" class="band">
@@ -136,7 +173,15 @@ updated_on: "2026-11-18"
   <div class="faq">
     <details>
       <summary>Who can see me?</summary>
-      <p>Pilots with equipment that can receive your ADS-L signal can see the position your Go transmits. Go receives FLARM but doesn&rsquo;t transmit it. Bravo doesn&rsquo;t transmit your position.</p>
+      <p>Pilots with equipment that can receive your ADS-L signal can see the position your Go transmits. Go receives FLARM but doesn&rsquo;t transmit it. Bravo doesn&rsquo;t transmit your position. Air traffic control radar doesn&rsquo;t show ADS-L: carry the transponder your airspace requires.</p>
+    </details>
+    <details>
+      <summary>Why ADS-L and not ADS-B?</summary>
+      <p>ADS-L transmits at 25&nbsp;mW, so a pocket device runs a day on its battery, and it needs no certification. ADS-B needs a certified transponder of 70&nbsp;W or more, and portable ADS-B may not transmit in the EU. Bravo still lets you see ADS-B aircraft. <%= link_to_page "blog/why-ads-l", label: "Why ADS-L" %>.</p>
+    </details>
+    <details>
+      <summary>I already use SafeSky. Why add a Go?</summary>
+      <p>SafeSky needs mobile coverage. Go works from aircraft to aircraft without it, and makes you visible to every ADS-L receiver around you. The two work side by side. <%= link_to_page "blog/network-or-radio", label: "Network or radio" %>.</p>
     </details>
     <details>
       <summary>Can I see aircraft with transponders?</summary>
@@ -158,5 +203,24 @@ updated_on: "2026-11-18"
       <summary>Can I go back to the original software?</summary>
       <p>Yes. skyBlip leaves the program that installs the software in place. You can download the original software of the T-Echo and the X1 from the web to reinstall it.</p>
     </details>
+  </div>
+  <p class="signature">More answers on the <%= link_to_page "features", label: "Go", anchor: "questions" %>, <%= link_to_page "skyblip-bravo", label: "Bravo", anchor: "questions" %> and <%= link_to_page "skyblip-tango", label: "Tango", anchor: "questions" %> pages.</p>
+</section>
+
+<section id="resources" class="band band--tint">
+  <h2 class="section-title">Learn more</h2>
+  <div class="resource-cards">
+    <article>
+      <h3><%= link_to_page "guides", label: "Guides" %></h3>
+      <p>Install your device, read the radar and the light, mount it in the cockpit, and see how the radio shares each second.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "blog", label: "Blog" %></h3>
+      <p>Longer answers to what pilots ask us on forums: ADS-L or ADS-B, network or radio, pocket or installed.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "compare", label: "Compare" %></h3>
+      <p>skyBlip beside the AERO Tracker, PowerFLARM, the Funke TM350 and SafeSky: what each one transmits, receives and costs.</p>
+    </article>
   </div>
 </section>

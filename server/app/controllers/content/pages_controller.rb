@@ -9,7 +9,7 @@ class Content::PagesController < ApplicationController
 
     if @format == :md
       response.headers["Link"] = %(<#{Content.canonical_url(@page.url_path)}>; rel="canonical", <#{@page.url_path}>; rel="alternate"; type="text/html")
-      render markdown: @page
+      render markdown: @page.markdown
     else
       response.headers["Link"] = %(<#{@page.markdown_path}>; rel="alternate"; type="text/markdown")
       render formats: :html
