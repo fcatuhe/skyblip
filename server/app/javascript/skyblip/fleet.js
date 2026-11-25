@@ -2,9 +2,10 @@ import { attestationServer } from '#skyblip/attestation';
 import { hasWebBluetooth, permittedDevices, requestDevice } from '#skyblip/ble';
 import { ActivationWitness, DeviceWitness } from '#skyblip/device_journal';
 import { journalOrNull } from '#skyblip/journal';
+import { bluetoothReadiness } from '#skyblip/readiness';
 import { LINKED_PHASES, RETURN_EVERY_MS, Updater, productOf } from '#skyblip/update';
 
-export { hasWebBluetooth };
+export { bluetoothReadiness, hasWebBluetooth };
 
 const STORAGE_KEY = 'skyblip.devices.v1';
 const PRODUCT_NAME = /^skyBlip (Go\+?|Bravo) ([0-9A-F]+)$/;
@@ -338,7 +339,10 @@ function localStorageOrNull() {
 
 // INFO: fc 11nov26 Turbo swaps pages without reloading this module, so every link outlives the page that opened it
 export function joinFleet(listener) {
-  shared ??= new Fleet({ storage: localStorageOrNull(), attestations: attestationServer() });
+  if (!shared) {
+    shared = new Fleet({ storage: localStorageOrNull(), attestations: attestationServer() });
+    bluetoothReadiness().listen(() => shared.changed());
+  }
   const leave = shared.listen(listener);
   return { fleet: shared, leave };
 }

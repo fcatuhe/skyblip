@@ -30,6 +30,23 @@ en:
       no_bluetooth: "This browser cannot connect to Bluetooth devices. Chrome and Edge support Bluetooth on Android, Windows, macOS and Linux."
       copy_link: Copy the link
       copied: Copied
+    bluetooth_check:
+      title: Switch on Bluetooth in this browser
+      hint: "Briefing reaches your devices over Bluetooth, to connect, set up and update them. Each line says Done once it works."
+      ok: Done
+      missing: To do
+      unknown: Checked once Web Bluetooth is on
+      optional: Optional
+      flag: Turn on Web Bluetooth
+      flag_how: "Chrome keeps it off on Linux. Copy this address into the address bar, set Web Bluetooth to Enabled, then click Relaunch."
+      adapter: Turn on Bluetooth
+      adapter_how: "Turn on Bluetooth in the computer's settings. A computer without Bluetooth needs a USB Bluetooth adapter."
+      adapter_linux: "On Linux, also start the Bluetooth service:"
+      remember: Reconnect your devices by themselves
+      remember_how: "Copy this address into the address bar, set it to Enabled, then click Relaunch. Briefing then reconnects the devices it knows without showing the list."
+    copy_code:
+      copy: Copy
+      copied: Copied
     unit:
       menu: Disconnect or forget
       connect: Connect
@@ -142,6 +159,13 @@ en:
         connect: Connect
         aircraft: Your aircraft
       start: "Plug your Go or Bravo into this computer with a USB cable. Briefing installs skyBlip on it, then connects to it."
+      linux:
+        title: On Linux, before you start
+        bluetooth_first: "Turn on Web Bluetooth with the steps on this page first. Chrome restarts to apply it, and the last step connects over Bluetooth."
+        dialout: "Let your user open the device's USB port, then log out and back in:"
+        dialout_note: "Already done on this computer? Skip it. On Arch Linux, the group is uucp."
+        snap: "Using Chromium from the Snap Store? Let it see USB drives:"
+        drive: "Not in the window? Open the drive once in your file manager so Linux mounts it, then choose it in the side panel."
       install: Install
       connect_running: Connect it over Bluetooth
       drive: "%{name} restarted as a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
@@ -158,6 +182,8 @@ en:
       keep_plugged: Keep it plugged in. This takes a few seconds.
       installed: "Installed. Last step: connect %{name} over Bluetooth."
       installed_trusted: "Installed. Last step: connect %{name} over Bluetooth. It trusts this browser, so it asks for no button press."
+      connect_after_flag: "Turn on Web Bluetooth with the steps on this page. Once Chrome has restarted, open Your devices and connect it from there."
+      connect_after_adapter: "Turn on Bluetooth with the steps on this page, and Connect appears here."
       connect: Connect
       choose_in_list: "Choose %{name} in the list."
       activating: "Activating %{name}."
@@ -187,6 +213,7 @@ en:
       port_closed: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge. A unit already running skyBlip lists no USB port: connect it over Bluetooth."
       port_failed: "The USB port could not be opened:"
       port_busy: "Another program is using the device. Close it, then click Install again."
+      port_busy_linux: "Another program is using the device, or Linux does not let this browser open it. Close any program using it. If none is, run sudo usermod -aG dialout $USER in a terminal (the group is uucp on Arch Linux), log out and back in, then click Install again."
       other_board: "This board does not run skyBlip. skyBlip runs on a LilyGO T-Echo or T-Echo Plus, and on a Seeed MeshTracker X1."
       not_drive: "That is not the drive. Choose the drive named TECHOBOOT or X1."
       drive_denied: "Briefing needs permission to save to the drive. Choose it again, and click Allow or Save changes."

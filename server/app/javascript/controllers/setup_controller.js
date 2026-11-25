@@ -1,9 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { Activator, httpServer } from "#skyblip/activation"
-import { hasWebBluetooth, installedNames, joinFleet } from "#skyblip/fleet"
+import { bluetoothReadiness, installedNames, joinFleet } from "#skyblip/fleet"
 import { DRIVE_NAMES, Installer, browserSupport } from "#skyblip/installer"
 import { sharedJournal } from "#skyblip/journal"
+import { onDesktopLinux } from "#skyblip/readiness"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { PARTNER, PairingFailed, pairTango, sides, tagText } from "#skyblip/tango"
 import { storedBrowserKey } from "#skyblip/trust"
@@ -25,7 +26,8 @@ const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: [
 export default class extends Controller {
   static targets = ["title", "steps", "panel", "install", "driveText", "byHand", "chooseDrive", "writingText", "connectText", "connect", "connectHint",
                     "finishText", "pressBravo", "retry", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
-                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers"]
+                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers",
+                    "linux", "bluetoothFirst"]
   static values = { devices: String, activation: String, setup: String, partner: String, challenges: String, registrations: String }
   static outlets = ["glass"]
 
@@ -194,6 +196,7 @@ export default class extends Controller {
   }
 
   #render() {
+    this.#linux()
     if (this.onboarding) return this.#onboarding()
     const support = browserSupport()
     if (support !== "usb" && this.installer.state.phase === "idle") return this.#show("unsupported", { text: say(`setup.unsupported_${support}`) })
@@ -204,7 +207,7 @@ export default class extends Controller {
     if (panel === "drive") this.#drive(state, name)
     if (panel === "writing") this.writingTextTarget.textContent = state.version ? say("setup.writing", { version: state.version, name }) : say("setup.downloading", { name })
     if (panel === "connect") this.#connectPanel(state, name)
-    this.#show(panel, { notice: this.failure ?? state.notice })
+    this.#show(panel, { notice: this.#onThisSystem(this.failure ?? state.notice) })
   }
 
   #drive(state, name) {
@@ -219,8 +222,10 @@ export default class extends Controller {
   #connectPanel(state, name) {
     this.connectTextTarget.textContent = say(state.trusted ? "setup.installed_trusted" : "setup.installed", { name })
     const code = tagText(state.tag) ?? "…"
-    this.connectHintTarget.textContent = say("setup.choose_in_list", { name: state.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}` })
-    this.connectTarget.hidden = !hasWebBluetooth()
+    const { ready, checks } = bluetoothReadiness()
+    const listed = state.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}`
+    this.connectHintTarget.textContent = ready ? say("setup.choose_in_list", { name: listed }) : say(checks.flag === "missing" ? "setup.connect_after_flag" : "setup.connect_after_adapter")
+    this.connectTarget.hidden = !ready
   }
 
   #onboarding() {
@@ -322,6 +327,16 @@ export default class extends Controller {
     this.#show("done")
   }
 
+  #linux() {
+    const linux = onDesktopLinux(navigator)
+    for (const each of this.linuxTargets) each.hidden = !linux
+    this.bluetoothFirstTarget.hidden = bluetoothReadiness().checks.flag !== "missing"
+  }
+
+  #onThisSystem(notice) {
+    return notice?.key === "port_busy" && onDesktopLinux(navigator) ? { ...notice, key: "port_busy_linux" } : notice
+  }
+
   #name({ product, tag }) {
     if (!product) return say("setup.the_device")
     return [PRODUCT_WORDS[product], tagText(tag)].filter(Boolean).join(" ")
@@ -341,7 +356,7 @@ export default class extends Controller {
     this.messageTarget.hidden = !message && !running
     this.messageTextTarget.hidden = !message
     this.messageTextTarget.textContent = message
-    this.connectRunningTarget.hidden = !running || !hasWebBluetooth()
+    this.connectRunningTarget.hidden = !running || !bluetoothReadiness().ready
   }
 
   #path(slug) {

@@ -30,6 +30,23 @@ it:
       no_bluetooth: "Questo browser non può collegarsi a dispositivi Bluetooth. Chrome ed Edge supportano il Bluetooth su Android, Windows, macOS e Linux."
       copy_link: Copia il link
       copied: Copiato
+    bluetooth_check:
+      title: Attiva il Bluetooth in questo browser
+      hint: "Briefing raggiunge i tuoi dispositivi via Bluetooth per collegarli, configurarli e aggiornarli. Ogni riga indica Fatto appena funziona."
+      ok: Fatto
+      missing: Da fare
+      unknown: Verificato quando Web Bluetooth è attivo
+      optional: Facoltativo
+      flag: Attiva Web Bluetooth
+      flag_how: "Chrome lo lascia disattivato su Linux. Copia questo indirizzo nella barra degli indirizzi, imposta Web Bluetooth su Enabled, poi fai clic su Relaunch."
+      adapter: Accendi il Bluetooth
+      adapter_how: "Accendi il Bluetooth nelle impostazioni del computer. Un computer senza Bluetooth ha bisogno di un adattatore Bluetooth USB."
+      adapter_linux: "Su Linux, avvia anche il servizio Bluetooth:"
+      remember: Ricollega i tuoi dispositivi da soli
+      remember_how: "Copia questo indirizzo nella barra degli indirizzi, impostalo su Enabled, poi fai clic su Relaunch. Briefing ricollega allora i dispositivi che conosce senza mostrare l'elenco."
+    copy_code:
+      copy: Copia
+      copied: Copiato
     unit:
       menu: Scollega o dimentica
       connect: Collega
@@ -142,6 +159,13 @@ it:
         connect: Collega
         aircraft: Il tuo aeromobile
       start: "Collega il tuo Go o Bravo a questo computer con un cavo USB. Briefing ci installa skyBlip, poi si collega al dispositivo."
+      linux:
+        title: Su Linux, prima di iniziare
+        bluetooth_first: "Attiva prima Web Bluetooth con i passaggi di questa pagina. Chrome si riavvia per applicarlo, e l'ultimo passaggio si collega via Bluetooth."
+        dialout: "Consenti al tuo utente di aprire la porta USB del dispositivo, poi esci e rientra nella sessione:"
+        dialout_note: "Già fatto su questo computer? Saltalo. Su Arch Linux il gruppo è uucp."
+        snap: "Usi Chromium dallo Snap Store? Consentigli di vedere le unità USB:"
+        drive: "Non compare nella finestra? Apri l'unità una volta nel gestore di file perché Linux la monti, poi sceglila nel pannello laterale."
       install: Installa
       connect_running: Collegalo via Bluetooth
       drive: "%{name} si è riavviato come unità USB chiamata %{drive}. Scegli quell'unità nella finestra successiva, poi consenti a Briefing di salvarci i file."
@@ -158,6 +182,8 @@ it:
       keep_plugged: Lascialo collegato. Ci vogliono pochi secondi.
       installed: "Installato. Ultimo passo: collega %{name} via Bluetooth."
       installed_trusted: "Installato. Ultimo passo: collega %{name} via Bluetooth. Questo browser è autorizzato, quindi non serve premere il pulsante."
+      connect_after_flag: "Attiva Web Bluetooth con i passaggi di questa pagina. Dopo il riavvio di Chrome, apri I tuoi dispositivi e collegalo da lì."
+      connect_after_adapter: "Accendi il Bluetooth con i passaggi di questa pagina, e qui compare Collega."
       connect: Collega
       choose_in_list: "Scegli %{name} nell'elenco."
       activating: "Attivazione di %{name}."
@@ -187,6 +213,7 @@ it:
       port_closed: "Nessun dispositivo nell'elenco? Accendilo e prova un altro cavo: molti cavi USB-C servono solo a ricaricare. Un dispositivo che ha già skyBlip non mostra una porta USB: collegalo via Bluetooth."
       port_failed: "Impossibile aprire la porta USB:"
       port_busy: "Un altro programma sta usando il dispositivo. Chiudilo, poi fai di nuovo clic su Installa."
+      port_busy_linux: "Un altro programma sta usando il dispositivo, oppure Linux non lascia che questo browser lo apra. Chiudi ogni programma che lo usa. Se nessuno lo usa, esegui sudo usermod -aG dialout $USER in un terminale (su Arch Linux il gruppo è uucp), esci e rientra nella sessione, poi fai di nuovo clic su Installa."
       other_board: "Questa scheda non supporta skyBlip. skyBlip funziona su LilyGO T-Echo o T-Echo Plus e su Seeed MeshTracker X1."
       not_drive: "Non è l'unità giusta. Scegli l'unità chiamata TECHOBOOT o X1."
       drive_denied: "Briefing richiede il permesso di salvare sull'unità. Sceglila di nuovo e fai clic su Consenti o Salva modifiche."
