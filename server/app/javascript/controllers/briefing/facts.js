@@ -1,4 +1,4 @@
-import { compareVersions, parseVersion } from "#skyblip/image"
+import { compareVersions, parseVersion, versionName } from "#skyblip/image"
 import { noTxMark } from "#skyblip/settings"
 import { say } from "controllers/briefing/words"
 
@@ -25,7 +25,16 @@ export function flight(status) {
 
 export function running(version, track) {
   if (!version) return null
-  return track ? say("words.running", { version, track: say(`words.track.${track}`) }) : version
+  const name = runningName(version, track)
+  return track ? say("words.running", { version: name, track: say(`words.track.${track}`) }) : name
+}
+
+export function runningName(version, track) {
+  return versionName(version, track === "release")
+}
+
+export function imageName(file) {
+  return versionName(file.version, file.channel === "release")
 }
 
 export function protocolsLine(protocols) {
@@ -46,10 +55,10 @@ export function seen(record) {
 
 // INFO: fc 11nov26 offline, the news is the newest image this browser saw offered, against the firmware the device last ran
 export function newsOf(unit) {
-  if (unit.linked) return unit.state.upgrade ? unit.state.file.version : null
-  const { newest, running: version } = unit.record
+  if (unit.linked) return unit.state.upgrade ? imageName(unit.state.file) : null
+  const { newest, newestRelease, running: version } = unit.record
   const [a, b] = [parseVersion(newest), parseVersion(version)]
-  return a && b && compareVersions(a, b) > 0 ? newest : null
+  return a && b && compareVersions(a, b) > 0 ? versionName(newest, newestRelease) : null
 }
 
 export function factsOf(unit) {

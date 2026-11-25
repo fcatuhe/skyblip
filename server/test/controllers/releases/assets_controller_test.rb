@@ -23,11 +23,11 @@ class Releases::AssetsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "stable release tags, whose names hold dots, route to the proxy" do
-    route = Rails.application.routes.recognize_path("/releases/v0.1.0/skyblip_simulator.wasm", method: :get)
+    route = Rails.application.routes.recognize_path("/releases/v0.1.0/skyblip-simulator.wasm", method: :get)
 
     assert_equal "releases/assets", route.fetch(:controller)
     assert_equal "v0.1.0", route.fetch(:release_tag)
-    assert_equal "skyblip_simulator.wasm", route.fetch(:file)
+    assert_equal "skyblip-simulator.wasm", route.fetch(:file)
   end
 
   test "only release tags and approved file names can be fetched" do

@@ -5,7 +5,7 @@ class SimulatorHelperTest < ActionView::TestCase
   include Rails.application.routes.url_helpers
 
   test "runtime firmware sources use the same-origin release proxy" do
-    assert_equal "/releases/v0.2.0/embed.js", simulator_module_path(tag: "v0.2.0")
+    assert_equal "/releases/v0.2.0/skyblip-simulator-embed.js", simulator_module_path("v0.2.0", Release::SimulatorFiles::CURRENT)
   end
 
   test "browser and node share app-owned protocol module names" do
@@ -20,21 +20,22 @@ class SimulatorHelperTest < ActionView::TestCase
     @release = Release.new("tag_name" => "dev-1005", "name" => "Development", "prerelease" => true,
                            "created_at" => "2026-10-17T00:00:00Z", "assets" => [], "body" => nil)
     @tag = @release.tag
+    @files = Release::SimulatorFiles::CURRENT
     @workbench = true
 
     render template: "briefing/simulator_builds/show"
 
-    assert_select "[data-dev-simulator-src-value='/releases/dev-1005/embed.js']"
-    assert_select "[data-dev-simulator-manifest-value='/releases/dev-1005/scenarios.json']"
+    assert_select "[data-dev-simulator-src-value='/releases/dev-1005/skyblip-simulator-embed.js']"
+    assert_select "[data-dev-simulator-manifest-value='/releases/dev-1005/skyblip-simulator-scenarios.json']"
   end
 
   test "the workbench keeps own-ship sensors editable without inline behavior" do
-    render partial: "shared/simulator_dev", locals: { module_path: "/releases/v0.2.0/embed.js" }
+    render partial: "shared/simulator_dev", locals: { module_path: "/releases/v0.2.0/skyblip-simulator-embed.js" }
 
     %w[spd alt trk trn clb slp sats air bat rng].each do |id|
       assert_select "input##{id}[type=range][data-action='input->dev-simulator#control']", count: 1
     end
-    assert_select "[data-dev-simulator-src-value='/releases/v0.2.0/embed.js']", count: 1
+    assert_select "[data-dev-simulator-src-value='/releases/v0.2.0/skyblip-simulator-embed.js']", count: 1
     assert_select "script, style, [style], [onclick], [oninput], [onpointerdown]", count: 0
   end
 end

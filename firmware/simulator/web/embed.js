@@ -1,4 +1,4 @@
-import createModule from './skyblip_simulator.js';
+import createModule from './skyblip-simulator.js';
 
 export const PAGES = ['radar', 'nearby', '6-pack', 'g meter', 'status', 'satellites', 'radio log', '', '', 'self test', 'bravo', 'bravo log'];
 export const ALARM = ['none', 'advisory'];

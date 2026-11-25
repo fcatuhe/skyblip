@@ -3,8 +3,10 @@ class Briefing::SimulatorBuildsController < Briefing::ApplicationController
     @workbench = params[:mode] == "workbench"
     if !@workbench && Release.local_simulator
       @tag = Release::LOCAL_TAG
+      @files = Release::SimulatorFiles::CURRENT
     elsif (@release = Release.simulator)
       @tag = @release.tag
+      @files = @release.simulator_files
     end
   rescue Release::Unavailable => error
     Rails.logger.warn(error.message)
