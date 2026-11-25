@@ -159,6 +159,7 @@
       later(() => closed.forEach(listener => listener()));
     }
 
+    // INFO: fc 25nov26 the frame is queued once this resolves, so a unit that awaits its answer before dropping the link never loses it
     async reply(fields) {
       const [{ encodeFrame }] = await modules();
       const whole = encodeFrame(fields);
@@ -366,7 +367,7 @@
         return this.acknowledge(true, 'dfu');
       }
       if (task === 'recovery') {
-        this.acknowledge(true, 'recovery');
+        await this.acknowledge(true, 'recovery');
         return later(() => this.drop(), 50);
       }
       if (task === 'register') return this.register();
@@ -510,12 +511,12 @@
       return { off: this.reached };
     }
 
-    installed(readImage, versionText) {
+    async installed(readImage, versionText) {
       this.windowOpen = false;
       const image = readImage(this.slot);
       if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
       this.landed = image;
-      this.acknowledge(true, 'install');
+      await this.acknowledge(true, 'install');
       later(() => this.reboot(this.approved), 50);
     }
 
