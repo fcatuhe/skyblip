@@ -47,7 +47,9 @@ function listen(journal) {
     visit = detail.action === "restore" ? "restore" : "visit"
     visitedAt = performance.now()
   })
-  addEventListener("error", event => failed(journal, "error", event.error, event))
+  addEventListener("error", event => {
+    if (!injected(event)) failed(journal, "error", event.error, event)
+  })
   addEventListener("unhandledrejection", event => failed(journal, "rejection", event.reason))
   addEventListener("stimulus:failed", ({ detail }) => failed(journal, "stimulus", detail.error, { controller: detail.identifier }))
   addEventListener("online", () => journal.flush())
@@ -67,6 +69,12 @@ function failed(journal, kind, error, { filename, lineno, colno, message, contro
   told.add(once)
   journal.record("browser.failed", facts)
   journal.flush()
+}
+
+// INFO: fc 25nov26 line 1 of a page is its doctype and our scripts are all same-origin, so these errors come from browsers and extensions
+function injected({ message, filename, lineno }) {
+  const inPage = filename?.split("#")[0] === location.href.split("#")[0] && lineno <= 1
+  return inPage || (message === "Script error." && !filename)
 }
 
 function framesOf(error) {
