@@ -50,7 +50,7 @@ jobs:
               - '!docs/bench/*.md'
               - '!scripts/*.md'
               - '!.agents/**'
-            # What goes into a published image, so a change elsewhere publishes no build. lib/dev_release.rb lists the same paths.
+            # What goes into a published image, so a change elsewhere publishes no build. lib/firmware_changes.rb lists the same paths.
             release:
               - 'firmware/**'
               - 'scripts/build_image.sh'
@@ -407,6 +407,8 @@ jobs:
             firmware/protocols/*/version.h
             firmware/products/*/PROTOCOLS
             lib/dev_release.rb
+            lib/firmware_changes.rb
+            lib/gh.rb
             lib/radio_protocols.rb
             lib/release_files.rb
             lib/release_notice.rb

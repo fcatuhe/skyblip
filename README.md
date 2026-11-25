@@ -61,7 +61,7 @@ CI builds it too, and which key signs it decides which units it can update over 
 
 - a pull request: a key made for the run, so the build is proven and the image updates nothing;
 - `main`, or a branch run by hand: the development key, published by [`firmware.yml`](.github/workflows/firmware.yml) as one pre-release on the Releases page, `dev-<build number>` for `main` (the last three kept) and `dev-<build number>-<branch>` for a branch (its newest kept until its pull request closes);
-- a `v*` tag on `main`: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal [`firmware/VERSION`](firmware/VERSION), the one firmware version every product carries.
+- a `v*` tag on `main`: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal [`firmware/VERSION`](firmware/VERSION), the one firmware version every product carries. The draft lists every pull request since the last release that touched the firmware under What's new and Nouveautés, for the owner to prune, rewrite for pilots and translate before publishing.
 
 Each release holds every product's images, named `skyblip-<product>-<version or dev tag>`, with the simulator, a `NOTICE.md` that holds the third-party notices and every license text, and a `SHA256SUMS` over all of them. A production release adds `PROTOCOLS.md`, the radio protocol versions each product carries and the specification each implements, and a pre-release puts them in its notes. A product with no sensor hub has no `.full.signed.bin`.
 

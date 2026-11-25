@@ -193,21 +193,24 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            lib/firmware_changes.rb
+            lib/gh.rb
+            lib/release_draft.rb
+            scripts/release_draft.rb
+          sparse-checkout-cone-mode: false
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release
           path: release
 
-      # The briefing shows pilots the two news sections under these exact headings.
+      # The news lists every firmware pull request since the last release, for the owner to prune before publishing (lib/release_draft.rb).
       - name: create the draft
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          tags=$(gh release list --repo "$GITHUB_REPOSITORY" -L 100 --exclude-drafts --exclude-pre-releases \
-                   --json tagName --jq '.[].tagName')
-          previous=$(grep -m1 -E '^v[0-9]' <<< "$tags") || previous=""
-          news=$(printf '%s\n' \
-            "## What's new" "" "<!-- For pilots, in English: one \"- \" line per change they will notice. -->" "" \
-            "## Nouveautés" "" "<!-- Pour les pilotes, en français : une ligne « - » par changement qu'ils remarqueront. -->")
-          gh release create "$GITHUB_REF_NAME" release/* \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --draft --notes "$news" --generate-notes ${previous:+--notes-start-tag "$previous"}
+          GH_REPO: ${{ github.repository }}
+        run: ruby scripts/release_draft.rb release
