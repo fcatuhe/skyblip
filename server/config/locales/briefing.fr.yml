@@ -318,7 +318,6 @@ fr:
         airborne: "En vol"
         unknown: "Pas encore de position GPS"
       track:
-        release: "version"
         development: "développement"
       running: "%{version}, %{track}"
       firmware_current: "à jour"
