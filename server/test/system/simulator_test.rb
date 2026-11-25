@@ -92,6 +92,25 @@ class SimulatorTest < ApplicationSystemTestCase
     end
   end
 
+  # A press on the pad or the device button left the focus on the pad, and the arrow keys stopped flying.
+  test "arrow keys still fly after a press on the pad or the device button" do
+    assert Release.local_simulator, "Run make -C firmware browser first"
+
+    visit "/try"
+    using_wait_time(8) { assert_selector ".simulator--running" }
+    climb = find("[data-axis=climb]", visible: :all)
+
+    find(".sb-pad").click
+    climb_before = climb.value.to_f
+    page.driver.browser.keyboard.type(:down)
+    assert_operator climb.value.to_f, :>, climb_before
+
+    find(".sb-key--action").click
+    climb_before = climb.value.to_f
+    page.driver.browser.keyboard.type(:down)
+    assert_operator climb.value.to_f, :>, climb_before
+  end
+
   private
     def first_arrivals(expected)
       page.document.synchronize do
