@@ -16,7 +16,7 @@ The driver brings the part up in three steps:
 |---|---|---|
 | 1, at the boot rate | `$PCAS04,7`, `$PCAS03,1,0,1,0,1,0,0,0,0,0,,,0,0`, `$PCAS11,6`, `$PCAS02,1000` | no GLL or VTG for `kVerifyWindowMs` |
 | 2 | `$PCAS01,5`, 115200 | one sentence that checksums at the new rate |
-| 3, at 115200 | `$PCAS02,500`, `$PCAS03,,,2,,,,,,,,,,,` | `kMinHalfSteps` half steps in `kRateVerifyWindowMs` |
+| 3, at 115200 | `$PCAS02,500`, `$PCAS03,,,1,,,,,,,,,,,` | `kMinHalfSteps` half steps in `kRateVerifyWindowMs` |
 
 - Step 3 comes only after step 2 has proved the part answers at 115200, as V1.1 requires.
 - A product that asked 1 Hz settles at 9600 when the port cannot retune or the part refuses `$PCAS01`. A product that asked 2 Hz never settles below it: the driver recovers the part instead.
@@ -35,7 +35,7 @@ The driver never settles for less than the product asked. A part that refuses 2 
 
 `L76k::holds_rate()` is true only while the part is ready at the asked rate.
 
-The driver empties the port before every configuration. Each drain publishes its newest GGA and RMC pair, and only when its stamp is later than the last pair published, so a replayed pair never goes out. A pair drained behind another is marked `backlogged` and anchors nothing. A stamp more than `kSentenceMaxAgeMs` behind the last is the part's clock stepping back, not a replay, and is published (`../../../core/gnss/README.md`, What the device can and cannot see about a late solution).
+The driver empties the port before every configuration. Each drain publishes its newest GGA and RMC pair, and only when its stamp is later than the last pair published, so a replayed pair never goes out. A pair drained behind another is marked `backlogged` and anchors nothing. The pair after a stamp at or behind the last published is marked `relabeled`, the only sign own-ship gets that the part's UTC stepped back. A stamp more than `kSentenceMaxAgeMs` behind the last is the part's clock stepping back, not a replay, and is published (`../../../core/gnss/README.md`, What the device can and cannot see about a late solution).
 
 ## A silent part
 
@@ -57,7 +57,7 @@ After `kSilentRoundsBeforeReset`, three rounds, the driver holds RESET_N low for
 | VDOP and the fix mode | GSA |
 | vertical rate | none, differenced from GGA's height or taken from the barometer |
 
-GGA and RMC go out every solution, GSA every second one, so once a second, and GSV only while the satellites page is up, one set in nine solutions. GGA and RMC are 150 bytes, 13 ms at 115200. They depart from V1.1's single sentence type, because no sentence carries a height and a velocity together: GGA has no speed, track or date, RMC no height, and CASIC's DHV no position. A Traffic burst takes both from one solution, so the driver publishes a solution only when its GGA and its RMC name the same instant (`gnss::NmeaParser::same_epoch()`).
+GGA, GSA and RMC go out every solution, and GSV only while the satellites page is up, one set in nine solutions. GSA rides every solution because it alone says whether that solution solved for height, which ADS-L G.1.7 asks before an altitude goes on air. GGA and RMC are 150 bytes, 13 ms at 115200. They depart from V1.1's single sentence type, because no sentence carries a height and a velocity together: GGA has no speed, track or date, RMC no height, and CASIC's DHV no position. A Traffic burst takes both from one solution, so the driver publishes a solution only when its GGA and its RMC name the same instant (`gnss::NmeaParser::same_epoch()`).
 
 ## What the bench checks
 

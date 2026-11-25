@@ -8,6 +8,7 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "simulator/simulator.h"
+#include "test/support/rf_pass_rig.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -49,12 +50,50 @@ int check_flown(simulator::Simulator& simulator, const simulator::AirRecord& rec
     return 1;
 }
 
+// G.1.16 ends the burst 500 ms after its fix.
+constexpr uint64_t kFixAtUs = 2000000;
+constexpr uint64_t kNavigationMaxAgeUs = 500000;
+// Build 863's worst from a burst's instant to TxDone, docs/bench/2026-09-29-build-874.md.
+constexpr uint64_t kInstantToDoneUs = 5530;
+
+// Serial 1199's position on A in second 2 is drawn at 490 ms, the last instant its fix allows.
+void arm_on_fix_last_instant(Pass& pass) {
+    REQUIRE(pass.begin() == Status::Ok);
+    pass.state.activation.serial = 1199;
+    pass.state.own.fix_at_ms = static_cast<uint32_t>(kFixAtUs / 1000);
+    pass.state.own.fix_in_hand_ms = 2070;
+    pass.pass_on_fix(2420000);
+    pass.pass_on_fix(2450000);
+    pass.pass_on_fix(2489000);
+    REQUIRE(pass.state.rf.dwell.burst_armed);
+    REQUIRE_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+}
+
 int check_every_position(simulator::Simulator& simulator) {
     int checked = 0;
     for (const simulator::AirRecord& record :
          records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition))
         checked += check_flown(simulator, record);
     return checked;
+}
+
+// Every position a flying Go sends in the 20 s from its receiver's label stepping by step_s,
+// checked.
+int positions_after_label_step(int32_t step_s, uint32_t latency_ms = parts::L76k::kBurstStartMs) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    fly_measured(simulator);
+    uint32_t now_ms = past_settling(simulator);
+    simulator.world().gnss().latency_ms = latency_ms;
+    run_on(simulator, now_ms, 10000);
+    now_ms += 10000;
+    while (now_ms % 1000 != 700) simulator.step(now_ms += simulator::Simulator::kStepMs);
+    models::L76k& chip = simulator.world().gnss();
+    chip.utc_seconds_of_day = static_cast<uint32_t>(
+        (static_cast<int32_t>(chip.utc_seconds_of_day) + step_s + 86400) % 86400);
+    simulator.world().air().clear();
+    run_on(simulator, now_ms + simulator::Simulator::kStepMs, 20000);
+    return check_every_position(simulator);
 }
 
 }  // namespace
@@ -136,6 +175,36 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: a receiver solving off the quarters never names
     check_every_position(simulator);
 }
 
+// The nRF52 clock counts 32768 Hz ticks, so its first reading after the instant can be 31 us late.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a position keyed a clock tick late still ends inside 500 ms") {
+    Pass pass;
+    arm_on_fix_last_instant(pass);
+    pass.executor_until(2489999, 1);
+    REQUIRE_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+
+    pass.platform.clock().set_microseconds(2490030);
+    pass.executor_until(2490031, 1);
+    pass.pass_on_fix(2491000);
+
+    CHECK(pass.first_tx_us == 2490031);
+    CHECK(pass.first_tx_us + kInstantToDoneUs <= kFixAtUs + kNavigationMaxAgeUs);
+    CHECK(pass.state.air.tx_lost == 0);
+}
+
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a key delay cannot age the encoded fix past 500 ms on air") {
+    for (const uint64_t resumed_us : {kFixAtUs + kNavigationMaxAgeUs - kInstantToDoneUs + 1,
+                                      kFixAtUs + kNavigationMaxAgeUs + 1000}) {
+        CAPTURE(resumed_us);
+        Pass pass;
+        arm_on_fix_last_instant(pass);
+
+        pass.pass_on_fix(resumed_us);
+
+        CHECK_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+        CHECK(pass.state.air.tx_lost == 1);
+    }
+}
+
 // Flown with the channel busy one burst in three seconds, and a receiver 200 ms late on the wire.
 TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst goes on air over 500 ms after its solution" *
           doctest::test_suite("main")) {
@@ -197,4 +266,23 @@ TEST_CASE(
         seconds.push_back(static_cast<uint32_t>(record.at_us / 1000000));
     CHECK(seconds.size() == 20);
     for (size_t i = 1; i < seconds.size(); i++) CHECK(seconds[i] == seconds[i - 1] + 1);
+}
+
+// A leap second's 23:59:60 and the 00:00:00 after it name one second, and the Go fell silent for
+// good.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a receiver that names one second twice is on air again in 5 s") {
+    CHECK(positions_after_label_step(-1) >= 16);
+}
+
+// A cold start may begin with a stale GPS-UTC offset, 18 s in 2026, and step its UTC back when
+// told.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a receiver whose UTC steps back 18 s is on air again in 5 s") {
+    CHECK(positions_after_label_step(-18) >= 16);
+}
+
+// A part already a second late names its edge a second off with no step back, so a repeat moves
+// nothing.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.16: a part a second late that then names a second twice stays off air") {
+    CHECK(positions_after_label_step(-1, 1000 + parts::L76k::kBurstStartMs) == 0);
 }

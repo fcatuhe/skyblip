@@ -2,25 +2,25 @@
 title: "Go: Displayansichten und Radarmodi"
 nav_title: Displayansichten
 slug: displayansichten
-description: "Sehen Sie jede Ansicht von skyBlip Go, vom Flugverkehr bis zur Diagnose. Vergleichen Sie PLOT ALL und PLOT TO SCALE anhand desselben Verkehrs."
+description: "Sehen Sie die Ansichten von skyBlip Go, vom Radar bis zur Diagnose. Vergleichen Sie PLOT ALL und PLOT TO SCALE anhand desselben Verkehrs."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Jede Ansicht, wie sie das Gerät darstellt.</h1>
+  <h1>Die Ansichten, wie sie das Gerät darstellt.</h1>
   <p class="lede">
-    Jedes Bild zeigt die 200&times;200 Pixel, die der
-    <%= link_to_page "skyblip-go", label: "Simulator", anchor: "simulator" %> im jeweiligen Zustand zeichnet. Wir erfassen sie pixelgenau. Ändert sich eine Anzeige auf dem Gerät, nehmen wir sie neu auf.
+    Jedes Bild gibt pixelgenau die 200&times;200 Pixel wieder, die der
+    <%= link_to_page "skyblip-go", label: "Simulator", anchor: "simulator" %> in der dargestellten Situation zeichnet. Ändert sich eine Anzeige auf dem Gerät, nehmen wir sie neu auf.
   </p>
 </section>
 
 <section>
   <h2 class="kicker" id="both-ways">Zwei Radarmodi</h2>
   <p class="lede">
-    <span class="mono">PLOT</span> im Einstellungsmenü stellt das Radar auf eine von zwei Arten dar. <span class="mono">ALL</span> ist die voreingestellte erste Option. Sie verkleinert den Kreis und setzt jedes Luftfahrzeug außerhalb des Kreises in der jeweiligen Richtung in den Ring darum. <span class="mono">TO SCALE</span> zeichnet jedes Symbol im Maßstab des Kreises. Was nicht auf das Display passt, entfällt. Wir zeigen drei Verkehrslagen in beiden Modi, jeweils mit derselben Firmware aufgezeichnet.
+    Mit <span class="mono">PLOT</span> im Einstellungsmenü wählen Sie zwischen zwei Radarmodi. <span class="mono">ALL</span> ist die erste Option und bei neuen Geräten voreingestellt. In diesem Modus wird der Kreis kleiner. Jedes Luftfahrzeug außerhalb des Kreises erscheint in seiner Richtung im Ring darum. <span class="mono">TO SCALE</span> zeigt die Luftfahrzeuge im Maßstab des Kreises. Luftfahrzeuge jenseits des Displayrands werden nicht angezeigt. Die folgenden drei Verkehrslagen wurden jeweils in beiden Modi mit derselben Firmware aufgezeichnet.
   </p>
 
   <div class="plot" data-controller="plot" data-plot-view-value="both">
@@ -31,7 +31,7 @@ updated_on: "2026-11-20"
     </p>
 
     <div class="plot-situation">
-      <h3 id="quiet-sky">Alles passt in den Kreis.</h3>
+      <h3 id="quiet-sky">Der gesamte Verkehr liegt im Kreis.</h3>
       <p>
         Drei Luftfahrzeuge innerhalb von vier nautischen Meilen. Mit <span class="mono">ALL</span>
         liegen sie im kleineren Kreis. Sonst ändert sich nichts. In der maßstabsgetreuen Ansicht ist der Kreis größer.
@@ -51,7 +51,7 @@ updated_on: "2026-11-20"
       <h3 id="past-the-ring">Verkehr außerhalb des Kreises.</h3>
       <p>
         Ein Luftfahrzeug nähert sich aus fünf nautischen Meilen voraus. Eine Gruppe von drei fliegt acht nautische Meilen rechts voraus, ein weiteres elf nautische Meilen links. Mit
-        <span class="mono">ALL</span> erscheinen alle im äußeren Ring. Die Gruppe teilt sich ein Symbol mit der Zahl 3. Die Linie zur Position des sich nähernden Luftfahrzeugs in einer Minute reicht bereits in den Kreis. Maßstabsgetreu erscheint nur das Luftfahrzeug voraus auf dem Display.
+        <span class="mono">ALL</span> erscheinen alle im äußeren Ring. Die Gruppe teilt sich ein Symbol mit der Zahl 3. Die Kurslinie des sich nähernden Luftfahrzeugs reicht bereits in den Kreis und endet an seiner vorhergesagten Position in einer Minute. In der maßstabsgetreuen Ansicht erscheint von diesen Luftfahrzeugen nur das voraus auf dem Display.
       </p>
       <div class="shots">
         <figure class="shot plot-all">
@@ -83,7 +83,7 @@ updated_on: "2026-11-20"
     </div>
   </div>
 
-  <p><%= link_to_page "radar", label: "Den äußeren Ring lesen", anchor: "every-aircraft", class: "cta cta--next" %></p>
+  <p><%= link_to_page "radar", label: "Die Symbole im äußeren Ring lesen", anchor: "every-aircraft", class: "cta cta--next" %></p>
 </section>
 
 <section>
@@ -134,7 +134,7 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Menü AIRCRAFT nach dem Tastendruck. Die Zeile CALLSIGN ist gewählt und zeigt NONE." %>
-      <figcaption>Nach einem Tastendruck</figcaption>
+      <figcaption>Kein Rufzeichen mehr, nach einem Tastendruck</figcaption>
     </figure>
   </div>
   <p>
@@ -172,7 +172,7 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="on-the-ground">Am Boden und ausgeschaltet</h2>
+  <h2 class="kicker" id="on-the-ground">Ohne Position, mit niedrigem Akkustand oder ausgeschaltet</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "Radaransicht ohne Position: Im leeren Kreis steht NO FIX, darunter der Fortschritt zur Positionsbestimmung." %>
@@ -201,7 +201,7 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="asked">Bestätigen Sie Anfragen am Display.</h2>
+  <h2 class="kicker" id="asked">Bestätigung und Wiederherstellung</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "confirm.png", alt: "Bestätigungsanfrage für Einstellungen vom Smartphone: SETTINGS unter dem großen Symbol, die Änderung, CANCELS IN mit den verbleibenden Sekunden, ACCEPT für die Taste und CANCEL für das Touchfeld" %>
@@ -209,7 +209,7 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "recovery.png", alt: "Wiederherstellungsansicht: RECOVERY unter dem großen Symbol, das USB-Laufwerk TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET und START für die Taste" %>
-      <figcaption>Übergabe an den USB-Bootloader</figcaption>
+      <figcaption>Wiederherstellung per USB</figcaption>
     </figure>
   </div>
   <p>
@@ -239,5 +239,6 @@ updated_on: "2026-11-20"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

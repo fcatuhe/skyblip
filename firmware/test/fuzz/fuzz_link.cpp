@@ -37,10 +37,9 @@ const std::vector<uint8_t>& logbook() {
     static const std::vector<uint8_t> image = [] {
         Rig flight(kNoGlass);
         if (flight.setup() != Status::Ok) __builtin_trap();
-        uint32_t now_ms = 0;
-        flight.seconds(now_ms, kTaxiOutSeconds, kTaxiMmS, kFieldAltitudeM);
-        flight.seconds(now_ms, kFlightSeconds, kCruiseMmS, kCruiseAltitudeM);
-        flight.seconds(now_ms, kTaxiInSeconds, kTaxiMmS, kFieldAltitudeM);
+        flight.seconds(kTaxiOutSeconds, kTaxiMmS, kFieldAltitudeM);
+        flight.seconds(kFlightSeconds, kCruiseMmS, kCruiseAltitudeM);
+        flight.seconds(kTaxiInSeconds, kTaxiMmS, kFieldAltitudeM);
         return flight.platform.log_flash().bytes();
     }();
     return image;
@@ -59,16 +58,15 @@ void write(Rig& rig, uint16_t session_id, events::Endpoint endpoint, const uint8
 }
 
 // The answer arms once the prompt has stood for the settle a press needs.
-void confirm_on_device(Rig& rig, uint32_t& now_ms) {
-    rig.run(now_ms, now_ms + common::PromptAnswer::kAnswerSettleMs);
-    now_ms += common::PromptAnswer::kAnswerSettleMs;
-    rig.press(now_ms);
+void confirm_on_device(Rig& rig) {
+    rig.run_for(common::PromptAnswer::kAnswerSettleMs);
+    rig.press();
 }
 
-size_t act(Rig& rig, uint32_t& now_ms, const uint8_t* input, size_t left) {
+size_t act(Rig& rig, const uint8_t* input, size_t left) {
     const uint8_t action = input[0];
     if (action == 'P') {
-        confirm_on_device(rig, now_ms);
+        confirm_on_device(rig);
         return 1;
     }
     if (left < kWriteHeadBytes) return left;
@@ -83,8 +81,7 @@ size_t act(Rig& rig, uint32_t& now_ms, const uint8_t* input, size_t left) {
         case 'l': write(rig, kSecondApp, events::Endpoint::Log, frame, frame_bytes); break;
         default: return 1;
     }
-    rig.run(now_ms, now_ms + kWriteGapMs);
-    now_ms += kWriteGapMs;
+    rig.run_for(kWriteGapMs);
     return kWriteHeadBytes + frame_bytes;
 }
 
@@ -95,13 +92,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     rig.platform.log_flash().restore(logbook());
     if (rig.setup() != Status::Ok) __builtin_trap();
     rig.utc_offset_s = kTaxiOutSeconds + kFlightSeconds + kTaxiInSeconds;
-    uint32_t now_ms = 0;
-    rig.seconds(now_ms, kGroundSeconds, kTaxiMmS, kFieldAltitudeM);
+    rig.seconds(kGroundSeconds, kTaxiMmS, kFieldAltitudeM);
     rig.raise_link(kFirstApp);
     rig.raise_link(kSecondApp);
 
     size_t at = 0;
     for (int action = 0; action < kMaxActions && at < size; action++)
-        at += act(rig, now_ms, data + at, size - at);
+        at += act(rig, data + at, size - at);
     return 0;
 }

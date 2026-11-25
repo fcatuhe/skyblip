@@ -17,21 +17,20 @@ namespace {
 
 constexpr uint16_t kBelowCutoffMv = power::kFlatMv - 100;
 
-void taxi(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 0, 300); }
+void taxi(Rig& rig, uint32_t seconds) { rig.seconds(seconds, 0, 300); }
 
-void arm_power_run(Rig& rig, uint32_t& now_ms) {
+void arm_power_run(Rig& rig) {
     rig.product.diagnostics().arm(diagnostics::Profile::PowerRun);
-    rig.run(now_ms, now_ms + 100);
-    now_ms += 100;
+    rig.run_for(100);
     REQUIRE(rig.product.capture().capturing());
 }
 
-void run_until_parked(Rig& rig, uint32_t& now_ms) {
-    const uint32_t deadline = now_ms + 20000;
-    while (rig.product.capture().capturing() && now_ms < deadline) {
-        rig.platform.clock().set_milliseconds(now_ms);
-        rig.product.run_pass(now_ms);
-        now_ms += 50;
+void run_until_parked(Rig& rig) {
+    const uint32_t deadline = rig.now_ms + 20000;
+    while (rig.product.capture().capturing() && rig.now_ms < deadline) {
+        rig.platform.clock().set_milliseconds(rig.now_ms);
+        rig.product.run_pass(rig.now_ms);
+        rig.now_ms += 50;
     }
     REQUIRE_FALSE(rig.product.capture().capturing());
 }
@@ -59,8 +58,8 @@ TEST_CASE("power run: before its first pair lands, the span quoted is the nomina
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm_power_run(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm_power_run(rig);
     rig.run_for(5000);
 
     CHECK(rig.product.capture().records_written() == 2);
@@ -71,8 +70,8 @@ TEST_CASE("power run: once pairs land, the span quoted is the one they are landi
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm_power_run(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm_power_run(rig);
 
     for (uint32_t elapsed_s = 7; elapsed_s <= 91; elapsed_s += 7) {
         rig.run_for(7000);
@@ -87,11 +86,11 @@ TEST_CASE("park: a power run taken down by its cell ends on a cutoff power recor
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm_power_run(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm_power_run(rig);
     rig.run_for(40000);
     rig.platform.battery().divider_mv = kBelowCutoffMv;
-    run_until_parked(rig, rig.now_ms);
+    run_until_parked(rig);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
 
     const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
@@ -107,11 +106,11 @@ TEST_CASE("park: a power run the pilot switches off closes on power, then duty, 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm_power_run(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm_power_run(rig);
     rig.run_for(40000);
     rig.product.shutdown().request(power::ShutdownReason::LongPress, rig.now_ms);
-    run_until_parked(rig, rig.now_ms);
+    run_until_parked(rig);
 
     const std::vector<diagnostics::Record> records = captured(rig);
     const std::vector<diagnostics::Record> last = tail(records, 3);
@@ -129,11 +128,11 @@ TEST_CASE("park: a full capture closes on the same pair, off its own cadence") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     rig.product.diagnostics().arm(diagnostics::Profile::Full);
-    taxi(rig, rig.now_ms, 4);
+    taxi(rig, 4);
     rig.product.shutdown().request(power::ShutdownReason::LinkRequest, rig.now_ms);
-    run_until_parked(rig, rig.now_ms);
+    run_until_parked(rig);
 
     const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
     CHECK(last[0].type == diagnostics::Type::Power);

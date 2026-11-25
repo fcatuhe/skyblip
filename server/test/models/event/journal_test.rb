@@ -77,6 +77,19 @@ class Event::JournalTest < ActiveSupport::TestCase
     assert_equal [ [ "0.2.0+950", "read" ] ], unit.firmwares.pluck(:version, :source)
   end
 
+  # A JSON number has no size, and the firmware's counters and the browser's all fit in a JavaScript number.
+  test "a number larger than a counter can hold is dropped" do
+    huge = 10**400
+    Event::Journal.new(browser: BROWSER, entries: [
+      entry("device.diagnosed", properties: { dump: { radio: { rx_ok: 4_294_967_295, noise_dbm: -105, tx_ok: huge, rssi: [ 1, huge, -huge, 1.5 ] } } }),
+      entry("device.connected", properties: { connect_ms: huge.to_s })
+    ]).record
+
+    diagnosed, connected = Event.order(:id).map(&:payload)
+    assert_equal({ "radio" => { "rx_ok" => 4_294_967_295, "noise_dbm" => -105, "rssi" => [ 1 ] } }, diagnosed["dump"])
+    assert_equal({}, connected)
+  end
+
   private
     def entry(name, id: SecureRandom.uuid, at: "2026-11-14T10:00:00Z", **fields)
       { id:, name:, at:, seq: 1, page: SecureRandom.uuid, **fields }

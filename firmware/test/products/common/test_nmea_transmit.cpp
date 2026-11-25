@@ -45,3 +45,16 @@ TEST_CASE("nmea: PFLAU's TX field is the transmit gate's, so a silent device adm
     CHECK(last_pflau_tx(simulator) == "0");
     CHECK(simulator.product().state().own.fix_valid);
 }
+
+// The gate stays open on held positions, and the app must not show them as going out.
+TEST_CASE("nmea: PFLAU's TX field reads 0 while every position is held") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(120);
+    simulator.world().gnss().latency_ms = 600;
+    simulator.world().connect_companion();
+    run_on(simulator, past_settling(simulator), 10000);
+    REQUIRE(simulator.product().state().transmit.transmits());
+    CHECK(last_pflau_tx(simulator) == "0");
+}

@@ -1019,6 +1019,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "irq_armed",
           "number": 96,
           "type": "boolean"
+        },
+        {
+          "name": "failed_writes",
+          "number": 97,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1515,6 +1520,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "irq_armed",
           "number": 96,
           "type": "boolean"
+        },
+        {
+          "name": "failed_writes",
+          "number": 97,
+          "type": "unsigned"
         }
       ]
     },
@@ -3870,6 +3880,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "pps",
           "code": 6,
           "mirrors": "Pps"
+        },
+        {
+          "name": "held",
+          "code": 7,
+          "mirrors": "Held"
         }
       ]
     },

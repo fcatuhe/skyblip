@@ -13,25 +13,23 @@
 namespace skyblip {
 
 // A page's ask and the press on the glass that allows it, as a pilot orders one in the field.
-inline void order_over_the_link(Rig& rig, uint32_t& now_ms, const char* profile) {
+inline void order_over_the_link(Rig& rig, const char* profile) {
     const std::string json =
         std::string("{\"command\":\"capture\",\"profile\":\"") + profile + "\"}";
     rig.send(json.c_str());
-    rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
+    rig.run_for(3000);
     REQUIRE(rig.product.config_link().config().pending() == common::Pending::Capture);
-    rig.press(now_ms);
-    rig.run(now_ms, now_ms + 1000);
-    now_ms += 1000;
+    rig.press();
+    rig.run_for(1000);
 }
 
-inline void arm_over_the_link(Rig& rig, uint32_t& now_ms, const char* profile = "full") {
-    order_over_the_link(rig, now_ms, profile);
+inline void arm_over_the_link(Rig& rig, const char* profile = "full") {
+    order_over_the_link(rig, profile);
     REQUIRE(rig.product.diagnostics().armed());
 }
 
-inline void stop_over_the_link(Rig& rig, uint32_t& now_ms) {
-    order_over_the_link(rig, now_ms, "stop");
+inline void stop_over_the_link(Rig& rig) {
+    order_over_the_link(rig, "stop");
     REQUIRE_FALSE(rig.product.diagnostics().armed());
 }
 
@@ -45,16 +43,14 @@ inline diagnostics::Record bench_record(uint32_t at_s) {
     return diagnostics::record_of(value, at);
 }
 
-inline uint32_t feed(Rig& rig, uint32_t& now_ms, uint32_t records) {
+inline uint32_t feed(Rig& rig, uint32_t records) {
     uint32_t pushed = 0;
     while (pushed < records && rig.product.capture().capturing()) {
         for (int i = 0; i < diagnostics::Recorder::kMaxRecords && pushed < records; i++)
             if (rig.product.diagnostics().record(bench_record(kBaseUtcS + pushed))) pushed++;
-        rig.run(now_ms, now_ms + 50);
-        now_ms += 50;
+        rig.run_for(50);
     }
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     return pushed;
 }
 

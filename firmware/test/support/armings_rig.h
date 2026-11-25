@@ -136,6 +136,8 @@ struct Armings {
     // INFO: fc 18nov26 these cases are about the arming, so the newest solution is the pass's own
     void ready_to_transmit(uint32_t utc_s) {
         state.own.fix_valid = true;
+        state.own.speed_valid = true;
+        state.own.track_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
         state.own.flight_state = 2;

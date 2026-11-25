@@ -16,23 +16,21 @@ namespace {
 
 constexpr uint32_t kHeardAddress = 0x3A4B5C;
 
-void type_aircraft_address(Rig& rig, uint32_t& now_ms, const char* wanted) {
+void type_aircraft_address(Rig& rig, const char* wanted) {
     for (int at = 0; at < go::kAircraftAddressCharacters; at++) {
-        while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig, now_ms);
-        change(rig, now_ms);
+        while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig);
+        change(rig);
     }
 }
 
-bool glass_reads(Rig& rig, uint32_t& now_ms, const char* text) {
-    rig.run(now_ms, now_ms + 4000);
-    now_ms += 4000;
+bool glass_reads(Rig& rig, const char* text) {
+    rig.run_for(4000);
     return reads_in(rig.product.screen().framebuffer(), text, 0, 0, go::kGlassWidth,
                     go::kGlassHeight, go::kMenuScale, true);
 }
 
-bool glass_shows(Rig& rig, uint32_t& now_ms, const go::Glass& expected) {
-    rig.run(now_ms, now_ms + 4000);
-    now_ms += 4000;
+bool glass_shows(Rig& rig, const go::Glass& expected) {
+    rig.run_for(4000);
     return std::memcmp(rig.product.screen().framebuffer().data(), expected.data(),
                        go::Glass::kBytes) == 0;
 }
@@ -53,21 +51,20 @@ TEST_CASE("menu: an aircraft address typed against the transponder Bravo names s
     REQUIRE(comms::address_of(tango.go.state().own_transponder) == kHeardAddress);
     if (tango.go.product.screen().noticing()) tango.go.tap();
 
-    uint32_t& now_ms = tango.now_ms;
-    open_menu(tango.go, now_ms);
-    focus_on(tango.go, now_ms, go::MenuRow::AircraftAddress);
-    change(tango.go, now_ms);
+    open_menu(tango.go);
+    focus_on(tango.go, go::MenuRow::AircraftAddress);
+    change(tango.go);
     REQUIRE(tango.go.product.screen().editor().editing());
-    CHECK(glass_reads(tango.go, now_ms, "BRAVO HEARS"));
-    CHECK(glass_reads(tango.go, now_ms, "3A4B5C"));
-    CHECK_FALSE(glass_reads(tango.go, now_ms, go::kOwnTransponderRefusedText));
+    CHECK(glass_reads(tango.go, "BRAVO HEARS"));
+    CHECK(glass_reads(tango.go, "3A4B5C"));
+    CHECK_FALSE(glass_reads(tango.go, go::kOwnTransponderRefusedText));
 
-    type_aircraft_address(tango.go, now_ms, "3A0001");
+    type_aircraft_address(tango.go, "3A0001");
     CHECK(tango.go.product.screen().editor().editing());
     CHECK(tango.go.product.screen().editor().refused());
     CHECK(tango.go.product.screen().editor().cursor() == 0);
-    CHECK(glass_reads(tango.go, now_ms, go::kOwnTransponderRefusedText));
-    CHECK(glass_reads(tango.go, now_ms, "BRAVO HEARS"));
+    CHECK(glass_reads(tango.go, go::kOwnTransponderRefusedText));
+    CHECK(glass_reads(tango.go, "BRAVO HEARS"));
     go::CallsignSnapshot field;
     field.title = "ADS-B";
     field.text = "3A0001";
@@ -75,13 +72,13 @@ TEST_CASE("menu: an aircraft address typed against the transponder Bravo names s
     field.refused = true;
     go::Glass expected;
     go::draw_callsign(expected, field);
-    CHECK(glass_shows(tango.go, now_ms, expected));
-    run_past_the_write_settle(tango.go, now_ms);
+    CHECK(glass_shows(tango.go, expected));
+    run_past_the_write_settle(tango.go);
     CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
 
-    type_aircraft_address(tango.go, now_ms, "3A4B5C");
+    type_aircraft_address(tango.go, "3A4B5C");
     CHECK_FALSE(tango.go.product.screen().editor().editing());
-    run_past_the_write_settle(tango.go, now_ms);
+    run_past_the_write_settle(tango.go);
     CHECK(tango.go.settings().aircraft_address == kHeardAddress);
 }
 
@@ -90,14 +87,14 @@ TEST_CASE("menu: an aircraft address of FFFFFF typed on the glass stores nothing
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    open_menu(rig, rig.now_ms);
-    focus_on(rig, rig.now_ms, go::MenuRow::AircraftAddress);
-    change(rig, rig.now_ms);
+    open_menu(rig);
+    focus_on(rig, go::MenuRow::AircraftAddress);
+    change(rig);
     REQUIRE(rig.product.screen().editor().editing());
-    CHECK_FALSE(glass_reads(rig, rig.now_ms, "BRAVO HEARS"));
+    CHECK_FALSE(glass_reads(rig, "BRAVO HEARS"));
 
-    type_aircraft_address(rig, rig.now_ms, "FFFFFF");
+    type_aircraft_address(rig, "FFFFFF");
     CHECK_FALSE(rig.product.screen().editor().editing());
-    run_past_the_write_settle(rig, rig.now_ms);
+    run_past_the_write_settle(rig);
     CHECK(rig.settings().aircraft_address == go::kAircraftAddressUnset);
 }

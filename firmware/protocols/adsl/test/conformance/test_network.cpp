@@ -1,12 +1,14 @@
 // ADS-L 4 SRD-860 issue 2 Subpart E, the network layer: header, scrambler, parity and signature.
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/physical.h"
 #include "protocols/adsl/reed_solomon.h"
 #include "protocols/adsl/test/conformance/reference.h"
+#include "protocols/adsl/uplink.h"
 #include "protocols/common/manchester.h"
 #include "protocols/common/xxtea.h"
 
@@ -14,84 +16,6 @@ using namespace skyblip;
 using namespace skyblip::adsl::conformance;
 
 namespace {
-// E.2's own sample implementation, transcribed, with the zero key the clause names for scrambling.
-void spec_xxtea(uint32_t* data, uint32_t words, const uint32_t* key, uint32_t rounds) {
-    const uint32_t kDelta = 0x9E3779B9u;
-    uint32_t next = data[0];
-    uint32_t sum = 0;
-    uint32_t previous = data[words - 1];
-    uint32_t rounds_left = rounds;
-    while (rounds_left-- > 0) {
-        sum += kDelta;
-        const uint32_t key_offset = (sum >> 2) & 3u;
-        uint32_t index = 0;
-        for (index = 0; index < words - 1; index++) {
-            next = data[index + 1];
-            data[index] += (((previous >> 5) ^ (next << 2)) + ((next >> 3) ^ (previous << 4))) ^
-                           ((sum ^ next) + (key[(index & 3u) ^ key_offset] ^ previous));
-            previous = data[index];
-        }
-        next = data[0];
-        data[words - 1] += (((previous >> 5) ^ (next << 2)) + ((next >> 3) ^ (previous << 4))) ^
-                           ((sum ^ next) + (key[(index & 3u) ^ key_offset] ^ previous));
-        previous = data[words - 1];
-    }
-}
-
-// E.3.1's own sample implementation, transcribed.
-uint32_t spec_crc24(const uint8_t* data, size_t bytes) {
-    const uint32_t kPolynomial = 0xFFFA0480u;
-    uint32_t crc = 0;
-    for (size_t i = 0; i < bytes + 3; i++) {
-        crc |= i < bytes ? data[i] : 0u;
-        for (uint8_t bit = 0; bit < 8; bit++) {
-            if (crc & 0x80000000u) crc ^= kPolynomial;
-            crc <<= 1;
-        }
-    }
-    return crc >> 8;
-}
-
-// INFO: fc 13nov26 E.3.2 transcribed, reading element 11 as alpha^11 the way CCSDS 131.0 does
-uint8_t spec_multiply(uint8_t left, uint8_t right) {
-    uint8_t product = 0;
-    while (right != 0) {
-        if (right & 1u) product ^= left;
-        const bool carry = (left & 0x80u) != 0;
-        left = static_cast<uint8_t>(left << 1);
-        if (carry) left ^= 0x1Du;
-        right = static_cast<uint8_t>(right >> 1);
-    }
-    return product;
-}
-
-uint8_t spec_power(uint8_t base, int exponent) {
-    uint8_t result = 1;
-    for (int i = 0; i < exponent; i++) result = spec_multiply(result, base);
-    return result;
-}
-
-void spec_reed_solomon(const uint8_t* data, uint8_t* parity) {
-    const int kParity = 32;
-    uint8_t generator[kParity + 1] = {1};
-    for (int i = 0; i < kParity; i++) {
-        const uint8_t root = spec_power(spec_power(2, 11), 121 + i);
-        for (int j = i + 1; j > 0; j--)
-            generator[j] =
-                static_cast<uint8_t>(generator[j - 1] ^ spec_multiply(generator[j], root));
-        generator[0] = spec_multiply(generator[0], root);
-    }
-    uint8_t remainder[kParity] = {0};
-    for (int i = 0; i < 223; i++) {
-        const uint8_t feedback = data[i] ^ remainder[0];
-        for (int j = 0; j < kParity - 1; j++)
-            remainder[j] = static_cast<uint8_t>(
-                remainder[j + 1] ^ spec_multiply(feedback, generator[kParity - 1 - j]));
-        remainder[kParity - 1] = spec_multiply(feedback, generator[0]);
-    }
-    std::memcpy(parity, remainder, kParity);
-}
-
 // The reference Traffic as another sender would put it on air under this network header.
 wire::Status received_with_header(uint8_t header, adsl::Packet& out) {
     adsl::Packet sent = traffic_packet();
@@ -285,6 +209,44 @@ TEST_CASE("ADS-L.4.SRD860.E.3: error control is the CRC unless the header bit na
     CHECK(received_with_header(0x80, packet) == wire::Status::Invalid);
 }
 
+// G.3 pads the data to whole words, so a CRC length is a multiple of 4 and a FEC length 1 past one.
+TEST_CASE(
+    "ADS-L.4.SRD860.E.3: no uplink length is both a CRC and a FEC one, so it names the mode") {
+    bool crc_length[256] = {false};
+    bool fec_length[256] = {false};
+    for (int count = 0; count <= 10; count++) {
+        int payload = 19 * count;
+        while ((payload - 3) % 4 != 0) payload++;
+        const int covered = 1 + 5 + payload;
+        crc_length[covered + 3] = true;
+        fec_length[covered + 32] = true;
+    }
+    for (int length = 0; length < 256; length++) {
+        CAPTURE(length);
+        CHECK_FALSE((crc_length[length] && fec_length[length]));
+        const adsl::UplinkLayout layout = adsl::uplink_layout(length);
+        CHECK((layout.records >= 0) == (crc_length[length] || fec_length[length]));
+        if (layout.records >= 0)
+            CHECK((layout.mode == adsl::ErrorControl::Fec) == fec_length[length]);
+    }
+}
+
+// The ground station picks the parity, so a header bit naming the other contradicts the length.
+TEST_CASE("ADS-L.4.SRD860.E.3: an uplink whose header bit names the other parity is refused") {
+    const adsl::Packet traffic[1] = {traffic_packet(0x3C1234)};
+    adsl::Packet heard[1];
+    adsl::UplinkStatistics statistics;
+    uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
+    const int crc_sent = spec_uplink(traffic, 1, 0x81, false, packet);
+    CHECK(packet[0] == 28);
+    CHECK(adsl::Uplink{}.decode(packet, static_cast<size_t>(crc_sent), heard, 1, statistics) ==
+          wire::Status::Invalid);
+    const int fec_sent = spec_uplink(traffic, 1, 0x01, true, packet);
+    CHECK(packet[0] == 57);
+    CHECK(adsl::Uplink{}.decode(packet, static_cast<size_t>(fec_sent), heard, 1, statistics) ==
+          wire::Status::Invalid);
+}
+
 // Four header fields in one byte, and this device sends a zero in every one of them.
 // The Mode-S polynomial over the header and the scrambled data, most significant byte first.
 TEST_CASE("ADS-L.4.SRD860.E.3.1: the parity is the 24-bit CRC the clause prints" *
@@ -299,6 +261,21 @@ TEST_CASE("ADS-L.4.SRD860.E.3.1: the parity is the 24-bit CRC the clause prints"
     CHECK(packet.crc_bytes[2] == static_cast<uint8_t>(expected));
     CHECK(packet.crc_ok());
     CHECK(adsl::Packet::kCrcCoverBytes == 21);
+}
+
+// One bit wrong in the header, the data or the CRC itself, and a CRC uplink is refused.
+TEST_CASE("ADS-L.4.SRD860.E.3.1: an uplink whose CRC does not check is refused") {
+    const adsl::Packet traffic[1] = {traffic_packet(0x3C1234)};
+    for (const int byte : {1, 2, 25, 26, 28}) {
+        CAPTURE(byte);
+        uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
+        const int sent = spec_uplink(traffic, 1, 0x01, false, packet);
+        packet[byte] ^= 0x04;
+        adsl::Packet heard[1];
+        adsl::UplinkStatistics statistics;
+        CHECK(adsl::Uplink{}.decode(packet, static_cast<size_t>(sent), heard, 1, statistics) ==
+              wire::Status::Crc);
+    }
 }
 
 TEST_CASE("ADS-L.4.SRD860.E.3.2: the forward error correction is Reed-Solomon over 255 bytes") {

@@ -1,5 +1,6 @@
 #include "core/gnss/nmea.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include "core/units/units.h"
@@ -54,8 +55,9 @@ int32_t stamp_ms_of_day(const char* stamp) {
     return seconds * 1000 + stamp_fraction_ms(stamp);
 }
 
-// INFO: fc 23sep26 no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea
+// INFO: fc 22nov26 COCOM's 1000 kn, far past G.1.8's 236 m/s, so a faster speed is held there
 constexpr int64_t kSpeedCeilingMmS = 514444;
+// INFO: fc 23sep26 no aircraft flies past the Karman line, or 1 km under the sea
 constexpr int64_t kAltitudeCeilingM = 100000;
 constexpr int64_t kAltitudeFloorM = -1000;
 
@@ -193,19 +195,29 @@ bool NmeaParser::parse_line(const char* line, int bytes) {
 // INFO: fc 13sep26 GSA is asked for to carry VDOP, which GGA has no field for
 bool NmeaParser::apply_gsa(const char* fields[], int field_count) {
     if (field_count <= kGsaVdopField) return false;
+    const bool opens_set = last_sentence_ != Sentence::Gsa;
     last_sentence_ = Sentence::Gsa;
-    // INFO: fc 18nov26 GSA comes once a second at 2 Hz, so its set replaces the marks, not each GGA
+    // INFO: fc 18nov26 a GSA set replaces the marks, not a GGA, so a burst without one keeps them
     if (solution_marks_stale_) sky_.clear_solution();
     solution_marks_stale_ = false;
+    if (opens_set) {
+        solution_.fix_mode = 0;
+        solution_.vdop_e2 = 0;
+    }
+    // INFO: fc 22nov26 one solution's GSAs come back to back, and a constellation outside it may
+    // say 1
+    solution_.fix_mode =
+        std::max(solution_.fix_mode, static_cast<uint8_t>(parse_long(fields[kGsaFixModeField], 1)));
     // INFO: fc 18sep26 one GSA per constellation, and one that solved nothing carries no DOP at all
     int64_t pdop_e2 = 0;
-    if (!parse_scaled(fields[kGsaPdopField], 100, pdop_e2) || pdop_e2 <= 0) return true;
-    solution_.fix_mode = static_cast<uint8_t>(parse_long(fields[kGsaFixModeField], 1));
     int64_t vdop_e2 = 0;
-    solution_.vdop_e2 =
-        parse_scaled(fields[kGsaVdopField], 100, vdop_e2) && vdop_e2 > 0 && vdop_e2 <= 0xFFFF
-            ? static_cast<uint16_t>(vdop_e2)
-            : 0;
+    if (parse_scaled(fields[kGsaPdopField], 100, pdop_e2) && pdop_e2 > 0)
+        solution_.vdop_e2 =
+            parse_scaled(fields[kGsaVdopField], 100, vdop_e2) && vdop_e2 > 0 && vdop_e2 <= 0xFFFF
+                ? static_cast<uint16_t>(vdop_e2)
+                : 0;
+    // INFO: fc 22nov26 the L76K documents no empty VDOP in 2D, so only a 3D mode vouches for one
+    if (solution_.fix_mode != kFixMode3D) solution_.vdop_e2 = 0;
 
     const System system =
         field_count > kGsaSystemField
@@ -285,19 +297,21 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
             solution_.utc_valid = true;
         }
     }
+    solution_.speed_valid = false;
+    solution_.track_valid = false;
     if (solution_.fix_valid) {
         solution_.latitude_1e7 = latitude_1e7;
         solution_.longitude_1e7 = longitude_1e7;
         int64_t knots_e2 = 0;
-        int64_t speed_mm_s = -1;
-        if (parse_scaled(fields[7], 100, knots_e2))
-            speed_mm_s =
-                wire::divide_rounded<int64_t>(knots_e2 * kMillimetresPerSecondPerKnotE3, 100000);
-        solution_.speed_mm_s = speed_mm_s >= 0 && speed_mm_s <= kSpeedCeilingMmS
-                                   ? static_cast<int32_t>(speed_mm_s)
-                                   : 0;
+        solution_.speed_valid = parse_scaled(fields[7], 100, knots_e2) && knots_e2 >= 0;
+        const int64_t speed_mm_s =
+            solution_.speed_valid
+                ? wire::divide_rounded<int64_t>(knots_e2 * kMillimetresPerSecondPerKnotE3, 100000)
+                : 0;
+        solution_.speed_mm_s = static_cast<int32_t>(std::min(speed_mm_s, kSpeedCeilingMmS));
         int64_t track_cdeg = 0;
-        if (parse_scaled(fields[8], 100, track_cdeg))
+        solution_.track_valid = parse_scaled(fields[8], 100, track_cdeg);
+        if (solution_.track_valid)
             solution_.track_cdeg =
                 static_cast<int32_t>(((track_cdeg % kCentiDegreesPerTurn) + kCentiDegreesPerTurn) %
                                      kCentiDegreesPerTurn);
@@ -316,6 +330,10 @@ bool NmeaParser::apply_gga(const char* fields[], int field_count, int bytes) {
     gga_stamp_ms_ = stamp_ms;
     last_sentence_ = Sentence::Gga;
     solution_marks_stale_ = true;
+    // INFO: fc 22nov26 a GGA opens its burst, so only a GSA after it says this solution solved
+    // height
+    solution_.fix_mode = 0;
+    solution_.vdop_e2 = 0;
     solution_.fix_quality = static_cast<uint8_t>(parse_long(fields[6], 2));
     solution_.satellites = static_cast<uint8_t>(parse_long(fields[7], 2));
 
@@ -326,8 +344,7 @@ bool NmeaParser::apply_gga(const char* fields[], int field_count, int bytes) {
 
     int64_t separation_mm = 0;
     solution_.geoid_measured = field_count > 11 && parse_scaled(fields[11], 1000, separation_mm) &&
-                               separation_mm != 0 && separation_mm > -200000 &&
-                               separation_mm < 200000;
+                               separation_mm > -200000 && separation_mm < 200000;
     solution_.geoid_separation_mm =
         solution_.geoid_measured ? static_cast<int32_t>(separation_mm) : kDefaultGeoidSeparationMm;
 

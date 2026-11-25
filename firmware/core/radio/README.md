@@ -14,11 +14,11 @@ Totals such as `rx_ok` cannot tell an empty sky from a receiver that frames noth
 | `Unarmed` | `ports::Rf` refused the plan that carried it, so nothing was armed |
 | `Received` | a burst arrived, framed, and named an aircraft |
 | `Named` | a burst framed and carried an aircraft's registration instead of its position: §F.2.1's payload 66 with OGN's info header, filed under the sender's address (`core/traffic/callsigns.h`) |
-| `BadCrc` | an integrity check refused it: the chip's own CRC, an ADS-L or ALP-TAS CRC no forward correction could rescue, or a Reed-Solomon codeword the uplink could not correct |
+| `BadCrc` | an integrity check refused it: the chip's own CRC, an ADS-L or ALP-TAS CRC no forward correction could rescue, or an uplink whose CRC did not check or whose Reed-Solomon codeword could not be corrected |
 | `Unframed` | clean chips behind the sync window and a sync tail naming neither system, so nothing was attempted |
 | `Miskeyed` | an ALP-TAS frame whose CRC held and whose sender keyed it on a second inside `kKeyWindowS` of ours, but not ours |
 | `Undecoded` | the frame was attempted and refused: the ALP-TAS plausibility gate with no second that would have read it, an ADS-L frame carrying no position, or a registration whose text is not a callsign (`protocol::is_callsign_character`) |
-| `Unsupported` | a message type this firmware does not read. ALP-TAS reads only its 2024 position frame, so Air V6 (type 0) and text (type 3) land here. ADS-L reads §F.2.1's Traffic and the registration inside payload 66, so Status (3), Remote Identification (6) and other telemetry in 66 land here |
+| `Unsupported` | a message type this firmware does not read. ALP-TAS reads only its 2024 position frame, so Air V6 (type 0) and text (type 3) land here. ADS-L reads §F.2.1's Traffic and the registration inside payload 66, so Status (3), Remote Identification (6) and other telemetry in 66 land here. On the O band, an uplink whose parity holds lands here when it is not a Traffic Uplink this firmware reads: a FIS-B Uplink (5), a later version, a reserved key, or a header bit naming the other parity than its length |
 | `Unattempted` | own-ship had no fix or no UTC to decode an ALP-TAS frame against |
 | `Declared` | an ADS-L Status from an aircraft in the table, whose Max. Protocol Version B.5 now holds for it, printed `STAT` |
 | `Deferred` | the clear channel assessment found the channel busy, and the burst is armed again a random 15 to 250 ms later, as far as its window reaches (ADS-L C.2 and D.3), printed `DEFER`. The row is dated at the planned instant and carries the level the assessment read |

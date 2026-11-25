@@ -235,7 +235,7 @@ The right of the track row reports the sensor hub: `IMU RUN -120mg` is a hub tha
 
 A hub that stopped names the stage and why: `IMU BOOT VERIFY` is an image refused, `IMU LOAD DOWN` a bus that quit mid-upload, `IMU HIF TIMEOUT` a part never ready, `IMU CONF NOSENS` an image with no accelerometer and `IMU CONF NOCFG` a configuration read back as nothing. The field is 16 cells at its widest, what the row leaves past `TRUE`.
 
-The traffic row ends with `TX ON` or `TX OFF`, from `timing::TransmitGate::transmits()`, the verdict every burst is sent by, so the glass never disagrees with the radio. `TX OFF` names the first requirement unmet now, `RADIO`, `GNSS`, `FIX`, `UTC` or `PPS` (`../../../core/timing/README.md`, The transmit gate), at once, without the 10 s the `NO TX` mark waits. `TX OFF` alone is the settle after acquisition (`core/gnss/README.md`).
+The traffic row ends with `TX ON` or `TX OFF`, from `timing::TransmitGate::on_air()`: the verdict every burst is sent by, with no position held past 5 s, so the glass never disagrees with the radio. `TX OFF` names the first requirement unmet now, `RADIO`, `GNSS`, `FIX`, `UTC`, `PPS` or `HELD` (`../../../core/timing/README.md`, The transmit gate), at once, without the 10 s the `NO TX` mark waits. `TX OFF` alone is the settle after acquisition (`core/gnss/README.md`).
 
 ## self_test
 
@@ -276,9 +276,9 @@ Under the divider stand the cell in volts to two decimals and the verdict, `PASS
 
 ## NO TX
 
-While the Go does not transmit ADS-L, every page says so in its top-left corner: `NO TX` over the reason, small, reversed in a patch it clears, mirroring the radar's Bravo corner. The reason is the first requirement of the transmit gate unmet: `RADIO`, `GNSS`, `FIX`, `UTC`, `PPS` or `ADDRESS` (`../../../core/timing/README.md`, The transmit gate). It is drawn last, over everything, because it is the one thing a pilot must read. Menus, prompts and notices do not carry it, since they stand for seconds.
+While the Go does not transmit ADS-L, every page says so in its top-left corner: `NO TX` over the reason, small, reversed in a patch it clears, mirroring the radar's Bravo corner. The reason is the first requirement of the transmit gate unmet: `RADIO`, `GNSS`, `FIX`, `UTC`, `PPS`, `HELD` or `ADDRESS` (`../../../core/timing/README.md`, The transmit gate). It is drawn last, over everything, because it is the one thing a pilot must read. Menus, prompts and notices do not carry it, since they stand for seconds.
 
-The bursts stop on the pass a requirement fails, but the mark waits until the failure has lasted 10 s, so a reconfigured receiver or a skipped pulse does not flicker it. It stays until every requirement has held 10 s, while the bursts resume at once. The radio is judged from boot. Everything the sky decides waits 10 s after the first fix, so a unit acquiring on the apron shows its stage, not a fault. The Go shakes once, `indication::kSignNoTx`, when the mark and flight first stand together, and not again while the mark stays.
+The bursts stop on the pass a requirement fails, `HELD` aside, which names positions held while the bursts keep trying, but the mark waits until the failure has lasted 10 s, so a reconfigured receiver or a skipped pulse does not flicker it. It stays until every requirement has held 10 s, while the bursts resume at once. The radio is judged from boot. Everything the sky decides waits 10 s after the first fix, so a unit acquiring on the apron shows its stage, not a fault. The Go shakes once, `indication::kSignNoTx`, when the mark and flight first stand together, and not again while the mark stays.
 
 `ADDRESS` is drawn for completeness, since an unactivated unit shows its activation page instead. The phone reads the same reason from `status` as `no_tx` (`../../../core/comms/README.md`).
 

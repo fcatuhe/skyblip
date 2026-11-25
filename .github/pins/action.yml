@@ -6,6 +6,6 @@ description: >-
 runs:
   using: composite
   steps:
-    - uses: emscripten-core/emsdk@7.0.0
+    - uses: emscripten-core/emsdk@7.0.1
     - uses: doctest/doctest@v2.5.3
     - uses: zephyrproject-rtos/zephyr@v4.5.0

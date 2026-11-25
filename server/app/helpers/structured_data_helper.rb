@@ -6,7 +6,7 @@ module StructuredDataHelper
   end
 
   def structured_data_graph
-    [ organization_data, website_data, web_page_data, breadcrumb_data, article_data, product_data ].compact
+    [ organization_data, website_data, web_page_data, breadcrumb_data, article_data, product_data, faq_data ].compact
   end
 
   private
@@ -95,6 +95,20 @@ module StructuredDataHelper
             "url" => page_url_for(Content::Page.find_by(base_slug: "buy", locale: @page.locale))
           }
         }
+      end
+    end
+
+    def faq_data
+      questions = Nokogiri::HTML5.fragment(content_for(:layout)).css(".faq details").map do |item|
+        {
+          "@type" => "Question",
+          "name" => item.at_css("summary").text.squish,
+          "acceptedAnswer" => { "@type" => "Answer", "text" => item.css("summary ~ *").map(&:text).join(" ").squish }
+        }
+      end
+
+      if questions.any?
+        { "@type" => "FAQPage", "@id" => structured_data_id("faq", canonical_url), "url" => canonical_url, "mainEntity" => questions }
       end
     end
 

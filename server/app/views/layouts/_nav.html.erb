@@ -1,18 +1,25 @@
 <header class="site-header">
-  <nav class="site-nav" aria-label="<%= t "nav.label" %>">
+  <nav class="site-nav" aria-label="<%= t "nav.label" %>" data-controller="nav">
     <%= link_to_page "index", label: render("layouts/wordmark", css: "wordmark-nav"), class: "site-nav-brand" %>
-    <ul class="site-nav-links">
-      <% %w[skyblip-go features buy install guides].each do |slug| %>
-        <li><%= link_to_page slug, label: (t("nav.devices") if slug == "features"), label_type: :nav, "aria-current": nav_current(slug) %></li>
-      <% end %>
-    </ul>
+    <%= render "layouts/nav_links" %>
     <div class="site-nav-actions">
       <%= render "layouts/locale_switcher" %>
       <%= link_to t("briefing.title"), briefing_root_path, class: "site-nav-manage" %>
       <% if Current.user&.admin? %>
         <%= link_to "Admin", analytics_default_path, class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("admin/")) %>
       <% end %>
+      <button type="button" class="site-nav-open" aria-label="<%= t "nav.open" %>" aria-haspopup="dialog" data-action="nav#open">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+      </button>
     </div>
+    <dialog class="site-nav-panel" aria-label="<%= t "nav.label" %>" data-nav-target="panel" data-action="click->nav#closeOnBackdrop">
+      <div class="site-nav-panel-body">
+        <button type="button" class="site-nav-close" aria-label="<%= t "nav.close" %>" data-action="nav#close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <%= render "layouts/nav_links" %>
+      </div>
+    </dialog>
   </nav>
   <%= yield :subnav %>
 </header>

@@ -77,6 +77,8 @@ TEST_CASE(
         own.longitude_1e7 = 81234500;
         own.altitude_hae_mm = 1000000;
         own.speed_mm_s = 100000;
+        own.speed_valid = true;
+        own.track_valid = true;
         own.hdop_e2 = 90;
         own.vdop_e2 = vdop_e2;
         own.flight_state = 2;

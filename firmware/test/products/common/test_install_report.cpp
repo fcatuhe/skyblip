@@ -31,9 +31,9 @@ bool says(const std::string& frame, const char* pair) {
     return frame.find(pair) != std::string::npos;
 }
 
-std::string land(Rig& rig, uint32_t& now_ms) {
-    open_upload_window(rig, now_ms);
-    land_upload(rig, now_ms);
+std::string land(Rig& rig) {
+    open_upload_window(rig);
+    land_upload(rig);
     return rig.last_on(events::Endpoint::Config);
 }
 
@@ -142,7 +142,7 @@ TEST_CASE("install report: an upload refused as the wrong key says what slot 1 h
     stage_versions(rig);
     sign(rig, 0x21, 0x42);
     REQUIRE(rig.setup() == Status::Ok);
-    REQUIRE(says(land(rig, rig.now_ms), "\"reason\":\"wrong_key\""));
+    REQUIRE(says(land(rig), "\"reason\":\"wrong_key\""));
     CHECK(report_frame(rig, rig.now_ms) ==
           "{\"command\":\"install_report\",\"landed_check\":\"matched\",\"staged_key\":"
           "\"42424242\"}");
@@ -155,7 +155,7 @@ TEST_CASE("install report: a landing with no key the unit can read says what the
     rig.platform.dfu().staged_key_valid = false;
     rig.platform.dfu().staged_check = ports::StagedCheck::Damaged;
     REQUIRE(rig.setup() == Status::Ok);
-    REQUIRE(says(land(rig, rig.now_ms), "\"reason\":\"wrong_key\""));
+    REQUIRE(says(land(rig), "\"reason\":\"wrong_key\""));
     CHECK(report_frame(rig, rig.now_ms) ==
           "{\"command\":\"install_report\",\"landed_check\":\"damaged\"}");
 }
@@ -165,7 +165,7 @@ TEST_CASE("install report: an upload refused as not approved keeps its landing t
     stage_versions(rig);
     rig.platform.dfu().staged_image_version = kRunning;
     REQUIRE(rig.setup() == Status::Ok);
-    REQUIRE(says(land(rig, rig.now_ms), "\"reason\":\"not_approved\""));
+    REQUIRE(says(land(rig), "\"reason\":\"not_approved\""));
     CHECK(says(report_frame(rig, rig.now_ms), "\"landed_check\":\"matched\""));
 }
 
@@ -174,8 +174,8 @@ TEST_CASE("install report: the next upload window forgets the landing it refused
     stage_versions(rig);
     sign(rig, 0x21, 0x42);
     REQUIRE(rig.setup() == Status::Ok);
-    land(rig, rig.now_ms);
-    open_upload_window(rig, rig.now_ms);
+    land(rig);
+    open_upload_window(rig);
     CHECK(report_frame(rig, rig.now_ms) == "{\"command\":\"install_report\"}");
 }
 
@@ -185,7 +185,7 @@ TEST_CASE(
     stage_versions(rig);
     sign(rig, 0x21, 0x21);
     REQUIRE(rig.setup() == Status::Ok);
-    REQUIRE(says(land(rig, rig.now_ms), "\"reason\":\"install\""));
+    REQUIRE(says(land(rig), "\"reason\":\"install\""));
     CHECK_FALSE(says(report_frame(rig, rig.now_ms), "landed_check"));
     CHECK(rig.platform.dfu().staged_checks == 0);
 }

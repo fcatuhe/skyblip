@@ -290,6 +290,7 @@ enum : uint32_t {
     kLinkDropReason = 94,
     kNoTx = 95,
     kIrqArmed = 96,
+    kFailedWrites = 97,
 };
 }
 

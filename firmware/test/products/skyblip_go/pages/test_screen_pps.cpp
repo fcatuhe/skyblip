@@ -25,46 +25,42 @@ bool radio_log_reads(ScreenRig& rig, const char* text) {
 // Pps::locked() holds for 3 s, so a late edge is still anchored and still transmitting.
 TEST_CASE("screen pps: an edge 2 s old on a locked clock reads LOCK on the radio log") {
     ScreenRig rig;
-    uint32_t now_ms = 0;
     edge_lost(rig, 2 * kSecondMs, true);
 
-    rig.show(now_ms, go::Page::RadioLog);
-    rig.run_seconds(now_ms, 3);
+    rig.show(go::Page::RadioLog);
+    rig.run_seconds(3);
     CHECK(radio_log_reads(rig, "PPS LOCK"));
 }
 
 TEST_CASE("screen pps: an edge 10 s old reads HOLD with its age while the slot map flies on") {
     ScreenRig rig;
-    uint32_t now_ms = 0;
     edge_lost(rig, 10 * kSecondMs, false);
     REQUIRE(timing::in_pps_holdover(rig.state.clock));
 
-    rig.show(now_ms, go::Page::RadioLog);
-    rig.run_seconds(now_ms, 3);
+    rig.show(go::Page::RadioLog);
+    rig.run_seconds(3);
     CHECK(radio_log_reads(rig, "PPS HOLD 10"));
 }
 
 TEST_CASE("screen pps: an edge 61 s old is past holdover and reads NONE") {
     ScreenRig rig;
-    uint32_t now_ms = 0;
     edge_lost(rig, 61 * kSecondMs, false);
     REQUIRE(timing::kPpsHoldoverMs < 61 * kSecondMs);
 
-    rig.show(now_ms, go::Page::RadioLog);
-    rig.run_seconds(now_ms, 3);
+    rig.show(go::Page::RadioLog);
+    rig.run_seconds(3);
     CHECK(radio_log_reads(rig, "PPS NONE"));
 }
 
 // Pps::since_edge_ms() reads 0 before the first edge, which the pages once showed as HOLD 0.
 TEST_CASE("screen pps: a clock with UTC and no edge ever reads NONE, and transmits nothing") {
     ScreenRig rig;
-    uint32_t now_ms = 0;
     edge_lost(rig, 0, false);
     rig.state.clock.pps_edge_us = 0;
     for (int phase = 0; phase < 1000; phase++)
         REQUIRE_FALSE(timing::Scheduler::plan(phase, rig.state.clock).tx_allowed);
 
-    rig.show(now_ms, go::Page::RadioLog);
-    rig.run_seconds(now_ms, 3);
+    rig.show(go::Page::RadioLog);
+    rig.run_seconds(3);
     CHECK(radio_log_reads(rig, "PPS NONE"));
 }

@@ -167,8 +167,8 @@ TEST_CASE("adsb capture: DF17 frames folded, recorded, drained to flash and read
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
 
     Bravo bravo;
     const uint32_t at_ms = rig.now_ms;
@@ -187,7 +187,7 @@ TEST_CASE("adsb capture: DF17 frames folded, recorded, drained to flash and read
 
     Writer writer{rig.product.bus(), rig.state(), rig.product.diagnostics()};
     REQUIRE(writer.capture.record(bravo.heard, at_ms));
-    stop(rig, rig.now_ms);
+    stop(rig);
 
     const std::vector<diagnostics::Record> records = captured(rig);
     REQUIRE(count_of(records, diagnostics::Type::Adsb) == 1);

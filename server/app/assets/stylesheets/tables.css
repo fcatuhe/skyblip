@@ -70,6 +70,10 @@
 
   .table-scroll table.modules td:first-of-type { font-family: var(--font-sans); }
 
+  .table-scroll table.prose td { font-family: var(--font-sans); }
+
+  .table-scroll table.prose tbody th { white-space: normal; }
+
   .blips td { text-align: center; vertical-align: middle; }
 
   .blips thead th { text-align: center; }

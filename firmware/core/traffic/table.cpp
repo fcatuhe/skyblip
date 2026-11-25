@@ -198,10 +198,23 @@ uint8_t TrafficTable::readable_version(const model::Ownship& own, uint32_t now_m
         const AlarmAssessment seen = assess(own, target.observation, now_ms);
         if (!seen.valid) continue;
         const int32_t vertical_m = seen.relative_altitude_valid ? seen.relative_altitude_m : 0;
-        if (adsl::close_client(seen.relative_distance_m, vertical_m, seen.closing_mm_s))
+        const int32_t closing_mm_s = model::velocity_valid(own)
+                                         ? seen.closing_mm_s
+                                         : fastest_closing_mm_s(target.observation);
+        if (adsl::close_client(seen.relative_distance_m, vertical_m, closing_mm_s))
             version = target.version.max;
     }
     return version;
+}
+
+// INFO: fc 22nov26 B.5 with no own velocity: own-ship may close at the fastest speed G.1.8 encodes
+int32_t TrafficTable::fastest_closing_mm_s(const model::AircraftObservation& target) {
+    const QuarterMetresPerSecond fastest_q{static_cast<uint16_t>(
+        adsl::Packet::kSpeedCode.decode(adsl::Packet::kSpeedInvalidCode - 1))};
+    const int32_t target_mm_s = target.speed_valid
+                                    ? to_mm_s(QuarterMetresPerSecond(target.speed_q)).value
+                                    : kUnknownTargetSpeedMps * kMillimetresPerMetre;
+    return to_mm_s(fastest_q).value + target_mm_s;
 }
 
 void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservation& incoming) {

@@ -12,6 +12,7 @@
 #include "protocols/adsl/media_access.h"
 #include "protocols/adsl/physical.h"
 #include "simulator/simulator.h"
+#include "test/support/armings_rig.h"
 #include "test/support/m_band_rig.h"
 #include "test/support/product_rig.h"
 #include "test/support/simulator_run.h"
@@ -57,7 +58,87 @@ std::vector<simulator::AirRecord> held_from_cycle_start(int speed_kt, uint32_t h
     return sent;
 }
 
+uint64_t last_armed_burst(const Armings& armings) {
+    for (uint32_t i = armings.rf.handed; i > 0; --i)
+        if (armings.rf.plans[i - 1].tx != nullptr) return armings.rf.plans[i - 1].tx_at_us;
+    return 0;
+}
+
 }  // namespace
+
+TEST_CASE(
+    "ADS-L.4.SRD860.D.3: an early busy report with no backoff left closes the dwell's burst") {
+    Armings armings;
+    armings.state.activation.serial = 3;
+    armings.ready_to_transmit(1000);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_at(420);
+    REQUIRE(armings.rf.with_tx == 1);
+    const uint64_t drawn_us = last_armed_burst(armings);
+    const int phase_ms = static_cast<int>((drawn_us - Armings::kEdgeUs) / 1000);
+    REQUIRE(phase_ms > 810 - 15);
+    REQUIRE(phase_ms <= 810);
+
+    armings.state.rf.note_busy({drawn_us, -50, true});
+    armings.tick_at(phase_ms - 1);
+    armings.tick_at(phase_ms);
+    armings.tick_at(821);
+
+    CHECK(armings.state.air.tx_busy_missed == 1);
+    CHECK(armings.rf.with_tx == 1);
+}
+
+TEST_CASE("ADS-L.4.SRD860.D.3: a late fix cannot cut short a selected backoff") {
+    Armings armings;
+    armings.state.activation.serial = 22;
+    armings.ready_to_transmit(1000);
+    armings.solving = false;
+    const uint32_t edge_ms = Armings::kEdgeUs / 1000;
+    armings.state.own.fix_at_ms = edge_ms;
+    armings.state.own.fix_in_hand_ms = edge_ms + 70;
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_at(420);
+    REQUIRE(armings.rf.with_tx == 1);
+    const uint64_t drawn_us = last_armed_burst(armings);
+    REQUIRE(drawn_us == Armings::kEdgeUs + 476000);
+    // This serial draws 40 units of 5 ms at .476, so the backoff ends at .676.
+    const uint64_t not_before_us = drawn_us + 200000;
+    armings.state.rf.note_busy({drawn_us, -50, true});
+    armings.tick_at(477);
+    CHECK(armings.state.air.tx_deferred == 1);
+    CHECK(armings.rf.with_tx == 1);
+
+    // A fix in hand at .540 redraws to .595, inside the backoff, so only the clamp keeps .676.
+    armings.state.own.utc_ms = 500;
+    armings.state.own.fix_at_ms = edge_ms + 500;
+    armings.state.own.fix_in_hand_ms = edge_ms + 540;
+    armings.tick_at(540);
+
+    CHECK(armings.rf.with_tx == 2);
+    CHECK(last_armed_burst(armings) >= not_before_us);
+    CHECK(last_armed_burst(armings) <= Armings::kEdgeUs + 810000);
+}
+
+// EN 300 220-1 5.21.1: the random interval runs from the assessment, which can come after the plan.
+TEST_CASE("ADS-L.4.SRD860.D.3: a channel heard busy late defers from when it was heard") {
+    Armings armings;
+    armings.state.activation.serial = 1;
+    armings.ready_to_transmit(1000);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_at(420);
+    REQUIRE(armings.rf.with_tx == 1);
+    const uint64_t drawn_us = last_armed_burst(armings);
+    const int phase_ms = static_cast<int>((drawn_us - Armings::kEdgeUs) / 1000);
+    REQUIRE(phase_ms < 650);
+
+    const uint64_t heard_us = drawn_us + 20000;
+    armings.state.rf.note_busy({drawn_us, -50, true, heard_us});
+    armings.tick_at(phase_ms + 21);
+
+    CHECK(armings.state.air.tx_deferred == 1);
+    REQUIRE(armings.rf.with_tx == 2);
+    CHECK(last_armed_burst(armings) >= heard_us + timing::PoliteAccess::kDeferralFloorUs);
+}
 
 // Forced on the ground only: airborne the Status and the name are still busy at +8, past 3000 ms.
 TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms" *
@@ -121,11 +202,10 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status padded to 24 bytes is refused, never f
     hear_adsl(rig, traffic);
     settle(rig, now_ms);
 
-    adsl::Packet status{};
-    adsl::encode_status(status, 0xC5D804, adsl::kAddressTableFlarm, adsl::StatusReport{});
-    status.scramble(adsl::Packet::kDataBytes);
-    status.set_crc(adsl::Packet::kDataBytes);
-    hear_m_band(rig, adsl::kSyncWord, status.data, adsl::kFrameBytes);
+    const uint8_t padded_status[] = {0x61, 0x03, 0x06, 0x01, 0x76, 0x31, 0x01, 0x00,
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0xF4, 0xBA, 0x2F};
+    hear_m_band(rig, 0xF5724B18u, padded_status, sizeof(padded_status));
     settle(rig, now_ms);
     CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
     CHECK(rig.state().air.rx_status == 0);
@@ -134,30 +214,50 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status padded to 24 bytes is refused, never f
     CHECK_FALSE(rig.state().traffic.at(index)->version.declared);
 }
 
-// The length byte rides outside the CRC: one bit misheard there costs neither frame.
-TEST_CASE("ADS-L.4.SRD860.D.1.1: a length byte misheard by its one bit still reads either frame") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 0;
-    fly(rig, now_ms, 3);
-    model::Ownship neighbour = rig.state().own;
-    neighbour.latitude_1e7 += 10000;
-    adsl::Packet traffic{};
-    REQUIRE(protocol::from_own(traffic, neighbour, 0xC5D804, adsl::kAddressTableFlarm, 4));
-    traffic.scramble();
-    traffic.set_crc();
-    hear_m_band(rig, adsl::sync_word(adsl::Packet::kStatusDataBytes), traffic.data,
-                adsl::kFrameBytes);
-    settle(rig, now_ms);
-    CHECK(heard_verdict(rig) == radio::Verdict::Received);
-    REQUIRE(rig.state().traffic.find(adsl::kAddressTableFlarm, 0xC5D804) >= 0);
+TEST_CASE("ADS-L.4.SRD860.D.1.1: the Go trusts a clean length and repairs only a doubtful one") {
+    const uint8_t traffic[] = {0x00, 0xD1, 0x87, 0x13, 0x91, 0x5C, 0x80, 0x2C,
+                               0x88, 0xD4, 0xD3, 0x86, 0x0E, 0x87, 0xD1, 0x04,
+                               0x40, 0xC5, 0x3C, 0x02, 0x7F, 0x88, 0x7D, 0xBA};
+    struct Trial {
+        uint8_t length;
+        uint8_t flipped_chips;
+        bool accepted;
+    };
+    const Trial trials[] = {
+        {0, 0, false},      {16, 0, false},   {24, 0, true},     {25, 0, false},   {0, 0x02, false},
+        {16, 0x02, false},  {24, 0x02, true}, {25, 0x02, true},  {16, 0x80, true}, {24, 0x80, true},
+        {255, 0x02, false}, {25, 0x0A, true}, {24, 0x2A, false},
+    };
+    for (const auto& [length, flipped_chips, accepted] : trials) {
+        CAPTURE(int(length));
+        CAPTURE(int(flipped_chips));
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        uint32_t now_ms = 0;
+        fly(rig, now_ms, 3);
 
-    adsl::Packet status{};
-    adsl::encode_status(status, 0xC5D804, adsl::kAddressTableFlarm, adsl::StatusReport{});
-    status.scramble(adsl::Packet::kStatusDataBytes);
-    status.set_crc(adsl::Packet::kStatusDataBytes);
-    hear_m_band(rig, adsl::kSyncWord, status.data, adsl::Packet::kStatusDataBytes);
-    settle(rig, now_ms);
-    CHECK(heard_verdict(rig) == radio::Verdict::Declared);
-    CHECK(rig.state().air.rx_status == 1);
+        events::RfEvent event{};
+        event.type = events::RfEventType::RxDone;
+        event.band = model::Band::M;
+        event.rssi_dbm = -15;
+        event.rssi_valid = true;
+        event.bytes = protocol::kRxChipBytes;
+        const auto put_byte = [&](size_t offset, uint8_t value) {
+            uint16_t chips = 0;
+            for (int bit = 7; bit >= 0; --bit)
+                chips = static_cast<uint16_t>((chips << 2) | ((value >> bit) & 1 ? 1 : 2));
+            event.data[offset * 2] = static_cast<uint8_t>(chips >> 8);
+            event.data[offset * 2 + 1] = static_cast<uint8_t>(chips);
+        };
+        put_byte(0, 0x72);
+        put_byte(1, 0x4B);
+        put_byte(2, length);
+        for (size_t i = 0; i < sizeof(traffic); i++) put_byte(3 + i, traffic[i]);
+        event.data[5] ^= flipped_chips;
+        rig.product.bus().rf.push(event);
+        settle(rig, now_ms);
+
+        CHECK((heard_verdict(rig) == radio::Verdict::Received) == accepted);
+        CHECK(rig.state().air.rx_ok == (accepted ? 1u : 0u));
+    }
 }

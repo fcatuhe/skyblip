@@ -13,7 +13,7 @@ class DevReleaseTest < Minitest::Test
   GO_NOTES = <<~NOTES.chomp
     ## skyBlip Go
 
-    Radio protocols: ADS-L 0.1.0, ALP-TAS 0.1.0.
+    Radio protocols: ADS-L 0.8.0, ALP-TAS 0.8.0.
 
     - `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/fcatuhe/skyblip/tree/main/firmware/keys)), older builds included.
     - `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for.
@@ -22,7 +22,7 @@ class DevReleaseTest < Minitest::Test
   BRAVO_NOTES = <<~NOTES.chomp
     ## skyBlip Bravo
 
-    Radio protocols: ADS-B 0.1.0.
+    Radio protocols: ADS-B 0.8.0.
 
     - `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/fcatuhe/skyblip/tree/main/firmware/keys)), older builds included.
     - `.uf2` installs on any unit by drag-and-drop, and moves it to the development key.
@@ -47,7 +47,7 @@ class DevReleaseTest < Minitest::Test
 
     **Full Changelog**: https://github.com/fcatuhe/skyblip/compare/dev-1005...dev-1010
   NOTES
-  SHARED_FILES = %w[NOTICE.md SHA256SUMS embed.js scenarios.json skyblip_simulator.js skyblip_simulator.wasm].freeze
+  SHARED_FILES = %w[NOTICE.md SHA256SUMS skyblip-simulator-embed.js skyblip-simulator-scenarios.json skyblip-simulator.js skyblip-simulator.wasm].freeze
   GO_FILES = %w[skyblip-go-%s.full.signed.bin skyblip-go-%s.signed.bin skyblip-go-%s.uf2].freeze
   BRAVO_FILES = %w[skyblip-bravo-%s.signed.bin skyblip-bravo-%s.uf2].freeze
 
