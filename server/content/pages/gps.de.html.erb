@@ -2,32 +2,32 @@
 title: "GPS-Positionsfix und Flugstatus bei skyBlip Go"
 nav_title: GPS
 slug: gps
-description: "Wie skyBlip Go GPS-Positionsfixes prüft, auf stabile Werte wartet, die Zeit per PPS bestimmt und anhand der Geschwindigkeit über Grund den Flug erkennt."
+description: "Wie skyBlip Go den GPS-Fix prüft, auf stabile Werte wartet, die Zeit per PPS bestimmt und den Flugstatus allein an der Geschwindigkeit über Grund erkennt."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Erst ein gültiger Positionsfix, dann die Flugerkennung.</h1>
-  <p class="lede">Ein skyBlip Go braucht seine Position und die Uhrzeit, bevor er seine Position per ADS-L senden kann. Er prüft die Daten des GPS-Empfängers und wartet auf stabile Werte. An der Geschwindigkeit über Grund erkennt er, ob das Luftfahrzeug fliegt. Davon hängen die Senderate und die Freigabe für Updates ab.</p>
+  <h1>Go prüft den GPS-Fix und erkennt den Flugstatus allein an der Geschwindigkeit über Grund.</h1>
+  <p class="lede">Um Ihre Position per ADS-L zu senden, braucht skyBlip Go seine GPS-Position und die Uhrzeit. Es prüft die Daten des GPS-Empfängers und wartet vor dem Senden auf stabile Werte. An der Geschwindigkeit über Grund erkennt es, ob Ihr Luftfahrzeug fliegt oder am Boden ist. Dieser Flugstatus bestimmt die Senderate und die erlaubten Updates.</p>
 </section>
 
 <section>
-  <h2 class="kicker">Der Positionsfix</h2>
+  <h2 class="kicker">Der GPS-Positionsfix</h2>
 
-  <h3 id="fix">Nicht jede Positionslösung ist ein gültiger Fix.</h3>
-  <p class="lede">Der GPS-Empfänger liefert jede Sekunde eine Positionslösung, auch ohne freie Sicht zum Himmel. Go erkennt sie erst nach eigenen Prüfungen als Fix an. Die beiden Datensätze mit Position und Datum müssen vorliegen und aktuell sein. Das Datum darf nicht der Platzhalter 1980 sein, den manche Empfänger senden, bevor das Datum bekannt ist. Die Position muss in plausibler Entfernung zur vorherigen liegen. Der Empfänger meldet auch, ob er seine Lösung für gültig hält. Go entscheidet selbst.</p>
-  <p class="lede">Go nutzt einen Quectel L76K, Bravo einen Airoha AG3335. Beide liefern ihre Daten in denselben NMEA-Datensätzen, die dieselbe Software auswertet.</p>
+  <h3 id="fix">Go prüft die Daten, bevor es einen GPS-Fix übernimmt.</h3>
+  <p class="lede">Der GPS-Empfänger liefert zwei Positionslösungen pro Sekunde, auch ohne freie Sicht zum Himmel. Go übernimmt diese Daten erst nach eigenen Prüfungen als GPS-Fix. Die beiden Datensätze mit Position und Datum müssen vorliegen und aktuell sein. Das Datum darf nicht der Platzhalter 1980 sein, den manche Empfänger senden, bevor das Datum bekannt ist. Die Position muss in plausibler Entfernung zur vorherigen liegen. Auch der Empfänger muss seine Lösung als gültig melden. Go prüft die Daten zusätzlich selbst.</p>
+  <p class="lede">Go nutzt einen Quectel L76K, Bravo einen Airoha AG3335. Beide liefern ihre Daten in denselben Nachrichten im NMEA-Format, den NMEA-Datensätzen. Go und Bravo werten sie mit derselben Software aus.</p>
 
   <h3 id="waiting">Drei Meldungen beim Warten.</h3>
-  <p class="lede"><span class="mono">NO FIX</span> allein verrät nicht, ob die Antenne unter einem Hallendach steht, der Empfänger keine Daten mehr liefert oder ein Fix in zwanzig Sekunden zu erwarten ist. Go liest die eintreffenden Datensätze und zeigt an, ob Sie das Gerät umstellen, warten oder prüfen sollten:</p>
+  <p class="lede"><span class="mono">NO FIX</span> allein verrät nicht, ob die Antenne unter einem Hallendach steht, der Empfänger keine Daten mehr liefert oder ein Fix in zwanzig Sekunden zu erwarten ist. Go prüft die bereits empfangenen Datensätze. Eine Meldung zeigt, ob Sie das Gerät umstellen, warten oder prüfen lassen sollten:</p>
 
   <div class="table-scroll">
     <table class="modules">
       <thead>
-        <tr><th>Anzeige</th><th>Was Go erkennt</th><th>Was zu tun ist</th></tr>
+        <tr><th>Meldung</th><th>Was Go empfängt</th><th>Was zu tun ist</th></tr>
       </thead>
       <tbody>
         <tr><th>GPS OFF</th><td>Kein aktueller Datensatz vom Empfänger</td><td>Prüfen Sie das Gerät auf der Werkbank. Bessere Sicht zum Himmel bringt den Empfänger nicht dazu, wieder Daten zu liefern.</td></tr>
@@ -44,14 +44,14 @@ updated_on: "2026-11-20"
     <figcaption>Noch kein Fix, aber der Empfänger hat ein Datum dekodiert</figcaption>
   </figure>
 
-  <h3 id="settle">Go sendet, sobald der Fix stabil ist.</h3>
+  <h3 id="settle">Go wartet vor dem Senden auf einen stabilen GPS-Fix.</h3>
   <p class="lede">Nach einem Kaltstart können Position, Höhe und besonders die Geschwindigkeit über Grund noch einige Sekunden schwanken. Die Geschwindigkeit über Grund löst auch den Flugstatus aus. Sendet Go zu früh, könnte er eine nie geflogene Spur mit der Senderate für den Flug ausgeben, obwohl das Luftfahrzeug am Boden steht.</p>
-  <p class="lede">Go wartet nicht pauschal, sondern prüft, ob sich die Fixes stabilisieren. Jede Sekunde sagt er aus dem letzten Fix die nächste Position bei gleichbleibender Geschwindigkeit und Drehrate voraus und vergleicht sie mit dem neuen Fix. Er beginnt zu senden, wenn drei Vorhersagen in Folge weniger als 12&nbsp;m abweichen. Zwölf Meter in einer Sekunde entsprechen 12&nbsp;m/s, der Startschwelle. Der zulässige Fehler richtet sich also nach der Flugerkennung, die er absichert. Eine 2D-Lösung zählt nicht, weil ihre Höhe nicht gemessen ist. Stabilisiert sich der Empfang nicht, beginnt Go 20&nbsp;s nach dem ersten Fix zu senden, nach einem kurzen Fixverlust schon nach 5&nbsp;s. Die Wartezeit ist begrenzt, denn gar keine Meldungen zu senden wäre schlechter.</p>
+  <p class="lede">Go wartet nicht pauschal, sondern prüft, ob sich die Fixes stabilisieren. Jede Sekunde sagt Go aus dem letzten Fix die nächste Position voraus. Dabei nimmt es eine gleichbleibende Geschwindigkeit und Drehrate an und vergleicht die Vorhersage mit dem neuen Fix. Er beginnt zu senden, wenn drei Vorhersagen in Folge weniger als 12&nbsp;m abweichen. Zwölf Meter in einer Sekunde entsprechen 12&nbsp;m/s, der Startschwelle. Der zulässige Fehler richtet sich also nach der Flugerkennung, die er absichert. Eine 2D-Lösung zählt nicht, weil ihre Höhe nicht gemessen ist. Stabilisiert sich der Empfang nicht, beginnt Go 20&nbsp;s nach dem ersten Fix zu senden, nach einem kurzen Fixverlust schon nach 5&nbsp;s. Die Wartezeit ist begrenzt, denn gar keine Meldungen zu senden wäre schlechter.</p>
 
-  <h3 id="deadline">Der Fix muss vor 450&nbsp;ms eintreffen.</h3>
+  <h3 id="deadline">Der Fix muss vor 450&nbsp;ms nach Sekundenbeginn eintreffen.</h3>
   <p class="lede">Go kann die Lösung für die laufende Sekunde erst mit dem letzten Datensatz des Empfängers nutzen. Die erste Aussendung ist 450&nbsp;ms nach Sekundenbeginn möglich. Der Empfänger beginnt etwa 70&nbsp;ms nach Sekundenbeginn zu senden. Mit der Startdatenrate von 9600&nbsp;Baud brauchen die 320 Bytes eines Fixes 333&nbsp;ms. Es bleiben 47&nbsp;ms Reserve. Bei einem Prüfgerät mit 22 Satelliten war der Fix erst bei 780&nbsp;ms vollständig. Alle früher geplanten Aussendungen entfielen.</p>
   <p class="lede">Go stellt den Empfänger deshalb auf 115200&nbsp;Baud, die höchste für den Konfigurationsbefehl dokumentierte Datenrate. Derselbe Fix braucht dann 28&nbsp;ms. Der Empfänger bestätigt den Befehl nicht. Go prüft daher, ob bei der neuen Rate ein Datensatz korrekt ankommt. Ist das nicht der Fall, kehrt er zur alten Rate zurück.</p>
-  <p class="lede">Die Satellitenansicht zeigt für jeden Satelliten einen Balken mit dem Signalpegel. Die Datensätze mit diesen Pegeln verzögern den Fix. Go fordert sie deshalb nur an, solange diese Ansicht offen ist, und zwar einmal alle fünf Sekunden. Die Zähler der Ansicht werden weiterhin jede Sekunde aktualisiert. Der Empfänger liefert eine Lösung pro Sekunde. Fünf Lösungen pro Sekunde würden den ersten Fix nicht beschleunigen und stärker schwankende Werte liefern.</p>
+  <p class="lede">Die Satellitenansicht zeigt für jeden Satelliten einen Balken mit dem Signalpegel. Die Datensätze mit diesen Pegeln verzögern den Fix. Go fordert sie deshalb nur an, solange diese Ansicht offen ist, und zwar einmal alle fünf Sekunden. Die Zähler der Ansicht werden weiterhin jede Sekunde aktualisiert. Der Empfänger berechnet zwei Positionslösungen pro Sekunde, zur vollen und zur halben Sekunde. ADS-L versieht jede Position mit einem Zeitstempel im Viertelsekundenraster. Dieser darf höchstens 10&nbsp;ms vom Messzeitpunkt des Empfängers abweichen. Eine Position wird nicht gesendet, wenn ihre Messung mehr als 500&nbsp;ms zurückliegt. Die Lösung der vollen Sekunde wird deshalb nur bis 490&nbsp;ms nach Sekundenbeginn zum Senden verwendet. So bleiben 10&nbsp;ms für die Aussendung selbst. Für den restlichen Zeitraum dient die Lösung der halben Sekunde. Eine Anforderung von vier Lösungen pro Sekunde ignoriert der Empfänger. Bei fünf Lösungen pro Sekunde fällt nur die Lösung der vollen Sekunde auf eine Viertelsekunde. Unsere <%= link_to_page "ads-l/questions", label: "offenen Fragen an die EASA", anchor: "sb-q2" %> fragen, ob die Regel das meint.</p>
 
   <figure class="shot">
     <%= screen_image_tag "satellites.png", alt: "Satellitenansicht: je ein Balken pro Satellit, nach Konstellation gruppiert, mit einer gepunkteten Linie bei 40 dB-Hz" %>
@@ -59,7 +59,7 @@ updated_on: "2026-11-20"
   </figure>
 
   <h3 id="pps">PPS markiert den Sekundenbeginn.</h3>
-  <p class="lede">Der GPS-Empfänger liefert einen Impuls pro Sekunde, kurz PPS. Jeder Impuls markiert den Beginn einer UTC-Sekunde und dient als Bezugspunkt für jedes <%= link_to_page "timing", label: "Funkzeitfenster" %>. Fallen die Impulse aus, hört Go 1,2&nbsp;s nach dem letzten Impuls auf zu senden, in der ersten Sekunde ohne Impuls. Die Funkzeitfenster laufen ab dem letzten Impuls 60&nbsp;s lang weiter, nur für den Empfang. Kehrt kein Impuls zurück, zeigt jede Seite 11,2&nbsp;s nach dem letzten Impuls <span class="mono">NO TX</span> über <span class="mono">PPS</span>, also 10&nbsp;s nach dem Sendestopp (<%= link_to_page "radar", label: "Sendet Go nicht", anchor: "no-tx" %>). Ein einzelner fehlender Impuls unterbricht das Senden für diese Sekunde, ohne dass die Markierung erscheint. Das Senden setzt wieder ein, wenn die Impulse zurückkehren und die übrigen Voraussetzungen erfüllt sind.</p>
+  <p class="lede">Der GPS-Empfänger liefert einen Impuls pro Sekunde, kurz PPS. Jeder Impuls markiert den Beginn einer UTC-Sekunde und dient als Bezugspunkt für jedes <%= link_to_page "timing", label: "Funkzeitfenster" %>. Fallen die Impulse aus, hört Go 1,2&nbsp;s nach dem letzten Impuls auf zu senden, in der ersten Sekunde ohne Impuls. Die Funkzeitfenster laufen ab dem letzten Impuls 60&nbsp;s lang weiter, nur für den Empfang. Kehrt kein Impuls zurück, zeigt jede Seite 11,2&nbsp;s nach dem letzten Impuls <span class="mono">NO TX</span> über <span class="mono">PPS</span>, also 10&nbsp;s nach dem Sendestopp (<%= link_to_page "radar", label: "Sendet Go nicht", anchor: "no-tx" %>). Fehlt nur ein einzelner Impuls, wird das Senden für diese Sekunde unterbrochen, ohne dass NO TX über PPS erscheint. Das Senden setzt wieder ein, wenn die Impulse zurückkehren und die übrigen Voraussetzungen erfüllt sind.</p>
   <p class="lede">Ob der L76K auch ohne Fix Impulse liefert, ist noch nicht geprüft. Die Dokumentation beschreibt den Impuls, sagt aber nicht, was bei Fixverlust geschieht. Der Chip unterstützt beides und Go konfiguriert dies nicht. Ein Test auf der Werkbank muss zeigen, was bei Fixverlust passiert.</p>
 </section>
 
@@ -72,7 +72,7 @@ updated_on: "2026-11-20"
   <div class="table-scroll">
     <table class="modules">
       <thead>
-        <tr><th>Status</th><th>Bedingung</th><th>Warum dieser Wert?</th></tr>
+        <tr><th>Status</th><th>Bedingung</th><th>Begründung der Schwelle</th></tr>
       </thead>
       <tbody>
         <tr><th>Start</th><td>Mindestens 12&nbsp;m/s (23&nbsp;kt)</td><td>Eine Schleppmaschine auf zügigem Rückweg zum Start rollt mit 10&nbsp;m/s. Im F-Schlepp hebt ein Segelflugzeug bei etwa 20&nbsp;m/s ab.</td></tr>
@@ -87,7 +87,7 @@ updated_on: "2026-11-20"
   <%= render "shared/flight_state" %>
 
   <p class="lede">Der Abstand zwischen 12 und 1&nbsp;m/s ist bei Wind wichtig. Ein kreisendes Segelflugzeug kann bei 15&nbsp;m/s Wind je Kreis von 5&nbsp;m/s gegen den Wind auf 40&nbsp;m/s mit dem Wind kommen. Eine einzige Schwelle zwischen diesen Werten würde laufend Landungen und Starts melden. Die Regel von 10&nbsp;s unter 8&nbsp;m/s verhindert das im Beispielkreis: Bei 20&nbsp;m/s Wind bleibt ein mit 22&nbsp;m/s kreisendes Segelflugzeug etwa 3&nbsp;s eines 25&nbsp;s dauernden Kreises unter der Landeschwelle.</p>
-  <p class="lede">Eine frühere Regel erkannte auch oberhalb von 2000&nbsp;m einen Flug. Dadurch galt ein abgestelltes Gerät in Courchevel auf 2008&nbsp;m dauerhaft als im Flug. Die Geschwindigkeit über Grund vermeidet dieses Problem, aber die Qualität des Fixes bleibt wichtig. Bei schlechtem Fix zählen Anzeichen für einen Flug weniger. Ein Geschwindigkeitssprung um mehr als das Vierfache zwischen zwei Fixes wird ignoriert. Anzeichen für den Bodenzustand werden nie abgewertet, denn eine verringerte Geschwindigkeit darf keine Landung vortäuschen. Der erste Fix nach dem Einschalten entscheidet sofort. Zwischen den Schwellen geht Go vom Bodenzustand aus, weil das Einschalten auf dem Weg zum Startplatz der übliche Fall ist.</p>
+  <p class="lede">Eine frühere Regel erkannte auch oberhalb von 2000&nbsp;m einen Flug. Dadurch galt ein abgestelltes Gerät in Courchevel auf 2008&nbsp;m dauerhaft als im Flug. Die Geschwindigkeit über Grund vermeidet dieses Problem, aber die Qualität des Fixes bleibt wichtig. Bei schlechtem Fix zählen Anzeichen für einen Flug weniger. Ein Geschwindigkeitssprung um mehr als das Vierfache zwischen zwei Fixes wird ignoriert. Anzeichen für den Bodenzustand werden nie abgewertet, denn eine verringerte Geschwindigkeit darf keine Landung vortäuschen. Schon mit dem ersten Fix nach dem Einschalten wählt Go einen Flugstatus. Liegt die Geschwindigkeit zwischen den Schwellen, nimmt es den Bodenzustand an. Das entspricht dem üblichen Einschalten beim Schleppen am Boden zum Startplatz.</p>
 
   <h3 id="changes">Was sich mit dem Status ändert.</h3>
   <div class="table-scroll">
@@ -97,8 +97,8 @@ updated_on: "2026-11-20"
       </thead>
       <tbody>
         <tr><th>Gesendete Positionen</th><td>Abwechselnd nach 9 und 11&nbsp;s</td><td>Jede Sekunde</td></tr>
-        <tr><th>Verkehrswarnung</th><td>Stumm</td><td>Verkehr wird auf Warnungen geprüft. Siehe <%= link_to_page "traffic", label: "Flugverkehr", anchor: "ground" %></td></tr>
-        <tr><th>Updates, Einstellungen vom Smartphone, Download des Flugprotokolls</th><td>Erlaubt</td><td>Neue Updates, Downloads und Einstellungen mit Bestätigung sind gesperrt. Einstellungen aus einem vertrauenswürdigen Browser bleiben möglich.</td></tr>
+        <tr><th>Verkehrswarnung</th><td>Keine Warnung</td><td>Go prüft den Verkehr auf Verkehrshinweise. Siehe <%= link_to_page "traffic", label: "Flugverkehr", anchor: "ground" %></td></tr>
+        <tr><th>Updates, Einstellungen vom Smartphone, Download des Flugprotokolls</th><td>Erlaubt</td><td>Neue Updates und Downloads des Flugprotokolls sind gesperrt. Einstellungen, die einen Tastendruck zur Bestätigung erfordern, sind ebenfalls gesperrt. Einstellungen aus einem vertrauenswürdigen Browser bleiben möglich.</td></tr>
         <tr><th>Flugprotokoll</th><td>Die vorherige Minute beim Rollen bleibt im Speicher</td><td>Eine Aufzeichnung pro Sekunde, einschließlich der vorherigen Minute</td></tr>
         <tr><th>Flugzeituhr</th><td>Behält ihren Stand</td><td>Zählt die Flugzeit</td></tr>
       </tbody>
@@ -108,14 +108,14 @@ updated_on: "2026-11-20"
   <p class="lede">Ein fälschlich erkannter Start sperrt Updates am Boden und belastet den Akku mit der Senderate für den Flug. Bei einem nicht erkannten Start sendet das Luftfahrzeug im Flug mit der Senderate für den Boden. Sobald Go einen Flug erkannt hat, hebt ein Fixverlust die Update-Sperre nicht auf. Das geschieht nur bei einem erkannten Bodenzustand. Der Empfangsausfall an einem Bergrücken gibt also kein Update im Flug frei. Hatte das Gerät seit dem Einschalten keinen Fix, ist der Status unbekannt. Updates bleiben möglich, etwa drinnen auf der Werkbank.</p>
   <p class="lede">Die Flugzeituhr zählt die Zeit in der Luft seit dem Einschalten, nicht seit dem letzten Start. Sie hält bei einer Landung an und läuft beim nächsten Start weiter. Aufsetzen und Durchstarten setzt die Summe also nicht zurück. Eine fälschlich erkannte Landung kostet nur die Sekunden im Bodenzustand.</p>
 
-  <h3 id="no-roll">Wenn die Geschwindigkeit über Grund nicht ausreicht.</h3>
-  <p class="lede">Ein Gleitschirm fliegt mit etwa 10&nbsp;m/s durch die Luft und erreicht bei 5&nbsp;m/s Gegenwind nur 5&nbsp;m/s über Grund. Er kann den ganzen Flug unter der Startschwelle bleiben. Dasselbe gilt für Hängegleiter am Hang und für Ballone. Für diese Typen sendet Go statt des Bodenzustands den nicht definierten ADS-L-Status. ADS-L sendet ihn mit voller Rate und meldet das Luftfahrzeug nie als abgestellt. Die Erkennung über die Geschwindigkeit meldet dadurch keinen Flug. Für das Flugprotokoll gilt eine eigene Regel: Es beginnt bei Bewegung und endet nach zwei Minuten Stillstand.</p>
+  <h3 id="no-roll">Geringe Geschwindigkeit über Grund kann einen Flug verbergen.</h3>
+  <p class="lede">Ein Gleitschirm fliegt mit etwa 10&nbsp;m/s durch die Luft und erreicht bei 5&nbsp;m/s Gegenwind nur 5&nbsp;m/s über Grund. Er kann den ganzen Flug unter der Startschwelle bleiben. Dasselbe gilt für Hängegleiter am Hang und für Ballone. Für diese Typen sendet Go statt des Bodenzustands den nicht definierten ADS-L-Status. Dieser Status wird in ADS-L mit voller Rate gesendet. Das Luftfahrzeug wird dadurch nie als abgestellt gemeldet. Die Erkennung über die Geschwindigkeit wechselt deshalb aber nicht in den Flugstatus. Für das Flugprotokoll gilt eine eigene Regel: Es beginnt, wenn sich das Luftfahrzeug bewegt, und endet nach zwei Minuten Stillstand.</p>
   <p class="lede">Früher diente die barometrische Steigrate dazu, solche Flüge zu erkennen. Böen, Druckänderungen und Messspitzen bei Aussetzern des Barometers meldeten aber falsche Starts beim Warten vor dem Hangar. Die Geschwindigkeit über Grund vermeidet das, kann Flüge bei geringer Geschwindigkeit über Grund aber übersehen. Der nicht definierte Sendestatus und die eigene Aufzeichnungsregel fangen das ab, ohne barometrisches Steigen als Flugnachweis zu werten.</p>
 
   <ul class="points">
-    <li>Go prüft jeden Fix selbst, statt die Gültigkeitsmeldung des Empfängers zu übernehmen</li>
+    <li>Go prüft jeden Fix selbst zusätzlich zur Gültigkeitsmeldung des Empfängers</li>
     <li>GPS OFF, MOVE OUT und FINDS FIX zeigen, ob Sie prüfen, das Gerät umstellen oder warten sollten</li>
-    <li>Go sendet nach drei Vorhersagen mit weniger als 12&nbsp;m Abweichung, spätestens 20&nbsp;s nach dem ersten Fix</li>
+    <li>Go sendet nach drei Vorhersagen mit jeweils weniger als 12&nbsp;m Abweichung vom empfangenen Fix, spätestens 20&nbsp;s nach dem ersten Fix</li>
     <li>Bei 115200&nbsp;Baud trifft der Fix vor der ersten möglichen Aussendung ein</li>
     <li>Go erkennt den Start bei 12&nbsp;m/s und die Landung unter 1&nbsp;m/s oder nach 10&nbsp;s unter 8&nbsp;m/s</li>
     <li>Fixverlust im Flug zählt nie als Landung</li>
@@ -123,5 +123,6 @@ updated_on: "2026-11-20"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

@@ -8,6 +8,8 @@ GSA field 2 says whether the receiver solved for height: 1 no fix, 2 without hei
 
 GGA field 11 is the geoid separation, which turns field 9's height above sea level into the ellipsoidal height G.1.7 sends. A 0.0 counts as measured: the geoid is level with the ellipsoid there, or the receiver has no geoid model and field 9 is already ellipsoidal, as SoftRF reads it (`src/protocol/data/NMEA.cpp:690-695`). An empty field falls back on `kDefaultGeoidSeparationMm`, 46 m over central Europe, and clears `geoid_measured`, so G.1.15 claims no vertical accuracy.
 
+RMC's speed and course each carry their own validity, `GnssSolution::speed_valid` and `track_valid`, because the L76K leaves either field empty "in case of an invalid value" (L76K GNSS Protocol Specification V1.1, RMC). An empty field is no speed, not 0 m/s. A speed past COCOM's 1000 kn is held at it and stays valid, since ADS-L G.1.8 saturates far below.
+
 Both receivers share the parser. Bravo's AG3335 sends NMEA 4.10 on the `GN` talker (`../../hardware/parts/ag3335/README.md`). Its GSA names Galileo as system 3, which `system_of_gsa_id` does not know, so a Galileo satellite in use matches any constellation with the same id. Only the satellites page reads that, and Bravo has none. Its GGA without a fix is 37 bytes, under `kGgaLengthFloorBytes`, so its no-fix reason reads `NO GGA`.
 
 ## How far a receiver with no fix has got

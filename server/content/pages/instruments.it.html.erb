@@ -5,14 +5,14 @@ slug: strumenti
 description: "Sei quadranti con letture di GPS e barometro. Il Go+ ha anche un accelerometro che conserva gli estremi del volo. Non sono strumenti di volo certificati."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Sei quadranti, e cosa ha subito la cellula.</h1>
+  <h1>Leggere i sei quadranti e l&rsquo;accelerometro del Go+</h1>
   <p class="lede">
-    Sei quadranti mostrano le letture di GPS e barometro, per divertimento. Il Go+ ha anche un
+    Sei quadranti mostrano le letture di GPS e barometro, per divertimento. Il Go+ aggiunge un
     accelerometro.
   </p>
 </section>
@@ -20,11 +20,11 @@ updated_on: "2026-11-09"
 <section>
   <div class="feature feature--reverse">
     <div>
-      <h3 id="six-pack">Sei quadranti e <span class="highlight">quanto resta nella batteria</span>.</h3>
+      <h3 id="six-pack">Sei quadranti e <span class="highlight">la carica della batteria</span>.</h3>
       <p>
-        Velocità al suolo, orizzonte, altimetro, virata, rotta al suolo, velocità verticale: un modo giocoso
-        di mostrare le letture di GPS e barometro. Sopra il quadrante centrale, la percentuale della batteria indica quanta autonomia di volo resta
-        al dispositivo. Gli altri cinque non possono dirtelo. Il tempo dal
+        Velocità al suolo, orizzonte, altimetro, virata, rotta al suolo, velocità verticale: i quadranti mostrano
+        in modo giocoso le letture di GPS e barometro. Sopra il quadrante centrale, la percentuale della batteria indica la carica
+        rimasta al dispositivo. Gli altri cinque non possono dirtelo. Il tempo dal
         decollo si trova sul radar, per il tuo libretto di volo.
       </p>
       <p>
@@ -42,11 +42,11 @@ updated_on: "2026-11-09"
 
   <div class="feature">
     <div>
-      <h3 id="g-meter">Cosa la cellula <span class="highlight">ha subito</span>.</h3>
+      <h3 id="g-meter">I carichi <span class="highlight">misurati durante il volo</span>.</h3>
       <p>
-        La quarta pagina mostra le letture dell&rsquo;accelerometro senza interpretarle.
+        La quarta pagina mostra l&rsquo;accelerometro del Go+: le sue letture, senza interpretarle.
         L&rsquo;indicatore mostra il carico attuale sull&rsquo;ala. Il riquadro intorno indica
-        il carico massimo e minimo fino a quel momento e i carichi massimi verso
+        il carico massimo e minimo del volo fino a quel momento e i carichi massimi verso
         sinistra e destra.
       </p>
       <p>
@@ -63,5 +63,6 @@ updated_on: "2026-11-09"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

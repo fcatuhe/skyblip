@@ -171,6 +171,8 @@ void push_moving_fix(Rig& rig, int32_t speed_mm_s, int32_t track_cdeg, uint32_t 
     solution.hdop_e2 = 100;
     solution.speed_mm_s = speed_mm_s;
     solution.track_cdeg = track_cdeg;
+    solution.speed_valid = true;
+    solution.track_valid = true;
     solution.sentences = updates;
     rig.product.bus().gnss.push(solution);
 }

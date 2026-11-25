@@ -95,8 +95,10 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
         traffic.altitude_valid = own.vdop_e2 != 0;
         if (traffic.altitude_valid)
             traffic.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value;
-        traffic.speed_valid = true;
-        traffic.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
+        // INFO: fc 22nov26 G.1.10 has no invalid track, so a speed with none goes invalid unless 0
+        traffic.speed_valid = model::velocity_valid(own);
+        if (traffic.speed_valid)
+            traffic.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
         // INFO: fc 19nov26 VDOP cannot bound a geoid separation the parser had to assume
         traffic.integrity =
             integrity_from_dop_e2(own.hdop_e2, own.geoid_measured ? own.vdop_e2 : 0);
@@ -106,7 +108,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
     traffic.climb_valid = own.climb_valid;
     if (own.climb_valid) traffic.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).value;
 
-    traffic.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).value;
+    if (own.track_valid) traffic.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).value;
     adsl::encode_traffic(packet, address_mapping_table, traffic);
     return true;
 }

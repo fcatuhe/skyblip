@@ -24,6 +24,8 @@ void climb_until_the_link_sees_it(Rig& rig) {
         gnss::GnssSolution climbing{};
         climbing.fix_valid = true;
         climbing.speed_mm_s = 50000;
+        climbing.speed_valid = true;
+        climbing.track_valid = true;
         climbing.altitude_msl_mm = 1200 * 1000;
         climbing.sentences = 1;
         rig.product.bus().gnss.push(climbing);

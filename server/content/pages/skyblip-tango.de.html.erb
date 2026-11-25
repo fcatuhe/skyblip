@@ -4,7 +4,7 @@ nav_title: Tango
 slug: tango
 share_image: tango
 description: "Koppeln Sie Go und Bravo, um ADS-L-, FLARM- und ADS-B-Verkehr auf einem Radar zu sehen. Go sendet Ihre Position weiterhin per ADS-L."
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <%= render "shared/device_tabs" %>
@@ -42,8 +42,34 @@ updated_on: "2026-11-18"
   <p>Sind die Geräte verbunden, gilt die Einstellung ALARM am Go für beide. Drücken Sie die Taste am Bravo oder berühren Sie das Touchfeld am Go eine Sekunde lang, um die Warnung auf beiden Geräten stummzuschalten.</p>
 </section>
 
-<section id="buy" class="band">
+<section id="questions" class="band">
+  <h2 class="section-title">Was Piloten über Tango fragen</h2>
+  <div class="faq">
+    <details>
+      <summary>Also ein Gerät für ADS-B und eines für ADS-L und FLARM?</summary>
+      <p>Ja. Bravo empfängt ADS-B. Go sendet ADS-L und empfängt ADS-L und FLARM. Go zeigt alle drei auf einem Radar an. Jedes Gerät läuft mit seinem eigenen Akku, und die beiden verständigen sich per Bluetooth.</p>
+    </details>
+    <details>
+      <summary>Welche Frequenzbänder deckt ein Tango ab?</summary>
+      <p>1090&nbsp;MHz ADS-B mit Bravo. 868&nbsp;MHz mit Go: ADS-L zum Empfangen und Senden, FLARM zum Empfangen. Go hört auch auf ADS-L-Meldungen von Bodenstationen auf 869,525&nbsp;MHz. Keines der beiden Geräte empfängt UAT auf 978&nbsp;MHz, das in Europa nicht zugelassen ist. <%= link_to_page "blog/who-sees-ads-l", label: "Jedes Frequenzband und wer es nutzt" %>.</p>
+    </details>
+    <details>
+      <summary>Sieht mich ein Flugzeug mit GTX&nbsp;345?</summary>
+      <p>Nein. Sie sehen es, weil sein ADS-B Bravo erreicht. Es sieht Sie nicht, weil es nur auf 1090&nbsp;MHz hört und Go per ADS-L sendet. Das ist die Grenze eines Funksystems, das keine Zulassung braucht. <%= link_to_page "blog/why-ads-l", label: "Warum ADS-L, wenn es ADS-B gibt" %>.</p>
+    </details>
+    <details>
+      <summary>Kann ich einen Tango von einem Flugzeug ins nächste mitnehmen?</summary>
+      <p>Ja, beide Geräte passen in eine Flugtasche. Hat das Flugzeug einen Transponder, stellen Sie vor dem Flug seine ICAO-Adresse ein. Dann bezeichnen Ihr ADS-L und sein ADS-B dasselbe Luftfahrzeug. Am Boden, mit dem Transponder auf ALT, schlägt Go die Adresse vor, die Bravo hört.</p>
+    </details>
+    <details>
+      <summary>Brauche ich noch ein Smartphone?</summary>
+      <p>Nein. Go zeigt den gesamten Verkehr auf seinem eigenen Display an und gibt die Warnung aus. Verbinden Sie Ihre Navigations-App mit Go, wenn Sie den Verkehr auch auf der Karte sehen wollen.</p>
+    </details>
+  </div>
+</section>
+
+<section id="buy" class="band band--tint">
   <h2 class="section-title">Kombinieren Sie zwei Geräte zu einem Tango</h2>
   <p>Sie kaufen die Geräte einzeln. Wenn Sie schon einen Go oder Go+ haben, kaufen Sie für Bravo einen MeshTracker X1. Haben Sie beide Geräte, hilft Ihnen Briefing, sie am Boden zu koppeln.</p>
-  <p class="signature"><%= link_to_page "buy", label: "Bezugsquellen ansehen", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Geräte installieren oder koppeln" %></p>
+  <p class="signature"><%= link_to_page "buy", label: "Bezugsquellen ansehen", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Geräte installieren oder koppeln" %> · <%= link_to_page "compare", label: "Mit anderen Systemen vergleichen" %></p>
 </section>

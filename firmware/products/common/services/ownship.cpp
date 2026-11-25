@@ -22,6 +22,7 @@ flight::FlightState OwnshipService::flight_state_from(const model::Ownship& own,
     sample.speed_mm_s = own.speed_mm_s;
     sample.hdop_e2 = own.hdop_e2;
     sample.fix_valid = own.fix_valid;
+    sample.speed_valid = own.speed_valid;
     return flight_.update(sample, now_ms);
 }
 
@@ -96,6 +97,8 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.geoid_measured = solution.geoid_measured;
     own.speed_mm_s = solution.speed_mm_s;
     own.track_cdeg = solution.track_cdeg;
+    own.speed_valid = solution.speed_valid;
+    own.track_valid = solution.track_valid;
     own.hdop_e2 = solution.hdop_e2;
     own.vdop_e2 = solution.vdop_e2;
     own.altitude_hae_valid = height_solved(own);

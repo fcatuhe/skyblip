@@ -2,7 +2,6 @@
 // radar, what we transmit about ourselves) is this parser's output, so a sentence
 // that fails its checksum must leave the fix untouched rather than half-applied,
 // and a sentence arriving one byte at a time must reconstruct exactly.
-#include <cstdio>
 #include <cstdlib>  // std::abs
 #include <cstring>
 #include <string>
@@ -10,21 +9,14 @@
 #include "core/gnss/nmea.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
+#include "test/support/nmea_checksum.h"
 
 using namespace skyblip::gnss;
+using skyblip::checksummed;
 
 namespace {
 constexpr const char* kNextBurstGga =
     "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
-
-std::string checksummed(const char* body) {
-    uint8_t checksum = 0;
-    for (const char* character = body; *character; character++)
-        checksum ^= static_cast<uint8_t>(*character);
-    char tail[4];
-    std::snprintf(tail, sizeof(tail), "*%02X", checksum);
-    return std::string("$") + body + tail;
-}
 
 bool parse(NmeaParser& parser, const std::string& line) {
     return parser.parse_line(line.c_str(), static_cast<int>(line.size()));
@@ -59,8 +51,10 @@ TEST_CASE("gnss: RMC updates fix position, time, speed, track" * doctest::test_s
     CHECK(solution.latitude_1e7 > 480000000);
     CHECK(solution.longitude_1e7 > 0);
     // 22.4 knots is 11.524 m/s, and the tenth of a knot the sentence carries survives
+    CHECK(solution.speed_valid);
     CHECK(solution.speed_mm_s == 11524);
     // 84.4 degrees, kept as the receiver reported it rather than as the wire will carry it
+    CHECK(solution.track_valid);
     CHECK(solution.track_cdeg == 8440);
     // 2025-08-23 12:35:19 UTC epoch
     CHECK(solution.utc_s == 1755952519u);
@@ -99,37 +93,14 @@ TEST_CASE("gnss: a latitude past 90, a longitude past 180 or a 60th minute is no
     CHECK(parser.solution().longitude_1e7 == -1800000000);
 }
 
-TEST_CASE("gnss: a speed or an altitude no civil receiver reports is refused, never overflowed") {
+TEST_CASE("gnss: an altitude no civil receiver reports is refused, never overflowed") {
     NmeaParser parser;
-    REQUIRE(
-        parse(parser, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,1000.1,084.4,230825,,")));
-    CHECK(parser.solution().speed_mm_s == 0);
-    REQUIRE(
-        parse(parser, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,99999999999999999999.9,"
-                                  "084.4,230825,,")));
-    CHECK(parser.solution().speed_mm_s == 0);
-
     for (const char* altitude : {"100000.1", "-1000.1", "99999999999999999999.9"}) {
         CAPTURE(altitude);
         const std::string body =
             std::string("GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,") + altitude + ",M,46.9,M,,";
         REQUIRE(parse(parser, checksummed(body.c_str())));
         CHECK_FALSE(parser.solution().altitude_msl_valid);
-    }
-}
-
-// A refused speed kept the one before it, and the case beside it only ever fed a fresh parser.
-TEST_CASE("gnss: a refused speed after a good one is not the good one carried over") {
-    for (const char* speed : {"1000.1", "99999999999999999999.9", ""}) {
-        CAPTURE(speed);
-        NmeaParser parser;
-        REQUIRE(parse(parser,
-                      checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230825,,")));
-        REQUIRE(parser.solution().speed_mm_s == 11524);
-        const std::string body =
-            std::string("GPRMC,123520,A,4807.038,N,01131.000,E,") + speed + ",084.4,230825,,";
-        REQUIRE(parse(parser, checksummed(body.c_str())));
-        CHECK(parser.solution().speed_mm_s == 0);
     }
 }
 

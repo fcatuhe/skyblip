@@ -4,7 +4,7 @@ nav_title: Tango
 slug: tango
 share_image: tango
 description: "Associez un Go et un Bravo pour afficher le trafic ADS-L, FLARM et ADS-B sur le même radar. Le Go continue d'émettre votre position en ADS-L."
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <%= render "shared/device_tabs" %>
@@ -42,8 +42,34 @@ updated_on: "2026-11-18"
   <p>Tant que les appareils sont reliés, le réglage ALARM sur le Go commande les deux. Appuyez sur le bouton de Bravo ou gardez le doigt une seconde sur le pavé du Go pour couper l&rsquo;alerte sur les deux appareils.</p>
 </section>
 
-<section id="buy" class="band">
+<section id="questions" class="band">
+  <h2 class="section-title">Les questions des pilotes sur Tango</h2>
+  <div class="faq">
+    <details>
+      <summary>Donc un boîtier pour l&rsquo;ADS-B, et un pour l&rsquo;ADS-L et le FLARM ?</summary>
+      <p>Oui. Bravo reçoit l&rsquo;ADS-B, le Go émet en ADS-L et reçoit l&rsquo;ADS-L et le FLARM, et le Go affiche les trois sur un seul radar. Chaque boîtier tourne sur sa batterie, et ils se parlent en Bluetooth.</p>
+    </details>
+    <details>
+      <summary>Quelles bandes couvre un Tango ?</summary>
+      <p>Le 1090&nbsp;MHz ADS-B avec Bravo. Le 868&nbsp;MHz avec le Go : l&rsquo;ADS-L en réception et en émission, le FLARM en réception. Le Go écoute aussi les stations sol ADS-L sur 869,525&nbsp;MHz. Aucun des deux ne reçoit l&rsquo;UAT sur 978&nbsp;MHz, qui n&rsquo;est pas ouvert en Europe. <%= link_to_page "blog/who-sees-ads-l", label: "Chaque bande, et qui l'utilise" %>.</p>
+    </details>
+    <details>
+      <summary>Un avion équipé d&rsquo;un GTX 345 me verra-t-il ?</summary>
+      <p>Non. Vous le voyez, car son ADS-B arrive jusqu&rsquo;à Bravo. Lui ne vous voit pas, car il n&rsquo;écoute que le 1090&nbsp;MHz et le Go émet en ADS-L. C&rsquo;est la limite d&rsquo;une radio qui ne demande aucune certification. <%= link_to_page "blog/why-ads-l", label: "Pourquoi l'ADS-L, quand l'ADS-B existe" %>.</p>
+    </details>
+    <details>
+      <summary>Puis-je emporter un Tango d&rsquo;un avion à l&rsquo;autre ?</summary>
+      <p>Oui, les deux boîtiers tiennent dans un sac de vol. Si l&rsquo;avion a un transpondeur, réglez son adresse OACI avant le vol, pour que votre ADS-L et son ADS-B désignent le même aéronef. Au sol, transpondeur sur ALT, le Go propose l&rsquo;adresse qu&rsquo;entend Bravo.</p>
+    </details>
+    <details>
+      <summary>Faut-il encore un téléphone ?</summary>
+      <p>Non. Le Go affiche tout le trafic sur son écran et donne l&rsquo;alerte. Connectez votre application de navigation au Go si vous voulez aussi le trafic sur la carte.</p>
+    </details>
+  </div>
+</section>
+
+<section id="buy" class="band band--tint">
   <h2 class="section-title">Formez un Tango avec deux boîtiers</h2>
   <p>Vous achetez les boîtiers séparément. Si vous avez déjà un Go ou un Go+, il vous faut un MeshTracker X1 pour Bravo. Si vous avez déjà les deux, le Briefing vous aide à les associer au sol.</p>
-  <p class="signature"><%= link_to_page "buy", label: "Voir où acheter les boîtiers", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Installer ou associer les appareils" %></p>
+  <p class="signature"><%= link_to_page "buy", label: "Voir où acheter les boîtiers", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Installer ou associer les appareils" %> · <%= link_to_page "compare", label: "Comparer avec d'autres systèmes" %></p>
 </section>

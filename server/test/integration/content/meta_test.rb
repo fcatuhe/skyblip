@@ -62,6 +62,16 @@ class Content::MetaTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the questions a page answers are marked up as an FAQ, and a page without them has none" do
+    get "/go"
+    question = structured_data("FAQPage")["mainEntity"].first
+    assert_equal [ "Question", "Does Go transmit FLARM?" ], question.values_at("@type", "name")
+    assert_match(/\ANo\. Go receives FLARM, so gliders/, question.dig("acceptedAnswer", "text"))
+
+    get "/mount"
+    assert_not_includes structured_data_types, "FAQPage"
+  end
+
   test "a long-form page is an article with its publication date" do
     get "/see-and-avoid"
 

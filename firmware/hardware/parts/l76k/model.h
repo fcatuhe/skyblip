@@ -21,6 +21,9 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     // INFO: fc 22nov26 false says 2 in GSA field 2 and still prints a VDOP, which V1.1 does not
     // rule out
     bool solves_height{true};
+    // INFO: fc 22nov26 L76K V1.1 leaves RMC's SOG and COG "empty in case of an invalid value"
+    bool emit_speed{true};
+    bool emit_course{true};
     uint8_t gps_in_view{9};
     uint8_t beidou_in_view{7};
     uint8_t glonass_in_view{5};

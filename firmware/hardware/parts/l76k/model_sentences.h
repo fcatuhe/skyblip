@@ -47,9 +47,9 @@ inline void L76k::emit_rmc() {
     line[written++] = ',';
     written += format_nmea_longitude(line + written, longitude_1e7);
     line[written++] = ',';
-    written += format_unsigned(line + written, knots_e2(), 1, 2);
+    if (emit_speed) written += format_unsigned(line + written, knots_e2(), 1, 2);
     line[written++] = ',';
-    written += format_unsigned(line + written, heading_e2(), 1, 2);
+    if (emit_course) written += format_unsigned(line + written, heading_e2(), 1, 2);
     line[written++] = ',';
     written += format_string(line + written, date);
     written += format_string(line + written, ",,,A");

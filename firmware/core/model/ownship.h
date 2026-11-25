@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "core/units/units.h"
+
 namespace skyblip::model {
 struct Ownship {
     bool fix_valid;
@@ -25,6 +27,9 @@ struct Ownship {
     int32_t speed_mm_s;
     // INFO: fc 20nov26 hundredths, 0 to 35999, because the turn rate is differentiated from it
     int32_t track_cdeg;
+    // INFO: fc 22nov26 the receiver reported each, so a speed of 0 is a standstill, not a gap
+    bool speed_valid;
+    bool track_valid;
     // INFO: fc 20nov26 positive to the right, zero when nothing measured it
     int16_t turn_cdps;
     uint32_t utc_s;
@@ -52,6 +57,12 @@ struct Ownship {
     uint8_t aircraft_category;
     uint8_t flight_state;
 };
+
+// INFO: fc 22nov26 G.1.10: a speed that encodes as zero needs no track to be a whole velocity
+inline bool velocity_valid(const Ownship& own) {
+    return own.speed_valid &&
+           (own.track_valid || to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value == 0);
+}
 
 }  // namespace skyblip::model
 

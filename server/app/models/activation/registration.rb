@@ -19,6 +19,8 @@ class Activation::Registration
   validates :signature, format: { with: Activation::SIGNATURE }
   validate :release_a_boolean, :public_key_strong
 
+  attr_reader :unit
+
   def unlock_code
     raise Activation::Refusal.new(:invalid) if invalid?
 
@@ -31,6 +33,7 @@ class Activation::Registration
     # INFO: fc 18oct26 signed inside the transaction that bound the key, so an admin's revocation lands before or after, never between
     code = Unit.transaction do
       key = Unit.register(device_id:, public_key:, version:, server_key_id:, release:, ip_address:)
+      @unit = key.unit
       if key.active?
         key.unit.attest_firmware(version:, release:)
         unlock_code_for(key.unit.serial, challenge.unit_nonce)
