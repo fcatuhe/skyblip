@@ -22,6 +22,16 @@ class Admin::McpTest < ActionDispatch::IntegrationTest
     assert_equal [ "S256" ], response.parsed_body["code_challenge_methods_supported"]
   end
 
+  # The admin server answered at /mcp until 25 November 2026, and a token granted for that address opens nothing here.
+  test "a token granted for the old /mcp address is refused" do
+    token = connect(client_id: CLAUDE_CODE).fetch("access_token")
+    OAuth::Grant.last.update!(resource: "https://www.example.com/mcp")
+
+    mcp "tools/list", token: token
+
+    assert_response :unauthorized
+  end
+
   test "Claude Code, Codex, pi and Claude on the web each connect through their metadata document, to tools that read but one" do
     [ [ CLAUDE_CODE, LOOPBACK ], [ CODEX, LOOPBACK ], [ PI, LOOPBACK ], [ CLAUDE, HOSTED ] ].each do |client_id, redirect_uri|
       mcp "tools/list", token: connect(client_id:, redirect_uri:).fetch("access_token")

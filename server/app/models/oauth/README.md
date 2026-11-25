@@ -14,7 +14,7 @@ claude mcp add --transport http skyblip-admin https://skyblip.eu/admin/mcp
 
 The gem refuses a resource on plain http other than `localhost`, so a development server on `skyblip.localhost` serves no admin MCP. Agents connect to production.
 
-The admin server lived at `/mcp` until 25 November 2026, when the public server that reads the website took that address. A grant made for `/mcp` names a resource skyBlip no longer serves, so its tokens are refused and the agent connects again at `/admin/mcp`.
+The admin server lived at `/mcp` until 25 November 2026, when the public server that reads the website took that address. A grant made for `/mcp` names a resource skyBlip no longer serves, so its tokens are refused, the next sweep drops it, and the agent connects again at `/admin/mcp`.
 
 ## Clients
 
@@ -32,4 +32,4 @@ Approving makes or refreshes one `OAuth::Grant` per admin and agent, which `Agen
 - Only digests are stored, and spending is a conditional update, so of two simultaneous redemptions one goes through. The log filters codes, verifiers and tokens. The token and revocation endpoints read the form body alone (RFC 6749 3.2), so nothing secret rides in a query string a proxy logs.
 - An agent that signs out posts its token to `/oauth/revocation` (RFC 7009).
 
-`OAuth.sweep` runs every morning from `config/recurring.yml`: expired codes and tokens go, and so does a grant left with no token or past its approval.
+`OAuth.sweep` runs every morning from `config/recurring.yml`: expired codes and tokens go, and so does a grant left with no token, past its approval, or made for a resource skyBlip no longer serves.

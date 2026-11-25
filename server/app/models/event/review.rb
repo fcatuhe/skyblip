@@ -135,12 +135,12 @@ class Event::Review
     { failed: top(rows("active_job.completed", "payload.job_class", "payload.exception_class").select { it["payload.exception_class"] }.map { it["payload.job_class"] }) }
   end
 
-  # INFO: fc 19nov26 an agent opens a session and lists the tools before each call, so the protocol's requests would outnumber the calls twenty to one
   def agents = mcp_use(routes.admin_mcp_path)
 
   def connectors = mcp_use(routes.mcp_path)
 
   private
+    # INFO: fc 19nov26 an agent opens a session and lists the tools before each call, so the protocol's requests would outnumber the calls twenty to one
     def mcp_use(path)
       answered = rows("mcp.answered", "context.path", "payload.method", "payload.tool").select { it["context.path"] == path }
       { sessions: answered.count { it["payload.method"] == "initialize" }, calls: top(answered.filter_map { it["payload.tool"] }) }

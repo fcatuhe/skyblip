@@ -9,12 +9,12 @@ class Content::GetPageTool < ApplicationTool
   annotations(**READING)
 
   def self.call(server_context:, url:)
-    if (page = Content::Page.at(URI(url).path))
+    if (path = URI(url).path) && (page = Content::Page.at(path))
       text "Source: #{page.canonical_url}\n\n#{page.markdown}"
     else
       refused "skyblip.eu has no page at #{url.truncate(80)}. list_pages names every page."
     end
-  rescue URI::InvalidURIError
+  rescue URI::Error
     refused "#{url.truncate(80)} is not an address. list_pages names every page."
   end
 end

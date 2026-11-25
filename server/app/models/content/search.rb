@@ -14,8 +14,8 @@ class Content::Search
   def self.fold(text) = text.to_s.unicode_normalize(:nfkd).gsub(/\p{Mn}/, "").downcase
 
   def initialize(query, locale:)
-    @terms = self.class.fold(query).scan(TERM).uniq.first(MAX_TERMS)
-    @documents = Content::Page.read_in(locale).map { |page| DOCUMENTS.compute_if_absent(page) { Document.new(page) } }
+    @patterns = self.class.fold(query).scan(TERM).uniq.first(MAX_TERMS).index_with { /(?<![[:alnum:]])#{Regexp.escape(it)}/ }
+    @documents = Content::Page.read_in(locale).map { |page| DOCUMENTS.fetch_or_store(page) { Document.new(page) } }
   end
 
   def results
@@ -24,15 +24,15 @@ class Content::Search
   end
 
   private
-    def score_of(document) = weights.sum { |term, weight| weight * Math.log(1 + frequency(document, term)) }
+    def score_of(document) = weights.sum { |pattern, weight| weight * Math.log(1 + frequency(document, pattern)) }
 
     # INFO: fc 25nov26 a word on every page, such as "the" or "skyBlip", weighs next to nothing, so a question ranks by its rarer words
     def weights
-      @weights ||= @terms.index_with do |term|
-        found_in = @documents.count { frequency(it, term).positive? }
+      @weights ||= @patterns.values.index_with do |pattern|
+        found_in = @documents.count { frequency(it, pattern).positive? }
         Math.log((@documents.size + 1.0) / (found_in + 0.5)) if found_in.positive?
       end.compact
     end
 
-    def frequency(document, term) = (@frequencies ||= {})[[ document, term ]] ||= document.frequency(term)
+    def frequency(document, pattern) = (@frequencies ||= {})[[ document, pattern ]] ||= document.frequency(pattern)
 end

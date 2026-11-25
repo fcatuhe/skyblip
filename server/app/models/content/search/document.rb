@@ -9,17 +9,12 @@ class Content::Search::Document
     @body = @paragraphs.map(&:last).join("\n\n")
   end
 
-  def frequency(term)
-    Content::Search::TITLE_WEIGHT * count(@title, term) + Content::Search::DESCRIPTION_WEIGHT * count(@description, term) +
-      count(@body, term)
+  def frequency(pattern)
+    Content::Search::TITLE_WEIGHT * @title.scan(pattern).size + Content::Search::DESCRIPTION_WEIGHT * @description.scan(pattern).size +
+      @body.scan(pattern).size
   end
 
   def excerpt(weights)
-    @paragraphs.max_by { |_, folded| weights.sum { |term, weight| folded.match?(pattern(term)) ? weight : 0 } }.first
+    @paragraphs.max_by { |_, folded| weights.sum { |pattern, weight| folded.match?(pattern) ? weight : 0 } }.first
   end
-
-  private
-    def count(text, term) = text.scan(pattern(term)).size
-
-    def pattern(term) = /(?<![[:alnum:]])#{Regexp.escape(term)}/
 end

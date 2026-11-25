@@ -50,6 +50,7 @@ module OAuth
       OAuth::Token.expired.delete_all
       OAuth::Grant.lapsed.destroy_all
       OAuth::Grant.expired.destroy_all
+      OAuth::Grant.elsewhere.destroy_all
     end
 
     def mint = SecureRandom.base58(43)

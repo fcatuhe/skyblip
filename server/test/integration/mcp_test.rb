@@ -1,6 +1,8 @@
 require "test_helper"
 
 class McpTest < ActionDispatch::IntegrationTest
+  include ConnectingAgents
+
   # A connector reads the website with no account, so nothing it can call writes.
   test "an agent with no token lists the tools, which only read the website" do
     mcp "tools/list"
@@ -10,6 +12,17 @@ class McpTest < ActionDispatch::IntegrationTest
     assert_equal %w[list_pages search_pages get_page], tools.pluck("name")
     assert tools.all? { it.dig("annotations", "readOnlyHint") }
     assert_equal [ "tools/list", "/mcp" ], Event.where(name: "mcp.answered").last.then { [ it.payload["method"], it.context["path"] ] }
+  end
+
+  # The admin tools live at /admin/mcp alone, so an admin's token opens nothing more here.
+  test "an admin's token at /mcp still reaches only the public tools" do
+    token = connect(client_id: CLAUDE_CODE).fetch("access_token")
+
+    mcp "tools/list", token: token
+    assert_equal %w[list_pages search_pages get_page], response.parsed_body.dig("result", "tools").pluck("name")
+
+    mcp "tools/call", { name: "get_insights", arguments: {} }, token: token
+    assert_equal "Tool not found: get_insights", response.parsed_body.dig("error", "data")
   end
 
   test "list_pages lists every page in a language, and in English the pages not translated yet" do
@@ -38,14 +51,18 @@ class McpTest < ActionDispatch::IntegrationTest
 
     call_tool("get_page", { url: "/nope" })
     assert response.parsed_body.dig("result", "isError")
-    call_tool("get_page", { url: "http://exa mple" })
-    assert response.parsed_body.dig("result", "isError")
+    [ "http://exa mple", "mailto:x", "urn:isbn:1" ].each do |url|
+      call_tool("get_page", { url: })
+      assert response.parsed_body.dig("result", "isError"), url
+    end
+    assert_not Event.exists?(name: "error.reported")
   end
 
   private
-    def mcp(method, params = {})
+    def mcp(method, params = {}, token: nil)
       post mcp_path, params: { jsonrpc: "2.0", id: 1, method:, params: }.to_json,
-        headers: { "Content-Type" => "application/json", "Accept" => "application/json, text/event-stream", "MCP-Protocol-Version" => "2025-06-18" }
+        headers: { "Content-Type" => "application/json", "Accept" => "application/json, text/event-stream",
+                   "MCP-Protocol-Version" => "2025-06-18", **({ "Authorization" => "Bearer #{token}" } if token) }
     end
 
     def call_tool(name, arguments = {})
