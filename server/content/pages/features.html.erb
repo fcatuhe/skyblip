@@ -180,6 +180,10 @@ updated_on: "2026-11-25"
       <p>No. The T-Echo has Bluetooth but no Wi-Fi, which draws far more current, and GDL&nbsp;90 travels over Wi-Fi. Go sends NMEA over Bluetooth, which SDVFR Next, SkyDemon and ForeFlight read.</p>
     </details>
     <details>
+      <summary>Does Go give my tablet its GPS position?</summary>
+      <p>Yes. Go sends its GPS position with the traffic over Bluetooth once a second. Your navigation app can use that position even on a tablet without GPS. <%= link_to_page "blog/gps-to-tablet", label: "How the Go gives your tablet a GPS position" %>.</p>
+    </details>
+    <details>
       <summary>What happens if FLARM changes its protocol?</summary>
       <p>Go might stop showing FLARM traffic until we update its firmware, which you install from your browser in Briefing. ADS-L, the standard EASA publishes, would not change, so others would still see you.</p>
     </details>

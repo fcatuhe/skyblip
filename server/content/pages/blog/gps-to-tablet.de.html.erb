@@ -1,0 +1,77 @@
+---
+title: "Die GPS-Position des Go auf Ihrem Tablet"
+nav_title: GPS auf dem Tablet
+slug: blog/gps-auf-dem-tablet
+description: "Der Go sendet Position und Verkehr jede Sekunde per Bluetooth, auch an Tablets ohne GPS. Mit der nächsten Firmware sendet er die Position früher."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25. November 2026</p>
+  <h1>Die GPS-Position des Go auf Ihrem Tablet</h1>
+  <p class="lede">Der skyBlip Go liefert jede Sekunde per Bluetooth seine GPS-Position und den Verkehr. So können Sie auch mit einem iPad ohne GPS navigieren. Mit der nächsten Firmware beginnt der Go etwa eine Zehntelsekunde nach der Messung mit dem Senden. Die Übertragung per Bluetooth kommt noch hinzu.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Position und Verkehr per Bluetooth</h2>
+  <h3>Die App bezieht beides vom Go.</h3>
+  <p>Markus fliegt mit SkyDemon auf einem iPad ohne GPS. Bei Pilot und Flugzeug fragte er, ob der Go neben dem Verkehr auch seine Position liefern kann. Er hat einen LilyGO T-Echo Plus bestellt und will ihn in der nächsten Saison im Motorflugzeug ausprobieren. Ein iPad ohne Mobilfunk hat keinen GPS-Empfänger. Die Mobilfunkversion hat einen, doch die App bezieht Position und Verkehr aus derselben Quelle. Wenn Sie mit dem Go als Quelle fliegen, zeigt die App Ihr Flugzeug an der vom Go ermittelten Position an, auch wenn das iPad eigenes GPS hat.</p>
+  <p>Der Go sendet mehrere Meldungen in einem Format namens FLARM-NMEA. Warnungen und Status kommen zuerst. Danach folgen die GPS-Position, die Druckhöhe bezogen auf 1013,25&nbsp;hPa, die Steig- oder Sinkrate, der Akkustand und bis zu zehn Verkehrsmeldungen. Der Go sendet eine Position nur, wenn der Empfänger eine gültige Position und eine gültige Uhrzeit liefert. Meldet der Empfänger den Verlust der GPS-Position, lässt der Go sie in den folgenden Meldungen sofort weg.</p>
+  <p>Der Empfänger bestimmt die Position zweimal pro Sekunde für ADS-L. Damit funkt der Go seine Position an andere Luftfahrzeuge. Das Tablet und das Flugprotokoll erhalten nur die jeweils zur vollen Sekunde gemessene Position. Der Go gibt sie unverändert und mit ihrer Messzeit weiter. Auch Bravo, unser ADS-B-Empfänger, liefert einer direkt verbundenen App jede Sekunde eine Position aus seinem eigenen GPS-Empfänger.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Wie alt ist die Position?</h2>
+  <h3>Die nächste Firmware wartet nicht mehr auf einen eigenen Sendetakt.</h3>
+  <p>Bis einschließlich Firmware 0.8.0 begann der Go mit dem Verbinden der App einen eigenen Sekundentakt. Der GPS-Empfänger lieferte die zur vollen Sekunde gemessene Position normalerweise etwa 0,1&nbsp;s nach der Messung. Verpasste sie den Sendezeitpunkt knapp, konnte sie fast eine weitere Sekunde liegen bleiben. Eine Funkübertragung konnte das Senden zusätzlich verzögern. Nach unserer Schätzung war die Position bei Sendebeginn im Mittel rund 0,6&nbsp;s alt, im ungünstigsten Fall etwa 1,2&nbsp;s.</p>
+  <p>Mit Firmware 0.8.1 beginnt der Go zu senden, sobald die zur vollen Sekunde gemessene Position vorliegt. Das ist normalerweise etwa 0,1&nbsp;s nach der Messung. Der Funk hat weiter Vorrang. Wenn die Position vorliegt, kann nur noch das Rufzeichen zur Aussendung anstehen. Der Go funkt es alle zehn Sekunden. In diesem Fall kann das Senden per Bluetooth bis zu 0,1&nbsp;s länger warten. Die Werte sind aus dem Programmablauf und den Zeitangaben des Empfängers abgeleitet. Wir haben die Verzögerung weder im Flug noch am Prüfstand mit einem Tablet gemessen. Die Bluetooth-Übertragung braucht zusätzlich Zeit.</p>
+  <p>Bei 100&nbsp;kt über Grund legen Sie in 0,6&nbsp;s rund 30&nbsp;m zurück, in 0,1 bis 0,2&nbsp;s rund 5 bis 10&nbsp;m. Das ist die Strecke bis zum Sendebeginn am Go. Wie groß der Unterschied auf der Karte ist, haben wir nicht gemessen.</p>
+  <p>Der Go sendet im Normalbetrieb weiterhin einmal pro Sekunde. Häufigeres Senden würde Verkehrsmeldungen wiederholen. Das Update fügt keine Bluetooth-Meldungen hinzu und ändert weder den Zeitpunkt der Display-Aktualisierung noch den Zeitpunkt der Schreibvorgänge im Speicher.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Wahl der GPS-Quelle</h2>
+  <h3>Sie sollten das GPS des Tablets weiter nutzen können.</h3>
+  <p>Die FLARM-Verkehrsmeldung <code>$PFLAA</code> gibt an, wie weit ein anderes Luftfahrzeug nördlich, östlich und über oder unter dem Go liegt. Um es richtig auf der Karte einzutragen, braucht die App die Position des Go als Bezugspunkt.</p>
+  <p>Am 13. November 2026 haben wir unseren <%= link_to_page "ads-l/nmea", label: "Vorschlag für ADS-L-NMEA" %> bei der EASA und dem für ADS-L zuständigen Gremium eingereicht. Nach dem Vorschlag enthält jede Verkehrsmeldung die Koordinaten und die Höhe des anderen Luftfahrzeugs. Eine App könnte den Verkehr dann anzeigen und für Ihr Flugzeug das GPS des Tablets nutzen. Für Tablets ohne GPS würde der Go weiterhin seine eigene Position liefern.</p>
+  <p>Firmware 0.8.1 sendet die Position des Go früher. Die GPS-Quelle lässt sich damit noch nicht wählen. Das Gremium müsste das Format annehmen. SkyDemon und andere Apps müssten es lesen und Sie die GPS-Quelle getrennt vom Verkehr wählen lassen. Den Stand halten wir in <a href="https://github.com/fcatuhe/skyblip/issues/529">GitHub-Issue #529</a> fest.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Vor dem Flug</h2>
+  <h3>Geben Sie der Antenne des Go freie Sicht zum Himmel.</h3>
+  <p>Das iPad kann dort bleiben, wo Sie es gut ablesen können, auch wenn es am Instrumentenbrett wenig Sicht zum Himmel hat. Platzieren Sie den Go so, dass seine Antenne freie Sicht zum Himmel hat. Der <%= link_to_page "gps", label: "GPS-Leitfaden" %> erklärt <span class="mono">NO FIX</span>, <span class="mono">MOVE OUT</span> und <span class="mono">FINDS FIX</span>.</p>
+  <p>Wir sind noch nicht mit einem Go und SkyDemon auf einem iPad ohne GPS geflogen. Wenn Sie es ausprobieren, prüfen Sie am Boden, ob die App Ihre Position anzeigt. Berichten Sie uns, wie es bei Ihnen klappt. Danke, Markus, für die Frage.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Quellen</h2>
+  <ul class="sources">
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, November 2026.
+      <span class="support">Markus&rsquo; Frage zum Fliegen mit einem iPad ohne GPS.</span>
+    </li>
+    <li>
+      <strong>SkyDemon-Forum</strong> &middot; Tim Dawson, <a href="http://forums.skydemon.aero/FindPost37247.aspx">1. Juli 2024</a> und <a href="http://forums.skydemon.aero/Topic37837.aspx">20. Februar 2025</a>.
+      <span class="support">Warum die App Position und Verkehr aus derselben Quelle bezieht.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot; <%= link_to_page "features", label: "Go" %>, <%= link_to_page "phone", label: "Bluetooth-Leitfaden" %>, <%= link_to_page "gps", label: "GPS-Leitfaden" %> und <%= link_to_page "timing", label: "Leitfaden zu den Funkzeiten" %>.
+      <span class="support">Was der Go sendet, wann die GPS-Position vorliegt und wann der Go funkt.</span>
+    </li>
+    <li>
+      <strong>skyBlip-Firmware</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/528">Die GPS-Position senden, sobald sie vorliegt</a>.
+      <span class="support">Was Firmware 0.8.1 beim Sendetakt ändert und wie die Verzögerung abgeschätzt wurde.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

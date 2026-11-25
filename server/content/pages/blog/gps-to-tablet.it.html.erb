@@ -1,0 +1,77 @@
+---
+title: "La posizione GPS del Go sul tuo tablet"
+nav_title: Il GPS sul tuo tablet
+slug: blog/gps-sul-tablet
+description: "Il Go invia via Bluetooth la posizione GPS e il traffico ogni secondo, anche a un tablet senza GPS. Il prossimo firmware invia prima la posizione."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 novembre 2026</p>
+  <h1>La posizione GPS del Go sul tuo tablet</h1>
+  <p class="lede">Lo skyBlip Go invia via Bluetooth la sua posizione GPS ogni secondo, insieme al traffico. Così puoi navigare anche con un iPad senza GPS. Con il prossimo firmware, il Go inizia a inviare la posizione circa un decimo di secondo dopo averla misurata. A questo si aggiunge il tempo della trasmissione via Bluetooth.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Posizione e traffico via Bluetooth</h2>
+  <h3>L&rsquo;app riceve entrambi dal Go.</h3>
+  <p>Markus vola con SkyDemon su un iPad senza GPS. Su Pilot und Flugzeug ha chiesto se il Go potesse fornirgli la sua posizione oltre al traffico. Ha ordinato un LilyGO T-Echo Plus per provarlo su un aereo a motore la prossima stagione. Un iPad solo Wi-Fi non ha un ricevitore GPS. Un modello con connessione cellulare ne ha uno, ma l&rsquo;app prende posizione e traffico da una sola fonte. Se voli con il Go come fonte, l&rsquo;app mostra il tuo aereo nella posizione del Go anche se l&rsquo;iPad ha il proprio GPS.</p>
+  <p>Il Go invia messaggi nel formato NMEA FLARM. In ogni invio, gli avvisi e lo stato del dispositivo arrivano per primi. Seguono la posizione GPS, la quota di pressione riferita a 1013,25&nbsp;hPa, la velocità verticale, il livello della batteria e fino a dieci messaggi di traffico. Il Go invia la posizione solo se il ricevitore ha un fix e un orario validi. Appena il ricevitore segnala la perdita del fix, il Go smette di includere la posizione nei nuovi invii.</p>
+  <p>Il ricevitore calcola due posizioni al secondo per l&rsquo;ADS-L, che il Go usa per trasmettere la propria posizione agli altri aeromobili. Il tablet e il registro di volo ricevono la posizione misurata all&rsquo;inizio di ogni secondo. Il Go la invia senza modificarla, con l&rsquo;ora della misura. Anche Bravo, il nostro ricevitore ADS-B, fornisce un fix al secondo dal proprio GPS a un&rsquo;app collegata direttamente.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Quanto è recente la posizione?</h2>
+  <h3>Il prossimo firmware invia il fix appena è disponibile.</h3>
+  <p>Fino al firmware 0.8.0 incluso, il Go avviava un proprio ciclo di invio di un secondo quando l&rsquo;app si collegava. Il ricevitore forniva il fix di inizio secondo in genere circa 0,1&nbsp;s dopo la misura. Se il fix arrivava appena dopo un invio, poteva aspettare quasi un altro secondo. Una trasmissione radio poteva ritardare ancora l&rsquo;invio. Secondo le nostre stime, quando il Go iniziava a inviare erano passati in media circa 0,6&nbsp;s dalla misura e fino a circa 1,2&nbsp;s nel caso peggiore.</p>
+  <p>Con il firmware 0.8.1, il Go inizia a inviare appena arriva il fix di inizio secondo, in genere circa 0,1&nbsp;s dopo la misura. La radio mantiene la priorità. Quando arriva il fix, può essere ancora in attesa solo il nominativo, che il Go trasmette ogni dieci secondi. In quel caso l&rsquo;invio via Bluetooth può aspettare fino a 0,1&nbsp;s in più. Le stime si basano sul codice e sui tempi del ricevitore. Non abbiamo misurato il ritardo in volo né al banco con un tablet. La trasmissione via Bluetooth aggiunge un ritardo proprio.</p>
+  <p>A 100&nbsp;kt di velocità al suolo percorri circa 30&nbsp;m in 0,6&nbsp;s e da 5 a 10&nbsp;m in un intervallo da 0,1 a 0,2&nbsp;s. È la distanza che percorri prima che il Go inizi a inviare. Non abbiamo misurato la differenza sulla mappa.</p>
+  <p>In condizioni normali il Go continua a fare un invio al secondo. Invii più frequenti ripeterebbero i messaggi di traffico. L&rsquo;aggiornamento non aggiunge messaggi Bluetooth e non cambia quando il Go aggiorna lo schermo o scrive in memoria.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Scegliere la fonte GPS</h2>
+  <h3>Dovresti poter continuare a usare il GPS del tablet.</h3>
+  <p>Il messaggio di traffico FLARM, <code>$PFLAA</code>, indica la posizione di ogni aeromobile rispetto al Go. Riporta le distanze verso nord e verso est e il dislivello rispetto al Go. Per collocare quell&rsquo;aeromobile nel punto giusto sulla mappa, l&rsquo;app deve partire dalla posizione del Go.</p>
+  <p>Il 13 novembre 2026 abbiamo presentato la nostra <%= link_to_page "ads-l/nmea", label: "proposta ADS-L NMEA" %> all&rsquo;EASA e all&rsquo;organismo responsabile dell&rsquo;ADS-L. Nel formato proposto, ogni messaggio di traffico contiene latitudine, longitudine e quota dell&rsquo;altro aeromobile. Un&rsquo;app potrebbe quindi mostrare quel traffico usando il GPS del tablet per il tuo aereo. Il Go continuerebbe a fornire la propria posizione ai tablet senza GPS.</p>
+  <p>Il firmware 0.8.1 invia prima la posizione del Go. Non permette di scegliere la fonte GPS. L&rsquo;organismo responsabile dovrebbe adottare il formato. SkyDemon e le altre app dovrebbero leggerlo e lasciarti scegliere la fonte GPS separatamente. Seguiamo questo lavoro nella <a href="https://github.com/fcatuhe/skyblip/issues/529">segnalazione #529 su GitHub</a>.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Prima del volo</h2>
+  <h3>Lascia all&rsquo;antenna del Go una vista libera del cielo.</h3>
+  <p>L&rsquo;iPad può restare dove riesci a leggerlo bene, anche se il supporto sul pannello gli copre il cielo. Metti il Go dove l&rsquo;antenna può vedere il cielo. La <%= link_to_page "gps", label: "guida al GPS" %> spiega i messaggi <span class="mono">NO FIX</span>, <span class="mono">MOVE OUT</span> e <span class="mono">FINDS FIX</span>.</p>
+  <p>Non abbiamo ancora volato con un Go e SkyDemon su un iPad senza GPS. Se provi questa configurazione, verifica a terra che l&rsquo;app mostri la tua posizione. Facci sapere come funziona. Grazie per la domanda, Markus.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Fonti</h2>
+  <ul class="sources">
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, novembre 2026.
+      <span class="support">La domanda di Markus sull&rsquo;uso di un iPad senza GPS.</span>
+    </li>
+    <li>
+      <strong>Forum SkyDemon</strong> &middot; Tim Dawson, <a href="http://forums.skydemon.aero/FindPost37247.aspx">1 luglio 2024</a> e <a href="http://forums.skydemon.aero/Topic37837.aspx">20 febbraio 2025</a>.
+      <span class="support">Perché l&rsquo;app prende posizione e traffico da una sola fonte.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot; <%= link_to_page "features", label: "Go" %>, <%= link_to_page "phone", label: "guida al Bluetooth" %>, <%= link_to_page "gps", label: "guida al GPS" %> e <%= link_to_page "timing", label: "guida ai tempi della radio" %>.
+      <span class="support">Cosa invia il Go, quando arriva il fix GPS e quando trasmette la radio.</span>
+    </li>
+    <li>
+      <strong>Firmware skyBlip</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/528">Inviare la posizione GPS appena è disponibile</a>.
+      <span class="support">Cosa cambia nel firmware 0.8.1 e come è stato stimato il ritardo.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
