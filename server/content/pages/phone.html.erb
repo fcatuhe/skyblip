@@ -4,27 +4,25 @@ nav_title: Phone
 description: "See skyBlip Go traffic in SDVFR Next, SkyDemon or ForeFlight over Bluetooth. Three connections at once, with no pairing."
 parent: guides
 share_image: radar
-updated_on: "2026-11-15"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>With your phone, and without trusting it.</h1>
+  <h1>See traffic on your phone</h1>
   <p class="lede">
-    What an app can see, what it can ask for, and the device screen that has the last word.
+    Connect your navigation app over Bluetooth to see traffic and review its requests. Confirm changes on the Go&rsquo;s screen.
   </p>
 </section>
 
 <section>
   <div class="feature">
     <div>
-      <h3 id="by-name">It appears by name, and <span class="highlight">three screens</span> see its traffic at once.</h3>
+      <h3 id="by-name">The Go appears by name, and <span class="highlight">three connections</span> receive its traffic at once.</h3>
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>: the product, then the
         24-bit address it got when it was <%= link_to "activated", briefing_activation_path %>.
-        Nothing to pair, no code to type. It sends traffic as a FLARM
-        NMEA data stream over both Bluetooth serial connection types that navigation software
-        looks for, so the app you already fly with finds it.
+        No pairing or code is needed. The Go sends traffic as a FLARM NMEA data stream. It supports both Bluetooth serial connection types that navigation software looks for, so the app you already fly with can find it.
       </p>
       <p>
         The tablet on the yoke, the phone in a pocket and the passenger&rsquo;s
@@ -49,14 +47,7 @@ updated_on: "2026-11-15"
 
   <h3 id="asked">A press allows, <span class="highlight">a tap refuses</span>.</h3>
   <p class="lede">
-    When an app asks for something that touches the device you have on board,
-    new firmware, a restart into the USB bootloader, a settings write, erasing
-    your flights, switching it off, the device does not take the phone at its
-    word. It puts the question on its own glass, names it, and waits thirty
-    seconds. A press on the <span class="mono">ACCEPT</span> key allows it,
-    and a tap on the pad&rsquo;s <span class="mono">CANCEL</span> key refuses it. The
-    glass counts down, <span class="mono">CANCELS IN 30 S</span>, and no answer
-    within that time counts as a refusal.
+    An app can request an update to the device&rsquo;s software, called firmware, a restart into the USB installation program, called the bootloader, a settings change, deletion of your flights or a shutdown. The device shows the request on its own screen and waits thirty seconds. Press the button labelled <span class="mono">ACCEPT</span> to allow it. Tap the pad labelled <span class="mono">CANCEL</span> to refuse it. The message <span class="mono">CANCELS IN 30 S</span> counts down the time remaining. If you do not answer within that time, the request is refused.
   </p>
 
   <figure class="shot">
@@ -66,8 +57,8 @@ updated_on: "2026-11-15"
 
   <p class="lede">
     Your callsign is one of those settings. The app sends it. The screen asks
-    for permission. Once approved, it is shown on the status screen, broadcast
-    once every ten seconds and shown on nearby aircraft&rsquo;s screens. You can also type it on the
+    for permission. Once approved, it is shown on the status screen and broadcast
+    once every ten seconds. It can appear on nearby aircraft&rsquo;s screens if their devices can read that message. You can also type it on the
     device itself, in <%= link_to_page "controls", label: "the callsign field", anchor: "callsign" %>,
     or set it from a browser in <%= link_to "Briefing", briefing_root_path %>, beside
     the aircraft type, the units and the alarm.
@@ -78,7 +69,7 @@ updated_on: "2026-11-15"
     authorise a request.
   </p>
 
-  <h3 id="firmware">New firmware comes <span class="highlight">from a web page</span>.</h3>
+  <h3 id="firmware">Install an update <span class="highlight">from a browser</span>.</h3>
   <p class="lede">
     <%= link_to "Briefing", briefing_root_path %> sends a signed
     firmware file over the same Bluetooth link, from Chrome or Edge. The screen asks for permission
@@ -94,14 +85,7 @@ updated_on: "2026-11-15"
     check the callsign and the aircraft type before you fly.
   </p>
   <p class="lede">
-    When the firmware will not take at all, the same page hands the device to
-    its USB bootloader, after the same press. The device switches itself
-    off with the screen shown below. The next press starts the bootloader: connected by a USB
-    cable, the device appears as a drive named <span class="mono">TECHOBOOT</span>.
-    Copy a <span class="mono">.uf2</span> file onto it to install new firmware.
-    <span class="mono">RESET</span> returns to skyBlip. Nothing transmits
-    during recovery. Two presses of <span class="mono">RESET</span> open the same
-    drive without a phone.
+    If the firmware will not install at all, open recovery mode from the same page. Press the device&rsquo;s button to confirm. The device switches itself off with the screen shown below. Press the button again to start the USB bootloader. Connect the device with a USB cable. It appears as a drive named <span class="mono">TECHOBOOT</span>. Copy a <span class="mono">.uf2</span> file onto that drive to install new firmware. Press <span class="mono">RESET</span> to return to skyBlip. Nothing transmits during recovery. Two presses of <span class="mono">RESET</span> open the same drive without a phone.
   </p>
 
   <figure class="shot">
@@ -124,7 +108,7 @@ updated_on: "2026-11-15"
   <ul class="points">
     <li>The bootloader checks the firmware signature against our key</li>
     <li>It refuses firmware older than the installed version</li>
-    <li>An open transport cannot install firmware</li>
+    <li>A Bluetooth connection without pairing is not enough to authorise a firmware installation</li>
     <li>All other requests can only run on the ground</li>
     <li>The device refuses them unless you confirm on its screen</li>
     <li>Your presence at the device replaces a pairing code</li>

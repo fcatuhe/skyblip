@@ -10,7 +10,7 @@ updated_on: "2026-11-25"
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Bravo, one button and a light.</h1>
-  <p class="lede">skyBlip Bravo warns you of approaching ADS-B traffic and sends it to your navigation app. Bravo only receives. It does not transmit your position.</p>
+  <p class="lede">skyBlip Bravo warns you of approaching ADS-B traffic. It sends that traffic to your navigation app. For aircraft traffic, Bravo only receives: it does not transmit your position.</p>
 </section>
 
 <section>
@@ -29,11 +29,11 @@ updated_on: "2026-11-25"
       <thead><tr><th>Gesture</th><th>What it does</th></tr></thead>
       <tbody>
         <tr><th>Press from off</th><td>Switches on, with one green pulse you feel.</td></tr>
-        <tr><th>Press during a fast red flicker</th><td>Silences the alarm, including the paired Go while they are linked.</td></tr>
-        <tr><th>Press during a fast green blink</th><td>Allows a setting or update requested by a phone or Briefing. Without a press, it expires after 30 seconds.</td></tr>
-        <tr><th>Press during a fast blue blink</th><td>Pairs with the Go that asked.</td></tr>
+        <tr><th>Press during a fast red flicker</th><td>Silences the alarm, including the paired Go while the link remains active.</td></tr>
+        <tr><th>Press during a fast green blink</th><td>Authorises the setting change or update requested by a phone or Briefing. Without a press, the request expires after 30 seconds.</td></tr>
+        <tr><th>Press during a fast blue blink</th><td>Pairs Bravo with the Go requesting it.</td></tr>
         <tr><th>Hold for 2&nbsp;s</th><td>Switches off, with three red pulses you feel.</td></tr>
-        <tr><th>Hold, plug in USB-C, keep holding</th><td>After about 3 seconds, the LED above the button turns white. The X1 becomes a USB drive named X1 for installing firmware by hand. Briefing asks only if it cannot restart Bravo itself.</td></tr>
+        <tr><th>Hold, plug in USB-C, keep holding</th><td>After about 3 seconds, the LED above the button turns white. The X1 appears as a USB drive named X1 for installing skyBlip manually. Briefing asks only if it cannot restart Bravo itself.</td></tr>
       </tbody>
     </table>
   </div>
@@ -60,10 +60,10 @@ updated_on: "2026-11-25"
         <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blue, fast blink</th><td>A Go asks to pair.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Two winks every 3&nbsp;s</th><td>A diagnostic recording is armed. The colour still shows the position state.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, every 3&nbsp;s</th><td>Battery low.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, every 600&nbsp;ms</th><td>Battery critical. With a full battery, a traffic or satellite receiver is not answering and Bravo refuses to run.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, every 600&nbsp;ms</th><td>Battery critical. If the battery is full, this flashing means a traffic receiver or the satellite receiver is not responding. Bravo then refuses to start.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Three red pulses, felt</th><td>Switching off, then dark.</td></tr>
         <tr><th>Dark</th><td>Off.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Steady white</th><td>The X1 is a USB drive for installing firmware.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Steady white</th><td>The X1 appears as a USB drive for installing skyBlip.</td></tr>
       </tbody>
     </table>
   </div>

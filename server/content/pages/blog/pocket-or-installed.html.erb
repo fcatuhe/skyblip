@@ -1,29 +1,29 @@
 ---
 title: "Pocket ADS-L or installed beacon under CS-STAN?"
 nav_title: Pocket or installed
-description: "A battery device can be forgotten, an installed one needs an engineer. What CS-SC057a asks to fit ADS-L for good, and what you can do with a Go today."
+description: "A battery device can be forgotten. A fitted unit needs an engineer. What CS-SC057a requires for ADS-L, and what a Go can do today."
 published_on: "2026-11-24"
 parent: blog
-updated_on: "2026-11-24"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24 November 2026</p>
   <h1>Pocket device or installed beacon?</h1>
-  <p class="lede">On Pilot und Flugzeug, the main objection to skyBlip was not about the radio. It was about the battery. A device that pilots sometimes switch on and sometimes forget will never cover the sky. Why not a cheap ADS-L beacon, fitted for good under CS-STAN, that runs whenever the aircraft does? The objection is fair, and the answer has two sides.</p>
+  <p class="lede">On Pilot und Flugzeug, the main objection to skyBlip was not about the radio. It was about the battery. A device that pilots sometimes switch on and sometimes forget will never make every aircraft visible. Why not a cheap ADS-L beacon, fitted for good under CS-STAN, that runs whenever the aircraft does? The objection is fair. Each option has its advantages.</p>
 </section>
 
 <section>
   <h2 class="kicker">The case for the pocket</h2>
   <h3>One device follows the pilot from aircraft to aircraft.</h3>
-  <p>Another pilot in the same thread answered for the battery. A device independent of the aircraft&rsquo;s power cannot disturb it, and some cheap receivers on aircraft power used to. Gliders, hang gliders, paragliders and balloons have no aircraft power to speak of. And a pilot who flies a club aircraft on Saturday and a friend&rsquo;s on Sunday carries his visibility with him.</p>
+  <p>Another pilot in the same thread argued for battery power. A device independent of the aircraft&rsquo;s power supply cannot interfere with it. Some cheap receivers connected to aircraft power have done so in the past. Gliders, hang gliders, paragliders and balloons have no aircraft power to speak of. A pilot who flies a club aircraft on Saturday and a friend&rsquo;s on Sunday can use the same device to transmit their position.</p>
   <p>The battery is also why we chose the hardware. The e-paper screen draws nothing to hold its picture, and on the bench a parked Go ran 18&nbsp;hours, a Go+ 49&nbsp;hours. Charged once a week, it is there for every flight.</p>
 </section>
 
 <section>
   <h2 class="kicker">The case for the installation</h2>
   <h3>A fitted unit starts with the master switch and is never left at home.</h3>
-  <p>An installed unit uses external antennas placed where they hear best, can feed the panel display, and needs no thought from the pilot. For an aircraft flown by many pilots, it is the surest way to have it transmit on every flight.</p>
+  <p>An installed unit uses external antennas placed for the best reception. It can send traffic to the panel display and needs no attention from the pilot. For an aircraft flown by many pilots, it is the surest way to have it transmit on every flight.</p>
   <p>In an EASA type-certified aircraft, the way to fit one without a design approval is CS-STAN, EASA&rsquo;s book of standard changes. The entry for ADS-L is <strong>CS-SC057a, Installation of an electronic conspicuity function</strong>. It names our case: a device that transmits outside the aeronautical band, on a frequency other than FLARM, and receives FLARM.</p>
 </section>
 
@@ -34,10 +34,10 @@ updated_on: "2026-11-24"
     <li><strong>Which aircraft.</strong> Aeroplanes that are not complex, small rotorcraft and ELA2 aircraft, for VFR and night VFR. Microlights and most homebuilts sit outside EASA type certification and follow national rules instead.</li>
     <li><strong>What the maker declares.</strong> How the transmitter meets telecom rules, how any lithium battery was handled, the size of an internal antenna, a way to display the traffic, and that the device relies on its own parts alone. With that, a transmitter on the 868&nbsp;MHz band and a GNSS receiver without ETSO are fitted with no EASA Form&nbsp;1.</li>
     <li><strong>What the installer does.</strong> Wire it to the non-essential bus with its fuse, record the electrical load on EASA Form&nbsp;123, keep it at 300&nbsp;g or less, keep the transmitter away from the flight instruments, and test on the ground or in flight, interference included.</li>
-    <li><strong>What it may not do.</strong> Give advice on how to avoid traffic, or feed the autopilot. The flight manual gets a supplement that says &ldquo;for airborne traffic awareness only&rdquo;.</li>
+    <li><strong>What the device may not do.</strong> Give advice on how to avoid traffic, or feed the autopilot. The flight manual gets a supplement that says &ldquo;for airborne traffic awareness only&rdquo;.</li>
     <li><strong>Who signs.</strong> A licensed engineer or a maintenance organisation. The rule says it &ldquo;is not suitable for the release to service of the aircraft by the pilot-owner&rdquo;.</li>
   </ul>
-  <p>Two more points from the text. Like every standard change, it does not apply to portable devices, so a Go on the glareshield needs none of this. And fitting a device under it &ldquo;does not automatically ensure compliance&rdquo; with SERA.6005(c) for U-space.</p>
+  <p>The text makes two further points. Like every standard change, CS-SC057a does not apply to portable devices. A Go on the glareshield is therefore not subject to these requirements. Fitting a device under this standard change &ldquo;does not automatically ensure compliance&rdquo; with SERA.6005(c) for U-space.</p>
 </section>
 
 <section>
@@ -54,7 +54,7 @@ updated_on: "2026-11-24"
     <li><strong>Keep one with the aircraft.</strong> At &euro;68, a Go can live in the aircraft&rsquo;s door pocket or with its keys, so whoever flies it carries it.</li>
     <li><strong>Check it at a glance.</strong> Its light winks green every three seconds once it has a position. Without one, it has no position to transmit.</li>
   </ul>
-  <p>We do not supply the declarations CS-SC057a asks for yet, so a Go cannot be fitted under it today. <%= link_to_page "roadmap", label: "skyBlip Panel", anchor: "on-board" %> is the installed version we are designing: no screen, aircraft power, traffic on the panel display.</p>
+  <p>We do not yet supply the declarations required by CS-SC057a. A Go therefore cannot be fitted under this standard change today. <%= link_to_page "roadmap", label: "skyBlip Panel", anchor: "on-board" %> is the installed version we are designing: no screen, aircraft power, traffic on the panel display.</p>
 </section>
 
 <section>

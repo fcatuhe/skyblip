@@ -1,28 +1,28 @@
 ---
 title: "skyBlip Go and Bravo guides and first steps"
 nav_title: Guides
-description: "Install your Go or Bravo, then find the controls, read the lights and set up your device for your first flight."
+description: "Install skyBlip on your Go or Bravo. Find the controls, read the lights and check the settings before your first flight."
 share_image: radar
 updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
   <h1>Find the right guide for your Go or Bravo</h1>
-  <p class="page-hero-subtitle">Just got your device? <%= link_to_page "install", label: "Start by installing it" %>. If Briefing says the device is ready, open its guide.</p>
+  <p class="page-hero-subtitle">Received your device? <%= link_to_page "install", label: "Install skyBlip" %>. If Briefing says your Go or Bravo is ready, open its first-steps guide.</p>
 </header>
 
 <section id="install" class="band">
-  <h2 class="section-title">Install</h2>
+  <h2 class="section-title">Install the software and mount the device</h2>
   <div class="guide-cards">
     <article>
       <%= screen_image_tag "self-test.png", alt: "The self-test page, with each component's name and test result, including TEMP NRF52840 marked NOT FOUND" %>
       <h3><%= link_to_page "install", label_type: :nav %></h3>
-      <p>Put skyBlip on your Go or Bravo from your browser. At every start, the Go checks its radio, GPS and barometer, and does not run without them.</p>
+      <p>Install skyBlip on your Go or Bravo from your browser. At every start, the Go checks its radio, GPS and barometer. It does not run without them.</p>
     </article>
     <article>
       <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ on a white LilyGO T-Echo Plus beside the crab clamp with an orange handle that holds it on the glareshield", class: "guide-photo" %>
       <h3><%= link_to_page "mount", label_type: :nav %></h3>
-      <p>Click a Go or a Go+ onto a ball joint clamped to the glareshield, with the parts we tested, place its antenna, and hang Bravo by its lanyard.</p>
+      <p>Click a Go or a Go+ onto a ball joint clamped to the glareshield and position its antenna. Find the parts we tested and see how to hang Bravo by its lanyard.</p>
     </article>
   </div>
 </section>
@@ -41,7 +41,7 @@ updated_on: "2026-11-25"
       <p>Find the button and light. See traffic in your navigation app or on the paired Go.</p>
     </article>
   </div>
-  <p class="signature">With a Tango, open both guides. Go shows the traffic and Bravo adds to what it receives.</p>
+  <p class="signature">With a Tango, open both guides. Go shows the traffic and Bravo adds to what Go receives.</p>
 </section>
 
 <section class="band">
@@ -76,7 +76,7 @@ updated_on: "2026-11-25"
     <article>
       <%= screen_image_tag "off-flat-battery.png", alt: "The screen of a device that has switched off because its battery is empty" %>
       <h3><%= link_to_page "power" %></h3>
-      <p>See what it waits for on the apron, what it looks like when off, and how the battery warns as it drains.</p>
+      <p>Recognise a Go&rsquo;s screen when it is off and its warnings as the battery runs down. Find out what it waits for on the apron too.</p>
     </article>
     <article>
       <%= screen_image_tag "confirm.png", alt: "The authorisation prompt on the screen" %>
@@ -92,23 +92,23 @@ updated_on: "2026-11-25"
     <article>
       <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
-      <p>One radio uses four time slots a second and receives signals from two systems in the same slot.</p>
+      <p>A single radio uses four time slots a second. Within one slot, it receives signals from two systems.</p>
     </article>
     <article>
       <%= render "shared/cycle", compact: true %>
       <h3><%= link_to_page "timing" %></h3>
-      <p>The serial picks the seconds of a 20&nbsp;s cycle, the parity of the second picks the channel, and a draw redone every second picks the millisecond.</p>
+      <p>The serial number determines which seconds are used in a 20&nbsp;s cycle. The channel depends on whether the second is even or odd. A new draw chooses the millisecond every second.</p>
     </article>
     <article>
       <%= render "shared/flight_state", compact: true %>
       <h3><%= link_to_page "gps" %></h3>
-      <p>A fix that must settle and land before 450&nbsp;ms, the pulse that starts each second, and flight decided from ground speed alone.</p>
+      <p>The fix must settle and arrive before 450&nbsp;ms. A pulse marks the start of each second. Go decides whether it is in flight from ground speed alone.</p>
     </article>
     <article>
       <%= render "shared/advisory_ring", compact: true %>
       <h3><%= link_to_page "traffic" %></h3>
-      <p>One advisory ring of 3&nbsp;km and 300&nbsp;m, no advisories on the ground, six missed reports to drop a target, and formation flying.</p>
+      <p>Go gives traffic advisories within a single ring of 3&nbsp;km and 300&nbsp;m. It gives no advisories on the ground and drops a target after six missed reports. The guide also covers formation flying.</p>
     </article>
   </div>
-  <p class="signature">Still have questions? The <%= link_to_page "blog", label_type: :nav %> answers what pilots ask on forums, and compares skyBlip with other devices.</p>
+  <p class="signature">Still have questions? Find our answers to pilots on forums and our comparison with other systems in the <%= link_to_page "blog", label_type: :nav %>.</p>
 </section>
