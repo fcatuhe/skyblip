@@ -1,6 +1,9 @@
 module ModelContextProtocol
   extend ActiveSupport::Concern
 
+  ICONS = [ { src: Content.canonical_url("/icon.svg"), mime_type: "image/svg+xml", sizes: [ "any" ] },
+            { src: Content.canonical_url("/icon.png"), mime_type: "image/png", sizes: [ "512x512" ] } ].freeze
+
   included do
     include Tracing
   end
@@ -21,9 +24,4 @@ module ModelContextProtocol
     end
 
     def allowed_hosts = [ Rails.application.routes.default_url_options.fetch(:host) ]
-
-    def icons
-      [ { src: Content.canonical_url("/icon.svg"), mime_type: "image/svg+xml", sizes: [ "any" ] },
-        { src: Content.canonical_url("/icon.png"), mime_type: "image/png", sizes: [ "512x512" ] } ]
-    end
 end

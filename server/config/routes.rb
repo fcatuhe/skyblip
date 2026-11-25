@@ -5,7 +5,10 @@ Rails.application.routes.draw do
 
   get "up" => "rails/health#show", as: :rails_health_check
 
-  resource :mcp, only: %i[show create destroy]
+  resource :mcp, only: %i[show create destroy] do
+    resource :server_card, only: :show, path: "server-card", module: :mcps
+    match "server-card", to: "mcps/server_cards#show", via: :options
+  end
 
   namespace :oauth do
     resource :authorization, only: %i[new create destroy]
@@ -16,6 +19,10 @@ Rails.application.routes.draw do
   scope ".well-known", module: :oauth do
     resource :authorization_server, only: :show, path: "oauth-authorization-server"
     resource :protected_resource, only: :show, path: "oauth-protected-resource/admin/mcp"
+  end
+
+  scope ".well-known", format: false do
+    resource :ai_catalog, only: :show, path: "ai-catalog.json"
   end
 
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
