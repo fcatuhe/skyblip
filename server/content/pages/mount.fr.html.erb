@@ -4,12 +4,12 @@ nav_title: Fixation
 slug: fixation
 description: "Clipsez un Go ou un Go+ sur une attache rapide et une rotule fixées à l'auvent, pour environ 21 € de pièces AliExpress. Suspendez Bravo à sa dragonne."
 parent: guides
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Sous les yeux, et bien tenu.</h1>
+  <h1>Fixez votre Go ou suspendez Bravo.</h1>
   <p class="lede">Une pince sur l&rsquo;auvent, une rotule et une attache rapide. Nous avons commandé ces pièces et les avons testées.</p>
 </section>
 
@@ -33,8 +33,8 @@ updated_on: "2026-11-18"
   </div>
   <ol class="steps-grid steps-grid--sequence">
     <li><h3>Percez le disque.</h3><p>Percez deux trous M3 dans le disque, à 14&nbsp;mm de part et d&rsquo;autre de son centre, hors de l&rsquo;insert central.</p></li>
-    <li><h3>Fixez-le au Go.</h3><p>Pressez le disque au dos du Go et serrez les deux vis. Choisissez M3&nbsp;x&nbsp;6 ou M3&nbsp;x&nbsp;8 selon le filet qui doit entrer dans le Go, soit la longueur moins l&rsquo;épaisseur du disque.</p></li>
-    <li><h3>Assemblez.</h3><p>Vissez la plaque mâle dans le disque, la base femelle sur la rotule, et la boule dans la pince. Serrez la pince sur l&rsquo;auvent, enfoncez la rotule sur la boule, clipsez le Go, orientez-le et serrez la bague.</p></li>
+    <li><h3>Fixez-le au Go.</h3><p>Pressez le disque au dos du Go et serrez les deux vis. Choisissez M3&nbsp;x&nbsp;6 ou M3&nbsp;x&nbsp;8 selon la longueur de filetage qui doit entrer dans le Go, soit la longueur de la vis moins l&rsquo;épaisseur du disque.</p></li>
+    <li><h3>Assemblez.</h3><p>Vissez la plaque mâle dans le disque et la base femelle sur la rotule. Vissez la boule dans la pince, puis serrez la pince sur l&rsquo;auvent. Enfoncez la rotule sur la boule et clipsez le Go. Orientez-le, puis serrez la bague.</p></li>
   </ol>
 </section>
 
@@ -56,7 +56,7 @@ updated_on: "2026-11-18"
   </div>
   <ol class="steps-grid steps-grid--sequence">
     <li><h3>Vissez la plaque.</h3><p>Vissez la plaque mâle dans l&rsquo;insert 1/4&Prime; au dos du Go+.</p></li>
-    <li><h3>Assemblez.</h3><p>Vissez la base femelle sur la rotule, et la boule dans la pince. Serrez la pince sur l&rsquo;auvent, enfoncez la rotule sur la boule, clipsez le Go+, orientez-le et serrez la bague.</p></li>
+    <li><h3>Assemblez.</h3><p>Vissez la base femelle sur la rotule et la boule dans la pince. Serrez la pince sur l&rsquo;auvent. Enfoncez la rotule sur la boule et clipsez le Go+. Orientez-le, puis serrez la bague.</p></li>
   </ol>
   <p class="signature">
     Prix relevés sur AliExpress entre le 3 octobre et le 18 novembre 2026. Les liens
@@ -68,14 +68,15 @@ updated_on: "2026-11-18"
 
 <section id="antenna" class="band band--tint">
   <h2 class="section-title">Placez l&rsquo;antenne</h2>
-  <p class="section-intro">Orientez le Go ou le Go+ pour que son antenne pointe droit vers le haut. Les antennes ADS-L sont à polarisation verticale&nbsp;: une antenne inclinée entend moins loin et porte moins loin. Écartez-la du métal, de la fibre de carbone et de votre corps, et laissez-lui la vue du ciel à travers la verrière ou le pare-brise, pour qu&rsquo;elle porte dans toutes les directions.</p>
+  <p class="section-intro">Orientez le Go ou le Go+ pour que son antenne pointe droit vers le haut. Les antennes ADS-L sont à polarisation verticale&nbsp;: une antenne inclinée reçoit et émet moins loin. Écartez-la du métal, de la fibre de carbone et de votre corps. Laissez-lui la vue du ciel à travers la verrière ou le pare-brise pour qu&rsquo;elle porte dans toutes les directions.</p>
 </section>
 
 <section id="bravo" class="band">
   <h2 class="section-title">skyBlip Bravo</h2>
-  <p class="section-intro">Suspendez Bravo par la dragonne en cuir de sa boîte, près de la verrière ou du pare-brise, avec la vue du ciel.</p>
+  <p class="section-intro">Suspendez Bravo par la dragonne en cuir fournie dans la boîte. Placez-le près de la verrière ou du pare-brise, avec la vue du ciel.</p>
 </section>
 
 <section class="band band--tint">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

@@ -28,7 +28,7 @@ Put a service that more than one product runs in `products/common/`, in namespac
 | `make fuzz` | runs the libFuzzer harnesses in `test/fuzz/` with clang |
 | `make fuzz-<name>` | runs one harness: `nmea`, `air`, `adsb`, `adsb_assembly`, `link`, `peer_bravo` or `peer_go` |
 | `make tidy` | runs clang-tidy over what the host build compiles, as CI does |
-| `make browser` | compiles the WASM that the Rails app's `/briefing/simulator` loads from a release, and bundles `scenarios/*.json` into the `scenarios.json` beside it |
+| `make browser` | compiles the WASM that the Rails app's `/briefing/simulator` loads from a release, and bundles `scenarios/*.json` into the `skyblip-simulator-scenarios.json` beside it (`simulator/README.md`, The browser) |
 | `make watch` | rebuilds and reruns the host tests on every save, or the WASM with `WATCH=browser`, through `watchexec` |
 | `make clean` | removes `build/` |
 | `make ... ABI=ilp32` | builds any of the above for i386, where `long` is 32 bits as on the nRF52 |
@@ -40,7 +40,7 @@ Put a service that more than one product runs in `products/common/`, in namespac
 
 Four versions move apart. [`VERSION`](VERSION) is the firmware version, one for every product. It moves with anything a product does, such as a page, an alarm or a power saving. A `v<version>` tag releases every product at it (`.github/workflows/release.yml`). Each `products/<product>/VERSION` is a link to it, because Zephyr reads the version from the application's own directory.
 
-The other three are the radio protocols' versions, a `kVersion` string beside the `kSpecification` it implements: `protocols/adsl/version.h`, `protocols/adsb/version.h` and `protocols/alptas/version.h`. Each stays at 0.1.0 until its protocol is ready for production. From then on a protocol version moves only when a change alters a rule its conformance rests on: the stack's frames, encoding, channels, timing or transmit rules, or a reading the frozen conformance suite pins. A change inside those rules, such as which second a burst takes, moves the firmware version alone. Each product lists its stacks in `products/<product>/PROTOCOLS`, one per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md` (`lib/radio_protocols.rb`). A unit names its own over the companion link's `protocols` command. `protocols/README.md` says what hangs on them and which skyBlip files outside a stack still change what it puts on air.
+The other three are the radio protocols' versions, a `kVersion` string beside the `kSpecification` it implements: `protocols/adsl/version.h`, `protocols/adsb/version.h` and `protocols/alptas/version.h`. Each started at 0.8.0, the firmware version of the first release. A protocol version moves only when a change alters a rule its conformance rests on: the stack's frames, encoding, channels, timing or transmit rules, or a reading the frozen conformance suite pins. A change inside those rules, such as which second a burst takes, moves the firmware version alone. Each product lists its stacks in `products/<product>/PROTOCOLS`, one per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md` (`lib/radio_protocols.rb`). A unit names its own over the companion link's `protocols` command. `protocols/README.md` says what hangs on them and which skyBlip files outside a stack still change what it puts on air.
 
 ## Before you ship a copy
 

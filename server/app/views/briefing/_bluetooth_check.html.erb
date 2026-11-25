@@ -1,0 +1,30 @@
+<%= tag.section class: "bluetooth-check", hidden: true, aria: { labelledby: "bluetooth-check-title" }, data: {
+      controller: "bluetooth-check",
+      bluetooth_check_ok_value: t("briefing.bluetooth_check.ok"),
+      bluetooth_check_missing_value: t("briefing.bluetooth_check.missing"),
+      bluetooth_check_unknown_value: t("briefing.bluetooth_check.unknown"),
+      bluetooth_check_optional_value: t("briefing.bluetooth_check.optional")
+    } do %>
+  <h2 id="bluetooth-check-title"><%= t("briefing.bluetooth_check.title") %></h2>
+  <p class="bluetooth-check-hint"><%= t("briefing.bluetooth_check.hint") %></p>
+  <ol class="bluetooth-check-list">
+    <li class="bluetooth-check-item" data-bluetooth-check-target="item" data-check="flag">
+      <p class="bluetooth-check-name"><%= t("briefing.bluetooth_check.flag") %> <span class="bluetooth-check-status" data-slot="status"></span></p>
+      <p><%= t("briefing.bluetooth_check.flag_how") %></p>
+      <%= render "briefing/copy_code", code: "chrome://flags/#enable-web-bluetooth" %>
+    </li>
+    <li class="bluetooth-check-item" data-bluetooth-check-target="item" data-check="adapter">
+      <p class="bluetooth-check-name"><%= t("briefing.bluetooth_check.adapter") %> <span class="bluetooth-check-status" data-slot="status"></span></p>
+      <p><%= t("briefing.bluetooth_check.adapter_how") %></p>
+      <div class="bluetooth-check-linux" data-bluetooth-check-target="linux" hidden>
+        <p><%= t("briefing.bluetooth_check.adapter_linux") %></p>
+        <%= render "briefing/copy_code", code: "sudo systemctl enable --now bluetooth" %>
+      </div>
+    </li>
+    <li class="bluetooth-check-item" data-bluetooth-check-target="item" data-check="remember" data-optional>
+      <p class="bluetooth-check-name"><%= t("briefing.bluetooth_check.remember") %> <span class="bluetooth-check-status" data-slot="status"></span></p>
+      <p><%= t("briefing.bluetooth_check.remember_how") %></p>
+      <%= render "briefing/copy_code", code: "chrome://flags/#enable-web-bluetooth-new-permissions-backend" %>
+    </li>
+  </ol>
+<% end %>

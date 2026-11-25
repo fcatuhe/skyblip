@@ -449,10 +449,13 @@ void World<Platform>::load(const Scenario& scenario) {
     gnss().turn_dps = scenario.turn_dps;
 
     clear_aircraft();
-    for (const ScenarioAircraft& aircraft : scenario.aircraft)
-        add_aircraft(aircraft.north_m, aircraft.east_m, aircraft.up_m, aircraft.speed_mps,
-                     aircraft.track_deg, aircraft.phase_ms, aircraft.slot, aircraft.system,
-                     aircraft.turn_dps, aircraft.climb_mps, 0, aircraft.adsb);
+    for (const ScenarioAircraft& aircraft : scenario.aircraft) {
+        const int index =
+            add_aircraft(aircraft.north_m, aircraft.east_m, aircraft.up_m, aircraft.speed_mps,
+                         aircraft.track_deg, aircraft.phase_ms, aircraft.slot, aircraft.system,
+                         aircraft.turn_dps, aircraft.climb_mps, aircraft.address, aircraft.adsb);
+        if (!aircraft.callsign.empty()) name_aircraft(index, aircraft.callsign.c_str());
+    }
 }
 
 template <class Platform>

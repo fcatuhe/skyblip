@@ -255,6 +255,9 @@ class Rf : public ports::Rf {
         config.sync = plan.sync;
         config.sync_bits = plan.sync_bits;
         config.payload_bytes = plan.rx_bytes;
+        config.tx_sync = plan.tx_sync;
+        config.tx_sync_bits = plan.tx_sync_bits;
+        config.tx_preamble_chips = plan.tx_preamble_chips;
         return config;
     }
 

@@ -1,6 +1,7 @@
 // ADS-L 4 SRD-860 issue 2 Subpart C, the physical layer: the bands, the coding and the second's
 // slots.
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "core/protocol/adsl.h"
@@ -9,7 +10,6 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/sx1262.h"
-#include "protocols/common/manchester.h"
 #include "simulator/simulator.h"
 #include "test/support/fresh_fix.h"
 #include "test/support/rf_pass_rig.h"
@@ -18,12 +18,6 @@
 using namespace skyblip;
 
 namespace {
-uint16_t chips_of(uint8_t byte) {
-    uint8_t coded[2] = {0, 0};
-    wire::manchester_encode(&byte, 1, coded);
-    return static_cast<uint16_t>((coded[0] << 8) | coded[1]);
-}
-
 // C.5 ends the Direct slot of second 3 at 1000 ms.
 constexpr uint64_t kSecond3SlotEndUs = 4000000;
 // Build 863's worst from a burst's instant to TxDone, docs/bench/2026-09-29-build-874.md.
@@ -88,16 +82,40 @@ TEST_CASE("ADS-L.4.SRD860.C.2: a busy burst backs off 15 to 250 ms, and stays in
     CHECK(timing::PoliteAccess::kDeferralCeilingUs == adsl::kMBandBackoff.ceiling_us);
 }
 
-// The radio sends eight repetitions; the last four and both 1001s are the leading sync byte.
-TEST_CASE("ADS-L.4.SRD860.C.2.3: the preamble is at most twelve 01s and then two 1001s") {
-    const uint8_t lead = static_cast<uint8_t>(adsl::kSyncWord >> 24);
-    CHECK(chips_of(lead) == 0x5599);
+TEST_CASE("ADS-L.4.SRD860.C.2.3: both modeled phases leave seven 01s before the marker") {
+    for (const bool inverted : {false, true}) {
+        CAPTURE(inverted);
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.platform().chips().radio.preamble_inverted = inverted;
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(50);
+        run_on(simulator, past_settling(simulator), 2000, 1);
 
-    const int radio_repetitions = parts::sx1262::kPreambleChips / 2;
-    const int lead_repetitions = 4;
-    CHECK(radio_repetitions == 8);
-    CHECK(radio_repetitions + lead_repetitions >= 5);
-    CHECK(radio_repetitions + lead_repetitions <= 12);
+        int positions = 0;
+        const simulator::Air& air = simulator.world().air();
+        for (int i = 0; i < air.record_count(); i++) {
+            const simulator::AirRecord& record = air.record_at(i);
+            if (payload_type_of(record) != adsl::Packet::kPayloadTypePosition) continue;
+            positions++;
+            std::string chips;
+            for (uint16_t byte = 0; byte < record.bytes; ++byte)
+                for (int bit = 7; bit >= 0; --bit)
+                    chips += (record.chips[byte] >> bit) & 1 ? '1' : '0';
+            const auto marker = chips.find(
+                "10011001"
+                "1001010110100110"
+                "1001101001100101");
+            REQUIRE(marker != std::string::npos);
+            int repetitions = 0;
+            for (auto start = marker; start >= 2 && chips.compare(start - 2, 2, "01") == 0;
+                 start -= 2)
+                repetitions++;
+            CHECK(repetitions == 7);
+            CHECK(chips.size() == 464);
+        }
+        CHECK(positions > 0);
+    }
 }
 
 // skyBlip's reading: within a flight state, every transmission the schedule makes alternates.

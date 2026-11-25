@@ -60,7 +60,7 @@ TEST_CASE("ADS-L.4.SRD860.B.3: a byte goes out most significant bit first") {
     CHECK(chips_of(0x80) == wire::manchester_chips(0x80));
 }
 
-// The preamble is the radio's: what the firmware hands it runs from the sync word to the last byte.
+// This case checks the Manchester-coded part of the burst. The device suite checks the preamble.
 TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, nothing behind it") {
     adsl::Packet packet = traffic_packet();
     packet.scramble();

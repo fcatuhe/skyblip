@@ -7,12 +7,18 @@ module SimulatorHelper
   GAUGE_INNER_BAND_RADIUS = 38
   GAUGE_CARDINALS = { 0 => "N", 90 => "E", 180 => "S", 270 => "W" }.freeze
   GAUGE_BANK_MARKS = [ -60, -30, -20, -10, 0, 10, 20, 30, 60 ].freeze
+  GAUGE_LEVEL_MARKS = [ -90, 90 ].freeze
 
   VSI_FULL_FPM = 2000
   VSI_KNEE_FPM = 1000
   VSI_KNEE_DEG = 90
   VSI_OUTER_DEG = 80
   VSI_ZERO_DEG = -90
+
+  HAND_TURNS_PER_NEEDLE_TURN = 10
+  BALL_TUBE_HALF_WIDTH = 13
+  BALL_RADIUS = 4.5
+  PITCH_FULL_DEG = 20
 
   SIMULATOR_DIALS = [
     { axis: "speed", area: "asi", label: "GS KT", min: 0, max: 180, step: 1, value: 120,
@@ -22,14 +28,15 @@ module SimulatorHelper
                { tone: "yellow", from: 140, to: 165 },
                { tone: "red", from: 165, to: 180 } ] },
     { axis: "altitude", area: "alt", label: "ALT FT", min: 0, max: 18000, step: 100, value: 4500,
-      scale: { zero: 0, span: 360, from: 0, to: 980, minor: 20, major: 100, numeral: 100,
+      scale: { zero: 0, span: 360, cycle: 1000, from: 0, to: 980, minor: 20, major: 100, numeral: 100,
                divisor: 100 },
       hands: 2 },
     { axis: "turn", area: "turn", label: "TURN D/S", min: -300, max: 300, step: 5, value: 0,
-      marks: [ -110, -90, 90, 110 ], letters: { "L" => -70, "R" => 70 }, plane: true, ball: true },
+      rate: { standard_dps_e1: 30, mark_deg: 20, limit_deg: 45 }, letters: { "L" => -70, "R" => 70 },
+      plane: true, ball: { axis: "slip", full_mg: 200 } },
     { axis: "slip", area: "turn", label: "SLIP MG", min: -250, max: 250, step: 5, value: 0 },
     { axis: "track", area: "trk", label: "TRK", min: 0, max: 359, step: 1, value: 225,
-      scale: { zero: 0, span: 360, from: 0, to: 350, minor: 10, major: 30, numeral: 30,
+      scale: { zero: 0, span: 360, cycle: 360, from: 0, to: 350, minor: 10, major: 30, numeral: 30,
                divisor: 10 },
       card: true, plane: true },
     { axis: "climb", area: "vsi", label: "VS FPM", min: -2000, max: 2000, step: 50, value: 0,
@@ -44,12 +51,12 @@ module SimulatorHelper
     { keys: "T", action: :traffic }
   ].freeze
 
-  def simulator_module_path(tag:)
-    release_asset_path(tag, "embed.js", locale: nil)
+  def simulator_module_path(tag, files)
+    release_asset_path(tag, files.embed, locale: nil)
   end
 
   def gauge_marks(dial)
-    return fixed_marks(dial) unless dial[:scale]
+    return rate_marks(dial) unless dial[:scale]
 
     scale = dial[:scale]
     scale_values(scale, scale[:minor]).map do |value|
@@ -76,6 +83,16 @@ module SimulatorHelper
     end
   end
 
+  def gauge_law(dial, part)
+    case part
+    when :needle then needle_law(dial[:scale])
+    when :hand then turning_law(dial[:scale], HAND_TURNS_PER_NEEDLE_TURN)
+    when :card then card_law(dial[:scale])
+    when :plane then plane_law(dial[:rate])
+    when :ball then ball_law(dial[:ball])
+    end
+  end
+
   def self.vsi_angle(fpm)
     rate = [ fpm.abs, VSI_FULL_FPM ].min
     inner = [ rate, VSI_KNEE_FPM ].min * VSI_KNEE_DEG / VSI_KNEE_FPM
@@ -87,6 +104,14 @@ module SimulatorHelper
     GAUGE_BANK_MARKS.map { |angle| mark_at(angle, angle.abs >= 30 ? GAUGE_MAJOR : GAUGE_MINOR) }
   end
 
+  def gauge_pitch_offset(degrees)
+    (degrees * GAUGE_RADIUS.fdiv(PITCH_FULL_DEG)).round(1)
+  end
+
+  def gauge_attitude_limits
+    { pixels_per_degree: GAUGE_RADIUS.fdiv(PITCH_FULL_DEG), pitch_limit: PITCH_FULL_DEG, bank_limit: GAUGE_BANK_MARKS.max }
+  end
+
   private
     def scale_values(scale, step)
       (scale[:from]..scale[:to]).step(step).to_a
@@ -95,8 +120,36 @@ module SimulatorHelper
     def scale_angle(scale, value)
       return SimulatorHelper.vsi_angle(value) if scale[:law] == :vsi
 
-      pivot = scale.fetch(:pivot, scale[:from])
-      scale[:zero] + ((value - pivot) * scale[:span]).fdiv(scale[:to] - scale[:from])
+      scale[:zero] + ((value - scale[:from]) * scale[:span]).fdiv(scale.fetch(:cycle) { scale[:to] - scale[:from] })
+    end
+
+    def needle_law(scale)
+      if scale[:law] == :vsi
+        { points: [ -VSI_FULL_FPM, -VSI_KNEE_FPM, 0, VSI_KNEE_FPM, VSI_FULL_FPM ].map { [ it, SimulatorHelper.vsi_angle(it) ] } }
+      elsif scale[:cycle]
+        turning_law(scale, 1)
+      else
+        { points: [ scale[:from], scale[:to] ].map { [ it, scale_angle(scale, it) ] } }
+      end
+    end
+
+    def turning_law(scale, turns)
+      cycle = scale[:cycle] * turns
+      { cycle:, points: [ [ 0, scale[:zero] ], [ cycle, scale[:zero] + scale[:span] ] ] }
+    end
+
+    def card_law(scale)
+      { cycle: scale[:cycle], points: [ [ 0, 0 ], [ scale[:cycle], -scale[:span] ] ] }
+    end
+
+    def plane_law(rate)
+      full_dps_e1 = rate[:limit_deg] * rate[:standard_dps_e1].fdiv(rate[:mark_deg])
+      { points: [ [ -full_dps_e1, -rate[:limit_deg] ], [ full_dps_e1, rate[:limit_deg] ] ] }
+    end
+
+    def ball_law(ball)
+      travel = BALL_TUBE_HALF_WIDTH - BALL_RADIUS
+      { move: "slide", points: [ [ -ball[:full_mg], -travel ], [ ball[:full_mg], travel ] ] }
     end
 
     def numeral_text(dial, value)
@@ -104,8 +157,10 @@ module SimulatorHelper
       cardinal || (value.abs / dial[:scale].fetch(:divisor, 1)).round.to_s
     end
 
-    def fixed_marks(dial)
-      Array(dial[:marks]).map { |angle| mark_at(angle, GAUGE_MAJOR) + [ true ] }
+    def rate_marks(dial)
+      mark = dial[:rate][:mark_deg]
+      GAUGE_LEVEL_MARKS.flat_map { |level| [ level, level + level.clamp(-1, 1) * mark ] }.sort
+                       .map { |angle| mark_at(angle, GAUGE_MAJOR) + [ true ] }
     end
 
     def lettered_marks(dial)

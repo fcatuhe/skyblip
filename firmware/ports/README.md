@@ -2,7 +2,7 @@
 
 A port is a role the core needs filled, declared in the core's own vocabulary. `hardware/` fills it with a part or a platform.
 
-Ports wrap no chip, so they are not a hardware abstraction layer. `Rf::arm()` takes a dwell with a sync word, a chip rate and the burst's planned and latest key instants. The latest instant can precede the end of the receive dwell, since ADS-L 4 SRD-860 §C.5 bounds the transmission to its slot. Keep register code and Zephyr headers in `hardware/parts/` and `hardware/platform/`. Nothing at or above this layer includes a framework, so the host suite and the WASM simulator build.
+Ports wrap no chip, so they are not a hardware abstraction layer. `Rf::arm()` takes a dwell with receive and optional transmit sync words, a chip rate and the burst's planned and latest key instants. The latest instant can precede the end of the receive dwell, since ADS-L 4 SRD-860 §C.5 bounds the transmission to its slot. Keep register code and Zephyr headers in `hardware/parts/` and `hardware/platform/`. Nothing at or above this layer includes a framework, so the host suite and the WASM simulator build.
 
 ## What is a port and what is an event
 
