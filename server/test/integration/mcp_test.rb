@@ -25,6 +25,15 @@ class McpTest < ActionDispatch::IntegrationTest
     assert_equal "Tool not found: get_insights", response.parsed_body.dig("error", "data")
   end
 
+  # Agents still pointed at /mcp after the admin tools moved called list_errors here, which is their mistake, not the server's.
+  test "a tool this server does not have is refused to the agent, and logs no error" do
+    mcp "tools/call", { name: "list_errors", arguments: {} }
+
+    assert_equal "Tool not found: list_errors", response.parsed_body.dig("error", "data")
+    assert_equal "invalid_params", Event.where(name: "mcp.answered").last.payload["error"]
+    assert_not Event.exists?(name: "error.reported")
+  end
+
   test "list_pages lists every page in a language, and in English the pages not translated yet" do
     pages = JSON.parse(call_tool("list_pages", { language: "fr" }))
 
