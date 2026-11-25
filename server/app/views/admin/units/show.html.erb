@@ -23,6 +23,10 @@
   <dd><%= l @unit.created_at, format: "%b %-d, %Y, %H:%M" %></dd>
   <dt>Activated</dt>
   <dd><%= @unit.activated_at ? l(@unit.activated_at, format: "%b %-d, %Y, %H:%M") : "no" %></dd>
+  <% if @visitor_tokens.any? %>
+    <dt>Activated by</dt>
+    <dd><%= unit_visitor_links(@visitor_tokens) %></dd>
+  <% end %>
 </dl>
 
 <%= render "help" %>

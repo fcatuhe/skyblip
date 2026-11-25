@@ -7,11 +7,6 @@ module SessionTestHelper
       cookies["session_id"] = cookie_jar[:session_id]
     end
   end
-
-  def sign_out
-    Current.session&.destroy!
-    cookies.delete("session_id")
-  end
 end
 
 ActiveSupport.on_load(:action_dispatch_integration_test) do

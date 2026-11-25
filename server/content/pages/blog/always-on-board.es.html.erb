@@ -1,0 +1,84 @@
+---
+title: "¿ADS-L de bolsillo o baliza instalada con CS-STAN?"
+nav_title: De bolsillo o instalado
+slug: blog/bolsillo-o-instalado
+description: "Un equipo con batería se olvida y uno instalado necesita un técnico. Qué exige CS-SC057a para instalar ADS-L y qué puedes hacer hoy con un Go."
+published_on: "2026-11-24"
+parent: blog
+updated_on: "2026-11-24"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24 de noviembre de 2026</p>
+  <h1>¿Equipo de bolsillo o baliza instalada?</h1>
+  <p class="lede">En Pilot und Flugzeug, la principal objeción a skyBlip no tenía que ver con la radio. Tenía que ver con la batería. Un equipo que los pilotos a veces encienden y a veces olvidan nunca cubrirá el cielo. ¿Por qué no una baliza ADS-L barata, instalada de forma permanente con CS-STAN, que funcione siempre que funcione la aeronave? La objeción es justa y la respuesta tiene dos caras.</p>
+</section>
+
+<section>
+  <h2 class="kicker">A favor del bolsillo</h2>
+  <h3>Un solo equipo acompaña al piloto de una aeronave a otra.</h3>
+  <p>Otro piloto del mismo hilo defendió la batería. Un equipo que no depende de la alimentación de la aeronave no puede perturbarla, y algunos receptores baratos conectados a la alimentación de a bordo lo hacían en el pasado. Los planeadores, las alas delta, los parapentes y los globos apenas tienen alimentación de a bordo. Y el piloto que vuela un avión del club el sábado y el de un amigo el domingo lleva su visibilidad consigo.</p>
+  <p>La batería también explica por qué elegimos este hardware. La pantalla de tinta electrónica no consume nada para mantener la imagen. En el banco, un Go en reposo aguantó 18&nbsp;horas y un Go+ 49&nbsp;horas. Si lo cargas una vez por semana, está listo para cada vuelo.</p>
+</section>
+
+<section>
+  <h2 class="kicker">A favor de la instalación</h2>
+  <h3>Un equipo instalado arranca con el interruptor general y nunca se queda en casa.</h3>
+  <p>Un equipo instalado usa antenas exteriores colocadas donde mejor reciben, puede enviar el tráfico a la pantalla del panel y no exige ninguna atención al piloto. En una aeronave que vuelan muchos pilotos, es la forma más segura de que transmita en cada vuelo.</p>
+  <p>En una aeronave con certificado de tipo de EASA, la forma de instalarlo sin una aprobación de diseño es CS-STAN, el libro de cambios estándar de EASA. La entrada para ADS-L es <strong>CS-SC057a, Installation of an electronic conspicuity function</strong>. Describe nuestro caso: un equipo que transmite fuera de la banda aeronáutica, en una frecuencia distinta de la de FLARM, y que recibe FLARM.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Qué exige CS-SC057a</h2>
+  <h3>Una declaración del fabricante, un técnico que lo instale y un suplemento al manual de vuelo.</h3>
+  <ul>
+    <li><strong>Qué aeronaves.</strong> Aviones no complejos, helicópteros pequeños y aeronaves ELA2, en VFR y VFR nocturno. Los ultraligeros y la mayoría de las aeronaves de construcción por aficionados quedan fuera de la certificación de tipo de EASA y siguen las normas nacionales.</li>
+    <li><strong>Qué declara el fabricante.</strong> Cómo cumple el transmisor las normas de telecomunicaciones, cómo se ha tratado la batería de litio si la hay, el tamaño de la antena interna, un medio para mostrar el tráfico y que el equipo solo depende de sus propios componentes. Con eso, un transmisor en la banda de 868&nbsp;MHz y un receptor GNSS sin ETSO se instalan sin formulario EASA Form&nbsp;1.</li>
+    <li><strong>Qué hace el instalador.</strong> Conectarlo a la barra no esencial con su fusible, anotar la carga eléctrica en el formulario EASA Form&nbsp;123, no pasar de 300&nbsp;g, alejar el transmisor de los instrumentos de vuelo y probarlo en tierra o en vuelo, también frente a interferencias.</li>
+    <li><strong>Qué no puede hacer el equipo.</strong> Dar indicaciones para evitar el tráfico ni enviar datos al piloto automático. El manual de vuelo recibe un suplemento que dice «solo para conocer el tráfico en vuelo».</li>
+    <li><strong>Quién firma.</strong> Un técnico de mantenimiento con licencia o una organización de mantenimiento. La norma dice que «no es adecuada para que el piloto propietario emita el certificado de aptitud para el servicio de la aeronave».</li>
+  </ul>
+  <p>El texto dice dos cosas más. Como cualquier cambio estándar, no se aplica a los equipos portátiles, así que un Go sobre la visera del panel no necesita nada de esto. Y un equipo instalado según esta entrada «no garantiza automáticamente el cumplimiento» de SERA.6005(c) para el U-space.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Qué existe</h2>
+  <h3>Un equipo instalado cuesta de cientos a miles de euros, sin contar el técnico.</h3>
+  <p>Funke publica una guía de instalación CS-STAN para su monitor de tráfico TM350, que transmite FLARM, recibe Mode S, ADS-B y FLARM y admite una placa ADS-L opcional. Avionix vende una versión de su AERO Tracker sin batería que arranca cuando la aeronave da corriente a su toma USB-C. FLARM vende la transmisión ADS-L como licencia para sus PowerFLARM instalados. Nuestra <%= link_to_page "compare", label: "comparativa" %> los recoge con sus precios.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Qué puedes hacer hoy con un Go</h2>
+  <h3>Déjalo conectado a su cable o ten uno en cada aeronave.</h3>
+  <ul>
+    <li><strong>Aliméntalo desde la aeronave.</strong> El Go funciona con su cable USB-C conectado durante todo el vuelo. No se enciende solo cuando le llega corriente: pulsas su botón. Lo decidimos así para que un cargador en la bolsa de vuelo nunca lo ponga a transmitir.</li>
+    <li><strong>Ten uno en la aeronave.</strong> Por 68&nbsp;€, un Go puede quedarse en el bolsillo de la puerta o con las llaves, y quien vuele se lo lleva.</li>
+    <li><strong>Compruébalo de un vistazo.</strong> Su luz parpadea en verde cada tres segundos en cuanto tiene posición. Sin posición, no tiene nada que transmitir.</li>
+  </ul>
+  <p>Todavía no aportamos las declaraciones que exige CS-SC057a, así que hoy no se puede instalar un Go según esta entrada. <%= link_to_page "roadmap", label: "skyBlip Panel", anchor: "on-board" %> es la versión instalada que estamos diseñando: sin pantalla, con la alimentación de la aeronave y con el tráfico en la pantalla del panel.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Fuentes</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/sites/default/files/dfu/cs-stan_issue_4.pdf">CS-STAN Issue 4</a>, ED Decision 2022/009/R, CS-SC057a.
+      <span class="support">Qué aeronaves pueden acogerse, las declaraciones del fabricante, las tareas del instalador, los límites y el certificado de aptitud para el servicio.</span>
+    </li>
+    <li>
+      <strong>f.u.n.k.e. AVIONICS</strong> &middot;
+      <a href="https://www.funkeavionics.de/wp-content/uploads/2025/11/03.314.010.12e_TM350_Approval-CS-STAN_Rev1.00_250725.pdf">Procedimientos de aprobación CS-STAN del TM350</a>, revisión 1.00.
+      <span class="support">Un monitor de tráfico instalado según CS-SC057a o CS-SC062a.</span>
+    </li>
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, noviembre de 2026.
+      <span class="support">La conversación a la que responde este artículo.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/club-fleet", class: "cta cta--previous" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

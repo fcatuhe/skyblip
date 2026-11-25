@@ -471,9 +471,11 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a browser without Web Bluetooth says where to open the app, and offers nothing it cannot do" do
+    in_firefox
     visit "/briefing"
     assert_selector ".fleet-unsupported h1", text: "Open this on Android or a computer"
     assert_no_button "Connect a device"
+    assert_no_selector ".bluetooth-check"
     screen "12-no-bluetooth"
   end
 

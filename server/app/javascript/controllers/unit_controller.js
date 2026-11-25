@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
-import { hasWebBluetooth, joinFleet, nameOf } from "#skyblip/fleet"
+import { bluetoothReadiness, joinFleet, nameOf } from "#skyblip/fleet"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
-import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "controllers/briefing/facts"
+import { factsOf, imageName, newsOf, productWord, protocolsLine, running, runningName, trackOf } from "controllers/briefing/facts"
 import { labelOf, shownIn } from "controllers/briefing/fields"
 import { heardRow, heardView, proposedIn } from "controllers/briefing/heard"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
@@ -232,7 +232,7 @@ export default class extends Controller {
   #offline(unit, away) {
     this.offlineTarget.hidden = away
     const busy = unit?.busy ?? false
-    this.connectTarget.hidden = !hasWebBluetooth()
+    this.connectTarget.hidden = !bluetoothReadiness().ready
     this.connectTarget.disabled = busy
     this.connectTarget.textContent = busy ? say("words.connecting") : this.connectTarget.dataset.label
     if (this.hasLastReadTarget) this.#lastRead(unit, away)
@@ -304,7 +304,7 @@ export default class extends Controller {
     const shown = Boolean(news || motionSensor) && !quiet
     this.bannerTarget.hidden = !shown
     this.bannerActionTarget.hidden = !linked
-    const running = unit?.state?.running ?? unit?.record.running
+    const running = runningName(unit?.state?.running ?? unit?.record.running, trackOf(unit?.state?.image) ?? unit?.record.track)
     if (shown) this.bannerTextTarget.textContent = motionSensor ? say("words.motion_sensor_banner", { running }) : say("words.update_banner", { version: news, running })
   }
 
@@ -312,7 +312,7 @@ export default class extends Controller {
     this.firmwareRowTarget.hidden = !linked
     if (!linked) return
     const version = running(state.running, trackOf(state.image))
-    const news = state.motionSensorWithoutFirmware ? say("words.motion_sensor_needs") : state.upgrade === true ? say("words.firmware_out", { version: state.file.version }) :
+    const news = state.motionSensorWithoutFirmware ? say("words.motion_sensor_needs") : state.upgrade === true ? say("words.firmware_out", { version: imageName(state.file) }) :
       state.upgrade === false ? say("words.firmware_current") : null
     this.firmwareTarget.textContent = [version, news].filter(Boolean).join(" · ")
   }

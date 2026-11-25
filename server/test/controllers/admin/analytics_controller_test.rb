@@ -81,6 +81,17 @@ class Admin::AnalyticsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".admin-metrics div:first-child dd a[href*=?]", "filters%5Boutbound%5D="
   end
 
+  test "counts the visitors who activated a unit, and the count opens them" do
+    activate browse([ [ "/briefing/activate", 60 ] ], visitor: "pilot", started_at: 1.day.ago), units(:bound), browser: "5G3GRZ31"
+    browse [ [ "/buy", 30 ] ], visitor: "other-pilot", started_at: 1.day.ago
+
+    get admin_analytics_path
+
+    assert_select ".admin-metrics div:nth-child(2)", text: /Activated\s+1/ do
+      assert_select "a[href=?]", admin_analytics_visitors_path(filters: { activation: "activated", end_on: Date.current, start_on: 30.days.ago.to_date })
+    end
+  end
+
   test "is for admins only" do
     sign_in_as users(:amelie)
 

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { Activator, httpServer } from "#skyblip/activation"
-import { hasWebBluetooth, joinFleet } from "#skyblip/fleet"
+import { bluetoothReadiness, joinFleet } from "#skyblip/fleet"
 import { sharedJournal } from "#skyblip/journal"
 import { factsOf, shortName } from "controllers/briefing/facts"
 import { say, sayNotice } from "controllers/briefing/words"
@@ -76,7 +76,7 @@ export default class extends Controller {
     this.factsTarget.textContent = unit ? [...factsOf(unit), say("words.not_activated")].join(" · ") : ""
     this.nameTarget.textContent = unit && linked ? say("words.activate_unit", { name: shortName(unit) }) : this.nameTarget.dataset.title
     this.hintTarget.hidden = linked
-    this.findTarget.hidden = linked || !hasWebBluetooth()
+    this.findTarget.hidden = linked || !bluetoothReadiness().ready
     this.findTarget.disabled = unit?.busy ?? false
     const ready = state?.phase === "ready" && state.read && !state.serial
     const notice = state?.notice ?? this.failure ?? unit?.state?.notice
@@ -94,7 +94,8 @@ export default class extends Controller {
   }
 
   #message(state, notice) {
-    const text = !hasWebBluetooth() ? say("activation_notices.no_bluetooth")
+    const readiness = bluetoothReadiness()
+    const text = !readiness.ready ? (readiness.fixable ? "" : say("activation_notices.no_bluetooth"))
       : WORKING[state?.phase] ? say(WORKING[state.phase])
       : notice && notice.key !== "activated" ? sayNotice(notice, "activation_notices", "notices")
       : ""

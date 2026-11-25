@@ -20,7 +20,7 @@ This directory holds the host tooling. The Python scripts run on the standard li
 | `build_local.sh` | build the device images of the products it is given, `skyblip_go` by default, off a committed ref, from a bare machine |
 | `build_image.sh` | build, sign and check one product's images in a ready workspace. `build_local.sh`, CI and a release share it |
 | `make_wordmark.py` | rasterise the wordmark into `firmware/ui/widgets/wordmark.cpp` |
-| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator |
+| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `skyblip-simulator-scenarios.json` each release carries for the simulator |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones |
 | `firmware_tree.rb` | print the firmware version `firmware/VERSION` holds (`version firmware`) or every product that declares a board, as JSON (`products firmware`), for the workflows and `build_image.sh` |
 | `release_files.rb` | stage a production release from its images, as `dev_release.rb` stages a pre-release: each product's images named after the version, the simulator, one `NOTICE.md` with every license text, `PROTOCOLS.md` and `SHA256SUMS` |

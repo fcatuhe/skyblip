@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { FakeSkyblip, signedImage } from './fake_skyblip.mjs';
 import { Fleet, namesOf, slugOf } from '#skyblip/fleet';
+import { take } from '../../app/javascript/controllers/briefing/shelf.js';
 
 function storage() {
   const items = new Map();
@@ -69,6 +70,23 @@ test('a connected device is remembered by this browser, and listed again after a
   assert.equal(again.record.running, '0.1.0+12');
   assert.equal(again.record.track, 'release');
   assert.ok(again.record.seen);
+});
+
+// Offline, the banner names the newest image the browser saw, so it must remember whether that image was a release.
+test('an image taken from a release is remembered as one, beside its version', async () => {
+  const shelf = storage();
+  airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 }));
+  const fleet = new Fleet({ storage: shelf });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.running && unit.state.settings);
+  const option = { value: '/releases/v0.2.0/skyblip-go-0.2.0.signed.bin', dataset: { channel: 'release' } };
+  await take(unit, option, async () => signedImage({ major: 0, minor: 2, revision: 0, build: 15 }, 6000));
+  await settled(fleet, () => unit.state.upgrade === true);
+  unit.disconnect();
+
+  const [again] = new Fleet({ storage: shelf }).remembered;
+  assert.equal(again.record.newest, '0.2.0+15');
+  assert.equal(again.record.newestRelease, true);
 });
 
 test('a Go and a Bravo stay connected side by side', async () => {

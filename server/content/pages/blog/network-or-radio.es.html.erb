@@ -1,0 +1,59 @@
+---
+title: "SafeSky y ADS-L: ¿red o radio?"
+nav_title: Red o radio
+slug: blog/red-o-radio
+description: "SafeSky comparte el tráfico por la red móvil, ADS-L por radio. Dónde funciona cada uno, dónde se queda ciego y por qué volamos con los dos."
+published_on: "2026-11-13"
+parent: blog
+updated_on: "2026-11-13"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 13 de noviembre de 2026</p>
+  <h1>SafeSky y ADS-L: ¿red o radio?</h1>
+  <p class="lede">Algunos pilotos encienden SafeSky para ver los planeadores cerca de su aeródromo, y funciona. Otros lo encuentran ciego donde más vuela la aviación ligera, lejos de las ciudades. Todos tienen razón. Los dos sistemas llevan el tráfico por caminos distintos.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Dos caminos</h2>
+  <h3>SafeSky pasa por la red. ADS-L va de aeronave a aeronave.</h3>
+  <p>SafeSky es una aplicación. Tu móvil envía tu posición por la red móvil a los servidores de SafeSky. Estos la combinan con el tráfico de más de treinta fuentes, entre ellas las estaciones terrestres OGN, los receptores ADS-B y otros usuarios de SafeSky, y devuelven el conjunto a cada móvil. La aplicación sola es gratuita. Para ver su tráfico en tu aplicación de navegación, o para recibir el tráfico de un equipo de radio como un receptor FLARM, necesitas SafeSky Premium, que cuesta 39,99&nbsp;€ al año.</p>
+  <p>ADS-L es una radio. Un equipo en tu aeronave emite tu posición cada segundo en 868&nbsp;MHz, y todos los receptores a unos pocos kilómetros la reciben directamente. Sin servidor, sin tarjeta SIM y sin suscripción.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Dónde se queda ciego cada uno</h2>
+  <h3>La red falla donde falta cobertura. La radio falla donde nadie transmite.</h3>
+  <ul>
+    <li><strong>La cobertura móvil.</strong> En vuelo, un móvil puede perder la red. Su posición llega entonces tarde al servidor o no llega. Los aviones ligeros y los planeadores pasan el tiempo sobre el campo, donde la cobertura es más débil. A ADS-L eso no le afecta.</li>
+    <li><strong>Quién participa.</strong> SafeSky ve a todos los usuarios de la aplicación y a todas las aeronaves que oye una estación terrestre, a cualquier distancia. ADS-L solo ve las aeronaves que llevan un equipo en su banda, pero las ve directamente.</li>
+    <li><strong>Quién te ve.</strong> Un reactor militar que vuela bajo no usa SafeSky ni lleva ADS-L. Ninguno de los dos te hace visible para una aeronave que solo lee transpondedores.</li>
+  </ul>
+  <p>Los instructores insisten en algo con lo que estamos de acuerdo: cada pantalla de la cabina atrae la mirada hacia dentro. Un sistema de tráfico está para decirte dónde mirar y luego dejarte mirar fuera. Por eso la alerta del Go enciende el cuarto de pantalla del lado del tráfico y nada más.</p>
+</section>
+
+<section>
+  <h2 class="kicker">En la práctica</h2>
+  <h3>Usa los dos. Se complementan.</h3>
+  <p>Un Go en la cabina te hace visible para todos los receptores ADS-L de alrededor, haya cobertura o no. Las estaciones OGN que lo oyen pueden pasarte a la red, así que los usuarios de SafeSky también pueden verte. Tu móvil sigue con SafeSky para el tráfico que solo conoce la red.</p>
+  <p>Si ya usas el AERO Tracker de SafeSky, ya transmites en ADS-L, y el Go te muestra a los demás de la misma forma por una fracción del precio. Nuestra <%= link_to_page "compare", label: "comparativa" %> los pone uno al lado del otro.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Fuentes</h2>
+  <ul class="sources">
+    <li>
+      <strong>SafeSky</strong> &middot; página <a href="https://www.safesky.app/application">App</a>, consultada el 13 de noviembre de 2026.
+      <span class="support">Qué hace la aplicación gratuita y qué requiere Premium: las aplicaciones de navegación y los equipos de radio.</span>
+    </li>
+    <li>
+      <strong>SafeSky</strong> &middot; página <a href="https://www.safesky.app/device">Electronic device</a>, consultada el 13 de noviembre de 2026.
+      <span class="support">El tráfico de más de 30 fuentes y las tarifas de datos móviles del AERO Tracker.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/skyblip-softrf-stratux", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/club-fleet", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

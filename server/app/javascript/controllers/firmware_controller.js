@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import { joinFleet } from "#skyblip/fleet"
-import { channelOf, fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
+import { channelOfImage, fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
 import { changesSince } from "controllers/briefing/changelog"
-import { productWord } from "controllers/briefing/facts"
+import { imageName, productWord, runningName, trackOf } from "controllers/briefing/facts"
 import { installCause, reportShown } from "#skyblip/install_report"
 import { say, sayNotice } from "controllers/briefing/words"
 
@@ -133,7 +133,7 @@ export default class extends Controller {
 
   #changes(unit, state) {
     const changelog = this.element.querySelector("template[data-changes]")
-    const sections = changelog ? changesSince([...changelog.content.querySelectorAll("section[data-version]")], { channel: channelOf(unit), running: state.running, offered: state.file?.version }) : []
+    const sections = changelog ? changesSince([...changelog.content.querySelectorAll("section[data-version]")], { channel: channelOfImage(state.file, unit), running: state.running, offered: state.file?.version }) : []
     const shown = sections.map(section => section.dataset.version).join(" ")
     if (shown !== this.changesShown) this.changeListTarget.replaceChildren(...sections.map(section => document.importNode(section, true)))
     this.changesShown = shown
@@ -157,7 +157,7 @@ export default class extends Controller {
     this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) ||
       (state.upgrade === false && !this.picked && !restoresMotionSensor)
     if (airborne) this.installTarget.textContent = say("words.locked")
-    else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: file.version })
+    else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: imageName(file) })
     else this.installTarget.textContent = this.installTarget.dataset.label
   }
 
@@ -171,8 +171,9 @@ export default class extends Controller {
   }
 
   #status(state, unit) {
-    const { phase, file, upgrade, image, running, progress } = state
-    if (phase === "uploading") return say("words.sending", { version: file?.version ?? "" })
+    const { phase, file, upgrade, image } = state
+    const running = runningName(state.running, trackOf(image))
+    if (phase === "uploading") return say("words.sending", { version: file ? imageName(file) : "" })
     if (phase === "installing") return say("words.installing")
     if (phase === "rebooting") return `${say("words.installing")} ${say("words.reconnecting")}`
     if (phase === "recovering") return say("notices.recovering")

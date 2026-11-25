@@ -8,7 +8,7 @@ product:
   currency: EUR
   image: pages/index/skyblip-go-techo.avif
 description: "Sehen Sie ADS-L- und FLARM-Verkehr auf dem Radar des Go. Senden Sie Ihre Position per ADS-L. Eine Verkehrswarnung zeigt, wohin Sie schauen sollten."
-updated_on: "2026-11-18"
+updated_on: "2026-11-24"
 ---
 
 <%= render "shared/device_tabs" %>
@@ -140,10 +140,60 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section id="try" class="band band--tint">
+<section id="questions" class="band band--tint">
+  <h2 class="section-title">Was Piloten über Go fragen</h2>
+  <div class="faq">
+    <details>
+      <summary>Sendet Go FLARM?</summary>
+      <p>Nein. Go empfängt FLARM, deshalb erscheinen Segelflugzeuge und Schleppmaschinen auf seinem Radar. Senden kann er nur ADS-L. Wer FLARM senden will, braucht eine Lizenz von FLARM. FLARM verkauft das Senden per ADS-L für seine PowerFLARM-Geräte, beim PowerFLARM Flex ist es enthalten. Ein FLARM-Pilot, der es einschaltet, sieht Sie.</p>
+    </details>
+    <details>
+      <summary>Wer sieht meinen Go? Sieht ihn die Flugsicherung?</summary>
+      <p>Jeder ADS-L-Empfänger in Reichweite sieht Sie: ein anderer Go, andere ADS-L-Geräte, manche FLARM-Geräte und OGN-Bodenstationen, die Sie an Apps wie SafeSky weitergeben. Das Radar der Flugsicherung sieht Sie nicht, ebenso wenig ein Transponder mit ADS-B In wie der GTX&nbsp;345. Behalten Sie den Transponder, den Ihr Luftraum vorschreibt. <%= link_to_page "blog/who-sees-ads-l", label: "Wer ADS-L sieht, Empfänger für Empfänger" %>.</p>
+    </details>
+    <details>
+      <summary>Wie lange hält der Akku?</summary>
+      <p>Auf unserem Prüfstand, am Boden abgestellt, lief ein Go 18&nbsp;Stunden und ein Go+ 49&nbsp;Stunden mit einer Ladung. Eine vollständige Entladung im Flug haben wir noch nicht gemessen. Im Flug sendet Go jede Sekunde statt alle zehn Sekunden. Wir veröffentlichen die Zahlen, sobald wir sie haben.</p>
+    </details>
+    <details>
+      <summary>Kann ich ihn im Flug am Kabel lassen?</summary>
+      <p>Ja. Go läuft mit eingestecktem USB-C-Kabel. Er schaltet sich nicht ein, wenn Strom ankommt: Drücken Sie seine Taste. So beginnt er nie zu senden, nur weil er in der Flugtasche an einem Ladegerät hängt.</p>
+    </details>
+    <details>
+      <summary>Kann ich ihn fest in mein Flugzeug einbauen?</summary>
+      <p>Nach CS-STAN derzeit nicht. Der Einbau in ein von der EASA musterzugelassenes Luftfahrzeug nach der Standardänderung CS-SC057a verlangt Erklärungen des Herstellers, die wir noch nicht liefern, und die Unterschrift eines freigabeberechtigten Technikers. Ein Go auf der Instrumentenbrettabdeckung braucht nichts davon. <%= link_to_page "roadmap", label: "skyBlip Panel", anchor: "on-board" %> ist die Einbauversion, die wir entwickeln. <%= link_to_page "blog/always-on-board", label: "Taschengerät oder Einbau: was CS-STAN verlangt" %>.</p>
+    </details>
+    <details>
+      <summary>Woran erkenne ich, dass er funktioniert?</summary>
+      <p>Seine LED blinkt alle drei Sekunden grün, sobald er eine Position hat, blau, solange er sie noch sucht, und sie flackert rot bei einer Verkehrswarnung. Sein Funkprotokoll listet jede Meldung auf, die er sendet und empfängt. <%= link_to_page "go-first-steps", label: "Die LED lesen", anchor: "light" %>.</p>
+    </details>
+    <details>
+      <summary>Kann ich die Antenne abgesetzt montieren?</summary>
+      <p>Derzeit nicht. Die Antenne sitzt am Gerät. Platzieren Sie deshalb den ganzen Go so, dass die Antenne nach oben zeigt und den Himmel sieht, auf der Instrumentenbrettabdeckung oder an einer anderen Stelle im Cockpit. Er muss nicht vor Ihnen liegen, wenn Sie den Verkehr in Ihrer App ablesen.</p>
+    </details>
+    <details>
+      <summary>Kann ich die Warnungen hören?</summary>
+      <p>Go+ piept und vibriert, aber sein Summer ist in einem lauten Cockpit schwer zu hören. Ihre Navigations-App empfängt die Warnungen des Go per Bluetooth und kann sie in Ihrem Headset ansagen. Go verbindet sich nicht direkt mit Bluetooth-Headsets.</p>
+    </details>
+    <details>
+      <summary>Sendet er GDL&nbsp;90?</summary>
+      <p>Nein. Der T-Echo hat Bluetooth, aber kein WLAN, das viel mehr Strom verbraucht, und GDL&nbsp;90 läuft über WLAN. Go sendet NMEA per Bluetooth. Das lesen SDVFR Next, SkyDemon und ForeFlight.</p>
+    </details>
+    <details>
+      <summary>Was passiert, wenn FLARM sein Protokoll ändert?</summary>
+      <p>Go könnte dann keinen FLARM-Verkehr mehr anzeigen, bis wir seine Firmware aktualisieren. Sie installieren sie mit Briefing in Ihrem Browser. ADS-L, der Standard, den die EASA veröffentlicht, würde sich nicht ändern. Die anderen würden Sie also weiterhin sehen.</p>
+    </details>
+    <details>
+      <summary>Ist skyBlip ein Fork von SoftRF?</summary>
+      <p>Nein. Wir haben viel von SoftRF und vom OGN Tracker gelernt und die Firmware dann von Grund auf neu geschrieben. <%= link_to_page "blog/skyblip-softrf-stratux", label: "skyBlip, SoftRF und Stratux" %>.</p>
+    </details>
+  </div>
+</section>
+
+<section id="try" class="band">
   <h2 class="section-title">Probieren Sie das Radar aus und wählen Sie ein Gerät</h2>
   <p>Go und Go+ haben dasselbe Radar. Koppeln Sie eines der beiden Geräte mit Bravo, um auch Luftfahrzeuge zu sehen, die ihre Position per ADS-B senden.</p>
-  <p>Go ist eine nicht zugelassene Hilfe für die Luftraumbeobachtung. Das Gerät ersetzt weder FLARM noch einen Transponder, wenn diese für Ihren Flug vorgeschrieben sind.</p>
+  <p>Go ist eine nicht zugelassene Hilfe für die Luftraumbeobachtung. Das Gerät ersetzt keinen Transponder, wenn er für Ihren Flug vorgeschrieben ist.</p>
   <p><%= link_to_page "controls", label: "Go bedienen", anchor: "two-contacts", id: "controls" %> · <%= link_to_page "power", label: "Strom und Akku", id: "power" %></p>
   <p class="signature"><%= link_to_page "skyblip-go", label: "Radar ausprobieren", class: "button button--primary" %> · <%= link_to_page "buy", label: "Go und Go+ vergleichen", anchor: "compare" %></p>
 </section>

@@ -31,6 +31,16 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr", text: /#{unit_keys(:contested_pending).public_key}.*development/m
   end
 
+  test "links a unit to the visitors who activated it" do
+    sign_in_as users(:francois)
+    visit = Ahoy::Visit.create!(visit_token: "visit", visitor_token: "pilot-token", started_at: 1.hour.ago)
+    Ahoy::Event.create!(name: "unit_activated", visit_id: visit.id, time: 1.hour.ago, properties: { "unit_id" => units(:bound).id })
+
+    get admin_unit_path(units(:bound))
+
+    assert_select "dd a[href=?]", admin_analytics_visitor_path("pilot-token"), text: "pilot-to"
+  end
+
   test "shows each firmware stretch with its variant and where it came from" do
     sign_in_as users(:francois)
     units(:bound).record_firmware(version: "0.4.0+1400", release: false, variant: "standard", source: "read")

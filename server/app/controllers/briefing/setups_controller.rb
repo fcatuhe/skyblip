@@ -3,5 +3,6 @@ class Briefing::SetupsController < Briefing::ApplicationController
 
   def show
     @partner = params[:for].to_s[PARTNER]
+    @handoff = Briefing::Handoff.from(params)
   end
 end

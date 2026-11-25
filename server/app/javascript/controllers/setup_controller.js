@@ -1,9 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { Activator, httpServer } from "#skyblip/activation"
-import { hasWebBluetooth, installedNames, joinFleet } from "#skyblip/fleet"
-import { DRIVE_NAMES, Installer, browserSupport } from "#skyblip/installer"
+import { bluetoothReadiness, installedNames, joinFleet } from "#skyblip/fleet"
+import { DRIVE_NAMES, Installer } from "#skyblip/installer"
 import { sharedJournal } from "#skyblip/journal"
+import { browserSupport, onDesktopLinux } from "#skyblip/readiness"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { PARTNER, PairingFailed, pairTango, sides, tagText } from "#skyblip/tango"
 import { storedBrowserKey } from "#skyblip/trust"
@@ -13,9 +14,9 @@ import { say, sayNotice } from "controllers/briefing/words"
 const PANELS = {
   idle: "start", choosing_port: "start", reading: "start",
   drive: "drive", choosing_drive: "drive", downloading: "writing", writing: "writing",
-  installed: "connect",
 }
-const STEPS = { start: "install", drive: "install", writing: "install", connect: "connect", finish: "connect", aircraft: "aircraft", done: "aircraft" }
+const STEPS = { start: "install", drive: "install", writing: "install", connect: "connect", phone: "connect", finish: "connect", aircraft: "aircraft", done: "aircraft" }
+const INSTALLED_KEY = "skyblip.setup.installed.v1"
 const SETUP_NOTICES = ["setup_notices", "notices"]
 const ACTIVATING = { asking: "words.asking_server", registering: "words.registering", unlocking: "words.registering" }
 const PRODUCT_WORDS = { go: "Go", bravo: "Bravo" }
@@ -25,21 +26,24 @@ const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: [
 export default class extends Controller {
   static targets = ["title", "steps", "panel", "install", "driveText", "byHand", "chooseDrive", "writingText", "connectText", "connect", "connectHint",
                     "finishText", "pressBravo", "retry", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
-                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers"]
-  static values = { devices: String, activation: String, setup: String, partner: String, challenges: String, registrations: String }
+                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers",
+                    "linux", "bluetoothFirst", "phoneAhead", "handoff", "handoffCode", "handoffText", "another", "copyLink", "byHandLink"]
+  static values = { devices: String, setup: String, partner: String, challenges: String, registrations: String, installed: String, tag: String, handoff: String }
   static outlets = ["glass"]
 
   connect() {
     this.session = joinFleet(() => this.#render())
     this.fleet = this.session.fleet
     this.installer = new Installer({
-      onChange: () => this.#render(),
+      onChange: state => this.#installerChanged(state),
       serial: navigator.serial,
       pickDrive: () => window.showDirectoryPicker({ id: "skyblip-drive", mode: "readwrite" }),
       download: product => this.#download(product),
       browserKey: storedBrowserKey,
       journal: sharedJournal(),
     })
+    this.resumed = this.#handedOver() ?? this.#recalled()
+    if (this.resumed) sharedJournal().record("installer.resumed", { product: this.resumed.product, from: this.resumed.from })
     this.#render()
   }
 
@@ -65,9 +69,14 @@ export default class extends Controller {
     return this.installer.install()
   }
 
+  another() {
+    this.#forget()
+    return this.restart()
+  }
+
   async connectInstalled() {
     this.failure = null
-    const { product, tag } = this.installer.state
+    const { product, tag } = this.#awaiting()
     try {
       const unit = await this.fleet.connectNew(installedNames(product, tag))
       if (unit) this.#onboard(unit)
@@ -81,7 +90,7 @@ export default class extends Controller {
     this.failure = null
     try {
       const unit = await this.fleet.connectNew()
-      if (unit?.needsActivation || unit?.slug.startsWith("activate-")) return Turbo.visit(this.activationValue)
+      if (unit?.needsActivation || unit?.slug.startsWith("activate-")) return this.#onboard(unit)
       if (unit?.remembered) return Turbo.visit(this.#path(unit.slug))
     } catch (error) {
       this.failure = { key: "failed", detail: error.message }
@@ -194,17 +203,30 @@ export default class extends Controller {
   }
 
   #render() {
+    this.#linux()
     if (this.onboarding) return this.#onboarding()
+    const waiting = this.#awaiting()
+    if (waiting) return this.#connectPanel(waiting)
     const support = browserSupport()
-    if (support !== "usb" && this.installer.state.phase === "idle") return this.#show("unsupported", { text: say(`setup.unsupported_${support}`) })
     const state = this.installer.state
+    if (support !== "usb" && state.phase === "idle") return this.#elsewhere(support)
     const panel = PANELS[state.phase]
     const name = this.#name(state)
-    if (panel === "start") this.installTarget.disabled = state.phase !== "idle"
+    if (panel === "start") this.#start(state)
     if (panel === "drive") this.#drive(state, name)
     if (panel === "writing") this.writingTextTarget.textContent = state.version ? say("setup.writing", { version: state.version, name }) : say("setup.downloading", { name })
-    if (panel === "connect") this.#connectPanel(state, name)
-    this.#show(panel, { notice: this.failure ?? state.notice })
+    this.#show(panel, { notice: this.#onThisSystem(this.failure ?? state.notice) })
+  }
+
+  #start(state) {
+    const { ready, checks } = bluetoothReadiness()
+    this.installTarget.disabled = state.phase !== "idle"
+    this.phoneAheadTarget.hidden = ready || checks.flag === "missing"
+  }
+
+  #elsewhere(support) {
+    if (support === "phone" && bluetoothReadiness().ready) return this.#show("phone")
+    this.#show("unsupported", { text: say(`setup.unsupported_${support}`) })
   }
 
   #drive(state, name) {
@@ -216,11 +238,79 @@ export default class extends Controller {
     this.chooseDriveTarget.disabled = state.phase !== "drive"
   }
 
-  #connectPanel(state, name) {
-    this.connectTextTarget.textContent = say(state.trusted ? "setup.installed_trusted" : "setup.installed", { name })
-    const code = tagText(state.tag) ?? "…"
-    this.connectHintTarget.textContent = say("setup.choose_in_list", { name: state.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}` })
-    this.connectTarget.hidden = !hasWebBluetooth()
+  #connectPanel(waiting) {
+    const name = this.#name(waiting)
+    const { ready, checks } = bluetoothReadiness()
+    const installing = browserSupport() === "usb"
+    if (!ready && !installing) return this.#show("unsupported", { text: say("setup.resumed_no_bluetooth", { name }), copy: true })
+    const code = tagText(waiting.tag) ?? "…"
+    const listed = waiting.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}`
+    this.connectTarget.hidden = !ready
+    this.anotherTarget.hidden = !installing || (ready && waiting.from !== "tab")
+    this.handoffTarget.hidden = ready
+    if (ready) {
+      this.connectTextTarget.textContent = say(waiting.from === "code" ? "setup.resumed" : waiting.trusted ? "setup.installed_trusted" : "setup.installed", { name })
+      this.connectHintTarget.textContent = say("setup.choose_in_list", { name: listed })
+    } else {
+      this.connectTextTarget.textContent = say("setup.installed_no_bluetooth", { name })
+      this.handoffCodeTarget.src = this.#handoffCode(waiting)
+      this.handoffTextTarget.textContent = say("setup.handoff.scan", { name: listed })
+      this.connectHintTarget.textContent = say(checks.flag === "missing" ? "setup.connect_after_flag" : "setup.connect_after_adapter")
+      this.#handOff(waiting, checks)
+    }
+    this.#show("connect", { notice: this.failure })
+  }
+
+  #handoffCode({ product, tag }) {
+    const query = new URLSearchParams({ installed: product })
+    if (tag !== null && tag !== undefined) query.set("tag", tag.toString(16).padStart(4, "0"))
+    return `${this.handoffValue}?${query}`
+  }
+
+  #handOff({ product }, checks) {
+    if (this.handedOff) return
+    this.handedOff = true
+    const cause = checks.flag === "missing" ? "flag" : checks.adapter === "missing" ? "adapter" : "browser"
+    sharedJournal().record("installer.handed_off", { product, cause })
+  }
+
+  #awaiting() {
+    const state = this.installer.state
+    if (state.phase === "installed") return state
+    return state.phase === "idle" ? this.resumed : null
+  }
+
+  #installerChanged(state) {
+    if (state.phase === "installed") {
+      const { product, tag, trusted } = state
+      this.#storage()?.setItem(INSTALLED_KEY, JSON.stringify({ product, tag, trusted }))
+    }
+    this.#render()
+  }
+
+  #handedOver() {
+    if (!this.installedValue) return null
+    return { product: this.installedValue, tag: this.tagValue ? parseInt(this.tagValue, 16) : null, trusted: false, from: "code" }
+  }
+
+  #recalled() {
+    const stored = this.#storage()?.getItem(INSTALLED_KEY)
+    return stored ? { ...JSON.parse(stored), from: "tab" } : null
+  }
+
+  #forget() {
+    this.resumed = null
+    this.handedOff = false
+    this.#storage()?.removeItem(INSTALLED_KEY)
+  }
+
+  #storage() {
+    try {
+      return window.sessionStorage
+    } catch (error) {
+      console.warn("This browser blocks site data, so the setup forgets the unit it installed on a reload:", error.message)
+      return null
+    }
   }
 
   #onboarding() {
@@ -301,6 +391,7 @@ export default class extends Controller {
 
   #finished() {
     sharedJournal().record("installer.finished", { kind: this.#case(), saved: Boolean(this.saving) })
+    this.#forget()
     this.saving = false
     this.#stage({ stage: "done" })
   }
@@ -322,14 +413,26 @@ export default class extends Controller {
     this.#show("done")
   }
 
+  #linux() {
+    const linux = onDesktopLinux(navigator)
+    for (const each of this.linuxTargets) each.hidden = !linux
+    this.bluetoothFirstTarget.hidden = bluetoothReadiness().checks.flag !== "missing"
+  }
+
+  #onThisSystem(notice) {
+    return notice?.key === "port_busy" && onDesktopLinux(navigator) ? { ...notice, key: "port_busy_linux" } : notice
+  }
+
   #name({ product, tag }) {
     if (!product) return say("setup.the_device")
     return [PRODUCT_WORDS[product], tagText(tag)].filter(Boolean).join(" ")
   }
 
-  #show(panel, { text = null, notice = null, scopes = SETUP_NOTICES } = {}) {
+  #show(panel, { text = null, notice = null, scopes = SETUP_NOTICES, copy = false } = {}) {
     for (const each of this.panelTargets) each.hidden = each.dataset.panel !== panel
     if (panel === "unsupported") this.unsupportedTextTarget.textContent = text
+    this.copyLinkTarget.hidden = !copy
+    this.byHandLinkTarget.hidden = copy
     const step = STEPS[panel]
     for (const item of this.stepsTarget.children) {
       if (item.dataset.step === step) item.setAttribute("aria-current", "step")
@@ -337,11 +440,11 @@ export default class extends Controller {
     }
     this.stepsTarget.hidden = panel === "unsupported"
     const message = notice ? sayNotice(notice, ...scopes) : ""
-    const running = panel === "unsupported" || notice?.key === "port_closed"
+    const running = (panel === "unsupported" || notice?.key === "port_closed") && bluetoothReadiness().ready
     this.messageTarget.hidden = !message && !running
     this.messageTextTarget.hidden = !message
     this.messageTextTarget.textContent = message
-    this.connectRunningTarget.hidden = !running || !hasWebBluetooth()
+    this.connectRunningTarget.hidden = !running
   }
 
   #path(slug) {

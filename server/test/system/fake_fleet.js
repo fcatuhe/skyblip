@@ -544,6 +544,7 @@
     units: [],
     pick: null,
     asked: [],
+    adapter: true,
     add(options) {
       const unit = new Unit(options);
       this.units.push(unit);
@@ -557,17 +558,21 @@
   const matches = (unit, filters) => filters.some(({ name, namePrefix, services }) =>
     (name && unit.name === name) || (namePrefix && unit.name.startsWith(namePrefix)) || Boolean(services));
 
-  window.fakeFleet = fleet;
-  Object.defineProperty(navigator, 'bluetooth', {
-    configurable: true,
-    value: {
-      requestDevice: async ({ filters }) => {
-        fleet.asked.push(filters);
-        const unit = (fleet.pick && fleet.unit(fleet.pick)) || fleet.units.find(each => matches(each, filters));
-        fleet.pick = null;
-        if (!unit || !matches(unit, filters)) throw Object.assign(new Error('User cancelled the requestDevice() chooser.'), { name: 'NotFoundError' });
-        return unit.device;
-      },
+  const bluetooth = Object.assign(new EventTarget(), {
+    getAvailability: async () => fleet.adapter,
+    requestDevice: async ({ filters }) => {
+      fleet.asked.push(filters);
+      const unit = (fleet.pick && fleet.unit(fleet.pick)) || fleet.units.find(each => matches(each, filters));
+      fleet.pick = null;
+      if (!unit || !matches(unit, filters)) throw Object.assign(new Error('User cancelled the requestDevice() chooser.'), { name: 'NotFoundError' });
+      return unit.device;
     },
   });
+  fleet.plugAdapter = present => {
+    fleet.adapter = present;
+    bluetooth.dispatchEvent(Object.assign(new Event('availabilitychanged'), { value: present }));
+  };
+
+  window.fakeFleet = fleet;
+  Object.defineProperty(navigator, 'bluetooth', { configurable: true, value: bluetooth });
 })();

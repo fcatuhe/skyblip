@@ -25,3 +25,11 @@ test('only the releases of the unit\'s channel count, and an unknown version sho
   assert.deepEqual(changesSince(sections, { channel: 'development', running: '0.1.0+1677', offered: '0.1.0+1693' }), [sections[0]]);
   assert.deepEqual(changesSince(sections, { channel: 'development', running: null, offered: '0.1.0+1693' }), []);
 });
+
+test('a development build offered a release lists the release\'s news, and none of the builds of main', () => {
+  const sections = [section('0.8.0'), section('0.1.0+2403', 'development'), section('0.1.0+2399', 'development')];
+
+  const shown = changesSince(sections, { channel: 'release', running: '0.1.0+2328', offered: '0.8.0+2405' });
+
+  assert.deepEqual(shown.map(({ dataset }) => dataset.version), ['0.8.0']);
+});

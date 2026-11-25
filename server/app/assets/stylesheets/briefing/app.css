@@ -106,9 +106,9 @@
     .app-shell--rail .app-main { padding-inline: var(--space-3xl); }
   }
 
-  .app-shell--rail:not(:has(.fleet-unit, .fleet-actions > :not([hidden]), .fleet-notice:not([hidden]))) { grid-template-columns: minmax(0, 1fr); }
-  .app-shell--rail:not(:has(.fleet-unit, .fleet-actions > :not([hidden]), .fleet-notice:not([hidden]))) > .fleet--rail { display: none; }
-  .app-shell--rail:not(:has(.fleet-unit, .fleet-actions > :not([hidden]), .fleet-notice:not([hidden]))) > .app-main { grid-column: auto; margin-inline: auto; }
+  .app-shell--rail:not(:has(.fleet-unit, .fleet-actions > :not([hidden]), .fleet-notice:not([hidden]), .bluetooth-check:not([hidden]))) { grid-template-columns: minmax(0, 1fr); }
+  .app-shell--rail:not(:has(.fleet-unit, .fleet-actions > :not([hidden]), .fleet-notice:not([hidden]), .bluetooth-check:not([hidden]))) > .fleet--rail { display: none; }
+  .app-shell--rail:not(:has(.fleet-unit, .fleet-actions > :not([hidden]), .fleet-notice:not([hidden]), .bluetooth-check:not([hidden]))) > .app-main { grid-column: auto; margin-inline: auto; }
 
   .app-main h1 {
     font-family: var(--font-display);
@@ -116,11 +116,6 @@
     letter-spacing: -0.015em;
     line-height: 1.25;
     margin: 0;
-  }
-
-  .app-foot {
-    margin-block: var(--space-xl) 0;
-    font-size: var(--text-s);
   }
 
   .button-app {

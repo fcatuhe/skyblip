@@ -1,0 +1,80 @@
+---
+title: "Warum ADS-L, wenn es ADS-B und UAT schon gibt?"
+nav_title: Warum ADS-L
+slug: blog/warum-ads-l
+description: "ADS-B braucht einen zugelassenen Transponder, UAT ist in Europa nicht freigegeben, ADS-L läuft mit Akku. Warum skyBlip ADS-L wählt und wo ADS-B passt."
+published_on: "2026-10-26"
+parent: blog
+updated_on: "2026-10-26"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 26. Oktober 2026</p>
+  <h1>Warum ADS-L, wenn es ADS-B und UAT schon gibt?</h1>
+  <p class="lede">Piloten fragen uns das oft: Warum auf ADS-L setzen statt auf ADS-B, einen weltweiten Standard mit zugelassener Ausrüstung, oder auf UAT, das die USA für Leichtflugzeuge nutzen? Die Antwort lautet: Strom, Papierkram und Preis. ADS-B behält seinen Platz, und beide treffen sich im Cockpit.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Strom</h2>
+  <h3>Ein Akku kann ADS-L tragen. ADS-B nicht.</h3>
+  <p>ADS-B auf 1090&nbsp;MHz kommt aus einem Transponder, der mit 70 bis 500&nbsp;W sendet. Der tragbare SkyEcho&nbsp;2 sendet mit 20&nbsp;W. UAT auf 978&nbsp;MHz beginnt in seiner schwächsten Klasse bei 7&nbsp;W. ADS-L sendet in seinem Hauptband mit höchstens 25&nbsp;mW, tausendmal weniger als der schwächste von ihnen.</p>
+  <p>Dieser Unterschied entscheidet, wer mitmachen kann. Ein Segelflugzeug, ein Gleitschirm, ein Ultraleicht mit kleiner Batterie oder eine Drohne kann einen 20-W-Sender nicht einen ganzen Flug lang versorgen. Ein Taschengerät mit 25&nbsp;mW läuft einen Tag lang mit einem Akku in Smartphone-Größe. Auf unserem Prüfstand lief unser Go abgestellt 18&nbsp;Stunden, der Go+ 49&nbsp;Stunden.</p>
+  <p>Die geringe Leistung hat ihren Preis: ADS-L reicht einige Kilometer weit, ADS-B Dutzende nautische Meilen. Um die Luftfahrzeuge zu sehen, die mit Ihnen zusammenstoßen könnten, zählen diese Kilometer. Go warnt innerhalb von 3&nbsp;km.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Papierkram</h2>
+  <h3>ADS-L braucht keine Zulassung. ADS-B und UAT schon.</h3>
+  <p>ADS-L nutzt das 868-MHz-Kurzstreckenband, das in der ganzen EU gemeinsam und lizenzfrei genutzt wird, dasselbe Band wie FLARM. Der Hersteller erklärt, dass sein Gerät die Spezifikation der EASA erfüllt. Niemand muss das Gerät oder seinen Besitzer genehmigen.</p>
+  <p>ADS-B sendet in einem geschützten Flugfunkband. In Europa darf ein tragbarer ADS-B-Sender überhaupt nicht senden: Der SkyEcho&nbsp;2 sendet nur im Vereinigten Königreich, in Australien und in Neuseeland und arbeitet anderswo nur als Empfänger. Ein eingebauter Sender braucht einen zugelassenen Transponder, eine zugelassene Positionsquelle, damit er der Flugsicherung nützt, und einen Prüfer, der ihn freigibt.</p>
+  <p>UAT ist in Europa nicht freigegeben. Das sagt die Sammlung der Standardänderungen der EASA selbst: »Die Frequenz von 978&nbsp;MHz für UAT-Sender wird zwar [&hellip;] in den USA genutzt, ist aber derzeit in der EU nicht standardisiert [&hellip;] UAT darf nur in einigen EU-Mitgliedstaaten betrieben werden.« Militärische TACAN- und DME-Stationen nutzen das Band noch, und es freizumachen ist eine Sache von Jahren.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Preis</h2>
+  <h3>Sichtbarkeit ist nur so viel wert wie die Zahl der Piloten, die sie nutzen.</h3>
+  <p>Ein System, das andere sieht und zeigt, funktioniert nur, wenn die anderen senden. Der Segelflug hat das mit FLARM erreicht, weil fast jedes Segelflugzeug eines hat. Die Allgemeine Luftfahrt und die UL-Szene haben es mit keinem System erreicht, weil die Geräte Hunderte oder Tausende Euro kosteten oder einen Nachmittag Einrichtung brauchten.</p>
+  <p>ADS-L läuft auf Hardware für das Hobbynetz Meshtastic, die zu Zehntausenden verkauft wird. Deshalb kostet ein Go ab 68&nbsp;€. Kein ADS-B-Sender wird diesem Preis nahekommen.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Wo jedes System passt</h2>
+  <h3>ADS-B für alle, die mit Verkehrsflugzeugen fliegen, ADS-L für alle, die tief fliegen.</h3>
+  <p>So sehen wir die Landschaft sich ordnen:</p>
+  <ul>
+    <li><strong>ADS-B</strong> für die gewerbliche und schwerere Luftfahrt und für jedes Luftfahrzeug, das im kontrollierten Luftraum fliegt, wo Flugsicherung und TCAS es lesen.</li>
+    <li><strong>ADS-L</strong> für die Allgemeine Luftfahrt, den Luftsport und Drohnen, im unkontrollierten Luftraum in geringer Höhe und im U-Space, wo SERA.6005(c) es bereits als Mittel zur elektronischen Sichtbarkeit nennt.</li>
+    <li><strong>Beides</strong> für Piloten, die in beiden Welten fliegen und bereit sind, ADS-B Out und In einzubauen.</li>
+  </ul>
+  <p>Die beiden sprechen nicht per Funk miteinander. Ein Garmin GTX&nbsp;345 hört keinen Go, und ein Go hört keinen GTX&nbsp;345. Sie treffen sich im Empfänger. skyBlip Bravo hört auf 1090&nbsp;MHz und zeigt, mit einem Go gekoppelt, ADS-B-, ADS-L- und FLARM-Verkehr auf einem Radar. Dieses Paar ist <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Damit erscheinen ADS-B-Luftfahrzeuge in Dutzenden nautischen Meilen Entfernung, manchmal fast hundert, weil ihre Sender so stark sind.</p>
+  <p>Bodenstationen können den Rest der Lücke schließen. ADS-L sieht einen Uplink vom Boden vor, der ADS-B-Verkehr und Wetter an ADS-L-Empfänger weiterleiten kann. Bisher senden ihn nur wenige Stationen, und Frankreich hat fast keine. Unsere <%= link_to_page "roadmap", label: "skyPost-Stationen" %> sollen welche hinzufügen.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Quellen</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, Issue 2, Anhang zur Leistung.
+      <span class="support">Sendeleistung im M-Band von 12 bis 14&nbsp;dBm ERP, also 16 bis 25&nbsp;mW.</span>
+    </li>
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/sites/default/files/dfu/cs-stan_issue_4.pdf">CS-STAN Issue 4</a>, CS-SC057a.
+      <span class="support">UAT in der EU nicht standardisiert, SRD-Bänder lizenzfrei.</span>
+    </li>
+    <li>
+      <strong>ICAO</strong> &middot; Anhang 10, Band IV, Transponderklassen, und Band III, Kapitel 12, Klassen der UAT-Sender.
+      <span class="support">70 bis 500&nbsp;W für Transponder, ab 7&nbsp;W für UAT.</span>
+    </li>
+    <li>
+      <strong>uAvionix</strong> &middot; Produktseite des SkyEcho&nbsp;2 bei einem europäischen Händler, abgerufen am 26. Oktober 2026.
+      <span class="support">20&nbsp;W 1090ES, Senden nur im Vereinigten Königreich, in Australien und in Neuseeland erlaubt.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/who-sees-ads-l", class: "cta cta--next" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
