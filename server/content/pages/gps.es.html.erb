@@ -2,56 +2,56 @@
 title: "Posición GPS y estado de vuelo del skyBlip Go"
 slug: gps
 nav_title: "GPS"
-description: "Cómo valida y estabiliza skyBlip Go la posición GPS, se sincroniza con PPS y detecta el vuelo solo por la velocidad respecto al suelo."
+description: "Cómo comprueba skyBlip Go la posición GPS, espera a que se estabilice, usa el PPS para la hora y detecta el vuelo solo por la velocidad respecto al suelo."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Posición validada y vuelo según la velocidad.</h1>
-  <p class="lede">Un skyBlip Go necesita su posición y su hora antes de transmitir una posición por ADS-L. Comprueba los datos que envía el receptor GPS, espera a que se estabilicen y decide si la aeronave está en vuelo a partir de la velocidad respecto al suelo. Esa decisión cambia la frecuencia de transmisión y determina si permite una actualización.</p>
+  <h1>El Go comprueba la posición GPS y determina el estado de vuelo solo por la velocidad respecto al suelo.</h1>
+  <p class="lede">Para transmitir tu posición por ADS-L, skyBlip Go necesita su posición GPS y la hora. Comprueba los datos del receptor GPS y espera a que se estabilicen antes de transmitir. Usa la velocidad respecto al suelo para determinar si tu aeronave está en vuelo o en tierra. Ese estado determina el ritmo de transmisión y las actualizaciones permitidas.</p>
 </section>
 
 <section>
   <h2 class="kicker">La posición GPS</h2>
 
-  <h3 id="fix">Una solución no basta para tener una posición válida.</h3>
-  <p class="lede">El receptor GPS envía una solución cada segundo, vea o no el cielo. El Go solo la acepta como posición válida tras sus propias comprobaciones. Las dos tramas que llevan la posición y la fecha deben estar presentes y ser recientes. La fecha no puede ser la de 1980 que algunos receptores envían por defecto antes de conocerla. La distancia a la posición anterior debe ser plausible. El receptor también indica si considera válida su solución, pero el Go toma su propia decisión.</p>
-  <p class="lede">El Go usa un receptor Quectel L76K. Bravo usa un Airoha AG3335. Ambos envían sus lecturas en el mismo formato de tramas NMEA, que interpreta el mismo analizador.</p>
+  <h3 id="fix">El Go comprueba los datos antes de aceptar una posición GPS.</h3>
+  <p class="lede">El receptor GPS envía dos soluciones por segundo, vea o no el cielo. El Go solo acepta ese conjunto de datos como posición GPS tras sus propias comprobaciones. Las dos tramas que llevan la posición y la fecha deben estar presentes y ser recientes. La fecha no puede ser la de 1980 que algunos receptores envían por defecto antes de conocerla. La distancia a la posición anterior debe ser plausible. El receptor también debe considerar válida su solución, y el Go añade sus propias comprobaciones.</p>
+  <p class="lede">El Go usa un receptor Quectel L76K. Bravo usa un Airoha AG3335. Ambos envían sus datos en tramas con formato NMEA, también llamadas sentencias NMEA. El Go y Bravo usan el mismo analizador para leerlas.</p>
 
-  <h3 id="waiting">Tres mensajes mientras espera.</h3>
-  <p class="lede"><span class="mono">NO FIX</span> por sí solo no te dice si la antena está bajo el techo de un hangar, si el receptor ha dejado de enviar datos o si faltan veinte segundos para obtener la posición. El Go lee las tramas que ya llegan y muestra un mensaje que indica si conviene moverlo, esperar o llevarlo al banco de pruebas:</p>
+  <h3 id="waiting">Tres mensajes te orientan mientras esperas.</h3>
+  <p class="lede"><span class="mono">NO FIX</span> no te dice si la antena está bajo el techo de un hangar, si el receptor no envía datos o si la posición llegará dentro de veinte segundos. El Go examina las tramas recibidas. Muestra un mensaje para indicarte si debes mover el dispositivo, esperar o llevarlo a revisar en el banco de pruebas:</p>
 
   <div class="table-scroll">
     <table class="modules">
       <thead>
-        <tr><th>Mensaje</th><th>Qué detecta el Go</th><th>Qué hacer</th></tr>
+        <tr><th>Mensaje</th><th>Qué recibe el Go</th><th>Qué hacer</th></tr>
       </thead>
       <tbody>
-        <tr><th>GPS OFF</th><td>No hay tramas recientes del receptor</td><td>Lleva el equipo al banco de pruebas. Despejar la vista del cielo no hará que el receptor vuelva a enviar tramas</td></tr>
-        <tr><th>MOVE OUT</th><td>Llegan soluciones sin una fecha utilizable</td><td>Lleva el equipo a un lugar donde la antena tenga una vista más despejada del cielo</td></tr>
-        <tr><th>FINDS FIX</th><td>El receptor ha decodificado una fecha utilizable</td><td>Deja el equipo donde está. El receptor ha leído el mensaje de navegación de un satélite, pero le falta la geometría para calcular la posición</td></tr>
+        <tr><th>GPS OFF</th><td>No hay tramas recientes del receptor</td><td>Lleva el dispositivo a revisar en el banco de pruebas. Una vista más despejada del cielo no hará que lleguen datos del receptor</td></tr>
+        <tr><th>MOVE OUT</th><td>Llegan soluciones sin una fecha utilizable</td><td>Mueve el dispositivo para que la antena tenga una vista despejada del cielo</td></tr>
+        <tr><th>FINDS FIX</th><td>El receptor ha decodificado una fecha utilizable</td><td>Deja el dispositivo donde está. El receptor ha leído el mensaje de navegación de un satélite, pero la geometría de los satélites recibidos aún no permite calcular una posición GPS</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p class="lede"><span class="mono">FINDS FIX</span> te indica que esperar puede ayudar. La fecha procede del mensaje de navegación de los satélites. Decodificarla es un paso más que no recibir ninguna señal utilizable. La pantalla de estado añade el tiempo que lleva en la fase actual, hasta 9:59. El círculo del radar y la lista NEARBY solo muestran el mensaje, para no redibujar parte de la pantalla cada segundo mientras no hay posición.</p>
+  <p class="lede"><span class="mono">FINDS FIX</span> te indica que esperar puede ayudar. El receptor ha decodificado la fecha del mensaje de navegación de los satélites. Ha avanzado respecto a la ausencia de una señal utilizable. La pantalla de estado también indica el tiempo que lleva en la fase actual, hasta 9:59. El círculo del radar y la lista NEARBY solo muestran el mensaje. Así se evita redibujar parte de la pantalla cada segundo mientras el dispositivo no tiene una posición GPS.</p>
 
   <figure class="shot">
     <%= screen_image_tag "no-fix.png", alt: "Pantalla del radar sin posición: el círculo vacío muestra NO FIX y, debajo, el estado del receptor" %>
     <figcaption>Aún no hay posición, pero el receptor ha decodificado una fecha</figcaption>
   </figure>
 
-  <h3 id="settle">Transmite cuando se estabiliza la posición.</h3>
+  <h3 id="settle">El Go espera a que se estabilice la posición GPS antes de transmitir.</h3>
   <p class="lede">Al arrancar en frío, un receptor puede dar soluciones que cambian de posición, altitud y sobre todo velocidad respecto al suelo durante varios segundos. Esa velocidad también activa el estado en vuelo. Si el dispositivo transmitiera demasiado pronto, podría difundir una trayectoria que la aeronave nunca recorrió, al ritmo de vuelo mientras está estacionada.</p>
-  <p class="lede">El Go comprueba si las soluciones se estabilizan en lugar de esperar un tiempo fijo. Cada segundo predice la posición siguiente a partir de la anterior, a velocidad y régimen de viraje constantes, y compara la predicción con la nueva posición. Empieza a transmitir después de tres predicciones consecutivas con un error inferior a 12&nbsp;m. Doce metros en un segundo equivalen a 12&nbsp;m/s, el umbral de despegue. Así, el límite de error está ligado a la decisión de vuelo que protege. Una solución 2D no cuenta para la estabilización porque no mide su altitud. Si el receptor no se estabiliza, la transmisión empieza a los 20&nbsp;s de la primera posición, o a los 5&nbsp;s de una pérdida breve. La espera tiene un límite porque sería peor no transmitir nunca.</p>
+  <p class="lede">El Go comprueba si las soluciones se estabilizan en lugar de esperar un tiempo fijo. Cada segundo predice la posición siguiente a partir de la anterior. Supone que la velocidad y el régimen de viraje se mantienen constantes y compara la predicción con la nueva posición. Empieza a transmitir después de tres predicciones consecutivas con un error inferior a 12&nbsp;m. Doce metros en un segundo equivalen a 12&nbsp;m/s, el umbral de despegue. Así, el límite de error está ligado a la decisión de vuelo que protege. Una solución 2D no cuenta para esta comprobación porque no aporta una altitud medida. Si el receptor no se estabiliza, la transmisión empieza a los 20&nbsp;s de la primera posición, o a los 5&nbsp;s de una pérdida breve. La espera tiene un límite porque sería peor no transmitir nunca.</p>
 
-  <h3 id="deadline">La posición tiene que llegar antes de los 450&nbsp;ms.</h3>
+  <h3 id="deadline">La posición tiene que llegar antes de los 450&nbsp;ms desde el inicio del segundo.</h3>
   <p class="lede">El Go no puede usar la solución del segundo actual hasta que el receptor envía la última trama. La primera transmisión posible es a los 450&nbsp;ms del inicio de ese segundo. El receptor empieza a enviar a los 70&nbsp;ms aproximadamente. A su velocidad de arranque de 9600&nbsp;baud, los 320 bytes de la posición tardan 333&nbsp;ms en llegar. Solo quedan 47&nbsp;ms de margen. En el banco de pruebas, un equipo con 22 satélites completó la posición a los 780&nbsp;ms. Se rechazó toda transmisión programada antes.</p>
   <p class="lede">Por eso, el Go cambia el receptor a 115200&nbsp;baud, la velocidad más alta documentada para su orden de configuración. Así, la misma posición tarda 28&nbsp;ms en llegar. La orden no tiene acuse de recibo, así que el Go comprueba si llega una trama válida a la nueva velocidad. Si no llega ninguna, vuelve a la anterior.</p>
-  <p class="lede">La pantalla de satélites muestra una barra de señal por satélite. Las tramas con esos niveles también retrasan la posición, así que el Go solo las solicita mientras esa pantalla está abierta, una vez cada cinco segundos. Los recuentos siguen actualizándose cada segundo. El receptor produce una solución por segundo. Cinco soluciones por segundo no adelantarían la primera posición y añadirían ruido a las lecturas.</p>
+  <p class="lede">La pantalla de satélites muestra una barra de señal por satélite. Las tramas con esos niveles también retrasan la posición, así que el Go solo las solicita mientras esa pantalla está abierta, una vez cada cinco segundos. Los recuentos siguen actualizándose cada segundo. El receptor calcula dos soluciones por segundo, una al inicio del segundo y otra al medio segundo. ADS-L fecha cada posición en un cuarto de segundo, con una diferencia máxima de 10&nbsp;ms respecto al instante en que la midió el receptor, y no transmite ninguna posición medida más de 500&nbsp;ms antes. Por eso la solución del inicio del segundo solo sirve para transmitir hasta los 490&nbsp;ms, reservando 10&nbsp;ms para la propia transmisión. La del medio segundo sirve para el resto de la ventana. El receptor ignora una solicitud de cuatro soluciones por segundo. Con cinco por segundo, solo la del inicio del segundo coincide con un cuarto de segundo. Nuestras <%= link_to_page "ads-l/questions", label: "preguntas abiertas a la EASA" %> plantean si esta es la interpretación correcta de la regla.</p>
 
   <figure class="shot">
     <%= screen_image_tag "satellites.png", alt: "Pantalla de satélites: una barra por satélite agrupada por constelación y una línea de puntos a 40 dB-Hz" %>
@@ -59,20 +59,20 @@ updated_on: "2026-11-20"
   </figure>
 
   <h3 id="pps">El PPS marca el inicio del segundo.</h3>
-  <p class="lede">El receptor GPS da un pulso por segundo, o PPS. Cada pulso marca el inicio de un segundo UTC y sirve de referencia para cada <%= link_to_page "timing", label: "ventana de radio" %>. Si cesan los pulsos, el Go deja de transmitir 1,2&nbsp;s después del último pulso, en el primer segundo sin pulso. Las ventanas de radio siguen funcionando a partir del último pulso durante 60&nbsp;s, solo para recibir. Si no vuelve ningún pulso, cada página muestra <span class="mono">NO TX</span> sobre <span class="mono">PPS</span> 11,2&nbsp;s después del último pulso, es decir, 10&nbsp;s después de detenerse la transmisión (<%= link_to_page "radar", label: "Cuando el Go no transmite", anchor: "no-tx" %>). Un solo pulso ausente pausa la transmisión durante ese segundo sin que aparezca la marca. La transmisión se reanuda cuando vuelven los pulsos, siempre que se cumplan los demás requisitos.</p>
+  <p class="lede">El receptor GPS da un pulso por segundo, o PPS. Cada pulso marca el inicio de un segundo UTC y sirve de referencia para cada <%= link_to_page "timing", label: "ventana de radio" %>. Si cesan los pulsos, el Go deja de transmitir 1,2&nbsp;s después del último pulso, en el primer segundo sin pulso. Las ventanas de radio siguen funcionando a partir del último pulso durante 60&nbsp;s, solo para recibir. Si no vuelve ningún pulso, cada página muestra <span class="mono">NO TX</span> sobre <span class="mono">PPS</span> 11,2&nbsp;s después del último pulso, es decir, 10&nbsp;s después de detenerse la transmisión (<%= link_to_page "radar", label: "Cuando el Go no transmite", anchor: "no-tx" %>). Si falta un solo pulso, la transmisión se pausa durante ese segundo sin que aparezca NO TX sobre PPS. La transmisión se reanuda cuando vuelven los pulsos, siempre que se cumplan los demás requisitos.</p>
   <p class="lede">Aún no se ha comprobado si el L76K sigue dando pulsos sin posición. La documentación describe el pulso, pero no dice si se interrumpe al perder la posición. El chip admite ambos comportamientos y el Go no lo configura. Hace falta una prueba en banco para saber qué ocurre cuando se pierde la posición.</p>
 </section>
 
 <section>
   <h2 class="kicker">El estado de vuelo</h2>
 
-  <h3 id="flight">En vuelo o en tierra, solo según la velocidad respecto al suelo.</h3>
+  <h3 id="flight">Solo la velocidad respecto al suelo determina el estado de vuelo.</h3>
   <p class="lede">El Go decide si la aeronave está en vuelo a partir de la velocidad respecto al suelo que llega con cada posición. No usa la altitud, la velocidad vertical ni el barómetro para decidirlo. Los umbrales separados impiden que un pequeño cambio de velocidad haga oscilar el estado:</p>
 
   <div class="table-scroll">
     <table class="modules">
       <thead>
-        <tr><th>Estado</th><th>Condición</th><th>Por qué ese valor</th></tr>
+        <tr><th>Estado</th><th>Condición</th><th>Motivo del umbral</th></tr>
       </thead>
       <tbody>
         <tr><th>Despegue</th><td>12&nbsp;m/s o más (23&nbsp;kt)</td><td>Un remolcador que vuelve deprisa a la parrilla de salida rueda a 10&nbsp;m/s. Un planeador remolcado despega a unos 20&nbsp;m/s</td></tr>
@@ -87,7 +87,7 @@ updated_on: "2026-11-20"
   <%= render "shared/flight_state" %>
 
   <p class="lede">El margen entre 12 y 1&nbsp;m/s importa cuando hay viento. Un planeador que gira con un viento de 15&nbsp;m/s puede pasar de 5&nbsp;m/s contra el viento a 40&nbsp;m/s a favor en cada giro. Un único umbral entre esas velocidades detectaría aterrizajes y despegues repetidos. Exigir 10&nbsp;s por debajo de 8&nbsp;m/s lo evita en el giro del ejemplo: con un viento de 20&nbsp;m/s, un planeador que gira a 22&nbsp;m/s pasa unos 3&nbsp;s de un giro de 25&nbsp;s por debajo del umbral de aterrizaje.</p>
-  <p class="lede">Una regla anterior también detectaba vuelo por encima de 2000&nbsp;m. Un equipo estacionado en Courchevel, a 2008&nbsp;m, quedaba siempre en vuelo. La velocidad respecto al suelo evita ese problema con la altitud, pero la calidad de la posición sigue importando. Una posición de mala calidad pesa menos como indicio de vuelo. Se ignora un salto de velocidad de más de cuatro veces entre posiciones consecutivas. Los indicios de estar en tierra no se reducen nunca, porque reducir una velocidad no debe inventar un aterrizaje. La primera posición después del encendido decide de inmediato. Entre los umbrales, el Go elige el estado en tierra, porque es habitual encenderlo mientras remolcan el planeador a la parrilla de salida.</p>
+  <p class="lede">Una regla anterior también detectaba vuelo por encima de 2000&nbsp;m. Un equipo estacionado en Courchevel, a 2008&nbsp;m, quedaba siempre en vuelo. La velocidad respecto al suelo evita ese problema con la altitud, pero la calidad de la posición sigue importando. Una posición de mala calidad pesa menos como indicio de vuelo. Se ignora un salto de velocidad de más de cuatro veces entre posiciones consecutivas. Los indicios de estar en tierra no se reducen nunca, porque reducir una velocidad no debe inventar un aterrizaje. El Go elige un estado de vuelo en cuanto recibe la primera posición después del encendido. Si la velocidad está entre los umbrales, elige el estado en tierra. Es habitual encenderlo mientras remolcan el planeador a la parrilla de salida.</p>
 
   <h3 id="changes">Qué cambia con el estado.</h3>
   <div class="table-scroll">
@@ -97,25 +97,25 @@ updated_on: "2026-11-20"
       </thead>
       <tbody>
         <tr><th>Posiciones transmitidas</th><td>A intervalos de 9 y luego 11&nbsp;s</td><td>Cada segundo</td></tr>
-        <tr><th>Alerta de tráfico</th><td>En silencio</td><td>Se evalúa si el tráfico justifica alertas. Consulta <%= link_to_page "traffic", label: "tráfico", anchor: "ground" %></td></tr>
-        <tr><th>Actualizaciones, ajustes desde el móvil y descarga del registro de vuelos</th><td>Permitidos</td><td>Se rechazan nuevas actualizaciones, la descarga del registro y los ajustes que requieren pulsación. Se permiten los ajustes desde un navegador de confianza</td></tr>
+        <tr><th>Alerta de tráfico</th><td>Sin alertas</td><td>Se evalúa el tráfico para activar avisos. Consulta <%= link_to_page "traffic", label: "tráfico", anchor: "ground" %></td></tr>
+        <tr><th>Actualizaciones, ajustes desde el móvil y descarga del registro de vuelos</th><td>Permitidos</td><td>Se rechazan las nuevas actualizaciones y la descarga del registro. También se rechazan los ajustes que requieren pulsar el botón. Se permiten los ajustes desde un navegador de confianza</td></tr>
         <tr><th>Registro de vuelo</th><td>El minuto anterior de rodaje se guarda en memoria</td><td>Se registra cada segundo, incluido ese minuto anterior</td></tr>
         <tr><th>Cronómetro de vuelo</th><td>Conserva su lectura</td><td>Cuenta el tiempo en vuelo</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p class="lede">Un despegue falso bloquea las actualizaciones en tierra y consume batería al ritmo de transmisión de vuelo. Un despegue no detectado deja que una aeronave transmita en vuelo al ritmo de estacionamiento. Una vez que el Go detecta el vuelo, perder la posición no levanta el bloqueo de las actualizaciones. Solo lo levanta una detección positiva de estar en tierra. Perder la recepción al pasar sobre una cresta no permite actualizar en vuelo. Un equipo sin posición desde el encendido tiene estado desconocido y permite actualizar. Así puedes trabajar con él en el banco de pruebas bajo techo.</p>
+  <p class="lede">Un despegue falso bloquea las actualizaciones en tierra y consume batería al ritmo de transmisión de vuelo. Un despegue no detectado deja que una aeronave transmita en vuelo al ritmo de tierra. Una vez detectado el vuelo, perder la posición GPS no autoriza las actualizaciones. El Go debe confirmar primero que la aeronave vuelve a estar en tierra. Perder la recepción al pasar sobre una cresta no permite iniciar una actualización en vuelo. Si el dispositivo no ha obtenido ninguna posición desde el encendido, su estado sigue siendo desconocido y permite actualizar. Así puedes hacer pruebas con él en el banco de pruebas bajo techo.</p>
   <p class="lede">El cronómetro cuenta el tiempo en vuelo desde que encendiste el Go, no desde el último despegue. Se detiene al aterrizar y sigue en el siguiente despegue. Una toma y despegue no pone a cero el tiempo acumulado. Un aterrizaje falso solo pierde los segundos que cuenta como tiempo en tierra.</p>
 
-  <h3 id="no-roll">Cuando la velocidad respecto al suelo no basta.</h3>
-  <p class="lede">Un parapente que vuela a unos 10&nbsp;m/s respecto al aire solo lleva 5&nbsp;m/s respecto al suelo con 5&nbsp;m/s de viento de cara. Puede quedar por debajo del umbral de despegue durante todo el vuelo. Las alas delta que vuelan en ladera y los globos pueden tener el mismo problema. Con esos tipos de aeronave, el Go transmite el estado indefinido de ADS-L en lugar de en tierra. ADS-L envía ese estado al ritmo de vuelo, de modo que la transmisión nunca los identifica como estacionados. Esto no hace que el detector de velocidad declare el estado en vuelo. Su registro de vuelo tiene otra regla: empieza cuando se mueven y termina tras dos minutos sin moverse.</p>
+  <h3 id="no-roll">Una velocidad baja respecto al suelo puede ocultar un vuelo.</h3>
+  <p class="lede">Un parapente que vuela a unos 10&nbsp;m/s respecto al aire solo lleva 5&nbsp;m/s respecto al suelo con 5&nbsp;m/s de viento de cara. Puede quedar por debajo del umbral de despegue durante todo el vuelo. Las alas delta que vuelan en ladera y los globos pueden tener el mismo problema. Con esos tipos de aeronave, el Go transmite el estado indefinido de ADS-L en lugar de en tierra. En ADS-L, ese estado se transmite al ritmo de vuelo. Así, estas aeronaves nunca se anuncian como estacionadas. Eso no hace que el detector basado en la velocidad respecto al suelo pase al estado en vuelo. El registro de vuelo sigue una regla distinta: empieza cuando la aeronave se mueve y termina tras dos minutos sin moverse.</p>
   <p class="lede">Antes se usaba el ascenso barométrico para detectar estos vuelos. Se eliminó porque las rachas, los cambios de presión y los picos cuando fallaba el barómetro marcaban despegues falsos en la cola del hangar. La velocidad respecto al suelo evita esas detecciones falsas, pero puede no detectar un vuelo a baja velocidad respecto al suelo. El estado indefinido transmitido y la regla de registro separada cubren esos límites sin tomar el ascenso barométrico como prueba de vuelo.</p>
 
   <ul class="points">
-    <li>El Go comprueba cada posición en lugar de aceptar el indicador de validez del receptor</li>
+    <li>El Go comprueba cada posición además de exigir el indicador de validez del receptor</li>
     <li>GPS OFF, MOVE OUT y FINDS FIX te indican si conviene investigar, mover el Go o esperar</li>
-    <li>La transmisión empieza tras tres predicciones con un error inferior a 12&nbsp;m, con un máximo de 20&nbsp;s desde la primera posición</li>
+    <li>La transmisión empieza tras tres predicciones cuya diferencia respecto a la posición recibida es inferior a 12&nbsp;m, con una espera máxima de 20&nbsp;s desde la primera posición</li>
     <li>A 115200&nbsp;baud la posición llega antes de la primera transmisión posible</li>
     <li>El Go detecta el despegue a 12&nbsp;m/s y el aterrizaje a menos de 1&nbsp;m/s o tras 10&nbsp;s por debajo de 8&nbsp;m/s</li>
     <li>Perder la posición en vuelo no cuenta nunca como aterrizar</li>

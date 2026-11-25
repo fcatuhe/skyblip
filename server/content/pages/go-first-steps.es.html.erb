@@ -4,13 +4,13 @@ slug: primeros-pasos-go
 nav_title: "Primeros pasos con Go"
 description: "Enciende el Go, comprueba que tiene posición y aprende a leer el radar. Elige tu tipo de aeronave e introduce tu indicativo."
 parent: guides
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Tu Go, desde la primera pulsación.</h1>
-  <p class="lede">Una pulsación enciende skyBlip Go. Dos segundos lo apagan. El panel táctil cambia de pantalla y silencia las alertas.</p>
+  <h1>Enciende el Go y localiza sus mandos.</h1>
+  <p class="lede">Pulsa el botón para encender skyBlip Go. Mantenlo pulsado dos segundos para apagarlo. El panel táctil cambia de pantalla y silencia las alertas.</p>
 </section>
 
 <section>
@@ -31,12 +31,12 @@ updated_on: "2026-11-18"
       <tbody>
         <tr><th>Toca el panel táctil</th><td>Abre la pantalla siguiente. Ante una solicitud, la rechaza: equivale a CANCEL en pantalla.</td></tr>
         <tr><th>Toca el panel táctil durante 1&nbsp;s</th><td>Silencia una alerta activa. Si no hay alerta, vuelve al radar.</td></tr>
-        <tr><th>Pulsa el botón</th><td>Si está apagado, inicia el radar. En una pantalla, abre su menú. En un menú, cambia el valor seleccionado. Ante una solicitud, la acepta.</td></tr>
+        <tr><th>Pulsa el botón</th><td>Si el Go está apagado, lo enciende en la pantalla del radar. En una pantalla, abre su menú. En un menú, cambia el valor seleccionado. Ante una solicitud, la acepta.</td></tr>
         <tr><th>Mantén pulsado el botón 2&nbsp;s</th><td>Apaga el dispositivo. El logotipo permanece en pantalla.</td></tr>
         <tr><th>Haz lo mismo con el dedo en el panel táctil</th><td>Apaga el dispositivo y deja la pantalla en blanco para guardarlo. Una imagen fija durante todo el invierno deja una sombra.</td></tr>
         <tr><th>Mantén pulsado el botón y enchufa el cargador</th><td>Se enciende y se carga. Si solo lo enchufas, se carga y sigue apagado.</td></tr>
         <tr><th>Pulsa RESET</th><td>Reinicia el Go.</td></tr>
-        <tr><th>Pulsa RESET dos veces en menos de medio segundo</th><td>Abre TECHOBOOT, una unidad USB para instalar el firmware. Briefing solo lo pide si no puede reiniciar el Go por sí mismo.</td></tr>
+        <tr><th>Pulsa RESET dos veces en menos de medio segundo</th><td>Abre TECHOBOOT, una unidad USB para instalar skyBlip. Briefing solo lo pide si no puede reiniciar el Go por sí mismo.</td></tr>
       </tbody>
     </table>
   </div>
@@ -44,7 +44,7 @@ updated_on: "2026-11-18"
   <div class="feature">
     <div>
       <h3 id="light">Fíjate en el color <span class="highlight">y en el ritmo</span>.</h3>
-      <p>La luz de skyBlip solo da destellos breves para ahorrar batería. Si hay posición, el receptor de satélites ya ha localizado el dispositivo.</p>
+      <p>La luz de skyBlip solo da destellos breves para ahorrar batería. Cuando el receptor de satélites sabe dónde estás, el dispositivo ya tiene posición.</p>
     </div>
   </div>
 
@@ -65,7 +65,7 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
-  <p>La luz roja de carga permanece encendida durante la carga, parpadea si falta la batería o hay una avería y se apaga al completarse la carga.</p>
+  <p>La luz roja de carga permanece encendida durante la carga y se apaga cuando la batería está llena. Parpadea si falta la batería o está defectuosa.</p>
 </section>
 
 <section id="type" class="band band--tint">
