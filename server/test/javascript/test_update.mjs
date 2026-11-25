@@ -203,6 +203,23 @@ test('progress only moves forward and ends at the image size', async () => {
   assert.equal(seen.at(-1), IMAGE_BYTES);
 });
 
+// Each state change redraws every page open on the fleet, and a real image takes hundreds of chunks.
+test('an upload reports its progress once per percent, not once per chunk', async () => {
+  const { device, updater, until } = await connected();
+  await updater.choose(signedImage(NEWER, 100_000), 'skyblip_go-0.2.0+15.signed.bin');
+  const percents = [];
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => {
+    if (state.phase === 'uploading') percents.push(Math.floor(100 * state.progress.sent / state.progress.total));
+    return installing(state);
+  });
+  assert.ok(device.uploadOffsets.length > 300, `${device.uploadOffsets.length} chunks`);
+  assert.deepEqual(percents, [...new Set(percents)]);
+  assert.equal(percents.at(-1), 100);
+});
+
 for (const [name, arrange, reason] of [
   ['a cell below the warning refuses the upload window', { swapPowered: false }, 'low_power'],
   ['a device in flight is asked for no upload window', { flight: 'airborne' }, 'in_flight'],
