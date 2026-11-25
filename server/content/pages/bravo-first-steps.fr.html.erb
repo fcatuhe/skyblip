@@ -5,13 +5,13 @@ slug: bravo-premiers-pas
 description: "Allumez Bravo, lisez son voyant et retrouvez le trafic ADS-B dans votre application ou sur le radar du Go."
 parent: guides
 share_image: bravo
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Bravo, un bouton et un voyant.</h1>
-  <p class="lede">skyBlip Bravo vous prévient du trafic ADS-B qui approche et le transmet à votre application de navigation. Bravo reçoit seulement. Il n&rsquo;émet pas votre position.</p>
+  <p class="lede">skyBlip Bravo vous prévient du trafic ADS-B qui approche. Il le transmet à votre application de navigation. Pour le trafic aérien, Bravo ne fait que recevoir&nbsp;: il n&rsquo;émet pas votre position.</p>
 </section>
 
 <section>
@@ -30,16 +30,16 @@ updated_on: "2026-11-18"
       <thead><tr><th>Geste</th><th>Ce qui se passe</th></tr></thead>
       <tbody>
         <tr><th>Appui, appareil éteint</th><td>Allume Bravo. Un éclat vert accompagne une vibration.</td></tr>
-        <tr><th>Appui pendant un scintillement rouge rapide</th><td>Coupe l&rsquo;alarme, y compris celle du Go appairé tant que la liaison tient.</td></tr>
-        <tr><th>Appui pendant un clignotement vert rapide</th><td>Autorise un réglage ou une mise à jour demandé par un téléphone ou Briefing. Sans appui, la demande expire après 30 secondes.</td></tr>
-        <tr><th>Appui pendant un clignotement bleu rapide</th><td>Appaire Bravo avec le Go qui le demande.</td></tr>
+        <tr><th>Appui pendant un scintillement rouge rapide</th><td>Coupe l&rsquo;alarme, y compris celle du Go associé tant que la liaison reste active.</td></tr>
+        <tr><th>Appui pendant un clignotement vert rapide</th><td>Autorise le réglage ou la mise à jour que demande un téléphone ou le Briefing. Sans appui, la demande expire après 30 secondes.</td></tr>
+        <tr><th>Appui pendant un clignotement bleu rapide</th><td>Associe Bravo au Go qui le demande.</td></tr>
         <tr><th>Appui maintenu, 2&nbsp;s</th><td>Éteint Bravo. Trois éclats rouges accompagnent trois vibrations.</td></tr>
-        <tr><th>Bouton maintenu, USB-C branché, sans relâcher</th><td>Après environ 3 secondes, le voyant au-dessus du bouton devient blanc. Le X1 devient un lecteur USB nommé X1 pour installer le firmware manuellement. Briefing ne le demande que s&rsquo;il ne peut pas redémarrer Bravo lui-même.</td></tr>
+        <tr><th>Bouton maintenu, USB-C branché, sans relâcher</th><td>Après environ 3 secondes, le voyant au-dessus du bouton devient blanc. Le X1 apparaît comme un lecteur USB nommé X1 pour installer skyBlip manuellement. Le Briefing ne le demande que s&rsquo;il ne peut pas redémarrer Bravo lui-même.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p>Un appui commencé avant une demande n&rsquo;y répond pas. Un appui maintenu n&rsquo;autorise jamais une demande. Le navigateur qui a installé Bravo modifie ses réglages, le met à jour et l&rsquo;appaire sans appui. Les autres navigateurs en demandent un.</p>
+  <p>Pour répondre à une demande, appuyez après son arrivée. Maintenir le bouton ne l&rsquo;autorise jamais. Le navigateur qui a installé Bravo peut modifier ses réglages, le mettre à jour et l&rsquo;associer à un Go sans appui. Les autres navigateurs en demandent un.</p>
 
   <div class="feature">
     <div>
@@ -61,10 +61,10 @@ updated_on: "2026-11-18"
         <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Bleu, clignotement rapide</th><td>Un Go demande l&rsquo;appairage.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Deux éclats toutes les 3&nbsp;s</th><td>Un enregistrement de diagnostic est armé. La couleur indique toujours si la position est connue.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, toutes les 3&nbsp;s</th><td>Batterie faible.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, toutes les 600&nbsp;ms</th><td>Batterie critique. Batterie pleine, un récepteur de trafic ou satellite ne répond pas et Bravo refuse de démarrer.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, toutes les 600&nbsp;ms</th><td>Batterie critique. Si la batterie est pleine, ce clignotement signale qu&rsquo;un récepteur de trafic ou le récepteur satellite ne répond pas. Bravo refuse alors de démarrer.</td></tr>
         <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Trois éclats rouges et trois vibrations</th><td>Bravo s&rsquo;éteint, puis le voyant aussi.</td></tr>
         <tr><th>Éteint</th><td>Appareil éteint.</td></tr>
-        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Blanc fixe</th><td>Le X1 est un lecteur USB pour installer le firmware.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Blanc fixe</th><td>Le X1 apparaît comme un lecteur USB pour installer skyBlip.</td></tr>
       </tbody>
     </table>
   </div>

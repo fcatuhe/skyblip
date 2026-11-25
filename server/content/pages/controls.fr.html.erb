@@ -5,14 +5,15 @@ slug: commandes
 description: "Utilisez le pavé et le bouton de skyBlip Go. Saisissez l'indicatif, réglez le radar et ouvrez les pages de diagnostic sans téléphone."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Deux commandes, et rien à apprendre deux fois.</h1>
+  <h1>Utiliser le pavé et le bouton du Go</h1>
   <p class="lede">
-    Un pavé et un bouton pour les menus, avec des pages de diagnostic pour l&rsquo;établi.
+    Faites défiler les pages avec le pavé. Ouvrez les menus avec le bouton.
+    Consultez les pages de diagnostic à l&rsquo;établi.
   </p>
 </section>
 
@@ -21,14 +22,13 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="two-contacts">Le pavé navigue, <span class="highlight">le bouton agit</span>.</h3>
       <p>
-        Deux commandes, chacune avec son rôle
-        à retenir. Le pavé tactile capacitif sur le bord supérieur fait défiler les quatre pages,
+        Le pavé tactile capacitif sur le bord supérieur fait défiler les quatre pages,
         sans changer les réglages. Le bouton sur le côté ouvre le menu de la page
         affichée. Chaque pression suivante change la valeur de la ligne sélectionnée.
       </p>
       <p>
-        Deux pages ont un menu. Tous les réglages accessibles avec ces commandes sont dans le menu du
-        radar, le premier écran utilisé pour configurer l&rsquo;appareil. Aucun
+        Deux pages ont un menu. Le radar est le premier écran utilisé pour configurer
+        l&rsquo;appareil. Son menu réunit tous les réglages accessibles avec le pavé et le bouton. Aucun
         réglage ne demande de confirmation&nbsp;: chaque pression applique
         le changement immédiatement.
       </p>
@@ -41,10 +41,10 @@ updated_on: "2026-11-20"
 
   <ul class="points">
     <li>Touchez brièvement le pavé pour passer à la page suivante</li>
-    <li>Gardez le doigt sur le pavé une seconde pour revenir au radar</li>
+    <li>Gardez le doigt sur le pavé une seconde pour couper le son d&rsquo;une alarme en cours, ou revenir au radar si aucune alarme n&rsquo;est active</li>
     <li>Appuyez sur le bouton pour ouvrir le menu, si la page en a un</li>
     <li>Appuyez à nouveau pour changer la valeur de la ligne sélectionnée</li>
-    <li>Dépassez la dernière ligne pour revenir à la page</li>
+    <li>Dans le menu, touchez le pavé après la dernière ligne pour revenir à la page</li>
     <li>Ne touchez à rien pendant une minute pour revenir automatiquement à la page</li>
   </ul>
 
@@ -64,8 +64,8 @@ updated_on: "2026-11-20"
       <p>
         Appuyez sur le bouton au dernier caractère pour enregistrer l&rsquo;indicatif. Les espaces
         laissés à la fin sont supprimés. Pour effacer un indicatif, remplacez le
-        premier caractère par un espace et appuyez sur le bouton. La touche du bouton
-        affiche <span class="mono">ERASE</span> une fois l&rsquo;espace sous la barre. Si vous quittez le champ avant de terminer, ou si vous le laissez une minute sans y toucher,
+        premier caractère par un espace et appuyez sur le bouton. Le libellé du bouton
+        devient <span class="mono">ERASE</span> quand le premier caractère est un espace. Si vous quittez le champ avant de terminer ou n&rsquo;y touchez pas pendant une minute,
         rien n&rsquo;est enregistré.
       </p>
     </div>
@@ -82,31 +82,30 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu aéronef après l'appui, avec la ligne CALLSIGN sélectionnée qui affiche NONE" %>
-      <figcaption>Une pression plus tard</figcaption>
+      <figcaption>L&rsquo;indicatif est effacé</figcaption>
     </figure>
   </div>
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="diagnostics">Quatre pages qui défilent, <span class="highlight">le reste par son nom</span>.</h3>
+      <h3 id="diagnostics">Quatre pages à faire défiler, <span class="highlight">les diagnostics à ouvrir par leur nom</span>.</h3>
       <p>
-        Touchez brièvement le pavé pour passer du radar à la liste, aux instruments, puis au G-mètre, et
-        à aucune autre page. Un pilote qui fait défiler les pages en
-        vol ne doit pas tomber sur les barres des satellites. Sur une carte sans
-        capteur inertiel, il n&rsquo;y a pas de G-mètre à afficher. Le pavé
-        passe donc cette page au lieu d&rsquo;afficher
+        Touchez brièvement le pavé pour passer du radar à la liste, puis aux instruments
+        et au G-mètre. Les autres pages restent hors de ce parcours.
+        Cela évite de tomber sur les barres des satellites en faisant défiler les pages en vol.
+        Sur un appareil sans capteur inertiel, le pavé saute la page du G-mètre au lieu d&rsquo;afficher
         <span class="mono">NO SENSOR</span> une fois sur quatre.
       </p>
       <p>
-        Ouvrez les autres pages par leur nom depuis le menu de la liste. En les fermant, vous
-        retrouvez la page où vous étiez. Les écrans ci-dessous servent à
-        l&rsquo;établi, au parking et aux rapports de bug. Vous ne pouvez pas y
-        accéder en faisant défiler les pages avec le pavé. Le journal Bravo montre ce que
-        fait tourner un skyBlip Bravo appairé, sa batterie et ce qu&rsquo;entend son
-        récepteur. Pour enregistrer un vol pour un rapport de bug ou un essai de décharge,
-        lancez l&rsquo;enregistrement depuis la page de l&rsquo;appareil dans l&rsquo;application
-        de briefing. L&rsquo;écran indique ce qu&rsquo;il effacera, et un appui sur le bouton
-        le lance.
+        Ouvrez les pages de diagnostic par leur nom depuis le menu de la liste.
+        Quand vous les fermez, vous retrouvez la page où vous étiez. Les écrans
+        ci-dessous servent aux vérifications à l&rsquo;établi, au parking et aux signalements
+        de problème. Le journal Bravo indique le logiciel utilisé par un skyBlip Bravo
+        appairé, l&rsquo;état de sa batterie et ce que reçoit son récepteur.
+        Pour enregistrer un vol destiné à un signalement de problème ou à un essai de décharge,
+        ouvrez la page de l&rsquo;appareil dans le Briefing et lancez l&rsquo;enregistrement.
+        L&rsquo;écran indique ce qui sera effacé. Appuyez sur le bouton pour confirmer
+        et démarrer l&rsquo;enregistrement.
       </p>
     </div>
     <figure class="shot">

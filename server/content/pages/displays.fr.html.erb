@@ -5,16 +5,16 @@ slug: ecrans
 description: "Retrouvez chaque écran de skyBlip Go, du radar aux diagnostics. Comparez PLOT ALL et PLOT TO SCALE sur les mêmes scènes de trafic."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Tous les écrans, tels que l&rsquo;appareil les dessine.</h1>
   <p class="lede">
-    Chaque image montre les 200&times;200 pixels du
+    Chaque image reproduit pixel par pixel les 200&times;200&nbsp;pixels du
     <%= link_to_page "skyblip-go", label: "simulateur", anchor: "simulator" %>,
-    placé dans cet état et capturé pixel par pixel. Quand un écran change sur
+    placé dans la situation présentée. Quand un écran change sur
     l&rsquo;appareil, nous en refaisons la capture.
   </p>
 </section>
@@ -22,13 +22,13 @@ updated_on: "2026-11-20"
 <section>
   <h2 class="kicker" id="both-ways">Le radar, de deux façons</h2>
   <p class="lede">
-    <span class="mono">PLOT</span>, dans le menu des réglages, dessine le radar
-    de deux façons. <span class="mono">ALL</span>, le premier choix et celui
-    sur lequel l&rsquo;appareil est livré, rétrécit le cercle et place chaque
-    aéronef au-delà sur la bande qui l&rsquo;entoure, dans son relèvement.
-    <span class="mono">TO SCALE</span> place chaque marque là où
-    l&rsquo;échelle du cercle la met, et laisse de côté ce qui ne tient pas.
-    Trois ciels, chacun capturé des deux façons sur le même firmware.
+    Le réglage <span class="mono">PLOT</span>, dans le menu des réglages, propose deux modes
+    d&rsquo;affichage du radar. <span class="mono">ALL</span> est son premier choix
+    et le réglage par défaut sur un appareil neuf. Dans ce mode, le cercle rétrécit.
+    Chaque aéronef au-delà apparaît sur la bande qui l&rsquo;entoure, dans sa direction.
+    <span class="mono">TO SCALE</span> affiche les aéronefs à
+    l&rsquo;échelle du cercle. Ceux qui dépassent les bords de l&rsquo;écran ne sont pas affichés.
+    Voici trois situations, chacune capturée dans les deux modes avec le même firmware.
   </p>
 
   <div class="plot" data-controller="plot" data-plot-view-value="both">
@@ -39,7 +39,7 @@ updated_on: "2026-11-20"
     </p>
 
     <div class="plot-situation">
-      <h3 id="quiet-sky">Un ciel qui tient dans le cercle.</h3>
+      <h3 id="quiet-sky">Tout le trafic est dans le cercle.</h3>
       <p>
         Trois aéronefs à moins de quatre milles. En <span class="mono">ALL</span>,
         ils sont dans le petit cercle, et rien d&rsquo;autre ne change. À
@@ -59,11 +59,12 @@ updated_on: "2026-11-20"
     <div class="plot-situation">
       <h3 id="past-the-ring">Du trafic au-delà du cercle.</h3>
       <p>
-        Un aéronef en rapprochement à cinq milles devant, un groupe de trois à huit
-        milles devant à droite, un autre à onze milles sur la gauche. En
-        <span class="mono">ALL</span>, chacun apparaît sur la bande. Le groupe
-        partage un symbole marqué 3. Un trait indique la position dans une minute de l&rsquo;aéronef qui approche.
-        Il entre déjà dans le cercle. À l&rsquo;échelle, seul l&rsquo;aéronef de devant apparaît
+        Un aéronef se rapproche à cinq milles devant vous. Un groupe de trois est à huit
+        milles devant à droite, et un autre aéronef à onze milles sur la gauche. En
+        <span class="mono">ALL</span>, ils apparaissent sur la bande. Le groupe
+        partage un symbole marqué 3. Le trait de l&rsquo;aéronef qui approche entre
+        déjà dans le cercle et se termine à sa position prévue dans une minute.
+        À l&rsquo;échelle, parmi ces aéronefs, seul celui de devant apparaît
         à l&rsquo;écran.
       </p>
       <div class="shots">
@@ -98,7 +99,7 @@ updated_on: "2026-11-20"
     </div>
   </div>
 
-  <p><%= link_to_page "radar", label: "Comment se lit la bande", anchor: "every-aircraft", class: "cta cta--next" %></p>
+  <p><%= link_to_page "radar", label: "Lire les symboles sur la bande", anchor: "every-aircraft", class: "cta cta--next" %></p>
 </section>
 
 <section>
@@ -114,7 +115,7 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "La page des aéronefs proches : une ligne pour le Go avec sa batterie à 92 %, 9 satellites et 5 aéronefs reçus, puis cinq aéronefs classés à votre hauteur d'abord, chacun avec une lettre qui indique sa source, son indicatif, ou son adresse en petits caractères, sa distance au sol et son altitude par rapport à vous" %>
-      <figcaption>Aéronefs proches</figcaption>
+      <figcaption>Nearby</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "sixpack.png", alt: "La page des six instruments : vitesse sol, horizon artificiel avec le niveau de batterie au-dessus, altimètre, coordinateur de virage avec sa bille, cadran de route sol et vitesse verticale" %>
@@ -145,11 +146,11 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif avec un espace comme premier caractère, la barre dessous, et la touche du bouton qui affiche maintenant ERASE" %>
-      <figcaption>Le premier caractère effacé</figcaption>
+      <figcaption>Un espace en premier caractère</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu aéronef après l'appui, avec la ligne CALLSIGN sélectionnée qui affiche NONE" %>
-      <figcaption>Une pression plus tard</figcaption>
+      <figcaption>Aucun indicatif, une pression plus tard</figcaption>
     </figure>
   </div>
   <p>
@@ -187,11 +188,11 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="on-the-ground">Au sol, et éteint</h2>
+  <h2 class="kicker" id="on-the-ground">Sans position, batterie faible ou appareil éteint</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "La page radar sans position : le cercle vide affiche NO FIX et, dessous, la progression du récepteur vers l'acquisition de la position" %>
-      <figcaption>En attente du ciel</figcaption>
+      <figcaption>En attente de position</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "low-battery.png", alt: "La page radar en vol avec une batterie faible : BAT et le pourcentage dans le cercle, à la place du mot d'état" %>
@@ -216,7 +217,7 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="asked">Il demande votre accord à l&rsquo;écran.</h2>
+  <h2 class="kicker" id="asked">Confirmation et récupération</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation pour des réglages envoyés par le téléphone : SETTINGS sous le grand logo, le changement demandé, CANCELS IN avec les secondes restantes, la touche du bouton ACCEPT et la touche du pavé CANCEL" %>
@@ -224,7 +225,7 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "recovery.png", alt: "La page de récupération : RECOVERY sous le grand logo, le nom de la clé USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET, et la touche du bouton START" %>
-      <figcaption>Confié au bootloader USB</figcaption>
+      <figcaption>Récupération par USB</figcaption>
     </figure>
   </div>
   <p>
@@ -235,7 +236,7 @@ updated_on: "2026-11-20"
 <section>
   <h2 class="kicker">Notes techniques</h2>
 
-  <h3 id="screen">Pourquoi l&rsquo;écran se comporte ainsi.</h3>
+  <h3 id="screen">Comment fonctionne l&rsquo;écran.</h3>
   <p class="lede">
     L&rsquo;écran est une dalle à papier électronique de 1,54&Prime;, 200&times;200 pixels.
     Il garde sa dernière image sans alimentation et ne consomme rien pour la
@@ -244,13 +245,13 @@ updated_on: "2026-11-20"
   </p>
   <p class="lede">
     En vol, chaque image utilise un rafraîchissement partiel. Le rafraîchissement
-    complet, qui fait clignoter l&rsquo;écran en noir et blanc pendant une
-    seconde et demie, a lieu deux fois par session&nbsp;: à
-    l&rsquo;allumage et à l&rsquo;extinction. Un changement de page utilise un
-    seul effacement au noir. L&rsquo;alarme clignote une fois par
-    seconde à cause de la limite de la dalle, pas d&rsquo;un rythme choisi. Un rafraîchissement plus
-    rapide est possible. Faire clignoter une grande zone noire à ce rythme marque
-    l&rsquo;écran définitivement.
+    complet fait clignoter l&rsquo;écran en noir et blanc pendant une
+    seconde et demie. Il a lieu deux fois par session&nbsp;: à
+    l&rsquo;allumage et à l&rsquo;extinction. Lors d&rsquo;un changement de page, l&rsquo;écran
+    passe une seule fois au noir. L&rsquo;alarme clignote une fois par
+    seconde pour respecter la limite de l&rsquo;écran. Un rafraîchissement plus
+    rapide est possible, mais faire clignoter une grande zone noire à ce rythme
+    laisse une marque permanente sur l&rsquo;écran.
   </p>
 
   <ul class="points">
