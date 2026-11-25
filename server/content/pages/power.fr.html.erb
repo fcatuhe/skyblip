@@ -76,10 +76,10 @@ updated_on: "2026-11-25"
         la batterie à la même tension de coupure.
       </p>
       <p>
-        Branchez le câble pour pouvoir réutiliser l&rsquo;appareil. Ce seul geste
-        réveille l&rsquo;électronique sans démarrer l&rsquo;appareil et remet
-        le logo. L&rsquo;appareil est de nouveau éteint et en charge. Le prochain
-        appui le démarre. Si la batterie s&rsquo;est vidée sur une étagère,
+        Branchez le câble pour pouvoir réutiliser l&rsquo;appareil. Le câble
+        seul ne change rien à l&rsquo;écran&nbsp;: le voyant rouge du chargeur
+        indique que la batterie se remplit. Un appui câble branché démarre
+        l&rsquo;appareil, quelle que soit la charge, et efface le message. Si la batterie s&rsquo;est vidée sur une étagère,
         l&rsquo;appareil n&rsquo;a laissé aucun message. Dans ce cas, un appui
         sur le bouton affiche le même message de batterie vide.
       </p>
@@ -104,7 +104,7 @@ updated_on: "2026-11-25"
         <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">BATTERY EMPTY</span></td></tr>
         <tr><th>Pression après une coupure batterie vide</th><td>ne répond pas&nbsp;: l&rsquo;écran indique déjà que la batterie est vide. Branchez le câble pour recharger l&rsquo;appareil</td></tr>
         <tr><th>Branchement du chargeur</th><td>charge et reste éteint. Un câble branché dans une sacoche ne le fait pas émettre</td></tr>
-        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge et reste éteint. <span class="mono">BATTERY EMPTY</span> reste affiché jusqu&rsquo;au prochain appui</td></tr>
         <tr><th>Bouton maintenu, chargeur branché</th><td>démarre et charge</td></tr>
         <tr><th>Pression sur <span class="mono">RESET</span></th><td>redémarre. Deux pressions en moins d&rsquo;une demi-seconde lancent le programme d&rsquo;installation par USB, appelé bootloader</td></tr>
       </tbody>
@@ -141,9 +141,9 @@ updated_on: "2026-11-25"
 
   <h3 id="gauge">Lire la jauge de batterie.</h3>
   <p class="lede">
-    Elle utilise deux courbes de tension, pas une. Pendant la charge, la tension aux bornes
-    dépasse celle de la batterie seule. La même mesure correspond alors à une batterie
-    bien plus vide, et le pourcentage indique quelle courbe a été utilisée.
+    Câble branché, l&rsquo;appareil mesure la tension USB, pas celle de la batterie.
+    Il n&rsquo;affiche donc pas de pourcentage. Le pourcentage n&rsquo;est
+    calculé que sur batterie.
   </p>
   <p class="lede">
     Elle ne recule jamais, et la baisse de tension due à une émission à

@@ -4,7 +4,7 @@ nav_title: GPS
 description: "How skyBlip Go turns GPS sentences into a fix, waits for it to settle, keeps time with PPS, and decides from ground speed alone whether it is flying."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
@@ -17,7 +17,7 @@ updated_on: "2026-11-20"
   <h2 class="kicker">The fix</h2>
 
   <h3 id="fix">A solution is not a fix.</h3>
-  <p class="lede">The GPS receiver sends a solution twice a second, whether or not it can see the sky. The Go accepts that solution as a fix only after its own checks. Both sentences carrying the position and date must be present and fresh. The date must not be the 1980 placeholder some receivers send before they know it. The position must be within plausible reach of the previous one. The receiver also reports whether it considers its solution valid, but the Go uses its own verdict.</p>
+  <p class="lede">The GPS receiver sends a solution twice a second, whether or not it can see the sky. The Go accepts that solution as a fix only after its own checks. Both sentences carrying the position and date must be present and fresh. The date must not be the 1980 placeholder some receivers send before they know it. The position must be within plausible reach of the previous one. The receiver must also report its solution as valid, and the Go adds its own checks.</p>
   <p class="lede">A Go uses a Quectel L76K receiver. A Bravo uses an Airoha AG3335. Both send their readings in the same NMEA sentence format, which the same parser reads.</p>
 
   <h3 id="waiting">Three words while it waits.</h3>
@@ -113,7 +113,7 @@ updated_on: "2026-11-20"
   <p class="lede">Barometric climb was once used to detect these flights. It was removed because gusts, pressure changes and spikes when the barometer dropped out caused false takeoffs in the hangar queue. Ground speed avoids those false detections, but it can miss flight at low ground speed. The undefined broadcast state and the separate logging rule address those limits without treating barometric climb as proof of flight.</p>
 
   <ul class="points">
-    <li>The Go checks each fix rather than accepting the receiver&rsquo;s validity flag</li>
+    <li>The Go checks each fix on top of the receiver&rsquo;s validity flag</li>
     <li>GPS OFF, MOVE OUT and FINDS FIX tell you whether to investigate, move or wait</li>
     <li>Transmission starts after three predictions within 12&nbsp;m, with a ceiling of 20&nbsp;s after the first fix</li>
     <li>115200&nbsp;baud brings the fix in before the first possible transmission</li>
