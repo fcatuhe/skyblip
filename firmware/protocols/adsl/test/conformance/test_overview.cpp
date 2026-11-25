@@ -60,7 +60,7 @@ TEST_CASE("ADS-L.4.SRD860.B.3: a byte goes out most significant bit first") {
     CHECK(chips_of(0x80) == wire::manchester_chips(0x80));
 }
 
-// The preamble is the radio's: what the firmware hands it runs from the sync word to the last byte.
+// This case checks the Manchester-coded part of the burst. The device suite checks the preamble.
 TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, nothing behind it") {
     adsl::Packet packet = traffic_packet();
     packet.scramble();
@@ -179,7 +179,7 @@ TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a 12 m VFOM is GVA 3, as Is
     CHECK(unclaimed.vertical_accuracy == 0);
 }
 
-// Issue 1 has no unknown code for these, so its 0x3FFF, 0xFF and 0x1FF would read as values.
+// INFO: fc 22nov26 the transmit conversion does not use the inferred Issue 1 climb marker
 TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a Traffic with an unknown field is held" *
           doctest::test_suite("main")) {
     for (int unknown = 0; unknown < 3; unknown++) {

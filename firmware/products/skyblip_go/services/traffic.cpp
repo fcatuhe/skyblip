@@ -26,6 +26,7 @@ bool utc_dated(const bus::State& state) {
 void TrafficService::tick(uint32_t now_ms) {
     // INFO: fc 20nov26 set before any frame drains, from the fix own-ship published this pass
     context_.state.traffic.set_own_reference(context_.state.own);
+    versions_.set_own_reference(context_.state.own);
     // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
     context_.state.traffic.set_own_address(settings::kSkyblipAddressMappingTable,
                                            context_.state.activation.address().value_or(0));
@@ -50,12 +51,14 @@ void TrafficService::tick(uint32_t now_ms) {
                 log(event, stamp_for(event, now_ms), radio::Verdict::Transmitted);
                 break;
             case events::RfEventType::Busy:
-                context_.state.rf.note_busy({event.tx_at_us, event.rssi_dbm, event.rssi_valid});
+                context_.state.rf.note_busy(
+                    {event.tx_at_us, event.rssi_dbm, event.rssi_valid, event.at_us});
                 break;
         }
     }
     const uint32_t now_s = context_.state.traffic_now_s(now_ms);
     context_.state.traffic.age_out(now_s);
+    versions_.age_out(now_s);
     context_.state.callsigns.age_out(now_s);
 }
 
@@ -139,9 +142,10 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     model::AircraftObservation observation{};
     const bool alptas = system == protocol::System::Alptas;
     int8_t key_offset_s = 0;
+    bool relayed = false;
     const radio::Verdict outcome =
         alptas ? decode_alptas(frame, keyed, stamp, observation, key_offset_s)
-               : decode_adsl(frame, keyed, stamp, observation);
+               : decode_adsl(frame, keyed, stamp, observation, relayed);
     if (outcome == radio::Verdict::Named) {
         context_.state.air.rx_named++;
         log(event, stamp, outcome, &observation);
@@ -164,11 +168,13 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     observation.at_ms = now_ms - static_cast<uint32_t>(observation.fix_age_ms);
     observation.rssi_dbm = event.rssi_dbm;
     context_.state.traffic.update(observation, utc_s);
+    if (!alptas && !relayed && !context_.state.traffic.own_aircraft(observation))
+        versions_.hear_traffic(observation, utc_s);
     context_.state.air.rx_ok++;
     log(event, stamp, radio::Verdict::Received, &observation);
 }
 
-// INFO: fc 20nov26 the uplink counts apart, so a packet Reed-Solomon refuses is never noise
+// INFO: fc 20nov26 the uplink counts apart, so a packet its parity refuses is never noise
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
                                uint32_t now_ms) {
     context_.state.air.uplink_frames++;
@@ -181,9 +187,14 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
         uplink_codec_.decode(event.data.data(), event.bytes, heard_s, heard_ms, relayed,
                              protocol::AdslUplink::kMaxTargets, statistics);
     context_.state.air.uplink_stale += static_cast<uint32_t>(statistics.stale);
-    if (decoded != Status::Ok) {
+    if (decoded == Status::Crc) {
         context_.state.air.uplink_bad++;
         log(event, stamp, radio::Verdict::BadCrc);
+        return;
+    }
+    if (decoded != Status::Ok) {
+        count_refusal(radio::Verdict::Unsupported);
+        log(event, stamp, radio::Verdict::Unsupported);
         return;
     }
 
@@ -222,16 +233,17 @@ bool TrafficService::names_its_sender(radio::Verdict outcome) {
 
 radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
                                            const events::Stamp& stamp,
-                                           model::AircraftObservation& observation) {
+                                           model::AircraftObservation& observation, bool& relayed) {
     adsl::Packet packet;
-    const wire::Status heard =
-        adsl::receive_as_heard(frame.data, frame.erasures, frame.length_heard, packet);
+    const wire::Status heard = adsl::receive_as_heard(
+        frame.data, frame.erasures, frame.length_heard, frame.length_erasures, packet);
     if (heard == wire::Status::Crc) return radio::Verdict::BadCrc;
     if (heard != wire::Status::Ok) return radio::Verdict::Unsupported;
     if (adsl_edge::is_registration(packet)) return learn_callsign(packet, utc_s, observation);
     if (packet.payload_type == adsl::Packet::kPayloadTypeStatus)
-        return learn_status(packet, observation);
+        return learn_status(packet, utc_s, observation);
     if (!packet.is_position()) return radio::Verdict::Unsupported;
+    relayed = packet.is_relay();
     events::Stamp received = stamp;
     received.at_s = utc_s;
     if (!protocol::to_observation(packet, received, 0, model::Source::AdslDirect, observation))
@@ -239,16 +251,16 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
     return radio::Verdict::Received;
 }
 
-// INFO: fc 13nov26 B.5: a Status from an untracked aircraft is dropped, and its next one counts
-radio::Verdict TrafficService::learn_status(const adsl::Packet& packet,
+// INFO: fc 22nov26 B.5: kept whatever the display shows, unless relayed or our own heard back
+radio::Verdict TrafficService::learn_status(const adsl::Packet& packet, uint32_t utc_s,
                                             model::AircraftObservation& observation) {
     observation.address = packet.address();
     observation.address_mapping_table = packet.address_mapping_table();
     observation.source = model::Source::AdslDirect;
     const std::optional<uint8_t> declared = adsl::status_max_version(packet);
-    if (!declared || !context_.state.traffic.declare_max_version(observation.address_mapping_table,
-                                                                 observation.address, *declared))
+    if (!declared || packet.is_relay() || context_.state.traffic.own_aircraft(observation))
         return radio::Verdict::Unsupported;
+    versions_.hear_status(observation.address_mapping_table, observation.address, *declared, utc_s);
     return radio::Verdict::Declared;
 }
 

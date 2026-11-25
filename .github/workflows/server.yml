@@ -100,20 +100,8 @@ jobs:
           working-directory: server
       - name: Run tests
         run: bin/rails db:test:prepare test
-      - name: Run deployment and release workflow tests
-        run: bundle exec ruby ../.github/test/deployment_test.rb
-      - name: Run development pre-release tests
-        run: bundle exec ruby ../.github/test/dev_release_test.rb
-      - name: Run release files tests
-        run: bundle exec ruby ../.github/test/release_files_test.rb
-      - name: Run firmware tree tests
-        run: bundle exec ruby ../.github/test/firmware_tree_test.rb
-      - name: Run deploy order tests
-        run: bundle exec ruby ../.github/test/deploy_order_test.rb
-      - name: Run upstream pin tests
-        run: bundle exec ruby ../.github/test/upstream_pins_test.rb
-      - name: Run emsdk install tests
-        run: bundle exec ruby ../.github/test/emsdk_test.rb
+      - name: Run the tests of the deployment, release and build scripts
+        run: bundle exec ruby -e 'Dir["../.github/test/*_test.rb"].each { require File.expand_path(it) }'
       # firmware.yml skips server/, so a change to link_registry.js alone is only checked here.
       - name: Check the files generated from the link registry are current
         run: python3 ../scripts/check_link_registry.py

@@ -60,22 +60,113 @@ TEST_CASE(
     CHECK(adsl::kUplinkMaxTargets == 10);
 }
 
+// These two G.3 records carry FF/3FFF/1FF and 00/0140/100, protected by E.2 and E.3.2.
+TEST_CASE("ADS-L.4.SRD860.G.3: the receiver infers how to read motion in unversioned records") {
+    const uint8_t frame[] = {
+        0x4D, 0x81, 0x02, 0xD6, 0xB6, 0x48, 0x59, 0xC9, 0x50, 0x5A, 0x96, 0x70, 0x38,
+        0xC0, 0x6E, 0x6A, 0xF5, 0x6A, 0x26, 0xCF, 0x48, 0x3D, 0x78, 0x9B, 0xED, 0xDD,
+        0xBD, 0xAB, 0x45, 0x74, 0x2F, 0x1C, 0xF9, 0x91, 0x37, 0xAF, 0xA7, 0x09, 0x7C,
+        0x3A, 0xE0, 0x0B, 0x5F, 0x53, 0xBD, 0xB1, 0xB9, 0x8C, 0x00, 0x1D, 0xD1, 0x19,
+        0x26, 0xF9, 0x77, 0xE3, 0x5A, 0x8B, 0xD4, 0xD4, 0x1F, 0x33, 0xCD, 0xA3, 0x16,
+        0x55, 0x80, 0x75, 0xE9, 0xF7, 0x3A, 0x7D, 0x0E, 0xFA, 0x8E, 0x94, 0x55, 0xC2,
+    };
+    adsl::Packet records[2]{};
+    adsl::UplinkStatistics statistics{};
+    REQUIRE(adsl::Uplink{}.decode(frame, sizeof(frame), records, 2, statistics) ==
+            wire::Status::Ok);
+    REQUIRE(statistics.targets == 2);
+    CHECK(statistics.corrected == 0);
+
+    adsl::Traffic traffic{};
+    CHECK(records[0].protocol_version() == 1);
+    REQUIRE(adsl::decode_traffic(records[0], traffic) == wire::Status::Ok);
+    CHECK_FALSE(traffic.altitude_valid);
+    CHECK_FALSE(traffic.speed_valid);
+    CHECK_FALSE(traffic.climb_valid);
+
+    CHECK(records[1].protocol_version() == 0);
+    REQUIRE(adsl::decode_traffic(records[1], traffic) == wire::Status::Ok);
+    CHECK(traffic.altitude_valid);
+    CHECK(traffic.speed_valid);
+    CHECK_FALSE(traffic.climb_valid);
+}
+
 // The receiver counts records from D.1.1's length byte, since nothing else in the packet says.
 TEST_CASE("ADS-L.4.SRD860.G.3: the number of targets is read from the Packet Length field") {
     for (int count = 0; count <= adsl::kUplinkMaxTargets; count++) {
+        CAPTURE(count);
         adsl::Packet traffic[adsl::kUplinkMaxTargets];
         for (int i = 0; i < count; i++)
             traffic[i] = relayed_traffic(0x100000u + static_cast<uint32_t>(i), 0);
         uint8_t packet[1 + adsl::kUplinkMaxLength];
         sent_uplink(traffic, count, packet);
-        CHECK(packet[0] == adsl::uplink_length(count));
+        CHECK(packet[0] == adsl::uplink_length(count, adsl::ErrorControl::Fec));
+
+        for (const bool fec : {false, true}) {
+            CAPTURE(fec);
+            adsl::conformance::spec_uplink(traffic, count, fec ? 0x81 : 0x01, fec, packet);
+            adsl::Packet heard[adsl::kUplinkMaxTargets];
+            adsl::UplinkStatistics statistics;
+            REQUIRE(adsl::Uplink{}.decode(packet, sizeof(packet), heard, adsl::kUplinkMaxTargets,
+                                          statistics) == wire::Status::Ok);
+            CHECK(statistics.targets == count);
+        }
+    }
+}
+
+// E.3.2 only recommends FEC past 64 bytes, so a ground station may send any uplink with the CRC.
+TEST_CASE("ADS-L.4.SRD860.G.3: an uplink is read under either parity, with one record or ten") {
+    struct Sent {
+        uint8_t network_header;
+        bool fec;
+        int count;
+        int length;
+    };
+    const Sent cases[] = {{0x01, false, 1, 28},
+                          {0x01, false, 10, 200},
+                          {0x61, false, 1, 28},
+                          {0x81, true, 1, 57},
+                          {0x81, true, 10, 229}};
+    for (const Sent& sent : cases) {
+        CAPTURE(int(sent.network_header));
+        CAPTURE(sent.length);
+        adsl::Packet traffic[adsl::kUplinkMaxTargets];
+        for (int i = 0; i < sent.count; i++)
+            traffic[i] = relayed_traffic(0x3C1000u + static_cast<uint32_t>(i), 8);
+        uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
+        const int bytes = adsl::conformance::spec_uplink(traffic, sent.count, sent.network_header,
+                                                         sent.fec, packet);
+        CHECK(packet[0] == sent.length);
 
         adsl::Packet heard[adsl::kUplinkMaxTargets];
         adsl::UplinkStatistics statistics;
-        REQUIRE(adsl::Uplink{}.decode(packet, sizeof(packet), heard, adsl::kUplinkMaxTargets,
-                                      statistics) == wire::Status::Ok);
-        CHECK(statistics.targets == count);
+        REQUIRE(adsl::Uplink{}.decode(packet, static_cast<size_t>(bytes), heard,
+                                      adsl::kUplinkMaxTargets, statistics) == wire::Status::Ok);
+        CHECK(statistics.targets == sent.count);
+        CHECK(statistics.corrected == 0);
+        for (int i = 0; i < sent.count; i++)
+            CHECK(std::memcmp(heard[i].payload + 1, traffic[i].payload + 1, 19) == 0);
     }
+}
+
+// A length that spells no count is refused, and one spelling the other parity fails that check.
+TEST_CASE("ADS-L.4.SRD860.G.3: an uplink length no count of records spells is refused") {
+    const adsl::Packet traffic[1] = {relayed_traffic(0x3C1234, 0)};
+    adsl::Packet heard[1];
+    adsl::UplinkStatistics statistics;
+    uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
+    adsl::conformance::spec_uplink(traffic, 1, 0x01, false, packet);
+    for (const uint8_t length : {uint8_t{27}, uint8_t{29}, uint8_t{56}, uint8_t{58}}) {
+        CAPTURE(int(length));
+        packet[0] = length;
+        CHECK(adsl::Uplink{}.decode(packet, sizeof(packet), heard, 1, statistics) ==
+              wire::Status::Invalid);
+    }
+    packet[0] = 57;
+    CHECK(adsl::Uplink{}.decode(packet, sizeof(packet), heard, 1, statistics) == wire::Status::Crc);
+    adsl::conformance::spec_uplink(traffic, 1, 0x81, true, packet);
+    packet[0] = 28;
+    CHECK(adsl::Uplink{}.decode(packet, sizeof(packet), heard, 1, statistics) == wire::Status::Crc);
 }
 
 // G.1.1 counts quarter seconds inside 15 s, so a record dated 40 quarters ago is exactly 10 s old.

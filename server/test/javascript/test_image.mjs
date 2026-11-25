@@ -2,11 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BLOB_PIN, signedImage } from './fake_skyblip.mjs';
-import { fullImageNeeded, readImage } from '#skyblip/image';
+import { fullImageNeeded, readImage, versionName } from '#skyblip/image';
 
 const VERSION = { major: 0, minor: 2, revision: 0, build: 15 };
 const IMAGE_BYTES = 6000;
 const PREFIX = BLOB_PIN.slice(0, 16);
+
+test('a release is named by its tag, and a development build by its version with the build', () => {
+  assert.equal(versionName('0.8.0+2405', true), 'v0.8.0');
+  assert.equal(versionName('0.8.0+2405', false), '0.8.0+2405');
+  assert.equal(versionName(null, true), null);
+});
 
 test('the protected TLVs give the blob an image pins and whether it carries it', () => {
   assert.deepEqual(readImage(signedImage(VERSION, IMAGE_BYTES, { imu: { pin: BLOB_PIN, full: false } })).imu, { pin: BLOB_PIN, full: false });

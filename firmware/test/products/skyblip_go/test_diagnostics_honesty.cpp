@@ -46,7 +46,8 @@ struct ServiceRig {
     uint8_t aircraft_type{go::kAircraftTypeLight};
     common::OwnshipService ownship{context, aircraft_type};
     uint32_t aircraft_address{};
-    go::TrafficService traffic{context, bus.rf, aircraft_address};
+    traffic::VersionTable versions{};
+    go::TrafficService traffic{context, bus.rf, aircraft_address, versions};
 
     ServiceRig() { recorder.arm(); }
 

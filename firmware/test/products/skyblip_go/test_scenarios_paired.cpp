@@ -194,7 +194,7 @@ TEST_CASE("paired scenario: the committed files replay with their expectations m
     for (const char* file :
          {"scenarios/paired.json", "scenarios/paired_link_lost.json",
           "scenarios/paired_bravo_without_fix.json", "scenarios/paired_quiet_sky.json",
-          "scenarios/paired_dense_sky.json"}) {
+          "scenarios/paired_dense_sky.json", "scenarios/paired_own_transponder.json"}) {
         CAPTURE(file);
         Paired paired(file);
         CHECK(paired.simulator.scenario().product == simulator::Product::Paired);
@@ -202,6 +202,17 @@ TEST_CASE("paired scenario: the committed files replay with their expectations m
         CHECK(paired.simulator.world().failures() == 0);
         CHECK(paired.simulator.product().bravo().refused() == 0);
     }
+}
+
+TEST_CASE("paired scenario: Bravo names the transponder aboard, and the Go proposes it") {
+    Paired paired("scenarios/paired_own_transponder.json");
+    const simulator::ScenarioAircraft& aboard = paired.simulator.scenario().aircraft.front();
+    REQUIRE(aboard.adsb.aboard);
+    REQUIRE(aboard.callsign == "DEFLY");
+    paired.run_until(20000);
+    REQUIRE(paired.go().own_transponder.has_value());
+    CHECK(comms::address_of(paired.go().own_transponder) == aboard.address);
+    CHECK(paired.simulator.product().screen().noticing());
 }
 
 TEST_CASE("paired scenario: Bravo flies the Go's own-ship, and hears the sky the Go flies in") {

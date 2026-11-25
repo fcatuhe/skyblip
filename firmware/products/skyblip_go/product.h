@@ -139,6 +139,7 @@ class Product {
     common::PowerService& power() { return power_; }
     RadioService& radio() { return radio_; }
     TrafficService& traffic() { return traffic_; }
+    const traffic::VersionTable& versions() const { return versions_; }
     common::AlarmService& alarm() { return alarm_; }
     common::NmeaService& nmea() { return nmea_; }
     ScreenService& screen() { return screen_; }
@@ -294,8 +295,9 @@ class Product {
         context_,     settings_store_,          power_.cutoff_monitor(),
         "skyBlip Go", identity::bluetooth_name, dfu::Product::Go};
     common::OwnshipService ownship_{context_, settings_.aircraft_type, &bus_.accelerometer};
-    RadioService radio_{context_, settings_};
-    TrafficService traffic_{context_, bus_.rf, settings_.aircraft_address};
+    traffic::VersionTable versions_{};
+    RadioService radio_{context_, settings_, versions_};
+    TrafficService traffic_{context_, bus_.rf, settings_.aircraft_address, versions_};
     common::AlarmService alarm_{context_, common::AlarmSettings{settings_.alarm}};
     common::NmeaService nmea_{context_, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,

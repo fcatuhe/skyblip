@@ -6,7 +6,8 @@ What the sky around this aircraft contains, how dangerous it is, and who in it i
 |---|---|
 | `sanity` | whether a decoded position is close enough to have been heard at all |
 | `lease` | how long one reception is believed, for every layer that holds a slot |
-| `table` | which aircraft the finite table holds, each one's turn rate, and the ADS-L version each one reads |
+| `table` | which aircraft the finite table holds, and each one's turn rate |
+| `versions` | which ADS-L version each client heard direct reads, kept apart from the display (§B.5) |
 | `alarm` | whether a target is an advisory, and what the annunciator is allowed to say |
 | `formation` | which targets are flying with us, on geometry alone |
 | `range` | how far a target is and how far above, and the order the nearby page lists them in |
@@ -137,9 +138,17 @@ An aircraft is announced again only by arriving again. Leaving takes a whole `kR
 
 An advisory is announced once, because a tone that repeats while a glider shares the thermal gets the device switched off.
 
-## Which ADS-L version a target reads
+## Which ADS-L version a client reads
 
-`Target::version` holds the highest version each neighbour reads (§B.5): the version of its last Traffic packet, until a Status declares its Max. Protocol Version, which then wins until the slot is freed (`declare_max_version`). A Status from an unknown address is dropped, and the next one, within 20 s, finds the target. `readable_version` returns the lowest among the targets `adsl::close_client()` calls close, an unknown altitude counted as level. Relayed targets are left out, because the uplink record does not carry their version.
+`VersionTable` (`versions.h`) keeps §B.5's state apart from the display table, because the display keeps what a pilot should see and §B.5 asks about every client close enough to read our Traffic. A full display drops a parked aircraft before a far airborne one, and may show an aircraft from another system under the same address, so it cannot answer for §B.5. The Go owns one table and hands it to `TrafficService`, which writes it, and to `RadioService`, which reads it. Bravo sends no ADS-L and holds none.
+
+An entry is one ADS-L client heard direct, keyed on its address table and address. It holds the version its last Traffic came in, the Max. Protocol Version of its last Status with the second it was heard, and the position, height, speed, track and climb its own last Traffic gave. A Status is filed whether or not its sender has sent Traffic or is on the display. `max_version()` is the Status's version while the Status holds, else the Traffic's, as §B.5 asks. A packet whose F.2 relay flag is set is not filed, because another station sent it and its sender may be out of our range, a reading EASA is asked to confirm (`docs/ADSL_EASA_QUESTIONS.md`, SB-Q10). The uplink is a ground station's relay and is not filed either. Nor is a packet under an address we transmit under, our serial's under table 58 or our aircraft's ICAO address under table 5, which the display refuses too (`TrafficTable::own_aircraft`): an echo of our own Traffic, often version 0 by §E.1.1, would otherwise hold us to Issue 1. Another ADS-L device aboard under the same ICAO address cannot be told from that echo, so it is not filed either.
+
+The position lapses with the display's lease, `kTargetForgetReports` of the client's own report periods: 6 s airborne, 60 s on the ground. The Status lapses after `kStatusForgetS`, 60 s, three of G.2.11's 20 s periods, so a client still sending keeps its declaration through two Statuses missed in a row. A lapsed declaration leaves the Traffic's version, which a conforming client never sends above its Status's, so lapsing early can only lower the version: own Traffic goes in Issue 1's form, or is held when it carries a field Issue 1 cannot write. The entry goes when both have lapsed.
+
+`readable_version` returns the lowest `max_version()` among the clients `adsl::close_client()` calls close, both sides carried to the burst's instant and an unknown altitude counted as level. Without an own velocity, from a receiver that reported no speed or a speed with no course, the closure is G.1.8's fastest encodable 236 m/s plus the client's speed, so every client own-ship could meet within 30 s counts as close. A client with no position is close to nobody.
+
+The table holds `kMaxClients`, 48. A full table gives a new client the place of the one that matters least: a client not close before a close one, among clients not close the one heard longest ago, and among close ones the one reading the highest version, then the one heard longest ago. A newcomer that matters no more than that one is not filed, its Status included, though the radio log still shows the Status as `STAT`. So a far client never displaces a close one, and a close client is given up only for one that reads no more, which leaves `readable_version` as it was. Closeness here is judged at own-ship's last fix.
 
 ## Turn rate
 

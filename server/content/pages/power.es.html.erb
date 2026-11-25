@@ -2,17 +2,17 @@
 title: "Batería del Go y carga por USB-C"
 slug: alimentacion
 nav_title: "Alimentación"
-description: "Carga skyBlip Go por USB-C. Interpreta los avisos de batería baja, BATTERY EMPTY y el apagado. La pantalla conserva la imagen sin corriente."
+description: "Carga skyBlip Go por USB-C. Interpreta los avisos de batería, BATTERY EMPTY y apagado. La pantalla de tinta electrónica conserva la imagen sin corriente."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Te dice qué hace, incluso apagado.</h1>
+  <h1>Enciende, carga y apaga el Go</h1>
   <p class="lede">
-    Qué indica el dispositivo antes de tener posición, cuando está apagado y cuando se agota la batería.
+    Identifica los mensajes del GPS y de la batería. Reconoce cuándo está apagado el dispositivo.
   </p>
 </section>
 
@@ -21,18 +21,18 @@ updated_on: "2026-11-19"
 
   <div class="feature">
     <div>
-      <h3 id="waiting">Te indica <span class="highlight">a qué espera</span>.</h3>
+      <h3 id="waiting">Espera <span class="highlight">la primera posición GPS</span>.</h3>
       <p>
-        Una pulsación enciende el Go y abre la pantalla de tráfico. El círculo indica cuándo aún no hay posición. El texto debajo del círculo indica en qué punto está el receptor: <span class="mono">GPS OFF</span> si no responde, <span class="mono">MOVE OUT</span> si envía soluciones de posición aún sin fecha y <span class="mono">FINDS FIX</span>
+        Una pulsación del botón enciende el Go y abre el radar. El círculo indica cuándo aún no hay posición. El mensaje debajo del círculo indica el estado del receptor GPS: <span class="mono">GPS OFF</span> si no responde, <span class="mono">MOVE OUT</span> si envía soluciones de posición aún sin fecha y <span class="mono">FINDS FIX</span>
         cuando lee una fecha de un satélite.
       </p>
       <p>
-        Así sabes si esperar o llevar el dispositivo al aire libre. El Go anuncia su primera posición y la pantalla empieza a mostrar el cielo que te rodea.
+        Así sabes si esperar o llevar el dispositivo al aire libre. El Go anuncia su primera posición. El radar muestra entonces el tráfico que te rodea.
       </p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "Pantalla del radar sin posición: el círculo vacío muestra NO FIX y, debajo, el estado del receptor" %>
-      <figcaption>A la espera de señal</figcaption>
+      <figcaption>A la espera de la primera posición GPS</figcaption>
     </figure>
   </div>
 
@@ -56,14 +56,14 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="flat-battery">Cuando se agota la batería <span class="highlight">la pantalla te avisa</span>.</h3>
       <p>
-        A 3,2&nbsp;V, el dispositivo se apaga por sí solo. Su último mensaje te dice por qué. Como no has pulsado nada, solo la pantalla puede explicar el apagado. Sin el mensaje, parecería un bloqueo o una avería. El botón deja de funcionar al mismo tiempo, porque pulsarlo volvería a llevar la batería a la misma tensión de corte.
+        A 3,2&nbsp;V, el dispositivo se apaga por sí solo. Su último mensaje indica que la batería está agotada. Como no has pulsado nada, solo la pantalla puede explicar el apagado. Sin ese mensaje, parecería un bloqueo o una avería. El botón deja de responder al mismo tiempo, porque pulsarlo volvería a llevar la batería a la misma tensión de corte.
       </p>
       <p>
-        Enchufa el cable para volver a usar el dispositivo. La electrónica se activa sin iniciar el dispositivo y reaparece el logotipo. El dispositivo queda apagado y cargándose. Enciéndelo con la siguiente pulsación. Si la batería se agotó mientras estaba guardado, el dispositivo no dejó ningún mensaje. En ese caso, al pulsar el botón aparece el mismo aviso de batería agotada.
+        Enchufa el cable para volver a usar el dispositivo. Conectar el cable no cambia la pantalla. La luz roja del cargador indica que la batería se está cargando. Pulsa el botón con el cable conectado para arrancar el dispositivo, sea cual sea la carga, y borrar el mensaje. Si la batería se agotó mientras estaba guardado, el dispositivo no dejó ningún mensaje. En ese caso, al pulsar el botón aparece el mismo aviso de batería agotada.
       </p>
       <p>
-        El dispositivo lo recuerda la próxima vez que arranca. La comprobación de funcionamiento muestra
-        <span class="mono">WAS EMPTY</span> junto a la tensión. Si un móvil se conecta durante ese arranque, recibe el mismo aviso. Así, un dispositivo que se apagó por falta de batería no vuelve como si nada hubiera pasado.
+        En el siguiente arranque, la comprobación de funcionamiento indica el apagado por batería agotada con el mensaje
+        <span class="mono">WAS EMPTY</span> junto a la tensión. Si un móvil se conecta durante ese arranque, recibe el mismo aviso. El dispositivo conserva así la información del apagado por falta de batería.
       </p>
     </div>
     <figure class="shot">
@@ -79,11 +79,11 @@ updated_on: "2026-11-19"
       </thead>
       <tbody>
         <tr><th>Pulsa el botón</th><td>Arranca, salvo si la batería está por debajo de 3,4&nbsp;V y no hay cargador conectado. En ese caso, aparece <span class="mono">BATTERY EMPTY</span></td></tr>
-        <tr><th>Pulsa tras apagarse por batería agotada</th><td>No hace nada. La pantalla ya indica por qué se apagó. Enchufa el cable para volver a usar el dispositivo</td></tr>
+        <tr><th>Pulsa tras apagarse por batería agotada</th><td>No responde. La pantalla ya indica que la batería está agotada. Enchufa el cable para cargar el dispositivo</td></tr>
         <tr><th>Enchufa el cargador</th><td>Se carga y sigue apagado. Enchufar un cable dentro de la bolsa de vuelo no hace que transmita</td></tr>
-        <tr><th>Enchufa el cargador a un dispositivo con la batería agotada</th><td>Se carga y sigue apagado. El logotipo sustituye a <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Enchufa el cargador a un dispositivo con la batería agotada</th><td>Se carga y sigue apagado. <span class="mono">BATTERY EMPTY</span> permanece en pantalla hasta la siguiente pulsación del botón</td></tr>
         <tr><th>Mantén pulsado el botón y enchufa el cargador</th><td>Arranca y se carga</td></tr>
-        <tr><th>Pulsa <span class="mono">RESET</span></th><td>Reinicia el dispositivo. Pulsa dos veces en menos de medio segundo para iniciar el gestor de arranque USB e instalar firmware por USB</td></tr>
+        <tr><th>Pulsa <span class="mono">RESET</span></th><td>Reinicia el dispositivo. Dos pulsaciones en menos de medio segundo inician el gestor de arranque USB, llamado bootloader, que permite instalar firmware por USB</td></tr>
       </tbody>
     </table>
   </div>
@@ -94,7 +94,7 @@ updated_on: "2026-11-19"
 
   <h3 id="cell">Por qué la batería dura todo el día.</h3>
   <p class="lede">
-    El apagado sigue una serie de pasos. No es un corte brusco de corriente. El orden importa. La memoria flash externa recibe la orden de entrar en reposo mientras aún tiene corriente. Una vez cortada la corriente, esa orden no sirve. La memoria consumiría toda su corriente de espera durante la noche mientras el dispositivo parece apagado dentro de la bolsa.
+    El apagado sigue varios pasos en un orden preciso. No es un corte brusco de corriente. Antes de cortar la alimentación, el dispositivo pone en reposo la memoria flash externa. Después del corte, la memoria ya no podría recibir esa orden. Consumiría toda su corriente de espera durante la noche mientras el dispositivo parece apagado dentro de la bolsa.
   </p>
   <p class="lede">
     La radio y los sensores consumen el resto. En vuelo, el dispositivo transmite una vez por segundo. En tierra, transmite una vez cada diez segundos. Su dirección determina cuál de esos diez segundos usa, así que las aeronaves de un mismo aeródromo se reparten las transmisiones.
@@ -109,9 +109,9 @@ updated_on: "2026-11-19"
     <li>La luz parpadea y nunca se queda encendida</li>
   </ul>
 
-  <h3 id="gauge">Qué no hace el indicador.</h3>
+  <h3 id="gauge">Cómo leer el indicador de batería.</h3>
   <p class="lede">
-    Usa dos curvas de tensión, no una. Durante la carga, la tensión en los bornes supera la tensión propia de la batería. La misma lectura corresponde entonces a una batería mucho más descargada. El porcentaje indica qué curva se ha aplicado.
+    Con el cable conectado, el dispositivo mide la tensión USB, no la de la batería. Por eso no muestra un porcentaje. Solo calcula el porcentaje cuando funciona con batería.
   </p>
   <p class="lede">
     El indicador no invierte su marcha. Una transmisión a 14&nbsp;dBm que reduzca brevemente la tensión no lo mueve. Un piloto deja de fiarse de un indicador que salta cada vez que transmite la radio.
@@ -134,5 +134,6 @@ updated_on: "2026-11-19"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

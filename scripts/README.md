@@ -20,7 +20,7 @@ This directory holds the host tooling. The Python scripts run on the standard li
 | `build_local.sh` | build the device images of the products it is given, `skyblip_go` by default, off a committed ref, from a bare machine |
 | `build_image.sh` | build, sign and check one product's images in a ready workspace. `build_local.sh`, CI and a release share it |
 | `make_wordmark.py` | rasterise the wordmark into `firmware/ui/widgets/wordmark.cpp` |
-| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator |
+| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `skyblip-simulator-scenarios.json` each release carries for the simulator |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones |
 | `firmware_tree.rb` | print the firmware version `firmware/VERSION` holds (`version firmware`) or every product that declares a board, as JSON (`products firmware`), for the workflows and `build_image.sh` |
 | `release_files.rb` | stage a production release from its images, as `dev_release.rb` stages a pre-release: each product's images named after the version, the simulator, one `NOTICE.md` with every license text, `PROTOCOLS.md` and `SHA256SUMS` |
@@ -48,7 +48,7 @@ macOS goes through CoreBluetooth and asks for Bluetooth permission the first tim
 
 - `./scripts/blip.py stream --seconds 30` subscribes to Nordic UART (`6e400003`), reassembles lines as the browser client does, and prints each NMEA sentence with a host timestamp. A sentence with a bad checksum is flagged, never dropped.
 - `./scripts/blip.py command '{"command":"diagnostics"}'` writes one command, as JSON with the registry's full names, to the config endpoint (`69c21302`) and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A multi-frame reply ends when a frame stops saying `"more": true`. A command the unit asks about on its glass, such as `gnss_cold_start`, is answered `pending`, and `blip.py` holds the link up to 35 s for the press, because the unit cancels a prompt whose link drops.
-- `./scripts/blip.py protocols` prints each radio protocol stack the unit carries with its version, as `ADS-L 0.1.0`.
+- `./scripts/blip.py protocols` prints each radio protocol stack the unit carries with its version, as `ADS-L 0.8.0`.
 - `./scripts/blip.py --name "skyBlip Bravo" capture power_run` arms a capture with the profile `full`, `power_run` or `flight_run`, and `capture stop` stops it. The unit asks for a press, on its glass or its lamp, and `blip.py` waits up to 35 s for the verdict.
 
 `blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains needs no edit here. Its decoder and encoder refuse what the unit's own refuse, as `schemas/link.v1.vectors.json` lists, and `blip.py` stops on a `FrameError` instead of guessing.

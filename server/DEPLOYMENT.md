@@ -32,4 +32,4 @@ The GitHub `server_production` environment holds `SSH_PRIVATE_KEY`, the private 
 
 ## Releases
 
-Both development pre-releases and production releases attach `skyblip_simulator.js`, `skyblip_simulator.wasm`, `embed.js` and `scenarios.json` beside the firmware images, before `SHA256SUMS`, so production's attestation covers them. The production WASM is built in its own job, away from the runner holding the signing key. A release without these files cannot run in the simulator, and publishing one never redeploys the server.
+Both development pre-releases and production releases attach `skyblip-simulator.js`, `skyblip-simulator.wasm`, `skyblip-simulator-embed.js` and `skyblip-simulator-scenarios.json` beside the firmware images, before `SHA256SUMS`, so production's attestation covers them. The production WASM is built in its own job, away from the runner holding the signing key. A release without these files cannot run in the simulator, and publishing one never redeploys the server.

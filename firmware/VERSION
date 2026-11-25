@@ -12,6 +12,6 @@
 # triple plus a build number, the commit count in scripts/build_image.sh, instead
 # of editing this file, because version.cmake:79-81 refuses a tweak above 255.
 VERSION_MAJOR = 0
-VERSION_MINOR = 1
+VERSION_MINOR = 8
 PATCHLEVEL = 0
 VERSION_TWEAK = 0

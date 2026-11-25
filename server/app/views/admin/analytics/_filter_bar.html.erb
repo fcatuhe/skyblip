@@ -18,6 +18,9 @@
   <nav class="admin-pills" aria-label="Segment">
     <%= analytics_choice_links(url, filter_params, key: :segment, values: Analytics::Visit.segments.keys) %>
   </nav>
+  <nav class="admin-pills" aria-label="Activation">
+    <%= analytics_choice_links(url, filter_params, key: :activation, values: Analytics::ACTIVATION_CHOICES) %>
+  </nav>
 </div>
 
 <% if display_filters(filter_params).any? %>

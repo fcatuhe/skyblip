@@ -4,13 +4,13 @@ nav_title: "Go: Erste Schritte"
 slug: go-erste-schritte
 description: "Schalten Sie Go ein, prüfen Sie seine Position und lernen Sie das Radar kennen. Wählen Sie Ihren Luftfahrzeugtyp und geben Sie Ihr Rufzeichen ein."
 parent: guides
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Ihr Go vom ersten Tastendruck an.</h1>
-  <p class="lede">Ein Tastendruck schaltet skyBlip Go ein. Zwei Sekunden schalten ihn aus. Das Touchfeld wechselt die Ansicht und schaltet Warnungen stumm.</p>
+  <h1>Schalten Sie Go ein und lernen Sie seine Bedienelemente kennen.</h1>
+  <p class="lede">Drücken Sie die Taste, um skyBlip Go einzuschalten. Halten Sie sie zwei Sekunden lang, um ihn auszuschalten. Mit dem Touchfeld wechseln Sie die Ansicht und schalten Warnungen stumm.</p>
 </section>
 
 <section>
@@ -31,12 +31,12 @@ updated_on: "2026-11-18"
       <tbody>
         <tr><th>Touchfeld antippen</th><td>Öffnet die nächste Ansicht. Lehnt eine Anfrage ab: Auf dem Display steht CANCEL.</td></tr>
         <tr><th>Touchfeld 1&nbsp;s berühren</th><td>Schaltet eine aktive Warnung stumm. Ohne Warnung kehren Sie zum Radar zurück.</td></tr>
-        <tr><th>Taste drücken</th><td>Startet das Radar, wenn das Gerät aus ist. Öffnet das Menü der aktuellen Ansicht. Ändert im Menü den ausgewählten Wert. Bestätigt eine Anfrage.</td></tr>
+        <tr><th>Taste drücken</th><td>Schaltet Go ein und öffnet die Radaransicht, wenn er ausgeschaltet ist. Öffnet das Menü der aktuellen Ansicht. Ändert im Menü den ausgewählten Wert. Bestätigt eine Anfrage.</td></tr>
         <tr><th>Taste 2&nbsp;s halten</th><td>Schaltet das Gerät aus. Das Logo bleibt auf dem Display.</td></tr>
         <tr><th>Taste ebenso halten und dabei das Touchfeld berühren</th><td>Schaltet das Gerät für die Lagerung mit leerem Display aus. Bleibt ein Bild den ganzen Winter stehen, hinterlässt es einen Schatten.</td></tr>
         <tr><th>Taste halten und Ladegerät anschließen</th><td>Startet das Gerät und lädt es. Schließen Sie das Ladegerät ohne Tastendruck an, lädt Go, bleibt aber aus.</td></tr>
         <tr><th>RESET drücken</th><td>Startet Go neu.</td></tr>
-        <tr><th>RESET zweimal innerhalb einer halben Sekunde drücken</th><td>Öffnet TECHOBOOT, ein USB-Laufwerk für die Firmwareinstallation. Briefing fordert Sie nur dazu auf, wenn es Go nicht selbst neu starten kann.</td></tr>
+        <tr><th>RESET zweimal innerhalb einer halben Sekunde drücken</th><td>Öffnet TECHOBOOT, ein USB-Laufwerk zur Installation von skyBlip. Briefing fordert Sie nur dazu auf, wenn es Go nicht selbst neu starten kann.</td></tr>
       </tbody>
     </table>
   </div>
@@ -65,7 +65,7 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
-  <p>Die separate rote Lade-LED leuchtet beim Laden durchgehend. Sie blinkt, wenn der Akku fehlt oder defekt ist, und erlischt bei vollem Akku.</p>
+  <p>Die separate rote Lade-LED leuchtet beim Laden durchgehend und erlischt bei vollem Akku. Sie blinkt, wenn der Akku fehlt oder defekt ist.</p>
 </section>
 
 <section id="type" class="band band--tint">
@@ -102,5 +102,6 @@ updated_on: "2026-11-18"
 <section class="band band--tint">
   <h2 class="section-title">Nach dem Flug</h2>
   <p>Halten Sie die Taste zwei Sekunden lang gedrückt, um Go auszuschalten, und laden Sie ihn dann per USB-C. Das Logo bleibt auf dem Display. Wenn Sie Go für Wochen oder den ganzen Winter lagern möchten, halten Sie die Taste stattdessen zwei Sekunden lang gedrückt und lassen Sie dabei einen Finger auf dem Touchfeld: Go schaltet sich mit leerem Display aus. Ein Bild, das so lange stehen bleibt, hinterlässt einen dauerhaften Schatten. Lesen Sie den <%= link_to_page "power", label: "Leitfaden zum Laden und Lagern" %>.</p>
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

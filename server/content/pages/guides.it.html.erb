@@ -2,28 +2,28 @@
 title: "Guide e primi passi con skyBlip Go e Bravo"
 nav_title: Guide
 slug: guide
-description: "Installa il tuo Go o Bravo, poi trova i comandi, leggi le spie e prepara il dispositivo per il primo volo."
+description: "Installa skyBlip sul tuo Go o Bravo. Trova i comandi, leggi le spie e prepara le impostazioni utili prima del primo volo."
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
   <h1>Trova la guida per il tuo Go o Bravo</h1>
-  <p class="page-hero-subtitle">Hai appena ricevuto il dispositivo? <%= link_to_page "install", label: "Comincia con l'installazione" %>. Se Briefing dice che il dispositivo è pronto, apri la sua guida.</p>
+  <p class="page-hero-subtitle">Hai appena ricevuto il dispositivo? <%= link_to_page "install", label: "Installa skyBlip" %>. Se Briefing indica che il tuo Go o Bravo è pronto, apri la sua guida ai primi passi.</p>
 </header>
 
 <section id="install" class="band">
-  <h2 class="section-title">Installa</h2>
+  <h2 class="section-title">Installa il software e fissa il dispositivo</h2>
   <div class="guide-cards">
     <article>
-      <%= screen_image_tag "self-test.png", alt: "La pagina di autotest, con il nome e il risultato del test di ogni componente, incluso TEMP NRF52840 contrassegnato NOT FOUND" %>
+      <%= content_image_tag "pages/guides/briefing-setup.it.avif", alt: "La pagina di configurazione di Briefing: tre passaggi, Installa, Collega e Il tuo aeromobile, e un pulsante Installa", class: "guide-screenshot" %>
       <h3><%= link_to_page "install", label_type: :nav %></h3>
-      <p>Installa skyBlip sul tuo Go o Bravo dal browser. A ogni avvio, il Go controlla la radio, il GPS e il barometro e non funziona senza questi componenti.</p>
+      <p>Installa skyBlip sul tuo Go o Bravo dal browser. A ogni avvio, il Go controlla la radio, il GPS e il barometro. Non funziona senza questi componenti.</p>
     </article>
     <article>
       <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ su un LilyGO T-Echo Plus bianco accanto al morsetto a pinza con manopola arancione che lo fissa alla palpebra del cruscotto", class: "guide-photo" %>
       <h3><%= link_to_page "mount", label_type: :nav %></h3>
-      <p>Aggancia un Go o un Go+ a uno snodo sferico fissato alla palpebra del cruscotto, con i componenti che abbiamo provato, posiziona la sua antenna e appendi Bravo con il suo laccetto.</p>
+      <p>Aggancia un Go o un Go+ a uno snodo sferico fissato alla palpebra del cruscotto e posiziona la sua antenna. Trova i componenti che abbiamo provato e le istruzioni per appendere Bravo con il suo laccetto.</p>
     </article>
   </div>
 </section>
@@ -42,7 +42,7 @@ updated_on: "2026-11-20"
       <p>Trova il pulsante e la spia. Vedi il traffico nella tua app di navigazione o sul Go abbinato.</p>
     </article>
   </div>
-  <p class="signature">Con un Tango, apri entrambe le guide. Go mostra il traffico e Bravo aggiunge quello che riceve.</p>
+  <p class="signature">Con un Tango, apri entrambe le guide. Go mostra il traffico e Bravo completa quello che il Go riceve.</p>
 </section>
 
 <section class="band">
@@ -77,7 +77,7 @@ updated_on: "2026-11-20"
     <article>
       <%= screen_image_tag "off-flat-battery.png", alt: "Lo schermo di un dispositivo che si è spento perché la batteria è scarica" %>
       <h3><%= link_to_page "power" %></h3>
-      <p>Scopri cosa aspetta sul piazzale, come appare da spento e come la batteria ti avvisa mentre si scarica.</p>
+      <p>Riconosci lo schermo di un Go spento e gli avvisi che dà mentre la batteria si scarica. Scopri anche cosa aspetta sul piazzale.</p>
     </article>
     <article>
       <%= screen_image_tag "confirm.png", alt: "La richiesta di autorizzazione sullo schermo" %>
@@ -93,36 +93,23 @@ updated_on: "2026-11-20"
     <article>
       <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
-      <p>Una radio usa quattro intervalli al secondo e riceve i segnali di due sistemi nello stesso intervallo.</p>
+      <p>Una sola radio usa quattro intervalli al secondo. Nello stesso intervallo riceve i segnali di due sistemi.</p>
     </article>
     <article>
       <%= render "shared/cycle", compact: true %>
       <h3><%= link_to_page "timing" %></h3>
-      <p>Il numero di serie sceglie i secondi di un ciclo di 20&nbsp;s, la parità del secondo sceglie il canale e un sorteggio ripetuto ogni secondo sceglie il millisecondo.</p>
+      <p>Il numero di serie determina i secondi utilizzati in un ciclo di 20&nbsp;s. Il canale dipende dal fatto che il secondo sia pari o dispari. Un nuovo sorteggio sceglie il millisecondo a ogni secondo.</p>
     </article>
     <article>
       <%= render "shared/flight_state", compact: true %>
       <h3><%= link_to_page "gps" %></h3>
-      <p>Un fix che deve stabilizzarsi e arrivare prima di 450&nbsp;ms, l&rsquo;impulso che avvia ogni secondo e lo stato di volo deciso solo dalla velocità al suolo.</p>
+      <p>Il fix deve stabilizzarsi e arrivare prima di 450&nbsp;ms. Un impulso segna l&rsquo;inizio di ogni secondo. Il Go determina se è in volo solo dalla velocità al suolo.</p>
     </article>
     <article>
       <%= render "shared/advisory_ring", compact: true %>
       <h3><%= link_to_page "traffic" %></h3>
-      <p>Un solo anello di avviso di 3&nbsp;km e 300&nbsp;m, nessun avviso a terra, sei messaggi mancanti per eliminare un bersaglio e il volo in formazione.</p>
+      <p>Il Go dà avvisi di traffico in un solo anello di 3&nbsp;km e 300&nbsp;m. Non dà avvisi a terra ed elimina un bersaglio dopo sei messaggi mancanti. La guida tratta anche il volo in formazione.</p>
     </article>
   </div>
-</section>
-
-<section class="band band--tint">
-  <h2 class="section-title">Per i curiosi</h2>
-  <div class="resource-cards">
-    <article>
-      <h3><%= link_to_page "see-and-avoid" %></h3>
-      <p>I dati pubblicati sul principio «vedere ed evitare» riguardano il campo visivo, il settore osservato, la dimensione apparente di un aeromobile e il tempo di reazione.</p>
-    </article>
-    <article>
-      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
-      <p>Scopri skyBlip Panel per gli schermi di cabina e le stazioni skyPost per ritrasmettere il traffico intorno a un campo di volo.</p>
-    </article>
-  </div>
+  <p class="signature">Altre domande? Nel <%= link_to_page "blog", label_type: :nav %> trovi le nostre risposte ai piloti dei forum e il confronto fra skyBlip e altri sistemi.</p>
 </section>

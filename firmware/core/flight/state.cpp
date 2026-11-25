@@ -48,7 +48,7 @@ void FlightMonitor::update_rolling(int32_t speed_mm_s) {
 }
 
 void FlightMonitor::update_taxi(const FlightSample& sample, uint32_t now_ms) {
-    if (!sample.fix_valid || !taxi_evidence(sample)) {
+    if (!sample.fix_valid || !sample.speed_valid || !taxi_evidence(sample)) {
         taxiing_ = false;
         return;
     }
@@ -68,6 +68,12 @@ FlightState FlightMonitor::update(const FlightSample& sample, uint32_t now_ms) {
         previous_speed_valid_ = false;
         return FlightState::Unknown;
     }
+    // INFO: fc 22nov26 a fix with no speed shows neither a takeoff nor a landing
+    if (!sample.speed_valid) {
+        previous_speed_valid_ = false;
+        return now_ms - speed_at_ms_ > kSpeedMaxAgeMs ? FlightState::Unknown : state_;
+    }
+    speed_at_ms_ = now_ms;
     update_rolling(sample.speed_mm_s);
 
     const int32_t previous_speed_mm_s = last_speed_mm_s_;

@@ -22,6 +22,7 @@ flight::FlightState OwnshipService::flight_state_from(const model::Ownship& own,
     sample.speed_mm_s = own.speed_mm_s;
     sample.hdop_e2 = own.hdop_e2;
     sample.fix_valid = own.fix_valid;
+    sample.speed_valid = own.speed_valid;
     return flight_.update(sample, now_ms);
 }
 
@@ -98,8 +99,11 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.geoid_measured = solution.geoid_measured;
     own.speed_mm_s = solution.speed_mm_s;
     own.track_cdeg = solution.track_cdeg;
+    own.speed_valid = solution.speed_valid;
+    own.track_valid = solution.track_valid;
     own.hdop_e2 = solution.hdop_e2;
     own.vdop_e2 = solution.vdop_e2;
+    own.altitude_hae_valid = height_solved(own);
     own.utc_s = solution.utc_s;
     own.utc_ms = solution.utc_ms;
     const Dated dated = solution_instant(solution, now_ms);
@@ -113,6 +117,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     // INFO: fc 18nov26 a withdrawal on any quarter withdraws the whole second the EFB and log read
     if (!own.fix_valid) context_.state.own_second.fix_valid = false;
     if (!own.utc_valid) context_.state.own_second.utc_valid = false;
+    relabeled_ = relabeled_ || solution.relabeled;
     anchor_utc_s(solution, now_ms);
     publish_solution_phase(now_ms);
 
@@ -259,17 +264,36 @@ void OwnshipService::update_residual(const model::Ownship& previous) {
 
 // INFO: fc 16sep26 a sentence names the second its own edge opened, and only that edge dates it
 // | 18nov26 and an anchor a timely fix set is replaced only by another
+// | 22nov26 or by two in a row naming their edge a whole second off once the stamps stepped back
 void OwnshipService::anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms) {
     timing::ClockState& clock = context_.state.clock;
     if (!dates_the_edge(solution, clock) || solution.backlogged) return;
     if (gnss::named_quarter_ms(solution.utc_ms) != 0) return;
     const uint32_t edge_ms = static_cast<uint32_t>(clock.pps_edge_us / 1000);
-    if (context_.state.own.fix_at_ms - edge_ms != solution.utc_ms) return;
     const bool fixed = solution.fix_valid && now_ms - edge_ms < latency_ceiling_ms(solution);
+    const int32_t off_ms =
+        static_cast<int32_t>(context_.state.own.fix_at_ms - edge_ms - solution.utc_ms);
+    if (!relabels(off_ms, fixed)) return;
     if (clock.utc_anchor_fixed && !fixed) return;
     clock.utc_s = solution.utc_s;
     clock.utc_edge_us = clock.pps_edge_us;
     clock.utc_anchor_fixed = fixed;
+}
+
+// INFO: fc 22nov26 a part turning a second late looks the same at the edge, but its stamps never
+// step back
+bool OwnshipService::relabels(int32_t off_ms, bool fixed) {
+    if (off_ms == 0) {
+        label_step_ms_ = 0;
+        relabeled_ = false;
+        off_unmarked_ = false;
+        return true;
+    }
+    off_unmarked_ = off_unmarked_ || (fixed && !relabeled_);
+    const bool stepped = fixed && relabeled_ && !off_unmarked_ && off_ms % 1000 == 0;
+    const bool confirmed = stepped && label_step_ms_ == off_ms;
+    label_step_ms_ = stepped && !confirmed ? off_ms : 0;
+    return confirmed;
 }
 
 // INFO: fc 18nov26 the stated 250 ms, or the part's own start and line time when its port is slower

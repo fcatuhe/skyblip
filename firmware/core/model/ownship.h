@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "core/units/units.h"
+
 namespace skyblip::model {
 struct Ownship {
     bool fix_valid;
@@ -13,7 +15,8 @@ struct Ownship {
     int32_t longitude_1e7;
     // INFO: fc 20nov26 HAE, because ADS-L G.1.7 transmits it and every received altitude uses it
     int32_t altitude_hae_mm;
-    // INFO: fc 11nov26 false only for a height dated apart from its position, a paired Go's
+    // INFO: fc 22nov26 false for a height the receiver did not solve, or dated apart from its
+    // position
     bool altitude_hae_valid{true};
     int32_t altitude_msl_mm;
     int32_t pressure_altitude_mm;
@@ -27,6 +30,9 @@ struct Ownship {
     int32_t speed_mm_s;
     // INFO: fc 20nov26 hundredths, 0 to 35999, because the turn rate is differentiated from it
     int32_t track_cdeg;
+    // INFO: fc 22nov26 the receiver reported each, so a speed of 0 is a standstill, not a gap
+    bool speed_valid;
+    bool track_valid;
     // INFO: fc 20nov26 positive to the right, zero when nothing measured it
     int16_t turn_cdps;
     uint32_t utc_s;
@@ -40,7 +46,7 @@ struct Ownship {
     uint32_t fix_in_hand_ms;
     // INFO: fc 20nov26 zero means the receiver did not report it, not a perfect HDOP
     uint16_t hdop_e2;
-    // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution
+    // INFO: fc 22nov26 vertical DOP in hundredths, zero unless the receiver's last GSA set said 3D
     uint16_t vdop_e2;
     // INFO: fc 20nov26 false when altitude_msl_mm used a regional geoid constant
     bool geoid_measured;
@@ -54,6 +60,12 @@ struct Ownship {
     uint8_t aircraft_category;
     uint8_t flight_state;
 };
+
+// INFO: fc 22nov26 G.1.10: a speed that encodes as zero needs no track to be a whole velocity
+inline bool velocity_valid(const Ownship& own) {
+    return own.speed_valid &&
+           (own.track_valid || to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value == 0);
+}
 
 }  // namespace skyblip::model
 

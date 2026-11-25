@@ -6,7 +6,7 @@ class Capture < CapturesRecord
   # INFO: fc 15nov26 a full ring is 28,900 records, about 7 MB of NDJSON and under 1 MB gzipped
   MAX_BYTES = 4.megabytes
 
-  enum :profile, %w[full power_run flight_run].index_by(&:itself), suffix: true
+  enum :profile, %w[full power_run flight_run].index_by(&:itself), suffix: true, validate: true
 
   validates :device, format: { with: DEVICE }
   validates :browser, format: { with: BROWSER }, allow_nil: true

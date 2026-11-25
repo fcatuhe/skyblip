@@ -1,6 +1,6 @@
 const EARTH_RADIUS_M = 6371008.8;
-const radians = degrees => (degrees * Math.PI) / 180;
-const degrees = radians => (radians * 180) / Math.PI;
+export const radians = degrees => (degrees * Math.PI) / 180;
+export const degrees = radians => (radians * 180) / Math.PI;
 
 export const FEET_PER_METRE = 3.28084;
 export const KNOTS_PER_METRE_SECOND = 1.943844;

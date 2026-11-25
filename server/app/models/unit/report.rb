@@ -2,6 +2,8 @@ class Unit::Report
   include ActiveModel::API
   include ActiveModel::Attributes
 
+  LONGEST_INSTALL = 1.day
+
   attribute :device_id, :string
   attribute :product, :string
   attribute :variant, :string
@@ -20,5 +22,5 @@ class Unit::Report
   validates :bluetooth_tag, inclusion: { in: Unit::BLUETOOTH_TAGS }, on: :read
   validates :to, format: { with: Activation::VERSION }, on: :install
   validates :from, format: { with: Activation::VERSION }, allow_nil: true, on: :install
-  validates :lasted_ms, numericality: { only_integer: true }, allow_nil: true, on: :install
+  validates :lasted_ms, numericality: { only_integer: true, in: 0..LONGEST_INSTALL.in_milliseconds }, allow_nil: true, on: :install
 end

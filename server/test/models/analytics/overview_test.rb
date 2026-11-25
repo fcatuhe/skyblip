@@ -39,7 +39,7 @@ class Analytics::OverviewTest < ActiveSupport::TestCase
   test "metrics of a period without visits are zeros" do
     overview = Analytics::Overview.new(filter_params: { start_on: @end_on + 1, end_on: @end_on + 2 })
 
-    assert_equal({ visitors: 0, visits: 0, pageviews: 0, bounce_rate: 0, visit_duration: 0 }, overview.metrics)
+    assert_equal({ visitors: 0, visits: 0, pageviews: 0, bounce_rate: 0, visit_duration: 0, activated_visitors: 0 }, overview.metrics)
   end
 
   test "path filter narrows visits and pageviews" do
