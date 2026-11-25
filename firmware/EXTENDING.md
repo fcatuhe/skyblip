@@ -34,4 +34,6 @@ The maintainer writes or rewrites every change to what the unit transmits, what 
 4. Run `make test` and `make tidy` here. Then regenerate the generated pages from the repository root, `python3 scripts/behavior_index.py` and `python3 scripts/tuning_index.py`, and commit them with the change.
 5. Open the pull request against `main`. CI signs its image with a key made for the run, so the image it builds updates no unit.
 
-skyBlip is MIT (`../LICENSE`). Code you wrote yourself can come in under MIT, even if you first published it under another license. Code someone else wrote under the GPL, such as most of SoftRF, cannot be copied in, so write it again against skyBlip's types. Sign off each commit with `git commit -s`, which states under the [Developer Certificate of Origin](https://developercertificate.org) that you have the right to submit it.
+## License
+
+skyBlip is MIT (`../LICENSE`), and a pull request submits its contribution under MIT.

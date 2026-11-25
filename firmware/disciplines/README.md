@@ -53,5 +53,3 @@ The type-specific features of moshe-braner's SoftRF fork land here, or elsewhere
 | No alarm between a tug and its glider | `Traffic_Update` in `src/TrafficHelper.cpp` | already done by `core/traffic/formation`, on geometry alone |
 | Paraglider alarms off, or graded on distance alone | `Alarm_Latest` | not a pack, because it lowers a level: a change to `core/traffic/` |
 | Winch mode, relaying landed-out aircraft, the radio protocols | `src/protocol/radio/` | not a pack, because it changes what goes on air: `protocols/` and `core/` |
-
-SoftRF is GPL-3.0 and skyBlip is MIT, so code from the fork cannot be copied in. `../EXTENDING.md` says what can.
