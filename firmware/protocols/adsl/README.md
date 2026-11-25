@@ -87,9 +87,11 @@ The integrator picks the CCA interval, the dead time, the threshold, the deferra
 
 `encode_status()` writes §G.2's payload type 3, what a device can hear and process, under version 1, since the Status first appears in Issue 2. `receive_class()` maps the share of the direct slot heard to §G.2.2's classes: over 5% Occasional, over 40% Partial, over 80% Full. `core/protocol/README.md` says what skyBlip declares.
 
-The payload is 12 bytes, so the packet is 16 with the network header and the CRC, and its §D.1.1 length byte says 16 (`Packet::kStatusDataBytes`, `data_bytes()`). `scramble()`, `set_crc()` and `receive()` take the length, so a Status padded to 24 bytes or a Traffic cut to 16 is `Invalid`.
+The F.2 header and G.2 Status payload together take 12 bytes. The network header and CRC bring the packet to 16 bytes, the length §D.1.1 requires. G.2 defines no padding, and those 12 bytes already meet F.2.5's alignment. The 24-byte device status in OGN Tracker is type 66 telemetry, not a padded G.2 Status. The receiver refuses a G.2 Status behind a clean length of 24, even when its first 16 bytes pass the CRC.
 
-The length byte rides outside the CRC, and 16 and 24 differ in one bit, so `receive_as_heard()` reads the frame at both lengths and keeps the one reading that comes out `Ok`. It refuses a frame both readings accept, since nothing under the CRC says which was sent: zeros behind a clean CRC codeword keep it clean. It reads 24 bytes only where the chips past the 16th byte were heard as a transmitter's, so a Status followed by silence reads at 16 alone.
+The length byte rides outside the CRC. The receiver checks only sizes that agree with every clean Manchester pair, and rejects lengths with more than two doubtful pairs. It can try both 16 and 24 only if bit 3 is doubtful, and refuses the burst if both sizes pass the CRC and payload checks. It checks at 24 bytes only when the chips after byte 16 were heard as a transmitter's.
+
+If both chips in a length pair flip, the receiver sees a clean wrong bit and loses the packet. The old receiver could recover it by ignoring the length. With independent 1% chip errors in a host probe of one million bursts per payload, exact Traffic receptions rose from 895,650 to 904,588 and exact Status receptions rose from 964,998 to 974,821. A collision can flip both chips together, so the gain does not apply to all interference.
 
 ## Which issue a payload is
 

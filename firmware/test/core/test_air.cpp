@@ -61,7 +61,7 @@ TEST_CASE("air: the two sync words share the window the detector matches") {
     CHECK(protocol::kSharedSync[0] == 0x55);
     CHECK(protocol::kSharedSync[1] == 0x99);
 
-    // The 24 bits of sync word still ahead of the frame when the report starts name the system.
+    // ADS-L uses the first 16 bits of its tail for sync and the last eight for length.
     CHECK(protocol::kSyncTailBits == 24);
     CHECK(protocol::sync_tail(adsl::kSyncWord) == 0x724B18u);
     CHECK(protocol::sync_tail(alptas::kSyncWord) == 0x31FAB6u);
@@ -109,8 +109,8 @@ TEST_CASE("air: the buffer a radio is handed is the burst, less the window the r
     CHECK(std::memcmp(on_air + protocol::kSyncWindowChipBytes, buffer, buffer_bytes) == 0);
 }
 
-// A dead chip pair in the sync tail must not cost the frame: it is 24 bits long
-// and the two systems differ in far more than one of them.
+// A dead chip pair in the sync tail must not cost the frame: the two sync words differ in many
+// bits.
 TEST_CASE("air: one flipped chip in the sync tail still names the system") {
     uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 3);
