@@ -3,7 +3,7 @@ title: "Installa skyBlip dal browser"
 nav_title: Installa
 slug: installa
 description: "Installa skyBlip sul tuo Go o Bravo dal browser con Briefing. Ti bastano un computer, Chrome o Edge e un cavo USB-C."
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
@@ -25,7 +25,7 @@ updated_on: "2026-11-18"
       </li>
       <li>
         <h3>Connetti</h3>
-        <p>Connetti il dispositivo via Bluetooth quando Briefing te lo chiede.</p>
+        <p>Via Bluetooth, dal computer o da un telefono Android con Chrome.</p>
       </li>
       <li>
         <h3>Vola</h3>
@@ -39,6 +39,7 @@ updated_on: "2026-11-18"
 <section id="connected" class="band">
   <h2 class="section-title">Da sapere</h2>
   <p>Attiva un Go nuovo in Briefing, senza creare un account. Bravo non richiede attivazione.</p>
+  <p>Il computer non ha Bluetooth? Installa via USB, poi inquadra il codice con un telefono Android e apri il link in Chrome per completare la configurazione. Sul telefono, un Go nuovo ti chiede di premere una volta il suo pulsante per attivarlo.</p>
   <p>Per un Tango, installa il software su entrambi i dispositivi, poi abbinali in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
   <p>Usi già skyBlip? <%= link_to "Connetti il dispositivo in Briefing", briefing_root_path(locale: I18n.locale) %> per accedere alle impostazioni e agli aggiornamenti.</p>
 </section>
@@ -48,6 +49,8 @@ updated_on: "2026-11-18"
     <h2>Se qualcosa non funziona</h2>
     <h3 id="not-found">Il dispositivo non compare</h3>
     <p>Accendilo e prova un cavo USB-C che supporti il trasferimento dati. Per l&rsquo;installazione guidata via USB, usa Chrome o Edge su un computer. Se non puoi usare la procedura guidata, copia il software a mano.</p>
+    <h3 id="no-bluetooth">Il computer non ha Bluetooth</h3>
+    <p>Installa prima via USB. Poi inquadra il codice con la fotocamera di un telefono Android e apri il link in Chrome. Senza fotocamera, apri skyblip.eu/setup in Chrome su quel telefono e tocca «Collegalo». Puoi anche collegare un adattatore Bluetooth USB al computer e connetterti da lì. Un iPhone non può connettersi al dispositivo in Briefing.</p>
     <h3 id="manual">Installa il software a mano</h3>
     <p>Scarica il file <code>.uf2</code> per il tuo dispositivo dalla <%= link_to "pagina delle versioni di skyBlip", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
     <ul>
