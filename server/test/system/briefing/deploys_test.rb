@@ -37,6 +37,29 @@ class Briefing::DeploysTest < ApplicationSystemTestCase
     end
   end
 
+  # Turbo prefetches a link on hover, and a prefetch answered by a deploy once loaded the hovered page.
+  test "a link hovered after a deploy is prefetched, and the page stays where it is" do
+    in_range a_go
+    on_the_shelf do
+      visit "/briefing"
+      page.execute_script(<<~JS)
+        addEventListener("turbo:before-fetch-response", event => {
+          if (event.target.tagName === "A") window.prefetchHandled = event.defaultPrevented
+        })
+      JS
+
+      deploying_new_scripts do
+        find(".app-menu summary").click
+        within(".app-menu") { find_link("Set up a device").hover }
+        page.document.synchronize do
+          raise Capybara::ExpectationNotMet, "no prefetch answered" if page.evaluate_script("window.prefetchHandled").nil?
+        end
+        assert_equal false, page.evaluate_script("window.prefetchHandled")
+        assert_current_path "/briefing"
+      end
+    end
+  end
+
   private
     def mark_the_document = page.execute_script("window.markedDocument = true")
 
