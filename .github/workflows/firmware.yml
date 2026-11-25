@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  # Keep the required check present without cross-building Rails-only changes.
+  # Skip the cross-builds when a change touches only the server or prose.
   changes:
     name: what changed
     runs-on: ubuntu-26.04-arm
@@ -471,3 +471,14 @@ jobs:
           path: firmware/build/meshtracker-x1-smoke.uf2
           if-no-files-found: error
           retention-days: 7
+
+  # The one check the main ruleset requires, since a skipped matrix job never reports its expanded names.
+  passed:
+    name: firmware passed
+    needs: [changes, host-tests, host-tests-sanitized, fuzz, lint, product-image, simulator, platform-adapters]
+    if: always()
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - name: fail when a check failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
