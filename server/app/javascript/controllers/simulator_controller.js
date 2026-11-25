@@ -86,6 +86,7 @@ export default class extends Controller {
   async start() {
     clearTimeout(this.bootTimer)
     this.#stop()
+    if (!("WebAssembly" in window)) return
     const generation = ++this.#generation
     const { load, PAGES } = await import(this.srcValue)
     if (generation !== this.#generation) return

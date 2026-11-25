@@ -20,7 +20,7 @@ browser.failed:
   group: Errors
   from: browser
   keys: [kind, error, message, file, line, column, controller, frames]
-  says: A script error, an unhandled rejection or an error Stimulus caught in a controller, on any page of the site, with its class, message, file, line and first frames, once per page view and kind of failure.
+  says: A script error, an unhandled rejection or an error Stimulus caught in a controller, on any page of the site, with its class, message, file, line and first frames, once per page view and kind of failure. Errors from the scripts a browser or an extension injects into the page are left out.
   answers: Which scripts break in which browsers, the browser half of the errors an error tracker would hold.
 bluetooth.chooser_closed:
   group: Bluetooth

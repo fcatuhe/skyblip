@@ -1,8 +1,12 @@
 # INFO: fc 14nov26 a failing tool answers the agent a bare internal error, so the error itself goes to the log and Rails.error
 MCP.configure do |config|
   config.exception_reporter = ->(error, context) do
-    Rails.logger.error error.full_message(highlight: false)
-    Rails.error.report error, context:
+    agents_mistake = error.is_a?(MCP::Server::RequestHandlerError) && error.error_type != :internal_error
+
+    unless agents_mistake
+      Rails.logger.error error.full_message(highlight: false)
+      Rails.error.report error, context:
+    end
   end
 
   config.around_request = ->(data, &request) do

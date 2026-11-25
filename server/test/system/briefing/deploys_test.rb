@@ -37,6 +37,21 @@ class Briefing::DeploysTest < ApplicationSystemTestCase
     end
   end
 
+  # A home page restored with the scripts of a morning deploy drew the simulator frame of the afternoon's, and its controller missed a target.
+  test "a frame answered after a deploy loads the page anew, so old scripts never meet new markup" do
+    page.current_window.resize_to(1000, 700)
+    visit "/"
+    frame = find("#simulator_build[loading=lazy]")
+    mark_the_document
+
+    deploying_new_scripts do
+      scroll_to frame, align: :center
+      assert_reloaded
+    end
+  ensure
+    page.current_window.resize_to(*ApplicationSystemTestCase::SCREEN_SIZE)
+  end
+
   # Turbo prefetches a link on hover, and a prefetch answered by a deploy once loaded the hovered page.
   test "a link hovered after a deploy is prefetched, and the page stays where it is" do
     in_range a_go
