@@ -15,7 +15,7 @@ Rails.application.routes.draw do
 
   scope ".well-known", module: :oauth do
     resource :authorization_server, only: :show, path: "oauth-authorization-server"
-    resource :protected_resource, only: :show, path: "oauth-protected-resource/mcp"
+    resource :protected_resource, only: :show, path: "oauth-protected-resource/admin/mcp"
   end
 
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
@@ -26,6 +26,7 @@ Rails.application.routes.draw do
   resources :events, only: :create
 
   namespace :admin do
+    resource :mcp, only: %i[show create destroy]
     resource :analytics, only: :show do
       scope module: :analytics do
         resources :visitors, only: %i[index show], param: :visitor_token
