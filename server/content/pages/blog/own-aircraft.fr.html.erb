@@ -1,0 +1,138 @@
+---
+title: "skyBlip et votre transpondeur, FLARM ou ADS-L à bord"
+nav_title: Votre propre avion
+slug: blog/votre-propre-avion
+description: "Un équipement dans votre cockpit est le trafic le plus proche. Comment un Tango masque votre transpondeur, ce que fait un FLARM à bord, et la patrouille."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 novembre 2026</p>
+  <h1>Quand le Go entend son propre avion</h1>
+  <p class="lede">Sur Pilot und Flugzeug, Frank a demandé si un Go pouvait ignorer un FLARM installé dans l&rsquo;avion, idéalement avec un profil, pour qu&rsquo;un même Go vole dans plusieurs avions du club. Un équipement dans votre propre cockpit est l&rsquo;aéronef le plus proche qui soit : à distance nulle, à votre hauteur. Sans filtre, il resterait sur votre radar et déclencherait l&rsquo;alerte pendant tout le vol. Pour le transpondeur de l&rsquo;avion, un Tango le gère déjà. Voici comment, écran par écran, ce que cela donne aujourd&rsquo;hui pour un FLARM ou un équipement ADS-L, et pourquoi ce n&rsquo;est pas la même chose que le vol en patrouille.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Pourquoi c&rsquo;est important</h2>
+  <h3>Votre propre transpondeur est le trafic le plus proche du ciel.</h3>
+  <p>Le Go alerte pour tout aéronef à moins de 3&nbsp;km et 300&nbsp;m de hauteur. Dans un Tango, Bravo écoute le 1090&nbsp;MHz dans le même cockpit que votre transpondeur, donc il l&rsquo;entend plus fort que tout le reste. Une station sol OGN ou skyPost peut aussi vous renvoyer votre propre position. Tant que le Go ne sait pas quelle adresse est la vôtre, il dessine cet aéronef sur son propre symbole, et il peut déclencher l&rsquo;alerte en vol.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Au sol</h2>
+  <div class="feature">
+    <div>
+      <h3>Bravo nomme le transpondeur qu&rsquo;il entend le plus fort.</h3>
+      <p>Passez le transpondeur sur ALT avant de rouler. En STBY, il n&rsquo;émet rien. Quand un transpondeur reste nettement plus fort que tous les autres pendant 10&nbsp;secondes, Bravo le nomme au Go : son adresse et, d&rsquo;après son identification ADS-B, l&rsquo;immatriculation et le type d&rsquo;aéronef. Un transpondeur mode&nbsp;S sans ADS-B Out ne donne que son adresse.</p>
+      <p>Ouvrez le menu des réglages sur le radar, puis <span class="mono">AIRCRAFT</span>. Le bloc du haut montre ce que Bravo entend. Les lignes du dessous montrent ce que le Go a enregistré. L&rsquo;immatriculation est en triple hauteur pour que vous la compariez au fuselage. Un appui sur le bouton enregistre ensemble le type, l&rsquo;indicatif et l&rsquo;adresse.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "aircraft-proposal.png", alt: "Le menu AIRCRAFT : un bloc noir avec LIGHT, D-EFLY en triple hauteur et ADS-B 3C4A21, au-dessus des lignes TYPE LIGHT, CALLSIGN D-EABC et ADS-B 3C6586, avec les touches SET et NEXT" %>
+      <figcaption>Ce que Bravo entend, au-dessus de ce que le Go a enregistré</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Ce que change un appui</h2>
+  <h3>Votre transpondeur n&rsquo;est plus jamais du trafic.</h3>
+  <ul>
+    <li><strong>Le Go masque cette adresse,</strong> sur le radar, dans l&rsquo;alerte et dans la liste NEARBY. Cela vaut pour chacune de ses copies : celle de Bravo, celle d&rsquo;une station sol qui la relaie, ou celle d&rsquo;un FLARM ou d&rsquo;un équipement ADS-L qui émet la même adresse.</li>
+    <li><strong>Le Go émet son ADS-L sous la même adresse OACI,</strong> comme ADS-L F.2.3 le demande à un aéronef équipé d&rsquo;un transpondeur. Un récepteur qui entend votre ADS-B et votre ADS-L affiche un seul aéronef, pas deux.</li>
+    <li><strong>Bravo garde aussi l&rsquo;adresse,</strong> et continue de masquer votre transpondeur si sa liaison avec le Go tombe.</li>
+    <li><strong>Le Go refuse une adresse qui contredit Bravo.</strong> Tant que Bravo nomme votre transpondeur, toute autre adresse saisie dans la ligne <span class="mono">ADS-B</span> est refusée, car F.2.3 demande d&rsquo;interdire les réglages incohérents. Effacer l&rsquo;adresse demande un second appui, sur un écran qui prévient que votre transpondeur apparaîtra comme trafic.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">Changer d&rsquo;avion</h2>
+  <div class="feature feature--reverse">
+    <div>
+      <h3>Avec un transpondeur, c&rsquo;est l&rsquo;avion qui se présente au Go.</h3>
+      <p>Frank demandait des profils. Pour un avion équipé d&rsquo;un transpondeur, un Tango n&rsquo;en a pas besoin. Quand Bravo entend un transpondeur que le Go n&rsquo;a pas enregistré, le Go le signale une fois par mise en marche, par-dessus la page affichée. Ici, un Go qui a volé en dernier dans D-EABC se trouve maintenant dans D-EFLY.</p>
+      <p>Le bouton enregistre le nouvel avion. Le pavé, le compte à rebours de 30&nbsp;secondes et un décollage ferment l&rsquo;écran sans rien enregistrer.</p>
+      <p>Sans Bravo, saisissez l&rsquo;adresse dans la ligne <span class="mono">ADS-B</span> du même menu. Tout avion équipé d&rsquo;un transpondeur mode&nbsp;S en a une : six chiffres hexadécimaux attribués par son État d&rsquo;immatriculation.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "aircraft-notice.png", alt: "L'écran BRAVO HEARS : LIGHT, D-EFLY en triple hauteur et ADS-B 3C4A21, un compte à rebours CANCELS IN 24 S et les touches SET et CLOSE" %>
+      <figcaption>Une fois par mise en marche, sur n&rsquo;importe quelle page</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">En vol</h2>
+  <div class="feature">
+    <div>
+      <h3>En l&rsquo;air, le Go ne propose rien.</h3>
+      <p>Bravo ne propose une adresse qu&rsquo;au sol. En l&rsquo;air, un équipier à 10&nbsp;m est aussi fort que votre propre transpondeur, et enregistrer son adresse le ferait disparaître de votre radar. En vol, le bloc dit donc où le faire et ne propose pas de <span class="mono">SET</span>.</p>
+      <p>Réglez l&rsquo;adresse avant le premier vol dans un avion, au plus tard au point d&rsquo;attente.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "aircraft-in-flight.png", alt: "Le menu AIRCRAFT en vol : le bloc indique IN FLIGHT, BRAVO FINDS IT ON THE GROUND, au-dessus des lignes TYPE, CALLSIGN et ADS-B, avec la seule touche NEXT" %>
+      <figcaption>Le même menu en vol</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Vol en patrouille</h2>
+  <div class="feature feature--reverse">
+    <div>
+      <h3>La patrouille se détecte en vol, et ne fait que couper l&rsquo;alerte.</h3>
+      <p>Le Go se tait aussi pour les aéronefs qui volent avec vous : une patrouille, un remorqueur et son planeur, deux planeurs dans la même pompe. Il ne peut pas connaître vos intentions, alors il lit la géométrie. Un aéronef à moins de 1&nbsp;000&nbsp;m et 100&nbsp;m de hauteur, qui garde la même place par rapport à vous, à 60&nbsp;m près, pendant 6&nbsp;secondes, vole avec vous. Un aéronef qui décolle avec vous rejoint la patrouille sans alerte.</p>
+      <p>Le radar dessine alors un carré autour de votre symbole, avec le nombre d&rsquo;équipiers dans chaque quart, à la place de leurs propres symboles. Le compteur <span class="mono">TRAFFIC</span> ne les compte pas, et la liste NEARBY les affiche toujours.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "formation.png", alt: "Le radar avec trois aéronefs autour du cercle et, au centre, un carré autour du symbole de l'avion avec le chiffre 1 dans son quart inférieur droit. TRAFFIC indique 3" %>
+      <figcaption>Un équipier à 60&nbsp;m sur la droite</figcaption>
+    </figure>
+  </div>
+  <p>La patrouille et votre propre avion sont deux filtres différents :</p>
+  <ul>
+    <li><strong>La patrouille est un jugement que le Go refait à chaque vol,</strong> d&rsquo;après la position de l&rsquo;autre aéronef. L&rsquo;adresse de votre avion est une identité que vous confirmez une fois, au sol.</li>
+    <li><strong>Un équipier reste sur le radar,</strong> sous forme de carré, et dans la liste NEARBY. Votre propre transpondeur n&rsquo;apparaît pas du tout.</li>
+    <li><strong>Un équipier qui se rapproche de vous</strong> à 3&nbsp;m/s ou plus, sur deux réceptions de suite, redevient du trafic. Votre propre transpondeur, jamais.</li>
+    <li><strong>La patrouille a besoin de l&rsquo;altitude de l&rsquo;autre aéronef,</strong> et elle prend fin à votre atterrissage.</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">FLARM et ADS-L à bord, aujourd&rsquo;hui</h2>
+  <h3>Sous l&rsquo;adresse OACI de l&rsquo;avion, ils sont déjà masqués.</h3>
+  <p>Le filtre porte sur l&rsquo;adresse, pas sur la radio. Un FLARM réglé pour émettre l&rsquo;adresse OACI de l&rsquo;avion plutôt que son propre identifiant FLARM est masqué dès que le Go a enregistré cette adresse. De même pour un équipement ADS-L qui émet l&rsquo;adresse OACI, comme F.2.3 le demande à un aéronef équipé d&rsquo;un transpondeur. Dans un avion de club avec un transpondeur et un FLARM sur son adresse OACI, un Tango masque les deux. Un Go seul aussi, dès que vous avez saisi l&rsquo;adresse.</p>
+  <p>Un FLARM qui émet son propre identifiant FLARM n&rsquo;a pas encore de filtre. Au sol, le Go n&rsquo;évalue aucun trafic, il reste donc silencieux. Quand vous décollez ensemble, le FLARM rejoint la patrouille : silencieux, et dessiné dans le carré. Un Go allumé en l&rsquo;air l&rsquo;entend pour la première fois en vol, et peut alerter jusqu&rsquo;à ce qu&rsquo;il ait gardé sa place pendant 6&nbsp;secondes.</p>
+</section>
+
+<section>
+  <h2 class="kicker">La suite</h2>
+  <h3>La même proposition pour FLARM et ADS-L.</h3>
+  <p>La question de Frank montre l&rsquo;étape suivante, et nous ne l&rsquo;avons pas encore construite. La façon dont Bravo nomme le transpondeur pourrait servir à la radio du Go : au sol, l&rsquo;équipement FLARM ou ADS-L qu&rsquo;il entend bien plus fort que tous les autres, proposé sur la même page <span class="mono">AIRCRAFT</span> et enregistré d&rsquo;un appui. Merci, Frank, pour la suggestion.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2, F.2.3.
+      <span class="support">L&rsquo;adresse OACI qu&rsquo;émet un aéronef équipé d&rsquo;un transpondeur, et les réglages incohérents qu&rsquo;un équipement doit refuser.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot;
+      <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/traffic/README.md">Comment le Go lit le trafic</a>, sur GitHub, en anglais.
+      <span class="support">Le filtre sur l&rsquo;adresse de l&rsquo;avion, et les règles de la patrouille avec leurs chiffres.</span>
+    </li>
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, novembre 2026.
+      <span class="support">La question de Frank à laquelle cet article répond.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "blog/always-on-board", class: "cta cta--previous" %></p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

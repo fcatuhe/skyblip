@@ -34,7 +34,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/blog</loc>
-    <lastmod>2026-11-24</lastmod>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/blog/always-on-board</loc>
@@ -47,6 +47,10 @@
   <url>
     <loc>https://skyblip.eu/blog/network-or-radio</loc>
     <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/own-aircraft</loc>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/blog/skyblip-softrf-stratux</loc>
@@ -98,7 +102,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/de/blog</loc>
-    <lastmod>2026-11-24</lastmod>
+    <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/eigenes-flugzeug</loc>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/blog/netz-oder-funk</loc>
@@ -234,7 +242,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/es/blog</loc>
-    <lastmod>2026-11-24</lastmod>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/blog/bolsillo-o-instalado</loc>
@@ -259,6 +267,10 @@
   <url>
     <loc>https://skyblip.eu/es/blog/skyblip-softrf-stratux</loc>
     <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/tu-propia-aeronave</loc>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/bravo</loc>
@@ -366,7 +378,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/blog</loc>
-    <lastmod>2026-11-24</lastmod>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/blog/flotte-de-club</loc>
@@ -391,6 +403,10 @@
   <url>
     <loc>https://skyblip.eu/fr/blog/skyblip-softrf-stratux</loc>
     <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/votre-propre-avion</loc>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/bravo</loc>
@@ -518,7 +534,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/it/blog</loc>
-    <lastmod>2026-11-24</lastmod>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/blog/chi-vede-ads-l</loc>
@@ -527,6 +543,10 @@
   <url>
     <loc>https://skyblip.eu/it/blog/flotta-del-club</loc>
     <lastmod>2026-11-21</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/il-tuo-aereo</loc>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/blog/perche-ads-l</loc>
