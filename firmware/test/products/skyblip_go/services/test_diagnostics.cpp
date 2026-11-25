@@ -22,19 +22,19 @@ const comms::Diagnostics& snapshot(Rig& rig) {
     return rig.product.config_link().config().diagnostics();
 }
 
-void pass(Rig& rig, Collector& collector, uint32_t& now_ms, uint32_t for_ms) {
-    const uint32_t until = now_ms + for_ms;
-    for (; now_ms <= until; now_ms += 50) {
-        rig.platform.clock().set_milliseconds(now_ms);
-        rig.product.run_pass(now_ms);
-        collector.step(rig.product, now_ms);
+void pass(Rig& rig, Collector& collector, uint32_t for_ms) {
+    const uint32_t until = rig.now_ms + for_ms;
+    for (; rig.now_ms <= until; rig.now_ms += 50) {
+        rig.platform.clock().set_milliseconds(rig.now_ms);
+        rig.product.run_pass(rig.now_ms);
+        collector.step(rig.product, rig.now_ms);
     }
 }
 
-void fly(Rig& rig, Collector& collector, uint32_t& now_ms, uint32_t seconds) {
+void fly(Rig& rig, Collector& collector, uint32_t seconds) {
     for (uint32_t i = 0; i < seconds; i++) {
         rig.push_timed_fix(50000, 500);
-        pass(rig, collector, now_ms, 950);
+        pass(rig, collector, 950);
         rig.utc_offset_s++;
     }
 }
@@ -53,7 +53,7 @@ TEST_CASE("diagnostics: the collector reads the device, subsystem by subsystem")
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    fly(rig, collector, rig.now_ms, 12);
+    fly(rig, collector, 12);
     const comms::Diagnostics& read = snapshot(rig);
 
     CHECK(read.gnss_baud == 9600);  // parts::L76k::kFactoryBaudRate, unless autobaud moved
@@ -85,11 +85,11 @@ TEST_CASE("diagnostics: the faults nobody could see reach the snapshot") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    pass(rig, collector, rig.now_ms, 1000);
+    pass(rig, collector, 1000);
 
     rig.platform.system_power().supply_warning = true;
     rig.platform.battery().divider_mv = 900;
-    pass(rig, collector, rig.now_ms, 12000);
+    pass(rig, collector, 12000);
 
     CHECK(snapshot(rig).supply_warnings == 1);
     CHECK(snapshot(rig).battery_implausible > 0);
@@ -99,13 +99,13 @@ TEST_CASE("diagnostics: the air's four outcomes leave the collector as four numb
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    pass(rig, collector, rig.now_ms, 1000);
+    pass(rig, collector, 1000);
 
     rig.state().air.rx_bad = 4;
     rig.state().air.rx_wait = 58;
     rig.state().air.rx_type = 19;
     rig.state().air.tx_lost = 2;
-    pass(rig, collector, rig.now_ms, 1100);
+    pass(rig, collector, 1100);
 
     CHECK(snapshot(rig).rx_bad == 4);
     CHECK(snapshot(rig).rx_wait == 58);
@@ -119,16 +119,16 @@ TEST_CASE("diagnostics: one refresh every second, and the link answers from it")
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
 
-    pass(rig, collector, rig.now_ms, 0);
+    pass(rig, collector, 0);
     const uint32_t refreshes = snapshot(rig).refreshes;
     CHECK(refreshes == 1);
 
-    pass(rig, collector, rig.now_ms, 5000);
+    pass(rig, collector, 5000);
     CHECK(snapshot(rig).refreshes >= refreshes + 5);
 
     rig.raise_link();
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, rig.now_ms, 200);
+    pass(rig, collector, 200);
     CHECK(has(config_frames(rig), "\"group\":\"radio\""));
 }
 
@@ -139,12 +139,12 @@ TEST_CASE("diagnostics: the link answers what the collector and the config servi
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
     rig.platform.battery().divider_mv = 3812;
-    fly(rig, collector, rig.now_ms, 4);
+    fly(rig, collector, 4);
     rig.raise_link();
     rig.platform.link().clear();
-    pass(rig, collector, rig.now_ms, 1000);
+    pass(rig, collector, 1000);
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, rig.now_ms, 200);
+    pass(rig, collector, 200);
 
     const std::string frames = config_frames(rig);
     REQUIRE_FALSE(frames.empty());
@@ -159,19 +159,19 @@ TEST_CASE("diagnostics: the dump names the requirement unmet now, status the one
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    fly(rig, collector, rig.now_ms, 4);
+    fly(rig, collector, 4);
     rig.raise_link();
     rig.platform.link().clear();
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, rig.now_ms, 200);
+    pass(rig, collector, 200);
     CHECK(has(config_frames(rig), "\"no_tx\":\"gnss\""));
     rig.send("{\"command\":\"status\"}");
-    pass(rig, collector, rig.now_ms, 200);
+    pass(rig, collector, 200);
     CHECK_FALSE(has(rig.last_on(events::Endpoint::Config), "no_tx"));
 
-    fly(rig, collector, rig.now_ms, timing::TransmitGate::kVerdictSettleMs / 1000 + 1);
+    fly(rig, collector, timing::TransmitGate::kVerdictSettleMs / 1000 + 1);
     rig.send("{\"command\":\"status\"}");
-    pass(rig, collector, rig.now_ms, 200);
+    pass(rig, collector, 200);
     CHECK(has(rig.last_on(events::Endpoint::Config), "\"no_tx\":\"gnss\""));
 }
 
@@ -180,17 +180,17 @@ TEST_CASE("diagnostics: the next link reads why the last one dropped") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Collector collector;
-    fly(rig, collector, rig.now_ms, 2);
+    fly(rig, collector, 2);
     rig.raise_link(1);
-    pass(rig, collector, rig.now_ms, 100);
+    pass(rig, collector, 100);
     constexpr uint8_t kSupervisionTimeout = 0x08;
     rig.drop_link(1, kSupervisionTimeout);
-    pass(rig, collector, rig.now_ms, 100);
+    pass(rig, collector, 100);
     rig.raise_link(2);
     rig.platform.link().clear();
-    pass(rig, collector, rig.now_ms, 1000);
+    pass(rig, collector, 1000);
     rig.send("{\"command\":\"diagnostics\"}");
-    pass(rig, collector, rig.now_ms, 200);
+    pass(rig, collector, 200);
 
     CHECK(snapshot(rig).link_drop_reason == kSupervisionTimeout);
     CHECK(has(config_frames(rig), "\"link_drop_reason\":8"));
@@ -198,12 +198,12 @@ TEST_CASE("diagnostics: the next link reads why the last one dropped") {
 
 namespace {
 // INFO: fc 14nov26 now_ms + for_ms is no bound across the wrap, so this walks a count of steps
-void pass_across_wrap(Rig& rig, Collector& collector, uint32_t& now_ms, uint32_t for_ms) {
+void pass_across_wrap(Rig& rig, Collector& collector, uint32_t for_ms) {
     for (uint32_t stepped = 0; stepped <= for_ms; stepped += 50) {
-        rig.platform.clock().set_milliseconds(now_ms);
-        rig.product.run_pass(now_ms);
-        collector.step(rig.product, now_ms);
-        now_ms += 50;
+        rig.platform.clock().set_milliseconds(rig.now_ms);
+        rig.product.run_pass(rig.now_ms);
+        collector.step(rig.product, rig.now_ms);
+        rig.now_ms += 50;
     }
 }
 }  // namespace
@@ -215,11 +215,11 @@ TEST_CASE("diagnostics: the cadence and the uptime survive the 49.7-day wrap") {
     Collector collector;
     rig.now_ms = 0xFFFFFF00u;  // 256 ms short of the wrap
 
-    pass_across_wrap(rig, collector, rig.now_ms, 0);
+    pass_across_wrap(rig, collector, 0);
     CHECK(snapshot(rig).uptime_s == 4294967u);
 
     const uint32_t refreshes_before = snapshot(rig).refreshes;
-    pass_across_wrap(rig, collector, rig.now_ms, 20000);
+    pass_across_wrap(rig, collector, 20000);
     CHECK(snapshot(rig).refreshes >= refreshes_before + 20);
     CHECK(snapshot(rig).uptime_s < 60u);
 }

@@ -116,6 +116,7 @@ struct Diagnostics {
     power::ResetReason reset{power::ResetReason::Unknown};
     uint32_t link_drops{0};
     uint8_t link_drop_reason{0};
+    uint32_t failed_writes{0};
     uint32_t range_refused{0};
     power::BatteryState battery{};
     power::PowerLevel power_level{power::PowerLevel::Unknown};

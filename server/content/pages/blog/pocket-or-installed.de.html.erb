@@ -1,0 +1,87 @@
+---
+title: "ADS-L in der Tasche oder Einbau nach CS-STAN?"
+nav_title: Tasche oder Einbau
+slug: blog/tasche-oder-einbau
+description: "Ein Akkugerät kann man vergessen. Der Einbau braucht einen Prüfer. Was CS-SC057a für ADS-L verlangt und was ein Go schon kann."
+published_on: "2026-11-24"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 24. November 2026</p>
+  <h1>Taschengerät oder fest eingebaute Bake?</h1>
+  <p class="lede">Bei Pilot und Flugzeug ging es beim wichtigsten Einwand gegen skyBlip nicht um den Funk, sondern um den Akku. Ein Gerät, das Piloten mal einschalten und mal vergessen, wird nie alle Flugzeuge sichtbar machen. Warum also keine günstige ADS-L-Bake, fest eingebaut nach CS-STAN, die immer läuft, wenn das Flugzeug läuft? Der Einwand ist berechtigt. Beide Lösungen haben ihre Vorteile.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Was für die Tasche spricht</h2>
+  <h3>Ein Gerät begleitet den Piloten von Flugzeug zu Flugzeug.</h3>
+  <p>Ein anderer Pilot im selben Thread sprach sich für den Akku aus. Ein Gerät, das nicht am Bordnetz hängt, kann das Bordnetz nicht stören. Manche billigen Empfänger am Bordnetz haben das früher getan. Segelflugzeuge, Drachen, Gleitschirme und Ballone haben praktisch kein Bordnetz. Wer samstags ein Vereinsflugzeug und sonntags das eines Freundes fliegt, kann mit demselben Gerät seine Position senden.</p>
+  <p>Der Akku hat auch die Wahl der Hardware bestimmt. Das E-Paper-Display braucht keinen Strom, um sein Bild zu halten. Auf dem Prüfstand lief ein abgestellter Go 18&nbsp;Stunden, ein Go+ 49&nbsp;Stunden. Einmal pro Woche geladen, ist er bei jedem Flug bereit.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Was für den Einbau spricht</h2>
+  <h3>Ein Einbaugerät startet mit dem Hauptschalter und bleibt nie zu Hause liegen.</h3>
+  <p>Ein Einbaugerät nutzt Außenantennen, die dort sitzen, wo sie am besten empfangen. Es kann Verkehrsdaten an das Display im Instrumentenbrett senden und braucht keine Aufmerksamkeit des Piloten. Bei einem Flugzeug, das viele Piloten fliegen, lässt sich so am zuverlässigsten sicherstellen, dass es bei jedem Flug sendet.</p>
+  <p>In einem von der EASA musterzugelassenen Luftfahrzeug führt der Weg zum Einbau ohne Konstruktionsgenehmigung über CS-STAN, die Sammlung der Standardänderungen der EASA. Der Eintrag für ADS-L ist <strong>CS-SC057a, Installation of an electronic conspicuity function</strong>. Er beschreibt genau unseren Fall: ein Gerät, das außerhalb des Flugfunkbands auf einer anderen Frequenz als FLARM sendet und FLARM empfängt.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Was CS-SC057a verlangt</h2>
+  <h3>Eine Erklärung des Herstellers, ein Prüfer für den Einbau, eine Ergänzung zum Flughandbuch.</h3>
+  <ul>
+    <li><strong>Welche Luftfahrzeuge.</strong> Nicht komplexe Flugzeuge, kleine Drehflügler und ELA2-Luftfahrzeuge, für VFR und Nacht-VFR. Ultraleichtflugzeuge und die meisten Eigenbauten fallen nicht unter die Musterzulassung der EASA und folgen nationalen Regeln.</li>
+    <li><strong>Was der Hersteller erklärt.</strong> Wie der Sender die Vorschriften für Funkanlagen erfüllt, wie mit einem Lithium-Akku umgegangen wurde, wie groß eine interne Antenne ist, wie der Verkehr angezeigt wird und dass das Gerät nur auf seine eigenen Bauteile angewiesen ist. Damit werden ein Sender im 868-MHz-Band und ein GNSS-Empfänger ohne ETSO ohne EASA Form&nbsp;1 eingebaut.</li>
+    <li><strong>Was der Einbauende tut.</strong> Das Gerät mit eigener Sicherung an den nicht essenziellen Bus anschließen, die elektrische Last auf EASA Form&nbsp;123 eintragen, höchstens 300&nbsp;g einbauen, den Sender von den Fluginstrumenten fernhalten und am Boden oder im Flug testen, Störungen eingeschlossen.</li>
+    <li><strong>Was das Gerät nicht darf.</strong> Ausweichempfehlungen geben oder den Autopiloten speisen. Das Flughandbuch erhält eine Ergänzung mit dem Hinweis »nur zur Verkehrsinformation im Flug«.</li>
+    <li><strong>Wer unterschreibt.</strong> Ein lizenzierter Prüfer oder ein Instandhaltungsbetrieb. Die Regel sagt, sie sei »nicht geeignet für die Freigabe des Luftfahrzeugs durch den Piloten-Eigentümer«.</li>
+  </ul>
+  <p>Der Text nennt zwei weitere Punkte. Wie jede Standardänderung gilt CS-SC057a nicht für tragbare Geräte. Ein Go auf der Instrumentenbrettabdeckung unterliegt daher keiner dieser Anforderungen. Und ein Gerät, das nach diesem Eintrag eingebaut ist, »stellt nicht automatisch die Einhaltung« von SERA.6005(c) für den U-Space sicher.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Was es gibt</h2>
+  <h3>Einbaugeräte kosten Hunderte bis Tausende Euro, bevor der Prüfer kommt.</h3>
+  <p>Funke veröffentlicht eine Einbauanleitung nach CS-STAN für seinen Verkehrsmonitor TM350. Er sendet FLARM, empfängt Mode S, ADS-B und FLARM und nimmt eine optionale ADS-L-Karte auf. Avionix verkauft eine Version seines AERO Tracker ohne Akku, die startet, sobald das Flugzeug ihre USB-C-Buchse mit Strom versorgt. FLARM verkauft das Senden von ADS-L als Lizenz für seine eingebauten PowerFLARM-Geräte. Unser <%= link_to_page "compare", label: "Vergleich" %> listet sie mit ihren Preisen auf.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Was Sie heute mit einem Go tun können</h2>
+  <h3>Lassen Sie ihn am Kabel, oder halten Sie einen pro Flugzeug bereit.</h3>
+  <ul>
+    <li><strong>Betreiben Sie ihn am Bordstrom.</strong> Go läuft den ganzen Flug über mit eingestecktem USB-C-Kabel. Er schaltet sich nicht von selbst ein, wenn Strom ankommt: Sie drücken seine Taste. So haben wir es gewollt, damit ein Ladegerät in der Flugtasche ihn nie zum Senden bringt.</li>
+    <li><strong>Lassen Sie einen beim Flugzeug.</strong> Für 68&nbsp;€ kann ein Go im Türfach oder bei den Schlüsseln bleiben, und wer fliegt, nimmt ihn mit.</li>
+    <li><strong>Prüfen Sie ihn mit einem Blick.</strong> Seine LED blinkt alle drei Sekunden grün, sobald er eine Position hat. Ohne Position hat er nichts zu senden.</li>
+  </ul>
+  <p>Wir liefern die von CS-SC057a geforderten Erklärungen noch nicht. Deshalb kann ein Go heute nicht nach dieser Standardänderung eingebaut werden. <%= link_to_page "roadmap", label: "skyBlip Panel", anchor: "on-board" %> ist die Einbauversion, die wir entwickeln: ohne Display, am Bordstrom, mit dem Verkehr auf dem Display im Instrumentenbrett.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Quellen</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/sites/default/files/dfu/cs-stan_issue_4.pdf">CS-STAN Issue 4</a>, ED Decision 2022/009/R, CS-SC057a.
+      <span class="support">Die betroffenen Luftfahrzeuge, die Erklärungen des Herstellers, die Aufgaben des Einbauenden, die Grenzen und die Freigabe.</span>
+    </li>
+    <li>
+      <strong>f.u.n.k.e. AVIONICS</strong> &middot;
+      <a href="https://www.funkeavionics.de/wp-content/uploads/2025/11/03.314.010.12e_TM350_Approval-CS-STAN_Rev1.00_250725.pdf">Zulassungsverfahren des TM350 nach CS-STAN</a>, Revision 1.00.
+      <span class="support">Ein eingebauter Verkehrsmonitor nach CS-SC057a oder CS-SC062a.</span>
+    </li>
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, November 2026.
+      <span class="support">Der Austausch, auf den dieser Beitrag antwortet.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

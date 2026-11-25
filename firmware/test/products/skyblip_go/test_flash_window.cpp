@@ -25,8 +25,8 @@ using namespace skyblip::settings_writes;
 TEST_CASE("flash window: a change made inside a dwell is not written until the window opens") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
-    step_until(rig, rig.now_ms, rig.now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
+    fly(rig);
+    step_until(rig, rig.now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
     REQUIRE(published_phase(rig) >= adsl::kDirectStartMs);
     REQUIRE(rig.state().rf.plan.tx_allowed);
     const uint32_t before = writes(rig);
@@ -34,11 +34,10 @@ TEST_CASE("flash window: a change made inside a dwell is not written until the w
     change_alarm(rig, go::Alarm::Soft);
     // Through the whole of the dwell it was made in, and the settle behind it,
     // nothing is on flash.
-    step_until(rig, rig.now_ms, rig.now_ms + timing::DurableWriteWindow::kSettleMs);
+    step_until(rig, rig.now_ms + timing::DurableWriteWindow::kSettleMs);
     CHECK(writes(rig) == before);
 
-    const uint32_t at_ms =
-        wait_for_write(rig, rig.now_ms, timing::DurableWriteWindow::kDeferCeilingMs);
+    const uint32_t at_ms = wait_for_write(rig, timing::DurableWriteWindow::kDeferCeilingMs);
     REQUIRE(at_ms != 0);
     const int phase = static_cast<int>(at_ms % 1000);
     // One of the two stretches the dwell map leaves: slot 1's tail, or the uplink
@@ -52,7 +51,7 @@ TEST_CASE("flash window: a change made inside a dwell is not written until the w
 TEST_CASE("flash window: a settings write is placed at the instant it starts, not its pass") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    stand_on_the_ground(rig, rig.now_ms);
+    stand_on_the_ground(rig);
     const uint32_t before = writes(rig);
     change_alarm(rig, go::Alarm::Soft);
     rig.platform.clock().set_milliseconds(rig.now_ms);
@@ -105,17 +104,17 @@ TEST_CASE("flash window: the radio's view of the second is stamped when its phas
 TEST_CASE("flash window: six rapid changes are one write") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
+    fly(rig);
     const uint32_t before = writes(rig);
 
     for (int i = 0; i < 6; i++) {
         change_alarm(rig, i % 2 == 0 ? go::Alarm::Soft : go::Alarm::Off);
-        step_until(rig, rig.now_ms, rig.now_ms + 120);
+        step_until(rig, rig.now_ms + 120);
     }
     REQUIRE(rig.product.config_link().durable_writes().requests() == 6);
 
-    REQUIRE(wait_for_write(rig, rig.now_ms, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
-    step_until(rig, rig.now_ms, rig.now_ms + 2000);
+    REQUIRE(wait_for_write(rig, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
+    step_until(rig, rig.now_ms + 2000);
     CHECK(writes(rig) - before == 1);
     CHECK(rig.product.config_link().durable_writes().writes() == 1);
 
@@ -133,7 +132,7 @@ TEST_CASE("flash window: six rapid changes are one write") {
 TEST_CASE("flash window: a thumb stepping the alarm on the glass writes flash once") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    stand_on_the_ground(rig, rig.now_ms);
+    stand_on_the_ground(rig);
 
     rig.press();
     REQUIRE(rig.product.screen().mode() == go::Mode::Menu);
@@ -163,16 +162,15 @@ TEST_CASE("flash window: a thumb stepping the alarm on the glass writes flash on
 TEST_CASE("flash window: a change is never held past the bound, at any phase") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
+    fly(rig);
 
     go::Alarm volume = go::Alarm::Off;
     for (int offset = 0; offset < 1000; offset += 70) {
-        step_until(rig, rig.now_ms, (rig.now_ms / 1000 + 1) * 1000 + static_cast<uint32_t>(offset));
+        step_until(rig, (rig.now_ms / 1000 + 1) * 1000 + static_cast<uint32_t>(offset));
         const uint32_t asked_at = rig.now_ms;
         volume = volume == go::Alarm::Soft ? go::Alarm::Off : go::Alarm::Soft;
         change_alarm(rig, volume);
-        const uint32_t at_ms =
-            wait_for_write(rig, rig.now_ms, timing::DurableWriteWindow::kDeferCeilingMs);
+        const uint32_t at_ms = wait_for_write(rig, timing::DurableWriteWindow::kDeferCeilingMs);
         REQUIRE(at_ms != 0);
         CHECK(at_ms - asked_at <= timing::DurableWriteWindow::kDeferCeilingMs);
     }
@@ -188,13 +186,12 @@ TEST_CASE("flash window: a change is never held past the bound, at any phase") {
 TEST_CASE("flash window: a change made on the ground is written promptly") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    stand_on_the_ground(rig, rig.now_ms);
+    stand_on_the_ground(rig);
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Ground);
 
     const uint32_t asked_at = rig.now_ms;
     change_alarm(rig, go::Alarm::Loud);
-    const uint32_t at_ms =
-        wait_for_write(rig, rig.now_ms, timing::DurableWriteWindow::kDeferCeilingMs);
+    const uint32_t at_ms = wait_for_write(rig, timing::DurableWriteWindow::kDeferCeilingMs);
     REQUIRE(at_ms != 0);
     // The settle, and less than one whole second of window on top of it.
     CHECK(at_ms - asked_at >= timing::DurableWriteWindow::kSettleMs);
@@ -207,15 +204,15 @@ TEST_CASE("flash window: a change made on the ground is written promptly") {
 TEST_CASE("flash window: a change that ends where it started writes no flash") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    stand_on_the_ground(rig, rig.now_ms);
+    stand_on_the_ground(rig);
     change_alarm(rig, go::Alarm::Loud);
-    REQUIRE(wait_for_write(rig, rig.now_ms, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
+    REQUIRE(wait_for_write(rig, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
 
     const uint32_t before = writes(rig);
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, rig.now_ms, rig.now_ms + 100);
+    step_until(rig, rig.now_ms + 100);
     change_alarm(rig, go::Alarm::Loud);
-    step_until(rig, rig.now_ms, rig.now_ms + 3000);
+    step_until(rig, rig.now_ms + 3000);
     CHECK(writes(rig) == before);
     // The request was still served: nothing is left pending, so nothing is waiting
     // for a bound it will never spend.
@@ -228,18 +225,18 @@ TEST_CASE("flash window: a change that ends where it started writes no flash") {
 TEST_CASE("flash window: a pending change is flushed on the way to power off") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
-    step_until(rig, rig.now_ms, rig.now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
+    fly(rig);
+    step_until(rig, rig.now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
     REQUIRE(rig.state().rf.plan.tx_allowed);
 
     const uint32_t before = writes(rig);
     change_alarm(rig, go::Alarm::Soft);
-    step_one(rig, rig.now_ms);
+    step_one(rig);
     REQUIRE(writes(rig) == before);
     REQUIRE(rig.product.config_link().durable_writes().pending());
 
     rig.product.shutdown().request(power::ShutdownReason::LinkRequest, rig.now_ms);
-    step_one(rig, rig.now_ms);
+    step_one(rig);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK(writes(rig) - before == 1);
     CHECK_FALSE(rig.product.config_link().durable_writes().pending());
@@ -252,13 +249,13 @@ TEST_CASE("flash window: a pending change is flushed on the way to power off") {
 TEST_CASE("flash window: the write counters are readable over the companion link") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    stand_on_the_ground(rig, rig.now_ms);
+    stand_on_the_ground(rig);
     change_alarm(rig, go::Alarm::Soft);
-    REQUIRE(wait_for_write(rig, rig.now_ms, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
+    REQUIRE(wait_for_write(rig, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
 
     rig.platform.link().clear();
     rig.send("{\"command\":\"flash\"}");
-    step_until(rig, rig.now_ms, rig.now_ms + 100);
+    step_until(rig, rig.now_ms + 100);
     const std::string reply = rig.last_on(events::Endpoint::Config);
     REQUIRE_FALSE(reply.empty());
     CHECK(reply.find("\"command\":\"flash\"") != std::string::npos);
@@ -279,7 +276,7 @@ TEST_CASE("flash window: the write counters are readable over the companion link
 TEST_CASE("flash window: a hundred patches cost one write") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
+    fly(rig);
     const uint32_t before = writes(rig);
     REQUIRE(rig.settings().alarm == go::Alarm::Loud);
 
@@ -287,13 +284,13 @@ TEST_CASE("flash window: a hundred patches cost one write") {
     // the whole hundred inside the bound.
     for (int i = 0; i < 100; i++) {
         change_alarm(rig, i % 2 == 0 ? go::Alarm::Off : go::Alarm::Soft);
-        step_one(rig, rig.now_ms);
+        step_one(rig);
     }
     CHECK(rig.product.config_link().durable_writes().requests() == 100);
     CHECK(writes(rig) == before);
 
-    REQUIRE(wait_for_write(rig, rig.now_ms, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
-    step_until(rig, rig.now_ms, rig.now_ms + 2000);
+    REQUIRE(wait_for_write(rig, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
+    step_until(rig, rig.now_ms + 2000);
     CHECK(writes(rig) - before == 1);
     CHECK(rig.product.config_link().durable_writes().writes() == 1);
 
@@ -310,17 +307,17 @@ TEST_CASE("flash window: a hundred patches cost one write") {
 TEST_CASE("flash window: a write the store refused is retried until it lands") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
+    fly(rig);
     rig.platform.key_value().refuse_writes = true;
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, rig.now_ms, rig.now_ms + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
+    step_until(rig, rig.now_ms + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK(rig.product.config_link().failed_writes() > 0);
     // Retried in the windows it is given, and forced at most once per bound.
     CHECK(rig.product.config_link().durable_writes().forced() <= 4);
     CHECK(rig.product.config_link().durable_writes().pending());
 
     rig.platform.key_value().refuse_writes = false;
-    step_until(rig, rig.now_ms, rig.now_ms + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
+    step_until(rig, rig.now_ms + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK_FALSE(rig.product.config_link().durable_writes().pending());
     uint8_t blob[64];
     size_t count = 0;
@@ -333,18 +330,18 @@ TEST_CASE("flash window: a write the store refused is retried until it lands") {
 TEST_CASE("flash window: a refused write is neither a write nor a change on the bench") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
+    fly(rig);
     const timing::DurableWriteWindow& window = rig.product.config_link().durable_writes();
     const uint32_t requests_before = window.requests();
     const uint32_t writes_before = window.writes();
     rig.platform.key_value().refuse_writes = true;
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, rig.now_ms, rig.now_ms + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
+    step_until(rig, rig.now_ms + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
     REQUIRE(rig.product.config_link().failed_writes() > 1);
     CHECK(window.writes() == writes_before);
 
     rig.platform.key_value().refuse_writes = false;
-    step_until(rig, rig.now_ms, rig.now_ms + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
+    step_until(rig, rig.now_ms + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK(window.writes() == writes_before + 1);
     CHECK(window.requests() == requests_before + 1);
 }
@@ -353,9 +350,9 @@ TEST_CASE("flash window: a store that did not mount is never written, and nothin
     Rig rig;
     rig.platform.key_value().refuse_mount = true;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
+    fly(rig);
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, rig.now_ms, rig.now_ms + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
+    step_until(rig, rig.now_ms + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK(rig.platform.key_value().writes() == 0);
     CHECK(rig.product.config_link().failed_writes() == 0);
     CHECK_FALSE(rig.product.config_link().durable_writes().pending());

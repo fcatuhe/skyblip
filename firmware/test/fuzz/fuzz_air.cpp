@@ -39,12 +39,16 @@ struct Receiver {
 // Raw sends the input's bytes, Sealed fixes their checksum, Encoded builds the frame from fields.
 enum class Sealing : uint8_t { Raw, Sealed, Encoded };
 
-void seal_adsl(uint8_t* frame) {
+void seal_adsl(uint8_t* frame, uint8_t bytes, bool build_status) {
     adsl::Packet packet{};
-    packet.reset();
-    std::memcpy(packet.data, frame, adsl::kFrameBytes);
-    packet.set_crc();
-    std::memcpy(frame, packet.data, adsl::kFrameBytes);
+    std::memcpy(packet.data, frame, bytes);
+    if (build_status) {
+        packet.version = adsl::Packet::kProtocolVersionIssue2;
+        packet.payload_type = adsl::Packet::kPayloadTypeStatus;
+        packet.scramble(bytes);
+    }
+    packet.set_crc(bytes);
+    std::memcpy(frame, packet.data, bytes);
 }
 
 // ALP-TAS is encrypted under its second, so only an encoder gets a mutation past the key.
@@ -74,17 +78,31 @@ void encode_alptas(FuzzedDataProvider& in, const Receiver& receiver, uint8_t* fr
 // One M-band transmitter, then the chips past the shared sync window the radio consumed.
 size_t transmit_m_band(FuzzedDataProvider& in, Sealing sealing, const Receiver& receiver,
                        uint8_t* chips) {
-    const bool adsl = in.ConsumeBool();
-    const uint32_t sync_word = adsl ? adsl::kSyncWord : alptas::kSyncWord;
-    const uint8_t frame_bytes = adsl ? adsl::kFrameBytes : alptas::kFrameBytes;
     uint8_t frame[alptas::kFrameBytes]{};
-    if (sealing == Sealing::Encoded && !adsl)
-        encode_alptas(in, receiver, frame);
-    else
-        in.ConsumeData(frame, frame_bytes);
-    if (sealing != Sealing::Raw && adsl) seal_adsl(frame);
-    if (sealing == Sealing::Sealed && !adsl) alptas::set_crc(frame);
-    protocol::m_band_payload(sync_word, frame, frame_bytes, chips);
+    if (in.ConsumeBool()) {
+        const bool short_frame = in.ConsumeBool();
+        const uint8_t bytes = short_frame ? adsl::Packet::kStatusDataBytes : adsl::kFrameBytes;
+        const uint8_t length =
+            in.PickValueInArray({bytes, adsl::Packet::kStatusDataBytes, adsl::Packet::kDataBytes,
+                                 in.ConsumeIntegral<uint8_t>()});
+        const bool erase_length_chip = in.ConsumeBool();
+        const unsigned bit = in.ConsumeIntegralInRange<unsigned>(0, 7);
+        in.ConsumeData(frame, bytes);
+        if (sealing != Sealing::Raw)
+            seal_adsl(frame, bytes, short_frame && sealing == Sealing::Encoded);
+        protocol::m_band_payload(adsl::sync_word(length), frame, bytes, chips);
+        if (erase_length_chip) {
+            uint8_t* length_chips = chips + protocol::kSyncTailChipBytes - 2;
+            length_chips[1 - bit / 4] ^= static_cast<uint8_t>(2u << (2 * (bit % 4)));
+        }
+    } else {
+        if (sealing == Sealing::Encoded)
+            encode_alptas(in, receiver, frame);
+        else
+            in.ConsumeData(frame, alptas::kFrameBytes);
+        if (sealing == Sealing::Sealed) alptas::set_crc(frame);
+        protocol::m_band_payload(alptas::kSyncWord, frame, alptas::kFrameBytes, chips);
+    }
     return protocol::kRxChipBytes;
 }
 
@@ -133,8 +151,8 @@ size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, const Receiver& 
 
 void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
     adsl::Packet packet;
-    if (adsl::receive_as_heard(frame.data, frame.erasures, frame.length_heard, packet) !=
-        wire::Status::Ok)
+    if (adsl::receive_as_heard(frame.data, frame.erasures, frame.length_heard,
+                               frame.length_erasures, packet) != wire::Status::Ok)
         return;
 
     if (adsl_edge::is_registration(packet)) {

@@ -3,13 +3,13 @@ title: "skyBlip Go first steps: buttons, lights and flight"
 nav_title: Go first steps
 description: "Switch on Go, check it has a position and learn to read its radar. Choose your aircraft type and set your callsign."
 parent: guides
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Your Go, from the first press.</h1>
-  <p class="lede">One press switches skyBlip Go on. Two seconds switches it off. Between the two, the pad moves through pages and silences alarms.</p>
+  <h1>Switch on Go and find its controls.</h1>
+  <p class="lede">Press the button to switch skyBlip Go on. Hold it for two seconds to switch it off. The touch-sensitive pad moves through pages and silences alarms.</p>
 </section>
 
 <section>
@@ -30,12 +30,12 @@ updated_on: "2026-11-18"
       <tbody>
         <tr><th>Tap the pad</th><td>Opens the next page. On a request, refuses it: the screen's CANCEL key.</td></tr>
         <tr><th>Touch the pad, 1&nbsp;s</th><td>Silences an active alarm. With no alarm, returns to the radar.</td></tr>
-        <tr><th>Press the button</th><td>From off, starts the radar. On a page, opens its menu. In a menu, changes the selected value. On a request, accepts it.</td></tr>
+        <tr><th>Press the button</th><td>If Go is off, switches it on at the radar page. On a page, opens its menu. In a menu, changes the selected value. On a request, accepts it.</td></tr>
         <tr><th>Hold the button, 2&nbsp;s</th><td>Switches off. The logo stays on the screen.</td></tr>
         <tr><th>The same hold, finger on the pad</th><td>Switches off with a blank screen, for storage. An image left all winter leaves a shadow.</td></tr>
         <tr><th>Hold the button and plug the charger in</th><td>Starts and charges. Plugging in alone charges and leaves it off.</td></tr>
         <tr><th>Press RESET</th><td>Restarts the Go.</td></tr>
-        <tr><th>Press RESET twice within half a second</th><td>Opens TECHOBOOT, a USB drive for installing firmware. Briefing asks for this only if it cannot restart the Go itself.</td></tr>
+        <tr><th>Press RESET twice within half a second</th><td>Opens TECHOBOOT, a USB drive for installing skyBlip. Briefing asks for this only if it cannot restart the Go itself.</td></tr>
       </tbody>
     </table>
   </div>
@@ -43,7 +43,7 @@ updated_on: "2026-11-18"
   <div class="feature">
     <div>
       <h3 id="light">Read the colour <span class="highlight">and the rhythm</span>.</h3>
-      <p>The skyBlip light only winks, to save the battery. A position means the satellite receiver has found where you are.</p>
+      <p>The skyBlip light flashes to save the battery. Your position is known when the satellite receiver knows where you are.</p>
     </div>
   </div>
 
@@ -64,7 +64,7 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
-  <p>The charger's separate red light stays lit while charging, blinks if the battery is missing or faulty, and goes out when full.</p>
+  <p>The charger's separate red light stays lit while charging and goes out when the battery is full. It blinks if the battery is missing or faulty.</p>
 </section>
 
 <section id="type" class="band band--tint">
@@ -101,5 +101,6 @@ updated_on: "2026-11-18"
 <section class="band band--tint">
   <h2 class="section-title">After the flight</h2>
   <p>Hold the button for two seconds to switch Go off, then charge over USB-C. The logo stays on the screen. To store Go for weeks or a whole winter, rest a finger on the pad and hold the button for two seconds instead: Go switches off with a blank screen. An image left that long leaves a permanent shadow. See <%= link_to_page "power", label: "the charging and storage guide" %>.</p>
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

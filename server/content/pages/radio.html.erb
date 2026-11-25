@@ -1,37 +1,34 @@
 ---
 title: "ADS-L and FLARM radio on 868 MHz"
 nav_title: Radio
-description: "How skyBlip Go transmits ADS-L and receives ADS-L and FLARM on 868 MHz. Channels, GPS timing and reception of future ground-station uplinks."
+description: "How skyBlip Go transmits ADS-L and receives ADS-L and FLARM on 868 MHz. GPS times each listening slot, including future ground-station uplinks."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>One radio, and a second shared by everyone in range.</h1>
+  <h1>Devices in range share the same second.</h1>
   <p class="lede">
-    One radio and one antenna. Every device in range divides each second the same way.
+    The Go has one radio and one antenna, so it divides each second into time slots in the same way as every device in range.
   </p>
 </section>
 
 <section>
-  <h3 id="second">Where the second goes.</h3>
+  <h3 id="second">Each time slot has its channel.</h3>
   <p class="lede">
-    The device has one radio and one antenna, so it divides each second into
-    time slots, each on one frequency. GPS marks the start of each second to
-    the microsecond. Every skyBlip Go, every skyPost and every
-    FLARM-generation device in range divides the same second the same way.
+    Each time slot uses a channel, meaning a frequency. GPS marks the start of each second to the microsecond. Every skyBlip Go, every skyPost and every FLARM-generation device in range follows the same division of the second.
   </p>
 
   <div class="table-scroll">
     <table class="modules">
       <thead>
-        <tr><th>Time since the start of the second</th><th>Tuned to</th><th>What is on the channel</th></tr>
+        <tr><th>Time since the start of the second</th><th>Channel</th><th>What is on the channel</th></tr>
       </thead>
       <tbody>
         <tr><th>0 to 200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the end of the time slot that began at 830&nbsp;ms in the previous second. FLARM-generation traffic is still transmitting here, so the device keeps listening. It also sends its callsign here every 10&nbsp;s</td></tr>
-        <tr><th>210 to 440&nbsp;ms</th><td>869.525&nbsp;MHz</td><td>the skyPost uplink from the ground station: the ADS-B traffic it received and the weather data it holds, at 200&nbsp;kbit/s. Receive only, always</td></tr>
+        <tr><th>210 to 440&nbsp;ms</th><td>869.525&nbsp;MHz</td><td>the skyPost uplink, meaning messages sent by the ground station: the ADS-B traffic it receives and the weather data it holds, at 200&nbsp;kbit/s. On this channel, the Go listens and never transmits</td></tr>
         <tr><th>450 to 820&nbsp;ms</th><td>868.200&nbsp;MHz</td><td>direct traffic on the lower channel, ADS-L and FLARM-generation together</td></tr>
         <tr><th>830 to 1200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the same on the upper channel, continuing 200&nbsp;ms into the next second</td></tr>
       </tbody>
@@ -48,11 +45,7 @@ updated_on: "2026-11-18"
     neighbours and never know which half.
   </p>
   <p class="lede">
-    On those two channels the device receives two systems in one time slot. ADS-L and
-    the FLARM-generation format both precede their frames with a 32-bit sync word,
-    a signal pattern. The two words share their first eighteen chips, or signal elements.
-    The receiver detects this shared sequence, and the software identifies the system
-    from the chips that follow. Each change from one time slot to the next takes
+    On those two channels, the Go receives ADS-L and the FLARM-generation format in the same time slot. Both systems put a 32-bit signal pattern, called a sync word, before their frames. The two patterns share their first eighteen signal elements, called chips. The radio detects this shared part. The software then identifies the system from the chips that follow. Each change from one time slot to the next takes
     10&nbsp;ms: 2&nbsp;ms still listening on the old channel for a late burst,
     5&nbsp;ms to retune, and 3&nbsp;ms listening on the new channel before
     its traffic starts. The same 5&nbsp;ms retune covers the change between
@@ -60,37 +53,33 @@ updated_on: "2026-11-18"
     100&nbsp;kbit/s Manchester FSK below, 200&nbsp;kbit/s GMSK above.
   </p>
   <p class="lede">
-    The transmit window is shorter. Positions and Status messages, which report
-    what the device can hear, go between 450 and 1000&nbsp;ms after the start
-    of the second. Positions use 868.2&nbsp;MHz in an even UTC second and
+    The Go transmits for less of the second than it listens. Its positions and Status messages go between 450 and 1000&nbsp;ms after the start of the second. Status messages report what the Go can receive. Positions use 868.2&nbsp;MHz in an even UTC second and
     868.4&nbsp;MHz in an odd one. They are scheduled every second airborne,
     and 9 then 11&nbsp;s apart on the ground. Status goes twice per 20&nbsp;s
     cycle, on the other channel from that second&rsquo;s position. The callsign
     is the exception: every 10&nbsp;s, it goes between 1000 and 1190&nbsp;ms
     on 868.4&nbsp;MHz, in the tail that falls in the next second.
-    The device sends ADS-L frames. ADS-L has no callsign field yet, so the
-    device sends its callsign separately in OGN-Tracker&rsquo;s record format.
-    It receives the FLARM-generation format but never transmits it.
+    The Go sends ADS-L frames. This format has no callsign field yet. The Go therefore sends its callsign in a separate message using OGN-Tracker&rsquo;s record format. It receives the FLARM-generation format but never transmits it.
     The ground station transmits on 869.525&nbsp;MHz. This device only listens
     there and never transmits on that frequency. Its planned transmission time
     within each window is calculated from the device address and the current
     second, then recalculated every second to reduce repeated overlaps.
     Before each burst it listens to the channel and, if it is busy, waits
     and listens again within the same window.
-    <%= link_to_page "timing", label: "The timing guide" %> says which seconds
-    and which instants each unit uses.
+    <%= link_to_page "timing", label: "When the Go transmits" %> explains how each unit chooses the second and start time of each transmission.
   </p>
 
   <ul class="points">
     <li>GPS aligns four time slots a second to the microsecond</li>
     <li>The device uses 868.200 and 868.400&nbsp;MHz for 375&nbsp;ms each</li>
     <li>It listens for the ground station on 869.525&nbsp;MHz for 235&nbsp;ms</li>
-    <li>It decodes two systems within one synchronisation window</li>
+    <li>It decodes ADS-L and the FLARM-generation format within the same time slot</li>
     <li>Each burst lasts about 5&nbsp;ms. A busy channel can delay it</li>
-    <li>It may transmit for 1&nbsp;% of any hour and uses about 0.6&nbsp;% airborne or 0.15&nbsp;% on the ground. The firmware enforces the limit</li>
+    <li>The Go may transmit for 1&nbsp;% of any hour. It uses about 0.6&nbsp;% airborne or 0.15&nbsp;% on the ground. The firmware enforces this limit</li>
   </ul>
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

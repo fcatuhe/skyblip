@@ -20,6 +20,20 @@ class Admin::Analytics::VisitorsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.analytics-visitor--user", text: "François Catuhe"
   end
 
+  test "narrows the visitors to those who activated, and links a visitor to its units and their briefing journal" do
+    activate browse([ [ "/briefing/activate", 60 ] ], visitor: "pilot-token", started_at: 1.hour.ago), units(:bound), browser: "5G3GRZ31"
+    browse [ [ "/buy", 30 ] ], visitor: "reader-token", started_at: 2.hours.ago
+
+    get admin_analytics_visitors_path(filters: { activation: "activated" })
+
+    assert_select "a.analytics-visitor", count: 1, text: "pilot-to"
+
+    get admin_analytics_visitor_path("pilot-token")
+
+    assert_select ".admin-visitor-activations a[href=?]", admin_unit_path(units(:bound)), text: units(:bound).slug
+    assert_select ".admin-visitor-activations a[href=?]", admin_events_path(browser: "5G3GRZ31"), text: "5G3G-RZ31"
+  end
+
   test "pages through the visitors, newest first" do
     51.times { |index| browse [ [ "/", 1 ] ], visitor: "visitor-#{index}", started_at: (index + 1).minutes.ago }
 
