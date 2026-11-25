@@ -1,6 +1,5 @@
 @layer simulator {
 .simulator {
-  --sim-glass: #c9cbc4;
   --sim-etch: #a9aca4;
   --sim-bezel: #24262a;
   --sim-dial: #101215;

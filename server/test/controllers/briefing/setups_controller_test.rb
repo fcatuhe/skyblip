@@ -16,4 +16,18 @@ class Briefing::SetupsControllerTest < ActionDispatch::IntegrationTest
     get "/briefing/setup", params: { for: "../admin" }
     assert_select "[data-setup-partner-value]", count: 0
   end
+
+  test "a unit installed on another device opens the setup on its Connect step" do
+    get "/briefing/setup", params: { installed: "go", tag: "3F2A" }
+    assert_select "[data-setup-installed-value='go'][data-setup-tag-value='3f2a']"
+
+    get "/briefing/setup", params: { installed: "router", tag: "3F2A" }
+    assert_select "[data-setup-installed-value]", count: 0
+  end
+
+  test "skyblip.eu/setup, the address a pilot types on the other device, opens the setup" do
+    get "/setup"
+
+    assert_redirected_to "/briefing/setup"
+  end
 end
