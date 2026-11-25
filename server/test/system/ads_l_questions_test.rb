@@ -4,12 +4,12 @@ class AdsLQuestionsTest < ApplicationSystemTestCase
   test "the list shows every question collapsed, and a question's reference opens it" do
     visit "/ads-l/questions"
 
-    assert_selector ".questions details", count: 8
+    assert_selector ".questions details", count: 11
     assert_no_selector ".questions details[open]"
 
-    click_link "SB-Q3"
-    assert_selector "details#sb-q3[open]"
-    assert_selector "details#sb-q3 figure.diagram", count: 2
+    click_link "SB-Q4"
+    assert_selector "details#sb-q4[open]"
+    assert_selector "details#sb-q4 figure.diagram", count: 2
   end
 
   test "a link to a question's reference opens it on arrival" do
