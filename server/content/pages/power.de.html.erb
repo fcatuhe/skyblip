@@ -2,17 +2,17 @@
 title: "Go: Akku, Laden per USB-C und Betriebszustände"
 nav_title: Strom und Akku
 slug: strom-und-akku
-description: "Laden Sie skyBlip Go per USB-C. Lesen Sie, wie Go bei leerem Akku warnt und warum das E-Paper-Display sein Bild ohne Strom behält."
+description: "Laden Sie skyBlip Go per USB-C. Verstehen Sie Akkuwarnungen, BATTERY EMPTY und das Abschalten. Das E-Paper-Display behält sein Bild ohne Strom."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Das Display informiert auch im ausgeschalteten Zustand.</h1>
+  <h1>Go einschalten, laden und ausschalten</h1>
   <p class="lede">
-    Was das Gerät anzeigt, bevor es eine Position hat, wenn es ausgeschaltet ist und wenn der Akku leer wird.
+    Erkennen Sie die Meldungen zu GPS und Akku. Sehen Sie, wann das Gerät ausgeschaltet ist.
   </p>
 </section>
 
@@ -21,17 +21,17 @@ updated_on: "2026-11-19"
 
   <div class="feature">
     <div>
-      <h3 id="waiting">Das Display zeigt, <span class="highlight">worauf Go wartet</span>.</h3>
+      <h3 id="waiting">Warten auf <span class="highlight">die erste GPS-Position</span>.</h3>
       <p>
-        Ein Tastendruck schaltet das Gerät ein und öffnet die Verkehrsanzeige. Solange Go keine Position hat, steht das im Radarkreis. Die Meldung darunter zeigt, wie weit der Empfänger ist: <span class="mono">GPS OFF</span>, wenn der Empfänger keine Daten liefert, <span class="mono">MOVE OUT</span>, wenn er Positionslösungen ohne Datum liefert, und <span class="mono">FINDS FIX</span>, sobald er das Datum eines Satelliten liest.
+        Ein Tastendruck schaltet das Gerät ein und öffnet das Radar. Solange Go keine Position hat, steht das im Radarkreis. Die Meldung unter dem Kreis zeigt den Zustand des GPS-Empfängers: <span class="mono">GPS OFF</span>, wenn der Empfänger keine Daten liefert, <span class="mono">MOVE OUT</span>, wenn er Positionslösungen ohne Datum liefert, und <span class="mono">FINDS FIX</span>, sobald er das Datum eines Satelliten liest.
       </p>
       <p>
-        So wissen Sie, ob Sie warten oder das Gerät ins Freie bringen sollten. Sobald es seine erste Position meldet, zeigt das Display den Luftraum um Sie herum.
+        So wissen Sie, ob Sie warten oder das Gerät ins Freie bringen sollten. Das Gerät meldet seine erste Position. Danach zeigt das Radar den Verkehr um Sie herum.
       </p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "Radaransicht ohne Position: Im leeren Kreis steht NO FIX, darunter der Fortschritt des Empfängers" %>
-      <figcaption>Warten auf einen Positionsfix</figcaption>
+      <figcaption>Warten auf die erste GPS-Position</figcaption>
     </figure>
   </div>
 
@@ -55,13 +55,13 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="flat-battery">Wenn der Akku leer ist, <span class="highlight">steht es auf dem Display</span>.</h3>
       <p>
-        Bei 3,2&nbsp;V schaltet sich das Gerät aus. Die letzte Meldung nennt den Grund. Sie haben nichts gedrückt, also kann nur das Display erklären, warum Go aus ist. Ohne diese Meldung sähe es nach einem Absturz oder Defekt aus. Die Taste reagiert ab diesem Moment nicht mehr. Ein Tastendruck würde den Akku nur wieder an dieselbe Abschaltspannung bringen.
+        Bei 3,2&nbsp;V schaltet sich das Gerät aus. Die letzte Meldung zeigt, dass der Akku leer ist. Sie haben nichts gedrückt, also kann nur das Display erklären, warum Go aus ist. Ohne diese Meldung sähe es nach einem Absturz oder Defekt aus. Die Taste reagiert ab diesem Moment nicht mehr. Ein Tastendruck würde den Akku nur wieder an dieselbe Abschaltspannung bringen.
       </p>
       <p>
-        Schließen Sie das Kabel an, um das Gerät wieder zu nutzen. Das weckt die Elektronik, ohne das Gerät zu starten, und zeigt das Logo wieder an. Das Gerät ist aus und lädt. Der nächste Tastendruck startet es. Hat sich der Akku bei der Lagerung entladen, steht noch keine Meldung auf dem Display. In diesem Fall zeigt ein Tastendruck dieselbe Meldung zum leeren Akku an.
+        Schließen Sie das Kabel an, um das Gerät wieder nutzen zu können. Das Anschließen allein ändert die Anzeige nicht. Die rote Ladeanzeige zeigt, dass der Akku geladen wird. Das Gerät bleibt ausgeschaltet. Drücken Sie bei angeschlossenem Kabel die Taste, um es unabhängig vom Akkustand zu starten und die Meldung zu löschen. Hat sich der Akku bei der Lagerung entladen, steht noch keine Meldung auf dem Display. In diesem Fall zeigt ein Tastendruck dieselbe Meldung zum leeren Akku an.
       </p>
       <p>
-        Das Gerät merkt sich das bis zum nächsten Start. Im Selbsttest steht
+        Beim nächsten Start meldet der Selbsttest das Abschalten wegen eines leeren Akkus mit
         <span class="mono">WAS EMPTY</span> neben der Spannung. Verbindet sich beim Start ein Smartphone, erhält es denselben Hinweis. So meldet sich das Gerät nach dem Ausfall nicht zurück, als wäre nichts passiert.
       </p>
     </div>
@@ -78,11 +78,11 @@ updated_on: "2026-11-19"
       </thead>
       <tbody>
         <tr><th>Taste drücken</th><td>Das Gerät startet, außer der Akku liegt ohne angeschlossenes Ladegerät unter 3,4&nbsp;V. Dann zeigt das Display <span class="mono">BATTERY EMPTY</span></td></tr>
-        <tr><th>Taste nach dem Abschalten bei leerem Akku drücken</th><td>Nichts. Das Display nennt den Grund bereits. Schließen Sie das Kabel an, um das Gerät wieder zu nutzen</td></tr>
+        <tr><th>Taste nach dem Abschalten bei leerem Akku drücken</th><td>Das Gerät reagiert nicht. Das Display zeigt bereits, dass der Akku leer ist. Schließen Sie das Kabel an, um das Gerät zu laden</td></tr>
         <tr><th>Ladegerät anschließen</th><td>Das Gerät lädt und bleibt aus. Das Anschließen in der Flugtasche löst keine Aussendung aus</td></tr>
-        <tr><th>Ladegerät bei leerem Akku anschließen</th><td>Das Gerät lädt und bleibt aus. Das Logo erscheint anstelle von <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Ladegerät bei leerem Akku anschließen</th><td>Das Gerät lädt und bleibt aus. <span class="mono">BATTERY EMPTY</span> bleibt bis zum nächsten Tastendruck stehen</td></tr>
         <tr><th>Taste halten und Ladegerät anschließen</th><td>Das Gerät startet und lädt</td></tr>
-        <tr><th>Drücken Sie <span class="mono">RESET</span></th><td>für einen Neustart. Drücken Sie zweimal innerhalb einer halben Sekunde, um den USB-Bootloader zu starten und die Firmware per USB zu installieren</td></tr>
+        <tr><th>Drücken Sie <span class="mono">RESET</span></th><td>für einen Neustart. Drücken Sie zweimal innerhalb einer halben Sekunde, um das Installationsprogramm für Firmware über USB zu starten, den USB-Bootloader</td></tr>
       </tbody>
     </table>
   </div>
@@ -108,9 +108,9 @@ updated_on: "2026-11-19"
     <li>Die LED blinkt und leuchtet nie dauerhaft</li>
   </ul>
 
-  <h3 id="gauge">Was die Akkuanzeige nicht tut.</h3>
+  <h3 id="gauge">Die Akkuanzeige ablesen.</h3>
   <p class="lede">
-    Die Anzeige nutzt zwei Spannungskurven statt einer. Beim Laden ist die Klemmenspannung höher als die eigene Spannung des Akkus. Derselbe Messwert entspricht dann einem deutlich leereren Akku. Der Prozentwert zeigt, welche Kurve verwendet wurde.
+    Bei angeschlossenem Kabel misst das Gerät die USB-Spannung, nicht die Akkuspannung. Deshalb zeigt es keinen Prozentwert an. Der Prozentwert wird nur im Akkubetrieb berechnet.
   </p>
   <p class="lede">
     Der Prozentwert läuft nicht rückwärts. Auch eine Aussendung mit 14&nbsp;dBm, die die Spannung kurz senkt, verändert ihn nicht. Eine Anzeige, die bei jeder Aussendung springt, ist für Piloten nicht verlässlich.
@@ -133,5 +133,6 @@ updated_on: "2026-11-19"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

@@ -48,7 +48,7 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 
 ## Built into the browser simulator
 
-`skyblip_simulator.wasm` and `skyblip_simulator.js` are our firmware compiled by Emscripten, which adds its own runtime.
+`skyblip-simulator.wasm` and `skyblip-simulator.js` are our firmware compiled by Emscripten, which adds its own runtime.
 
 | Component | License |
 |---|---|

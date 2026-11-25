@@ -46,12 +46,42 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
     assert_select ".locale-switcher [aria-disabled=true]", text: "Français"
   end
 
+  # A request for /?locale=zz answered a 500, since I18n refuses a locale it does not know.
+  test "a locale the site does not speak, asked in the query, is ignored" do
+    get "/about", params: { locale: "zz" }
+
+    assert_response :success
+    assert_select "html[lang=en]"
+  end
+
   test "unknown and noncanonical content slugs are not recognized" do
     %w[/unknown /index /fr/index /fr/about /a-propos /fr/ads-l/nmea /fr/fr /fr/fr/a-propos].each do |path|
       assert_raises(ActionController::RoutingError, path) do
         Rails.application.routes.recognize_path(path, method: :get)
       end
     end
+  end
+
+  test "every page in a section links the pages before and after it in its reading order" do
+    Content::Page.all.select(&:parent).each do |page|
+      get page.url_path
+
+      assert_equal 1, css_select("nav.pager").size, page.url_path
+      assert_equal [ page.previous_page&.url_path ].compact, css_select("nav.pager a[rel=prev]").map { it["href"] }, page.url_path
+      assert_equal [ page.next_page&.url_path ].compact, css_select("nav.pager a[rel=next]").map { it["href"] }, page.url_path
+    end
+  end
+
+  test "a blog post offers the next post on the right, before its sources" do
+    get "/fr/blog/flotte-de-club"
+
+    assert_select ".pager-place", text: "Blog · 5 sur 7"
+    assert_select ".pager-link--previous[href='/fr/blog/reseau-ou-radio']", text: /Précédent/
+    assert_select ".pager-link--next[href='/fr/blog/poche-ou-installe']", text: /Suivant/
+
+    get "/blog/who-sees-ads-l"
+
+    assert_equal %w[nav ul], css_select("nav.pager, ul.sources").map(&:name)
   end
 
   test "application routes never resolve to the content controller" do

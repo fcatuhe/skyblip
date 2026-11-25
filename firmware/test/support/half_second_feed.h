@@ -37,6 +37,8 @@ inline void deliver(Rig& rig, const Solution& delivered, uint32_t& updates) {
     solution.altitude_msl_valid = true;
     solution.speed_mm_s = delivered.speed_mm_s;
     solution.track_cdeg = 0;
+    solution.speed_valid = true;
+    solution.track_valid = true;
     solution.hdop_e2 = 100;
     solution.vdop_e2 = 150;
     solution.satellites = 10;

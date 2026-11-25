@@ -4,14 +4,14 @@ nav_title: Radar
 description: "Read the skyBlip Go traffic display, symbols and Nearby list. Understand alerts within 3 km and 300 m and how PLOT ALL shows distant traffic."
 parent: guides
 share_image: radar
-updated_on: "2026-11-23"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Where to look, and who is there.</h1>
+  <h1>Read the radar, alarm and Nearby list.</h1>
   <p class="lede">
-    The page you leave a skyBlip Go on: where to look, who is there, and what the alarm means when it speaks.
+    The radar is the page you leave a skyBlip Go on. Here is how to read its symbols, the Nearby list and the alarm.
   </p>
 </section>
 
@@ -20,17 +20,12 @@ updated_on: "2026-11-23"
 
   <div class="feature">
     <div>
-      <h3 id="heading-up">Traffic drawn <span class="highlight">the way you see it</span>.</h3>
+      <h3 id="heading-up">You are in the centre, <span class="highlight">track up</span>.</h3>
       <p>
-        You are in the middle, track up. The picture stays that way as the sky
-        turns around you. Traffic drawn to the upper right is traffic to look
-        for off the right of the nose, with nothing to convert. The top of the screen is kept clear because that is the half you are flying into. The only exception is <span class="mono">NO TX</span> and its reason in the top-left corner.
+        You are in the centre, track up. The picture rotates to keep your track at the top. An aircraft shown at the upper right is ahead and to the right of the nose, with no mental conversion needed. The top of the screen is kept clear to show traffic ahead of you. Only <span class="mono">NO TX</span> and the reason transmission has stopped can appear there, in the top-left corner.
       </p>
       <p>
-        Each aircraft is a shape that tells you where to look.
-        A point facing up means above you. A point facing down means below. A diamond means at your
-        level. A small angled mark shows if it is climbing or descending. The line
-        from each symbol ends where the aircraft will be in a minute.
+        Each symbol&rsquo;s shape shows the aircraft&rsquo;s altitude relative to you. A point facing up means above you. A point facing down means below. A diamond means at your level. A small angled mark shows if the aircraft is climbing or descending. The line from each symbol ends at its predicted position in a minute.
       </p>
     </div>
     <figure class="shot">
@@ -50,28 +45,16 @@ updated_on: "2026-11-23"
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="every-aircraft">Every aircraft, <span class="highlight">however far</span>.</h3>
+      <h3 id="every-aircraft">Every aircraft heard, <span class="highlight">whatever its distance</span>.</h3>
       <p>
-        To scale, the picture ends at the edge of the screen: with the 4&nbsp;NM ring, an
-        aircraft beyond about six miles disappears. With
-        <span class="mono">PLOT</span> on <span class="mono">ALL</span>, the
-        first option in the settings menu and the default on a new device,
-        every aircraft heard with a position is shown. The ring
-        shrinks to leave a band around it. An aircraft beyond the ring appears
-        on that band, in its direction, with the same shape it would have inside.
+        In the to-scale mode, aircraft beyond the edge of the screen are no longer visible. With the 4&nbsp;NM ring, an aircraft beyond about six miles disappears. Setting
+        <span class="mono">PLOT</span> to <span class="mono">ALL</span> shows every aircraft heard with a position. It is the first option in the settings menu and the default on a new device. The ring shrinks to leave a band around it. An aircraft beyond the ring appears on that band, in its direction, with the same shape it would have inside.
       </p>
       <p>
-        Its distance is not shown to scale, but its minute of track is: from the aircraft's
-        real position, with only the part inside the ring drawn. An aircraft
-        closing fast from six miles appears as a mark on the band and a line already
-        inside the ring, ending where it will be in a minute.
+        The symbol on the band shows the aircraft's direction, not its distance. Its track line remains to scale. It is calculated from the aircraft's real position, but only the part inside the ring is drawn. An aircraft closing fast from six miles therefore appears on the band with a line already inside the ring. That line ends at its predicted position in a minute.
       </p>
       <p>
-        Aircraft close together on the band share one mark with a count beside
-        it. An aircraft triggering an alarm takes priority. Otherwise, the mark shows the aircraft
-        closest to your altitude. The count never covers another aircraft, and
-        a mark behind you moves aside rather than disappear
-        under the range label.
+        Aircraft close together on the band share one symbol with a count beside it. The symbol of an aircraft triggering an alarm takes priority. Otherwise, the symbol is that of the aircraft closest to your altitude. The count never covers another aircraft. A symbol behind you moves aside so the range label does not hide it.
       </p>
     </div>
     <figure class="shot">
@@ -85,35 +68,28 @@ updated_on: "2026-11-23"
     <li>TO SCALE: the picture drawn to the ring's scale</li>
     <li>On the band: the direction, the shape, the alarm</li>
     <li>A minute of track, where it enters the ring</li>
-    <li>Aircraft close together on the band share one mark and a count</li>
+    <li>Aircraft grouped on the band share a symbol and a count</li>
     <li>The corner shows the count of every aircraft heard</li>
   </ul>
 
   <p class="lede">
-    <%= link_to_page "displays", label: "The screens page", anchor: "both-ways" %>
+    <%= link_to_page "displays", label: "The comparison of both modes", anchor: "both-ways" %>
     shows the same traffic in both modes, one button press apart.
   </p>
 
   <div class="feature">
     <div>
-      <h3 id="alarm">One alarm, and it says <span class="highlight">where to look</span>.</h3>
+      <h3 id="alarm">One alarm that shows <span class="highlight">where to look</span>.</h3>
       <p>
-        An aircraft within 3&nbsp;km horizontally and 300&nbsp;m vertically has its symbol filled
-        in. A quarter of the screen centred on it goes black once a second. You
-        have nothing to read: you catch the flash out of
-        the corner of your eye. It tells you to turn your
-        head that way. Whatever page you are on, the radar takes over.
+        When an aircraft is within 3&nbsp;km horizontally and 300&nbsp;m vertically, its symbol fills in black. A quarter of the screen centred on its direction goes black once a second. You have nothing to read: the flash catches the corner of your eye and shows which way to look. Whatever page you are on, the Go returns to the radar.
       </p>
       <p>
-        The black sector catches the eye. The symbol gives you the angle.
-        Traffic 38° off the nose is not rounded to &ldquo;ahead and
-        right&rdquo;: the sector is centred on 38°, so you look there rather
-        than search a quarter of the sky.
+        The black sector catches the eye. The symbol gives you the precise direction. For an aircraft 38° off the nose, the sector is centred on 38°. You look in that direction, rather than only &ldquo;ahead and right&rdquo; across a quarter of the sky.
       </p>
       <p>
         There is no higher alert level, and there never will be. Climbing or
         descending has to be coordinated with the other aircraft. This
-        device has no link for that. The loudest thing it can say is look.
+        device has no link for that. It shows you where to look without telling you how to manoeuvre.
       </p>
     </div>
     <figure class="shot">
@@ -131,7 +107,7 @@ updated_on: "2026-11-23"
     <li>A caution, never an instruction</li>
   </ul>
 
-  <h3 id="shapes">Six shapes, and <span class="highlight">you read them without learning them</span>.</h3>
+  <h3 id="shapes">Six shapes for relative altitude, <span class="highlight">readable without learning them</span>.</h3>
   <p class="lede">
     A point facing up means traffic above you. A point facing down means below. A diamond means
     traffic within 60&nbsp;m of your altitude. A full-size symbol means the aircraft is within the 300&nbsp;m
@@ -141,12 +117,11 @@ updated_on: "2026-11-23"
   </p>
   <p class="lede">
     The ring means an aircraft is sending no altitude. It points neither up nor down, because
-    nobody knows if it is above or below you. Within 3&nbsp;km it is filled
+    its altitude relative to you is unknown. Within 3&nbsp;km it is filled
     like any alarm, because it may be at your level.
   </p>
   <p class="lede">
-    A symbol filled in black means an alarm. While no symbol is filled, nothing is
-    urgent: it is the one contrast the screen keeps in reserve.
+    Black fill is reserved for alarm symbols. While no symbol is filled, the screen is not reporting an urgent situation.
   </p>
 
   <%= render "shared/blips",
@@ -171,28 +146,19 @@ updated_on: "2026-11-23"
 
   <div class="feature">
     <div>
-      <h3 id="nearby">Who is out there, <span class="highlight">those at your height first</span>.</h3>
+      <h3 id="nearby">The Nearby list, <span class="highlight">those at your height first</span>.</h3>
       <p>
-        The radar says where to look. This page says who is there. One row per
-        aircraft with a known position: its callsign if it broadcasts one and its
-        radio address otherwise, the horizontal distance between you, and how far above or
-        below you it is, or two dashes when it sends no altitude. A radio
-        address is in small type, so you can tell it from a callsign.
+        The radar shows where to look. The Nearby list identifies aircraft with a known position, one per row. Each row shows the aircraft&rsquo;s callsign, or its radio address if it broadcasts no callsign. It also shows the horizontal distance between you and the aircraft&rsquo;s altitude relative to you. Two dashes replace the altitude difference if the aircraft sends no altitude. The radio address appears in small type to distinguish it from a callsign.
       </p>
       <p>
-        Above the list, one line for the Go and one for a paired Bravo: its
-        battery, the satellites its position uses and the aircraft its radio
-        receives. When a unit has no position or does not work, a word replaces
-        the last two: <span class="mono">GPS OFF</span>,
+        Above the list, one row shows the Go&rsquo;s status and another shows a paired Bravo&rsquo;s. Each row gives the battery status, the number of satellites used to calculate its position and the number of aircraft received. When a unit has no position or does not work, a message replaces the satellite and traffic counts: <span class="mono">GPS OFF</span>,
         <span class="mono">MOVE OUT</span>, <span class="mono">FINDS FIX</span>,
         <span class="mono">TX OFF</span>, <span class="mono">NO LINK</span> or
         <span class="mono">RX DOWN</span>.
       </p>
       <p>
-        An aircraft raising an alarm comes first, then those within 300&nbsp;m
-        (about 1,000&nbsp;ft) of your altitude, then the rest, nearest first in
-        each group. An airliner overhead is near on the ground, but it lists below
-        a glider at your height.
+        Aircraft triggering an alarm come first, followed by those within 300&nbsp;m
+        (about 1,000&nbsp;ft) of your altitude, then the rest. Within each group, aircraft are sorted by horizontal distance, nearest first. An airliner overhead has a small horizontal distance but appears after a glider at your height.
       </p>
       <p>
         The letter at the start of the row tells you where the information came from.
@@ -211,10 +177,10 @@ updated_on: "2026-11-23"
     <div>
       <h3 id="no-tx">When Go stops transmitting, <span class="highlight">it keeps warning you</span>.</h3>
       <p>
-        Go keeps receiving traffic, warning you, feeding your navigation app and recording your flight when it stops transmitting your position. After 10&nbsp;s without meeting a transmission requirement, every page shows <span class="mono">NO TX</span> above a reason word, white on black in the top-left corner. <span class="mono">RADIO</span> means the radio is not answering or listening before transmission. <span class="mono">GNSS</span> means the GPS receiver is not calculating positions twice a second, on the second and half-second. <span class="mono">FIX</span> means no valid position. <span class="mono">UTC</span> means no valid UTC time to synchronise the radio. <span class="mono">PPS</span> means no pulse from the GPS receiver for the current second. <span class="mono">HELD</span> means every other requirement holds, but Go has held the positions it owed for more than 5&nbsp;s, because none could go out as ADS-L requires. It keeps trying, and sends the next one as soon as it can. If several requirements fail, Go shows the first in that order.
+        When Go stops transmitting your position, it keeps receiving traffic and warning you. It also keeps feeding your navigation app and recording your flight. After 10&nbsp;s without meeting a transmission requirement, every page shows <span class="mono">NO TX</span> above a reason word, white on black in the top-left corner. <span class="mono">RADIO</span> means the radio is not answering or listening before transmission. <span class="mono">GNSS</span> means the GPS receiver is not calculating positions twice a second, on the second and half-second. <span class="mono">FIX</span> means no valid position. <span class="mono">UTC</span> means no valid UTC time to synchronise the radio. <span class="mono">PPS</span> means no pulse from the GPS receiver for the current second. <span class="mono">HELD</span> means every other requirement holds, but Go has held the positions it owed for more than 5&nbsp;s, because none could go out as ADS-L requires. It keeps trying, and sends the next one as soon as it can. If several requirements fail, Go shows the first in that order.
       </p>
       <p>
-        Transmission stops as soon as a requirement fails and resumes on its own when all requirements hold again. With <span class="mono">HELD</span>, Go keeps trying instead, and the status message still goes out. The mark stays until all have held for 10&nbsp;s, so it can remain briefly after transmission resumes. It does not appear over menus or prompts. In flight, Go vibrates once when the mark appears, or on takeoff if it is already shown. Before the first position, the radar shows the receiver&rsquo;s progress instead. Radio faults are checked from start-up. The self test page marks the part preventing transmission with <span class="mono">NO TX</span>. The status page&rsquo;s traffic row shows <span class="mono">TX OFF</span> and the reason without waiting 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> shows the same reason as the corner mark while connected.
+        Transmission stops as soon as a requirement fails and resumes on its own when all requirements hold again. With <span class="mono">HELD</span>, Go keeps trying instead, and the status message still goes out. The mark stays until all requirements have been met for 10&nbsp;s. It can therefore remain briefly after transmission resumes. It does not appear over menus or prompts. In flight, Go vibrates once when the mark appears, or on takeoff if it is already shown. Before Go obtains its first GPS position, the radar shows the receiver&rsquo;s progress instead. Radio faults are checked from start-up. The self test page marks the part preventing transmission with <span class="mono">NO TX</span>. The status page&rsquo;s traffic row shows <span class="mono">TX OFF</span> and the reason without waiting 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> shows the same reason as the corner mark while connected.
       </p>
     </div>
     <figure class="shot">
@@ -225,5 +191,6 @@ updated_on: "2026-11-23"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

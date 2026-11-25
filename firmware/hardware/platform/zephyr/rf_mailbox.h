@@ -21,14 +21,14 @@ class RfMailbox {
         Status verdict = Status::Ok;
         k_sched_lock();
         if (joins_flying_dwell(plan, now_us)) {
-            if (flying_bursts_.add(burst_of(plan)))
+            if (flying_bursts_.add(ports::RfBurst::of(plan)))
                 wake();
             else
                 verdict = Status::WouldBlock;
         } else if (flying_ && plan.end_us <= flying_end_us_) {
             verdict = Status::WouldBlock;
         } else if (queued_ && same_dwell(plan, queued_plan_)) {
-            if (plan.tx != nullptr && !queued_bursts_.add(burst_of(plan)))
+            if (plan.tx != nullptr && !queued_bursts_.add(ports::RfBurst::of(plan)))
                 verdict = Status::WouldBlock;
         } else {
             queued_plan_ = plan;
@@ -135,10 +135,6 @@ class RfMailbox {
         if (!flying_ || plan.tx == nullptr) return false;
         if (plan.mode != flying_mode_ || plan.frequency_hz != flying_frequency_hz_) return false;
         return plan.tx_at_us >= now_us && plan.tx_at_us < flying_end_us_;
-    }
-
-    static ports::RfBurst burst_of(const ports::RfPlan& plan) {
-        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced};
     }
 
     static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {

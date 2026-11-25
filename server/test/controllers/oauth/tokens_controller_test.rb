@@ -169,7 +169,7 @@ class OAuth::TokensControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Taking a client off the list must cut the agents already connected, not leave them reading until they lapse.
-  test "a client taken off the list loses its connection, at /mcp and at the token endpoint" do
+  test "a client taken off the list loses its connection, at /admin/mcp and at the token endpoint" do
     tokens = connect(client_id: CLAUDE_CODE)
 
     with_config oauth_client_ids: Rails.configuration.x.oauth_client_ids - [ CLAUDE_CODE ] do

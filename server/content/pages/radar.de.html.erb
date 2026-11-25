@@ -5,14 +5,14 @@ slug: radar
 description: "Lesen Sie Radar, Symbole und die Liste NEARBY auf skyBlip Go. Warnungen gelten innerhalb von 3 km und 300 m. PLOT ALL zeigt auch entfernten Verkehr."
 parent: guides
 share_image: radar
-updated_on: "2026-11-23"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Wohin Sie schauen sollten und wer dort fliegt.</h1>
+  <h1>Radar, Warnung und die Liste NEARBY lesen.</h1>
   <p class="lede">
-    Die Ansicht, die auf skyBlip Go offen bleibt: Wohin Sie schauen sollten, wer dort fliegt und was eine Warnung bedeutet.
+    Das Radar ist die Ansicht, die auf skyBlip Go offen bleibt. Hier erfahren Sie, wie Sie die Symbole, die Liste NEARBY und die Warnung lesen.
   </p>
 </section>
 
@@ -21,12 +21,12 @@ updated_on: "2026-11-23"
 
   <div class="feature">
     <div>
-      <h3 id="heading-up">Der Verkehr erscheint so, <span class="highlight">wie Sie ihn vor sich sehen</span>.</h3>
+      <h3 id="heading-up">Sie sind in der Mitte, <span class="highlight">Ihr Kurs über Grund zeigt nach oben</span>.</h3>
       <p>
-        Sie sind in der Mitte, Ihre Flugrichtung zeigt nach oben. Das bleibt auch in der Kurve so. Verkehr rechts oben suchen Sie rechts vor der Nase, ohne umzurechnen. Die obere Hälfte des Bildschirms bleibt frei, denn in diese Richtung fliegen Sie. Die einzige Ausnahme sind <span class="mono">NO TX</span> und der Grund dafür in der linken oberen Ecke.
+        Sie sind in der Mitte, Ihr Kurs über Grund zeigt nach oben. Die Darstellung dreht sich so, dass dies auch in der Kurve gilt. Ein Luftfahrzeug rechts oben suchen Sie rechts vor der Nase, ohne umzurechnen. Die obere Hälfte des Bildschirms bleibt für den Verkehr vor Ihnen frei. Nur <span class="mono">NO TX</span> und der Grund für den Sendestopp können dort in der linken oberen Ecke erscheinen.
       </p>
       <p>
-        Die Form jedes Luftfahrzeugs zeigt, wohin Sie schauen sollten. Eine Spitze nach oben bedeutet über Ihnen, eine nach unten unter Ihnen. Eine Raute bedeutet auf Ihrer Höhe. Ein kleiner Winkel zeigt Steig- oder Sinkflug. Die Linie am Symbol endet an der Position des Luftfahrzeugs in einer Minute.
+        Die Symbolform zeigt die Höhe des Luftfahrzeugs relativ zu Ihnen. Eine Spitze nach oben bedeutet über Ihnen, eine nach unten unter Ihnen. Eine Raute bedeutet auf Ihrer Höhe. Ein kleiner Winkel zeigt Steig- oder Sinkflug. Die Linie am Symbol endet an der vorhergesagten Position des Luftfahrzeugs in einer Minute.
       </p>
     </div>
     <figure class="shot">
@@ -46,13 +46,13 @@ updated_on: "2026-11-23"
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="every-aircraft">Jedes Luftfahrzeug, <span class="highlight">auch weit entfernt</span>.</h3>
+      <h3 id="every-aircraft">Jedes empfangene Luftfahrzeug, <span class="highlight">unabhängig von der Entfernung</span>.</h3>
       <p>
         Maßstabsgetreu endet die Ansicht am Displayrand. Beim Kreis von 4&nbsp;NM ist ein Luftfahrzeug jenseits von etwa sechs nautischen Meilen nicht sichtbar. Steht
         <span class="mono">PLOT</span> auf <span class="mono">ALL</span>, der ersten Option im Einstellungsmenü und der Voreinstellung neuer Geräte, erscheint jedes empfangene Luftfahrzeug mit Position. Der Kreis wird kleiner und lässt Platz für einen äußeren Ring. Ein Luftfahrzeug außerhalb des Kreises erscheint dort in seiner Richtung, mit demselben Symbol wie im Kreis.
       </p>
       <p>
-        Die Entfernung ist dort nicht maßstabsgetreu. Die Kurslinie für eine Minute ist es: Sie geht von der tatsächlichen Position aus und erscheint nur, soweit sie im Kreis liegt. Bei einem Luftfahrzeug, das sich aus sechs nautischen Meilen schnell nähert, steht das Symbol im äußeren Ring. Die Linie reicht bereits in den Kreis und endet an der Position in einer Minute.
+        Das Symbol im äußeren Ring zeigt die Richtung des Luftfahrzeugs, nicht seine Entfernung. Die Entfernung wird dort nicht maßstabsgetreu dargestellt. Die Kurslinie für eine Minute bleibt dagegen maßstabsgetreu. Sie wird von der tatsächlichen Position aus berechnet, aber nur innerhalb des Kreises gezeichnet. Bei einem Luftfahrzeug, das sich aus sechs nautischen Meilen schnell nähert, steht das Symbol im äußeren Ring. Die Linie reicht bereits in den Kreis und endet an der Position in einer Minute.
       </p>
       <p>
         Nahe beieinanderliegende Luftfahrzeuge teilen sich im äußeren Ring ein Symbol mit einer Zahl daneben. Ein Luftfahrzeug mit Warnung hat Vorrang. Sonst zeigt das Symbol das Luftfahrzeug, das Ihrer Höhe am nächsten ist. Die Zahl verdeckt kein anderes Luftfahrzeug. Ein Symbol hinter Ihnen rückt zur Seite, statt unter der Reichweitenangabe zu verschwinden.
@@ -74,13 +74,13 @@ updated_on: "2026-11-23"
   </ul>
 
   <p class="lede">
-    <%= link_to_page "displays", label: "Die Anleitung zu den Displayansichten", anchor: "both-ways" %>
+    <%= link_to_page "displays", label: "Der Vergleich der beiden Modi", anchor: "both-ways" %>
     zeigt denselben Verkehr in den beiden Modi, die Sie mit einem Tastendruck wechseln.
   </p>
 
   <div class="feature">
     <div>
-      <h3 id="alarm">Eine Warnung zeigt, <span class="highlight">wohin Sie schauen sollten</span>.</h3>
+      <h3 id="alarm">Eine einzige Warnung zeigt, <span class="highlight">wohin Sie schauen sollten</span>.</h3>
       <p>
         Liegt ein Luftfahrzeug innerhalb von 3&nbsp;km horizontal und 300&nbsp;m vertikal, wird sein Symbol ausgefüllt. Ein auf das Luftfahrzeug ausgerichtetes Viertel des Displays wird einmal pro Sekunde schwarz. Sie brauchen nichts zu lesen. Sie sehen das Blinken aus dem Augenwinkel und drehen den Kopf in diese Richtung. Das Radar erscheint unabhängig von der geöffneten Ansicht.
       </p>
@@ -88,7 +88,7 @@ updated_on: "2026-11-23"
         Der schwarze Sektor fällt auf. Das Symbol zeigt den Winkel. Verkehr 38° neben der Nase wird nicht zu »rechts voraus« gerundet. Der Sektor ist auf 38° ausgerichtet, damit Sie dorthin schauen, statt ein ganzes Viertel des Himmels abzusuchen.
       </p>
       <p>
-        Eine höhere Warnstufe gibt es nicht und wird es nicht geben. Steigen oder Sinken müsste mit dem anderen Luftfahrzeug abgestimmt sein. Dem Gerät fehlt dafür die Verbindung. Es kann Ihnen nur zeigen, wohin Sie schauen sollten.
+        Eine höhere Warnstufe gibt es nicht und wird es nicht geben. Steigen oder Sinken müsste mit dem anderen Luftfahrzeug abgestimmt sein. Dem Gerät fehlt dafür die Verbindung. Es zeigt Ihnen, wohin Sie schauen sollten, gibt aber keine Anweisung für ein Ausweichmanöver.
       </p>
     </div>
     <figure class="shot">
@@ -106,7 +106,7 @@ updated_on: "2026-11-23"
     <li>Ein Hinweis, nie eine Anweisung</li>
   </ul>
 
-  <h3 id="shapes">Sechs Formen, <span class="highlight">die Sie ohne Lernen verstehen</span>.</h3>
+  <h3 id="shapes">Sechs Formen für die relative Höhe, <span class="highlight">die Sie ohne Lernen verstehen</span>.</h3>
   <p class="lede">
     Eine Spitze nach oben bedeutet Verkehr über Ihnen, eine nach unten darunter. Eine Raute bedeutet Verkehr bis zu 60&nbsp;m über oder unter Ihnen. Ein normal großes Symbol steht für ein Luftfahrzeug innerhalb des Höhenbereichs von 300&nbsp;m, den die Warnung nutzt. Ein kleineres Symbol steht für mehr vertikalen Abstand. Es bleibt sichtbar, ohne eine Warnung auszulösen. Der Winkel erscheint ab 2,5&nbsp;m/s Steigen oder Sinken und zeigt in die entsprechende Richtung.
   </p>
@@ -114,7 +114,7 @@ updated_on: "2026-11-23"
     Ein Ring bedeutet, dass das Luftfahrzeug keine Höhe sendet. Er zeigt weder nach oben noch nach unten, weil die relative Höhe unbekannt ist. Innerhalb von 3&nbsp;km wird er wie bei jeder Warnung ausgefüllt, weil das Luftfahrzeug auf Ihrer Höhe sein könnte.
   </p>
   <p class="lede">
-    Ein schwarz ausgefülltes Symbol zeigt eine Warnung. Solange kein Symbol ausgefüllt ist, ist nichts dringend. Für diesen Fall behält sich das Display den Kontrast vor.
+    Schwarz ausgefüllte Symbole sind Warnungen vorbehalten. Solange kein Symbol ausgefüllt ist, zeigt das Display keine dringende Warnung an. Diesen Kontrast verwendet es nur für Warnungen.
   </p>
 
   <%= render "shared/blips",
@@ -139,18 +139,18 @@ updated_on: "2026-11-23"
 
   <div class="feature">
     <div>
-      <h3 id="nearby">Verkehr in der Nähe, <span class="highlight">zuerst auf Ihrer Höhe</span>.</h3>
+      <h3 id="nearby">Die Liste NEARBY, <span class="highlight">zuerst auf Ihrer Höhe</span>.</h3>
       <p>
-        Das Radar zeigt, wohin Sie schauen sollten. Diese Ansicht zeigt, wer dort ist. Je Luftfahrzeug mit bekannter Position sehen Sie eine Zeile: das Rufzeichen, falls es eines sendet, sonst die Funkadresse, die horizontale Entfernung und die Höhe über oder unter Ihnen. Zwei Striche stehen für eine unbekannte Höhe. Die Funkadresse ist kleiner gedruckt, damit Sie sie vom Rufzeichen unterscheiden können.
+        Das Radar zeigt, wohin Sie schauen sollten. Die Liste NEARBY identifiziert die Luftfahrzeuge mit bekannter Position. Je Luftfahrzeug mit bekannter Position sehen Sie eine Zeile: das Rufzeichen, falls es eines sendet, sonst die Funkadresse, die horizontale Entfernung und die Höhe über oder unter Ihnen. Zwei Striche stehen für eine unbekannte Höhe. Die Funkadresse ist kleiner gedruckt, damit Sie sie vom Rufzeichen unterscheiden können.
       </p>
       <p>
-        Über der Liste steht je eine Zeile für Go und einen gekoppelten Bravo: Akkustand, Satelliten für den Positionsfix und empfangene Luftfahrzeuge. Hat ein Gerät keine Position oder funktioniert es nicht, ersetzt eine Meldung die letzten beiden Angaben: <span class="mono">GPS OFF</span>,
+        Über der Liste steht eine Zeile für den Zustand des Go und eine weitere für einen gekoppelten Bravo. Jede zeigt den Akkustand, die Anzahl der für den Positionsfix verwendeten Satelliten und die Anzahl empfangener Luftfahrzeuge. Hat ein Gerät keine Position oder funktioniert es nicht, ersetzt eine Meldung die Angaben zu Satelliten und Verkehr: <span class="mono">GPS OFF</span>,
         <span class="mono">MOVE OUT</span>, <span class="mono">FINDS FIX</span>,
         <span class="mono">TX OFF</span>, <span class="mono">NO LINK</span> oder
         <span class="mono">RX DOWN</span>.
       </p>
       <p>
-        Zuerst kommt ein Luftfahrzeug mit Warnung, dann die Luftfahrzeuge bis zu 300&nbsp;m (etwa 1.000&nbsp;ft) über oder unter Ihnen, dann die übrigen. In jeder Gruppe steht das nächste zuerst. Ein Verkehrsflugzeug direkt über Ihnen ist horizontal nah, steht aber unter einem Segelflugzeug auf Ihrer Höhe.
+        Zuerst kommt ein Luftfahrzeug mit Warnung, dann die Luftfahrzeuge bis zu 300&nbsp;m (etwa 1.000&nbsp;ft) über oder unter Ihnen, dann die übrigen. In jeder Gruppe sind die Luftfahrzeuge nach horizontaler Entfernung geordnet, das nächste zuerst. Ein Verkehrsflugzeug direkt über Ihnen ist horizontal nah, steht aber unter einem Segelflugzeug auf Ihrer Höhe.
       </p>
       <p>
         Der Buchstabe am Zeilenbeginn zeigt die Quelle.
@@ -169,10 +169,10 @@ updated_on: "2026-11-23"
     <div>
       <h3 id="no-tx">Wenn Go nicht mehr sendet, <span class="highlight">warnt es Sie weiter</span>.</h3>
       <p>
-        Go empfängt weiter Verkehr, warnt Sie, versorgt Ihre Navigations-App mit Daten und zeichnet Ihren Flug auf, wenn es Ihre Position nicht mehr sendet. Fehlt eine Sendevoraussetzung 10&nbsp;s lang, zeigt jede Seite links oben <span class="mono">NO TX</span> über einem Wort für den Grund, weiß auf schwarz. <span class="mono">RADIO</span> bedeutet, dass das Funkteil nicht antwortet oder vor dem Senden nicht hört. <span class="mono">GNSS</span> bedeutet, dass der GPS-Empfänger nicht zweimal pro Sekunde eine Position berechnet, zur vollen und zur halben Sekunde. <span class="mono">FIX</span> bedeutet, dass eine gültige Position fehlt. <span class="mono">UTC</span> bedeutet, dass keine gültige UTC-Zeit zur Synchronisierung des Funks vorliegt. <span class="mono">PPS</span> bedeutet, dass der Impuls des GPS-Empfängers für die laufende Sekunde fehlt. <span class="mono">HELD</span> bedeutet, dass alle anderen Voraussetzungen erfüllt sind, Go aber die fälligen Positionen seit mehr als 5&nbsp;s zurückhält, weil keine so gesendet werden konnte, wie ADS-L es verlangt. Go versucht es weiter und sendet die nächste, sobald es kann. Fehlen mehrere Voraussetzungen, zeigt Go die erste in dieser Reihenfolge.
+        Wenn Go Ihre Position nicht mehr sendet, empfängt es weiter Verkehr und warnt Sie. Es versorgt auch weiterhin Ihre Navigations-App mit Daten und zeichnet Ihren Flug auf. Fehlt eine Sendevoraussetzung 10&nbsp;s lang, zeigt jede Seite links oben <span class="mono">NO TX</span> über einem Wort für den Grund, weiß auf schwarz. <span class="mono">RADIO</span> bedeutet, dass das Funkteil nicht antwortet oder vor dem Senden nicht hört. <span class="mono">GNSS</span> bedeutet, dass der GPS-Empfänger nicht zweimal pro Sekunde eine Position berechnet, zur vollen und zur halben Sekunde. <span class="mono">FIX</span> bedeutet, dass eine gültige Position fehlt. <span class="mono">UTC</span> bedeutet, dass keine gültige UTC-Zeit zur Synchronisierung des Funks vorliegt. <span class="mono">PPS</span> bedeutet, dass der Impuls des GPS-Empfängers für die laufende Sekunde fehlt. <span class="mono">HELD</span> bedeutet, dass alle anderen Voraussetzungen erfüllt sind, Go aber die fälligen Positionen seit mehr als 5&nbsp;s zurückhält, weil keine so gesendet werden konnte, wie ADS-L es verlangt. Go versucht es weiter und sendet die nächste, sobald es kann. Fehlen mehrere Voraussetzungen, zeigt Go die erste in dieser Reihenfolge.
       </p>
       <p>
-        Go hört sofort auf zu senden, wenn eine Voraussetzung fehlt, und sendet von selbst wieder, sobald alle erfüllt sind. Bei <span class="mono">HELD</span> versucht Go es stattdessen weiter, und die Statusmeldung geht weiter hinaus. Die Markierung bleibt, bis alle Voraussetzungen 10&nbsp;s lang erfüllt waren. Sie kann deshalb nach der Wiederaufnahme des Sendens kurz stehen bleiben. Über Menüs oder Eingabeaufforderungen erscheint sie nicht. Im Flug vibriert Go einmal, wenn die Markierung erscheint, oder beim Start, wenn sie bereits angezeigt wird. Vor der ersten Position zeigt das Radar stattdessen den Fortschritt des Empfängers. Das Funkteil wird schon beim Einschalten geprüft. Die Selbsttest-Seite kennzeichnet das Bauteil, das das Senden verhindert, mit <span class="mono">NO TX</span>. Die Verkehrszeile der Statusseite zeigt <span class="mono">TX OFF</span> und den Grund, ohne 10&nbsp;s zu warten. <%= link_to "Briefing", briefing_root_path %> zeigt bei bestehender Verbindung denselben Grund wie die Markierung in der Ecke.
+        Go hört sofort auf zu senden, wenn eine Voraussetzung fehlt, und sendet von selbst wieder, sobald alle erfüllt sind. Bei <span class="mono">HELD</span> versucht Go es stattdessen weiter, und die Statusmeldung geht weiter hinaus. Die Markierung bleibt, bis alle Voraussetzungen 10&nbsp;s lang erfüllt waren. Sie kann deshalb nach der Wiederaufnahme des Sendens kurz stehen bleiben. Über Menüs oder Eingabeaufforderungen erscheint sie nicht. Im Flug vibriert Go einmal, wenn die Markierung erscheint, oder beim Start, wenn sie bereits angezeigt wird. Bevor Go seine erste GPS-Position erhält, zeigt das Radar stattdessen den Fortschritt des Empfängers. Das Funkteil wird schon beim Einschalten geprüft. Die Selbsttest-Seite kennzeichnet das Bauteil, das das Senden verhindert, mit <span class="mono">NO TX</span>. Die Verkehrszeile der Statusseite zeigt <span class="mono">TX OFF</span> und den Grund, ohne 10&nbsp;s zu warten. <%= link_to "Briefing", briefing_root_path %> zeigt bei bestehender Verbindung denselben Grund wie die Markierung in der Ecke.
       </p>
     </div>
     <figure class="shot">
@@ -183,5 +183,6 @@ updated_on: "2026-11-23"
 </section>
 
 <section class="band">
+  <%= render "shared/pager", page: @page %>
   <%= render "shared/cta" %>
 </section>

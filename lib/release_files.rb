@@ -7,7 +7,7 @@ class ReleaseFiles
   IMAGE_ENDINGS = %w[.uf2 .signed.bin].freeze
   HUB_IMAGE_ENDING = ".full.signed.bin".freeze
   BUILD_ENDINGS = %w[.version .signed.confirmed.bin].freeze
-  SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json].freeze
+  SIMULATOR_FILES = %w[skyblip-simulator.js skyblip-simulator.wasm skyblip-simulator-embed.js skyblip-simulator-scenarios.json].freeze
 
   attr_reader :slugs, :version
 

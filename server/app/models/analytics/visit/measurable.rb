@@ -3,7 +3,7 @@ module Analytics
     module Measurable
       extend ActiveSupport::Concern
 
-      NO_METRICS = { visitors: 0, visits: 0, pageviews: 0, bounce_rate: 0, visit_duration: 0 }.freeze
+      NO_METRICS = { visitors: 0, visits: 0, pageviews: 0, bounce_rate: 0, visit_duration: 0, activated_visitors: 0 }.freeze
 
       class_methods do
         def metrics
@@ -15,7 +15,8 @@ module Analytics
               visits: row.visits,
               pageviews: row.pageviews || 0,
               bounce_rate: bounce_rate_of(row),
-              visit_duration: row.visit_duration || 0
+              visit_duration: row.visit_duration || 0,
+              activated_visitors: row.activated_visitors
             }
           else
             NO_METRICS
@@ -29,8 +30,13 @@ module Analytics
               "COUNT(*) AS visits",
               "SUM(analytics_visits.pageviews_count) AS pageviews",
               "SUM(CASE WHEN analytics_visits.pageviews_count = 1 THEN 1 ELSE 0 END) AS bounced",
-              "CAST(ROUND(AVG(analytics_visits.visit_duration)) AS INTEGER) AS visit_duration"
+              "CAST(ROUND(AVG(analytics_visits.visit_duration)) AS INTEGER) AS visit_duration",
+              activated_visitors.as("activated_visitors")
             ]
+          end
+
+          def activated_visitors
+            Arel::Nodes::Case.new.when(activation_exists).then(Ahoy::Visit.arel_table[:visitor_token]).count(true)
           end
 
           def bounce_rate_of(row)

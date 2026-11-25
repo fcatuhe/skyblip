@@ -9,5 +9,6 @@ class Admin::UnitsController < Admin::ApplicationController
 
   def show
     @unit = Unit.find(params[:id])
+    @visitor_tokens = Ahoy::Visit.activating(@unit).distinct.pluck(:visitor_token)
   end
 end

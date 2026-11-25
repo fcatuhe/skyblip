@@ -21,6 +21,8 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
     own.altitude_hae_mm = 1500000;  // HAE: what G.1.7 transmits
     own.speed_mm_s = 50000;
     own.climb_mm_s = 2000;
+    own.speed_valid = true;
+    own.track_valid = true;
 
     // No fix yet: altitude and ground speed are unavailable, not zero.
     adsl::Packet packet{};
@@ -37,6 +39,21 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
     CHECK(packet.altitude_m() == 1500);
     CHECK(packet.has_speed());
     CHECK_FALSE(packet.has_climb());
+
+    // A fix whose receiver reported no speed, or no track to go with a speed, sends no speed.
+    own.speed_valid = false;
+    from_own(packet, own, 0xABCDEF, 6, 4);
+    CHECK_FALSE(packet.has_speed());
+    own.speed_valid = true;
+    own.track_valid = false;
+    from_own(packet, own, 0xABCDEF, 6, 4);
+    CHECK_FALSE(packet.has_speed());
+    own.speed_mm_s = 100;
+    from_own(packet, own, 0xABCDEF, 6, 4);
+    CHECK(packet.has_speed());
+    CHECK(packet.speed_q() == 0);
+    own.speed_mm_s = 50000;
+    own.track_valid = true;
 
     // Everything known.
     own.climb_valid = true;
@@ -160,6 +177,8 @@ TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read
     own.speed_mm_s = 61000;
     own.climb_mm_s = -3200;
     own.track_cdeg = 27350;
+    own.speed_valid = true;
+    own.track_valid = true;
     own.hdop_e2 = 90;
     own.vdop_e2 = 140;
     own.geoid_measured = true;

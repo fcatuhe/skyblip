@@ -35,6 +35,8 @@ model::Ownship flying_own() {
     own.altitude_hae_mm = 1000000;
     own.speed_mm_s = 30000;
     own.track_cdeg = 9000;
+    own.speed_valid = true;
+    own.track_valid = true;
     own.hdop_e2 = 90;
     own.vdop_e2 = 120;
     own.climb_valid = true;
@@ -81,6 +83,18 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour that is neither close nor closing lea
     CHECK(stacked.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
 }
 
+// A 2D fix knows no height, so an Issue 1 client 900 m above may be level with us, and is close.
+TEST_CASE("ADS-L.4.SRD860.B.5: with no height of its own, a Go counts a client overhead as close") {
+    model::Ownship own = flying_own();
+    own.altitude_hae_valid = false;
+    model::AircraftObservation above = neighbour(own, 500, 0);
+    above.altitude_m = 1900;
+    traffic::TrafficTable table;
+    table.set_own_reference(own);
+    REQUIRE(table.update(above, own.utc_s) >= 0);
+    CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+}
+
 // 4 km ahead, closing at 150 m/s head-on: 27 s to CPA, inside B.5's 30.
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour less than 30 s from CPA counts as close") {
     model::Ownship own = flying_own();
@@ -92,6 +106,30 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour less than 30 s from CPA counts as clo
     head_on.track_c9 = 384;
     REQUIRE(table.update(head_on, own.utc_s) >= 0);
     CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+}
+
+// Own speed unknown, the closure is too: 30 s at G.1.8's fastest 236 m/s is 7080 m, plus its own.
+TEST_CASE("ADS-L.4.SRD860.B.5: with no own speed, a client 30 s away at 236 m/s counts as close") {
+    model::Ownship own = flying_own();
+    own.speed_mm_s = 0;
+    own.speed_valid = false;
+    const auto readable = [&](const model::Ownship& from, int32_t east_m) {
+        traffic::TrafficTable table;
+        table.set_own_reference(from);
+        model::AircraftObservation hovering = neighbour(from, east_m, 0);
+        hovering.speed_q = 0;
+        REQUIRE(table.update(hovering, from.utc_s) >= 0);
+        return table.readable_version(from, from.fix_at_ms);
+    };
+    CHECK(readable(own, 2500) == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(readable(own, 7000) == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(readable(own, 7200) == adsl::Packet::kMaxProtocolVersion);
+
+    model::Ownship trackless = flying_own();
+    trackless.track_cdeg = 27000;
+    trackless.track_valid = false;
+    CHECK(readable(trackless, 2500) == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(readable(flying_own(), 2500) == adsl::Packet::kMaxProtocolVersion);
 }
 
 // B.5 reads a Traffic packet's version only for a client whose Status has not been heard.
@@ -167,7 +205,7 @@ struct Flown {
 // Every simulated aircraft sends version 0, so to a Go it is an Issue 1 client until a Status says
 // more. A VDOP of 0 is a 2D fix, whose altitude goes out as unknown.
 Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int speed_kt = 60,
-            uint32_t for_ms = 15000) {
+            uint32_t for_ms = 15000, bool speed_reported = true) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.product().settings().aircraft_type = category;
@@ -175,7 +213,13 @@ Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int sp
     simulator.world().set_speed_kt(speed_kt);
     simulator.world().gnss().vdop_e2 = vdop_e2;
     if (beside_issue1) simulator.world().add_aircraft(0, 400, 0, speed_kt == 0 ? 1 : 30, 90);
-    const uint32_t settled_ms = past_settling(simulator);
+    uint32_t settled_ms = past_settling(simulator);
+    if (!speed_reported) {
+        simulator.world().gnss().emit_speed = false;
+        run_on(simulator, settled_ms, 1000);
+        simulator.world().air().clear();
+        settled_ms += 1000 + simulator::Simulator::kStepMs;
+    }
     const uint32_t held_before = simulator.product().state().air.tx_held_for_b5;
     const uint32_t given_up_before = simulator.product().state().air.tx_given_up;
     run_on(simulator, settled_ms, for_ms);
@@ -230,6 +274,19 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a 2D fix beside an Issue 1 client puts no positio
     CHECK(alone.held == 0);
     CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
     CHECK(alone.unmet == timing::NoTx::None);
+}
+
+// Issue 1 has no code for an unknown speed either, and the Go sent 0 m/s in its place.
+TEST_CASE(
+    "ADS-L.4.SRD860.B.5: a fix with no ground speed beside an Issue 1 client puts none on air") {
+    const Flown beside = flown(4, true, 150, 60, 15000, /*speed_reported=*/false);
+    CHECK(beside.sent == 0);
+    CHECK(beside.held > 10);
+
+    const Flown alone = flown(4, false, 150, 60, 15000, /*speed_reported=*/false);
+    CHECK(alone.sent > 10);
+    CHECK(alone.held == 0);
+    CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
 }
 
 TEST_CASE("ADS-L.4.SRD860.B.5: beside an Issue 1 client a glider still goes out every second") {

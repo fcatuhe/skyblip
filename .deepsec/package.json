@@ -1,0 +1,8 @@
+{
+  "name": "skyblip-deepsec",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "deepsec": "2.3.16"
+  }
+}

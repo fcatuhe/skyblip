@@ -23,7 +23,7 @@ module OAuth
 
     def issuer = routes.root_url.chomp("/")
 
-    def resource = routes.mcp_url
+    def resource = routes.admin_mcp_url
 
     def protected_resource
       MCP::Server::OAuth::ProtectedResourceMetadata.new(
@@ -50,6 +50,7 @@ module OAuth
       OAuth::Token.expired.delete_all
       OAuth::Grant.lapsed.destroy_all
       OAuth::Grant.expired.destroy_all
+      OAuth::Grant.elsewhere.destroy_all
     end
 
     def mint = SecureRandom.base58(43)

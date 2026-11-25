@@ -1,0 +1,8 @@
+<div class="resource-cards">
+  <% slugs.each do |slug| %>
+    <article>
+      <h3><%= link_to_page slug %></h3>
+      <p><%= find_page(slug).description %></p>
+    </article>
+  <% end %>
+</div>

@@ -9,8 +9,7 @@ class Event::Error
       counts = errors.group(:fingerprint).count
       devices = errors.group(:fingerprint).distinct.count(:device)
       browsers = errors.group(:fingerprint).distinct.count(:browser)
-      last_ids = errors.group(:fingerprint).maximum(:id)
-      latest = Event.where(id: last_ids.values).index_by(&:fingerprint)
+      latest = latest_of(errors).index_by(&:fingerprint)
       first = Event.errors.where(fingerprint: counts.keys).group(:fingerprint).minimum(:occurred_at)
       resolutions = Resolution.where(fingerprint: counts.keys).index_by(&:fingerprint)
 
@@ -27,6 +26,15 @@ class Event::Error
           first_at: occurrences.minimum(:occurred_at), latest:, resolution: Resolution.find_by(fingerprint:))
       end
     end
+
+    private
+      def latest_of(errors)
+        events = Event.arel_table
+        newest_first = Arel::Nodes::Window.new.partition(events[:fingerprint]).order(events[:occurred_at].desc, events[:id].desc)
+        rank = Arel::Nodes::Over.new(Arel::Nodes::NamedFunction.new("ROW_NUMBER", []), newest_first).as("rank")
+
+        Event.from(errors.select(events[Arel.star], rank).arel.as("events")).where(rank: 1)
+      end
   end
 
   def initialize(fingerprint:, count:, devices:, browsers:, first_at:, latest:, resolution:)
