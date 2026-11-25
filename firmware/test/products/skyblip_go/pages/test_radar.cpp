@@ -420,3 +420,24 @@ TEST_CASE("radar page: a blip on the state word is drawn over it, and the word s
     CHECK(canvas.get_pixel(100, 147));
     CHECK(canvas.get_pixel(100, 161));
 }
+
+// A Go on the cable that lost it says when it goes off, both lines at the size the ring is read at.
+TEST_CASE("radar page: a cable countdown takes the ring as two lines, OFF IN over the minutes" *
+          doctest::test_suite("main")) {
+    RadarSnapshot parked = flying(0);
+    parked.flight_running = false;
+    parked.off_in_min = 4;
+    const Glass going = radar(parked);
+    CHECK(reads_in(going, "OFF IN", 40, 110, 160, 160, 2));
+    CHECK(reads_in(going, "4 MIN", 40, 130, 160, 180, 2));
+    CHECK_FALSE(reads_in(going, "GROUND", 0, 0, 200, 199, 2));
+
+    // The countdown outranks a warned cell, since the unit goes off before the cell matters.
+    parked.battery_low = true;
+    parked.battery_percent = 4;
+    CHECK(reads_in(radar(parked), "OFF IN", 40, 110, 160, 160, 2));
+    CHECK_FALSE(reads_in(radar(parked), "BAT 4%", 0, 0, 200, 199, 2));
+
+    parked.plot = RadarPlot::ToScale;
+    CHECK(reads_in(radar(parked), "4 MIN", 40, 130, 160, 180, 2));
+}

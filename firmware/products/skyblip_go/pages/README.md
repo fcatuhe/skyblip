@@ -70,6 +70,8 @@ The long touch on the pad dismisses (`../input/README.md`). With an alarm standi
 
 The ring has two slots, a double-height banner and a small line under it. A cell that needs charge takes the banner, `BAT 12%` from the knee down, because it is the one thing on the page a pilot can act on. Everything else moves down a slot, and the small line's word drops: a taxiing aircraft on a flat cell reads `BAT 4%` over `TAXI`, and a blind one `BAT 4%` over `NO FIX`. The level is `core/power`'s, `Low` and under (`core/power/README.md`), so a charger, which holds the level at `Normal`, clears it at once. The ring and the lamp start at the same knee.
 
+A Go in cable mode that lost its cable on the ground counts down in the ring: `OFF IN` over `4 MIN`, both at double height, the pair lifted to stay centred above the range (`../../../core/power/README.md`, Cable mode). It outranks the cell and the state word, because the unit goes off before either matters. The minutes are whole and rounded up, so the last one reads `1 MIN` and the panel refreshes once a minute. The countdown never stands in flight, since the hold only runs on the ground, and it goes with the cable's return.
+
 The ring speaks for the Go alone, and a paired Bravo speaks in its own corner. A banner too wide for the `ALL` ring's chord rises a pixel at a time until it clears, with the small line. Every current word fits, so the rise guards the next one.
 
 Under `NO FIX` stands the receiver's stage (`core/gnss/README.md`), `GPS OFF`, `MOVE OUT` or `FINDS FIX`, each naming an action: a bench, a walk into the open, or patience. Its elapsed seconds stay on `status`, since they would refresh the panel every second.

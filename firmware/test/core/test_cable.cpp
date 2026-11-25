@@ -46,3 +46,25 @@ TEST_CASE(
     CHECK_FALSE(watch.gone(landed_ms + kCableGoneHoldMs - 1, false, false));
     CHECK(watch.gone(landed_ms + kCableGoneHoldMs, false, false));
 }
+
+TEST_CASE("cable: the countdown runs only while the hold does, down to zero") {
+    CableWatch watch;
+    CHECK_FALSE(watch.off_in_ms(0));
+    watch.gone(0, true, false);
+    CHECK_FALSE(watch.off_in_ms(0));
+    watch.gone(1000, false, false);
+    CHECK(watch.off_in_ms(1000) == kCableGoneHoldMs);
+    CHECK(watch.off_in_ms(61000) == kCableGoneHoldMs - 60000);
+    CHECK(watch.off_in_ms(1000 + kCableGoneHoldMs + 5) == 0u);
+    watch.gone(2000, false, true);
+    CHECK_FALSE(watch.off_in_ms(2000));
+}
+
+TEST_CASE("cable: the glass counts whole minutes up, so the last minute reads 1 and never 0") {
+    CHECK(off_in_min(kCableGoneHoldMs) == 5);
+    CHECK(off_in_min(kCableGoneHoldMs - 1) == 5);
+    CHECK(off_in_min(4 * 60000) == 4);
+    CHECK(off_in_min(60001) == 2);
+    CHECK(off_in_min(1) == 1);
+    CHECK(off_in_min(0) == 1);
+}

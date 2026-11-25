@@ -160,11 +160,14 @@ class Shell {
     }
 
     void watch_cable(uint32_t now_ms) {
+        std::optional<uint32_t>& off_in_ms = product_.state_.power.cable_off_in_ms;
+        off_in_ms.reset();
         if (product_.power_switch() != power::Switch::Cable) return;
         const bool airborne =
             product_.state_.flight.confirmed_state == flight::FlightState::Airborne;
         if (cable_.gone(now_ms, product_.state_.power.battery.external_power, airborne))
             shutdown_.request(power::ShutdownReason::CableGone, now_ms);
+        off_in_ms = cable_.off_in_ms(now_ms);
     }
 
     void record_loop(uint32_t now_ms) {

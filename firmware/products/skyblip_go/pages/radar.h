@@ -54,6 +54,7 @@ struct RadarSnapshot {
     int formation_members{0};
     uint8_t battery_percent{0};
     bool battery_low{false};
+    std::optional<uint8_t> off_in_min{};
     comms::BravoState bravo{comms::BravoState::Unpaired};
     bool bravo_heard{false};
     bool bravo_battery_low{false};

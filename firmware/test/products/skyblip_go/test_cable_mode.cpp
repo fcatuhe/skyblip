@@ -1,4 +1,5 @@
 // Cable mode: a Go wired to the aircraft's USB socket switches on and off with the master switch.
+#include "core/power/battery.h"
 #include "core/power/cable.h"
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
@@ -32,8 +33,12 @@ TEST_CASE("product: in cable mode a cable gone for the hold switches the Go off 
     REQUIRE(rig.setup() == Status::Ok);
     rig.run_for(5000);
 
+    CHECK_FALSE(rig.state().power.cable_off_in_ms);
     pull_cable_for(rig, power::kCableGoneHoldMs - 5000);
     CHECK_FALSE(rig.product.shutdown().going_down());
+    REQUIRE(rig.state().power.cable_off_in_ms);
+    // The hold starts on the first battery sample without the cable, up to one period late.
+    CHECK(*rig.state().power.cable_off_in_ms <= 5000 + power::kBatteryPeriodMs);
 
     pull_cable_for(rig, 10000);
     REQUIRE(rig.product.shutdown().going_down());
@@ -56,6 +61,7 @@ TEST_CASE("product: on the button a pulled cable never switches the Go off") {
 
     pull_cable_for(rig, 2 * power::kCableGoneHoldMs);
     CHECK_FALSE(rig.product.shutdown().going_down());
+    CHECK_FALSE(rig.state().power.cable_off_in_ms);
 }
 
 TEST_CASE("product: in cable mode the cable wakes the Go, and it signs on as a press would" *
@@ -99,4 +105,21 @@ TEST_CASE("product: a cable back while the Go parks for its loss restarts it ins
     pressed.run_for(10000);
     REQUIRE(pressed.product.ready_to_power_off());
     CHECK_FALSE(pressed.product.cable_returned());
+}
+
+TEST_CASE("product: a cable back on the ground stops the countdown the ring reads") {
+    Rig rig;
+    store_power_switch(rig, power::Switch::Cable);
+    rig.platform.battery().external_power = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(5000);
+
+    // 90 s out leaves about 3.5 minutes, which the ring rounds up to 4.
+    pull_cable_for(rig, 90000);
+    REQUIRE(rig.state().power.cable_off_in_ms);
+    CHECK(power::off_in_min(*rig.state().power.cable_off_in_ms) == 4);
+    rig.platform.battery().external_power = true;
+    rig.run_for(5000);
+    CHECK_FALSE(rig.state().power.cable_off_in_ms);
+    CHECK_FALSE(rig.product.shutdown().going_down());
 }

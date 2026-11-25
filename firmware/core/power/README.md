@@ -100,6 +100,7 @@ In cable mode:
 - Every SYSTEM OFF writes GPREGRET `0x00` instead of `0x6d` and leaves the button unarmed (`boot_magic_for_system_off` and `button_wakes` in `shutdown.h`). With no skip, the T-Echo's bootloader lets a VBUS wake through (`../../boards/lilygo/t_echo_plus/factory/README.md`), and `boot_path` runs it. The X1's bootloader enters DFU only on a 3 s hold, so there the button stays armed.
 - A cable wake signs on, as a press does, so a pilot sees the unit come on with the master.
 - `CableWatch` switches the unit off once the cable has been gone for `kCableGoneHoldMs`, with `ShutdownReason::CableGone`. It counts only a cable it saw, so a unit woken on its cell by RESET runs until a long press or the cutoff.
+- The radar's ring counts the hold down, `OFF IN` over `4 MIN`, from `bus::PowerState::cable_off_in_ms` (`../../products/skyblip_go/pages/README.md`).
 - The hold runs only on the ground. A cable lost in flight costs the cell, and an airborne unit that switched itself off would stop transmitting. After a landing the hold starts again.
 - The VBUS wake fires on VBUS rising. A cable that comes back while the unit parks for its loss would find it in SYSTEM OFF with nothing to wake it, so the unit restarts instead (`Shell::cable_returned`).
 - A long press or the link's `power_off` with the cable in switches the unit off until the cable next comes back, or RESET.

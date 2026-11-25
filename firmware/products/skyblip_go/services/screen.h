@@ -5,6 +5,7 @@
 
 #include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
+#include "core/power/cable.h"
 #include "core/power/duty.h"
 #include "core/power/wake.h"
 #include "core/units/units.h"
@@ -211,6 +212,10 @@ class ScreenService : public runtime::Service {
 
     // INFO: fc 20sep26 core/power debounced it, dropped a charged cell and a floating sense
     bool battery_low() const { return power::needs_charge(context_.state.power.level); }
+    std::optional<uint8_t> off_in_min() const {
+        if (!context_.state.power.cable_off_in_ms) return std::nullopt;
+        return power::off_in_min(*context_.state.power.cable_off_in_ms);
+    }
     const comms::PeerHealth* bravo_health_live() const {
         return context_.state.bravo == comms::BravoState::Live ? bravo_.health() : nullptr;
     }

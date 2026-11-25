@@ -202,12 +202,24 @@ const char* cell_word(const RadarSnapshot& snapshot, char* out) {
 struct RingWords {
     const char* banner{nullptr};
     const char* note{nullptr};
+    int note_scale{kNoteScale};
 };
+
+int format_off_in(char* out, uint8_t minutes) {
+    int written = format_unsigned(out, minutes);
+    written += format_string(out + written, " MIN");
+    out[written] = 0;
+    return written;
+}
 
 // INFO: fc 17nov26 the ring speaks for the Go alone, its first two words standing in this order
 RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     const char* state = snapshot.fix_valid ? ground_word(snapshot) : "NO FIX";
     const char* stage = snapshot.fix_valid ? nullptr : gnss::stage_name(snapshot.stage);
+    if (snapshot.off_in_min) {
+        format_off_in(cell_buffer, *snapshot.off_in_min);
+        return {"OFF IN", cell_buffer, kBannerScale};
+    }
     if (const char* cell = cell_word(snapshot, cell_buffer)) return {cell, state};
     return {state, stage};
 }
@@ -251,15 +263,15 @@ void reverse(ui::Canvas& canvas, const Box& box) {
             canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
 }
 
-Box note_box(const char* note, int y) {
-    const int width = text_width(note, kNoteScale);
-    return padded(kCentreX - width / 2, y, width, kCharacterHeight * kNoteScale);
+Box note_box(const char* note, int y, int scale) {
+    const int width = text_width(note, scale);
+    return padded(kCentreX - width / 2, y, width, kCharacterHeight * scale);
 }
 
-void state_note(ui::Canvas& canvas, const char* note, int y) {
-    const Box box = note_box(note, y);
+void state_note(ui::Canvas& canvas, const char* note, int y, int scale) {
+    const Box box = note_box(note, y, scale);
     canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
-    canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, note, true, kNoteScale);
+    canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, note, true, scale);
 }
 
 void bravo_live_mark(ui::Canvas& canvas, int right, int bottom) {
@@ -290,6 +302,12 @@ void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
         else
             bravo_live_mark(canvas, x - kUnitGap, kFooterY - kStackGap);
     }
+}
+
+// INFO: fc 26nov26 a note at banner size lifts the pair, so both lines stay centred above the range
+int pair_lift(const RingWords& ring) {
+    if (!ring.note || ring.note_scale == kNoteScale) return 0;
+    return (kNoteGap + kCharacterHeight * (ring.note_scale - kNoteScale)) / 2;
 }
 
 Box banner_box(const char* word, int y) {
@@ -456,15 +474,16 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     int reading_count = 2;
     char cell_buffer[12];
     const RingWords ring = ring_words(snapshot, cell_buffer);
-    const int banner_y = ring.banner ? banner_y_inside(ring.banner, layout) : layout.banner_y;
+    const int banner_y =
+        ring.banner ? banner_y_inside(ring.banner, layout) - pair_lift(ring) : layout.banner_y;
     const int note_y = layout.note_y - layout.banner_y + banner_y;
     if (ring.banner) {
         state_banner(canvas, ring.banner, banner_y);
         readings[reading_count++] = banner_box(ring.banner, banner_y);
     }
     if (ring.note) {
-        state_note(canvas, ring.note, note_y);
-        readings[reading_count++] = note_box(ring.note, note_y);
+        state_note(canvas, ring.note, note_y, ring.note_scale);
+        readings[reading_count++] = note_box(ring.note, note_y, ring.note_scale);
     }
 
     const int16_t track_angle16 =
