@@ -153,6 +153,18 @@ installer.noticed:
   keys: [key, detail, phase]
   says: The setup page showed a notice, a closed port chooser, a refused drive, a failed download or write, or a pairing that failed, by its key, with the browser's message and the step it came at.
   answers: Why setups fail, the list to work down so no pilot is stranded with a unit half installed.
+installer.handed_off:
+  group: Installer
+  from: browser
+  keys: [product, cause]
+  says: The computer that installed a unit could not reach Bluetooth, and showed the code that opens the setup's Connect step on a phone, `cause` `adapter` for a computer without a Bluetooth adapter, `flag` for Chrome on Linux before its Web Bluetooth flag, `browser` for a browser without Web Bluetooth.
+  answers: How many setups have to move from the computer to a phone, and why.
+installer.resumed:
+  group: Installer
+  from: browser
+  keys: [product, from]
+  says: The setup page opened on the Connect step of a unit installed before, `from` `code` on the phone that opened the code a computer showed, `tab` on the computer that installed it, back on the page in the same tab.
+  answers: How many handed-off setups reach the phone, and how many pilots come back to a setup they left after the install.
 installer.finished:
   group: Installer
   from: browser

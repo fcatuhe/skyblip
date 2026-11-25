@@ -65,8 +65,9 @@ Rails.application.routes.draw do
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }
   end
 
-  # INFO: fc 11nov26 the glass prints skyblip.eu/activate, and the device pages lived on the public site before the briefing app | 13nov26 the briefing dropped its /fr addresses for a language setting | 13nov26 the Go's page moved from /features to /go | 13nov26 the ADS-L pages moved under /ads-l
+  # INFO: fc 11nov26 the glass prints skyblip.eu/activate, and the device pages lived on the public site before the briefing app | 13nov26 the briefing dropped its /fr addresses for a language setting | 13nov26 the Go's page moved from /features to /go | 13nov26 the ADS-L pages moved under /ads-l | 25nov26 the setup asks a pilot to type skyblip.eu/setup on the other device
   get "activate", to: redirect("/briefing/activate")
+  get "setup", to: redirect("/briefing/setup")
   get "fr/activer", to: redirect("/briefing/activate")
   %w[update configure manage].each { |path| get path, to: redirect("/briefing") }
   %w[mettre-a-jour regler mise-a-jour].each { |path| get "fr/#{path}", to: redirect("/briefing") }
@@ -85,7 +86,9 @@ Rails.application.routes.draw do
       resources :captures, only: :create, module: :devices
     end
     resource :activation, only: :show, path: "activate"
-    resource :setup, only: :show
+    resource :setup, only: :show do
+      resource :handoff, only: :show, module: :setups, defaults: { format: :svg }
+    end
     resource :installer, only: :show
     resource :preferences, only: %i[show update]
     resource :tools, only: :show
