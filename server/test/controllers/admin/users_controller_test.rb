@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
+  include ConnectingAgents
   test "sends a visitor to the sign-in page" do
     get admin_users_path
 
@@ -71,6 +72,19 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_empty users(:amelie).sessions.reload
     assert_equal [ here ], users(:francois).sessions.reload.to_a
     assert_not Session.exists?(elsewhere.id)
+  end
+
+  # A leaked session may have connected an agent, so a new password must end that access too.
+  test "a new password disconnects the user's agents" do
+    tokens = connect(client_id: CLAUDE_CODE)
+
+    patch admin_user_path(users(:francois)), params: { user: { password: "a-new-long-password", password_confirmation: "a-new-long-password" } }
+
+    assert_empty users(:francois).oauth_grants.reload
+    mcp "tools/list", token: tokens.fetch("access_token")
+    assert_response :unauthorized
+    post oauth_token_path, params: { grant_type: "refresh_token", refresh_token: tokens.fetch("refresh_token"), client_id: CLAUDE_CODE }
+    assert_equal "invalid_grant", response.parsed_body["error"]
   end
 
   test "deletes another user, never the admin signed in" do
