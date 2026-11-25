@@ -8,7 +8,16 @@
 namespace skyblip::timing {
 
 // INFO: fc 19nov26 in the order a reason is named: the first one unmet is the one the glass says
-enum class NoTx : uint8_t { None = 0, Address = 1, Radio = 2, Gnss = 3, Fix = 4, Utc = 5, Pps = 6 };
+enum class NoTx : uint8_t {
+    None = 0,
+    Address = 1,
+    Radio = 2,
+    Gnss = 3,
+    Fix = 4,
+    Utc = 5,
+    Pps = 6,
+    Held = 7,
+};
 
 constexpr const char* to_string(NoTx reason) {
     switch (reason) {
@@ -19,6 +28,7 @@ constexpr const char* to_string(NoTx reason) {
         case NoTx::Fix: return "FIX";
         case NoTx::Utc: return "UTC";
         case NoTx::Pps: return "PPS";
+        case NoTx::Held: return "HELD";
     }
     return "";
 }
@@ -31,6 +41,9 @@ struct Requirements {
     bool settled{false};
     bool utc{false};
     bool pps{false};
+    // INFO: fc 22nov26 no position owed held for over kPositionsHeldCeilingMs, which keeps the gate
+    // open
+    bool positions{false};
 };
 
 NoTx first_unmet(const Requirements& met);
@@ -41,11 +54,15 @@ class TransmitGate {
     static constexpr uint32_t kNoTxHoldMs = 10000;
     // INFO: fc 19nov26 the sky's requirements are judged this long after the first fix
     static constexpr uint32_t kVerdictSettleMs = 10000;
+    static constexpr uint32_t kPositionsHeldCeilingMs = 5000;
 
     void judge(const Requirements& met, uint32_t now_ms);
 
     // INFO: fc 19nov26 the settle after the first fix holds the burst and is never a reason
     bool transmits() const { return transmits_; }
+    // INFO: fc 22nov26 what the status page, nearby and PFLAU say: transmitting, positions going
+    // out
+    bool on_air() const { return transmits_ && unmet_ == NoTx::None; }
     NoTx unmet() const { return unmet_; }
     NoTx shown() const { return shown_; }
     const Requirements& met() const { return met_; }

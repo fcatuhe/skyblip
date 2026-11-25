@@ -7,6 +7,7 @@
 #include "core/protocol/adsl.h"
 #include "core/radio/log.h"
 #include "core/settings/address.h"
+#include "core/timing/transmit_gate.h"
 #include "core/traffic/table.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
@@ -198,6 +199,7 @@ struct Flown {
     uint32_t given_up{0};
     uint8_t version{0};
     uint8_t category{0};
+    timing::NoTx unmet{timing::NoTx::None};
 };
 
 // Every simulated aircraft sends version 0, so to a Go it is an Issue 1 client until a Status says
@@ -238,6 +240,7 @@ Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int sp
     }
     out.held = simulator.product().state().air.tx_held_for_b5 - held_before;
     out.given_up = simulator.product().state().air.tx_given_up - given_up_before;
+    out.unmet = simulator.product().state().transmit.unmet();
     return out;
 }
 
@@ -264,11 +267,13 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a 2D fix beside an Issue 1 client puts no positio
     const Flown beside = flown(4, true, /*vdop_e2=*/0);
     CHECK(beside.sent == 0);
     CHECK(beside.held > 10);
+    CHECK(beside.unmet == timing::NoTx::Held);
 
     const Flown alone = flown(4, false, /*vdop_e2=*/0);
     CHECK(alone.sent > 10);
     CHECK(alone.held == 0);
     CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
+    CHECK(alone.unmet == timing::NoTx::None);
 }
 
 // Issue 1 has no code for an unknown speed either, and the Go sent 0 m/s in its place.

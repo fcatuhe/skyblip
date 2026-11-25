@@ -15,9 +15,22 @@ void RadioService::judge_transmit(uint32_t now_ms) {
     met.settled = own.tx_settled;
     met.utc = own.utc_valid;
     met.pps = timing::pps_fresh(clock);
+    met.positions = positions_flow();
     context_.state.transmit.judge(met, now_ms);
+    if (!context_.state.transmit.transmits()) positions_held_since_ms_.reset();
     if (transmitted_ && !context_.state.transmit.transmits()) withdraw_carried();
     transmitted_ = context_.state.transmit.transmits();
+}
+
+// INFO: fc 22nov26 every position held counts, for its fix or for B.5, until one goes on air
+void RadioService::hold_position() {
+    position_held_ms_ = context_.roles.clock.milliseconds();
+    if (!positions_held_since_ms_) positions_held_since_ms_ = position_held_ms_;
+}
+
+bool RadioService::positions_flow() const {
+    return !positions_held_since_ms_ || position_held_ms_ - *positions_held_since_ms_ <=
+                                            timing::TransmitGate::kPositionsHeldCeilingMs;
 }
 
 // INFO: fc 19nov26 a closing gate takes back the bursts handed on, as silence_after() does

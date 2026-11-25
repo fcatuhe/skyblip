@@ -134,6 +134,8 @@ class RadioService : public runtime::Service {
     void count_given_up(uint32_t now_ms);
     void count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
     void hold_for_fix(uint32_t utc_s);
+    void hold_position();
+    bool positions_flow() const;
     void carry_position(const timing::Transmitter::Attempt& position, uint32_t utc_s);
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
     static void listen_for(timing::Band band, ports::RfPlan& plan);
@@ -191,6 +193,9 @@ class RadioService : public runtime::Service {
     bool held_for_b5_{false};
     uint32_t held_for_fix_s_{0};
     bool held_for_fix_{false};
+    // INFO: fc 22nov26 the first and the latest position held since one last went on air
+    std::optional<uint32_t> positions_held_since_ms_{};
+    uint32_t position_held_ms_{0};
     // INFO: fc 19nov26 a position waiting for its fix, lost unless armed before its second ends
     uint32_t fix_wanted_s_{0};
     bool fix_wanted_{false};
