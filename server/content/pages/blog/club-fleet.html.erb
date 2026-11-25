@@ -48,7 +48,10 @@ updated_on: "2026-11-25"
 <section>
   <h2 class="kicker">Before you buy</h2>
   <p>Go is an uncertified aid to lookout. It does not replace a transponder where one is required, and it does not transmit FLARM. Our <%= link_to_page "compare", label: "comparison" %> sets it beside installed units, and the <%= link_to_page "buy", label: "buying guide" %> lists sellers in five countries.</p>
-  <p><%= link_to_page "blog/network-or-radio", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/pocket-or-installed", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
 </section>
 
 <section class="band">

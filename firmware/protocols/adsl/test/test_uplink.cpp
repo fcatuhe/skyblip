@@ -204,8 +204,9 @@ TEST_CASE("uplink: the sync word is C.4.3's, and the byte behind it is D.1.1's l
     uint8_t packet[1 + adsl::kUplinkMaxLength];
     sent(tx, 3, packet);
     uint8_t burst[adsl::kUplinkMaxBurstBytes];
-    CHECK(adsl::encode_o_band(packet, burst) == 3u + adsl::uplink_length(3));
-    CHECK(burst[2] == adsl::uplink_length(3));
+    CHECK(adsl::encode_o_band(packet, burst) ==
+          3u + adsl::uplink_length(3, adsl::ErrorControl::Fec));
+    CHECK(burst[2] == adsl::uplink_length(3, adsl::ErrorControl::Fec));
     // §C.4: 200 kbps GMSK, BT 0.5, in a 250 kHz channel, ±50 kHz deviation.
     CHECK(adsl::kUplinkChipRateBps == 200000);
     CHECK(adsl::kUplinkDeviationHz == 50000);

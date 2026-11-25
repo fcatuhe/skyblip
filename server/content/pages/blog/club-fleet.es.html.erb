@@ -49,7 +49,10 @@ updated_on: "2026-11-25"
 <section>
   <h2 class="kicker">Antes de comprar</h2>
   <p>El Go es una ayuda no certificada para la vigilancia visual. No sustituye a un transpondedor donde es obligatorio y no transmite en FLARM. Nuestra <%= link_to_page "compare", label: "comparativa" %> lo compara con los equipos instalados, y la <%= link_to_page "buy", label: "guía de compra" %> indica vendedores en cinco países.</p>
-  <p><%= link_to_page "blog/network-or-radio", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/pocket-or-installed", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
 </section>
 
 <section class="band">

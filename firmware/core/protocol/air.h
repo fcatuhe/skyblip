@@ -60,6 +60,7 @@ struct Frame {
     uint8_t bytes{0};
     // INFO: fc 18nov26 D.1.1's length byte as heard, the last of the sync tail, outside the CRC
     uint8_t length_heard{0};
+    uint8_t length_erasures{0};
     uint16_t bad_chips{0};
     uint8_t data[kRxFrameBytes]{};
     uint8_t erasures[kRxFrameBytes]{};

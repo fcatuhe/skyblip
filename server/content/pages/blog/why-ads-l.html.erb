@@ -50,6 +50,10 @@ updated_on: "2026-11-25"
 </section>
 
 <section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
   <h2 class="kicker">Sources</h2>
   <ul class="sources">
     <li>
@@ -71,7 +75,6 @@ updated_on: "2026-11-25"
       <span class="support">20&nbsp;W 1090ES, transmit allowed in the UK, Australia and New Zealand only.</span>
     </li>
   </ul>
-  <p><%= link_to_page "blog/who-sees-ads-l", class: "cta cta--next" %></p>
 </section>
 
 <section class="band">
