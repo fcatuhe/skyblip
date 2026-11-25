@@ -213,6 +213,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
 | `kNoTxHoldMs` | 10000 (10 s) | milliseconds | Hold | a failure shown only once it lasts, so a short gap never flickers |
 | `kVerdictSettleMs` | 10000 (10 s) | milliseconds | Settle | the sky's requirements are judged this long after the first fix |
+| `kPositionsHeldCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | [README](../firmware/core/timing/README.md) argues it |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -429,4 +430,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-284 constants over 26 folders.
+285 constants over 26 folders.

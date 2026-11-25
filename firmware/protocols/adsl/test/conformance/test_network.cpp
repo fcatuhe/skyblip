@@ -93,7 +93,7 @@ TEST_CASE("ADS-L.4.SRD860.E.1.1: an invalid vertical rate, 0x1FF, goes out as ve
     CHECK(packet.protocol_version() == 1);
 }
 
-// Issue 1 G.1.5 marks no fix with 0xFFFFFF, and reads 0x800000 as 90 S and 180 W.
+// Issue 1 G.1.5 marks no fix with 0xFFFFFF. Code 0x800000 falls outside the geographic bounds.
 TEST_CASE("ADS-L.4.SRD860.E.1.1: a position marked absent, 0x800000, goes out as version 1") {
     const adsl::Packet packet = traffic_with([](adsl::Traffic& t) { t.position_valid = false; });
     CHECK(packet.field(adsl::Packet::kLatitudeField) == 0x800000u);

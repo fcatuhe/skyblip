@@ -35,7 +35,7 @@ The driver never settles for less than the product asked. A part that refuses 2 
 
 `L76k::holds_rate()` is true only while the part is ready at the asked rate.
 
-The driver empties the port before every configuration. Each drain publishes its newest GGA and RMC pair, and only when its stamp is later than the last pair published, so a replayed pair never goes out. A pair drained behind another is marked `backlogged` and anchors nothing. A stamp more than `kSentenceMaxAgeMs` behind the last is the part's clock stepping back, not a replay, and is published (`../../../core/gnss/README.md`, What the device can and cannot see about a late solution).
+The driver empties the port before every configuration. Each drain publishes its newest GGA and RMC pair, and only when its stamp is later than the last pair published, so a replayed pair never goes out. A pair drained behind another is marked `backlogged` and anchors nothing. The pair after a stamp at or behind the last published is marked `relabeled`, the only sign own-ship gets that the part's UTC stepped back. A stamp more than `kSentenceMaxAgeMs` behind the last is the part's clock stepping back, not a replay, and is published (`../../../core/gnss/README.md`, What the device can and cannot see about a late solution).
 
 ## A silent part
 

@@ -300,6 +300,7 @@ void RadioService::carry_position(const timing::Transmitter::Attempt& position, 
 }
 
 void RadioService::hold_for_fix(uint32_t utc_s) {
+    hold_position();
     if (held_for_fix_ && held_for_fix_s_ == utc_s) return;
     context_.state.air.tx_held_for_fix++;
     held_for_fix_ = true;
@@ -467,6 +468,7 @@ void RadioService::credit(uint64_t tx_at_us, uint32_t now_ms) {
 
 void RadioService::spend(Armed& dwell, Payload payload, uint32_t now_ms) {
     transmitter_.sent(dwell.utc_s, now_ms, payload);
+    if (payload == Payload::Position) positions_held_since_ms_.reset();
     contention_[static_cast<int>(payload)].open = false;
     if (payload == Payload::Callsign) context_.state.air.tx_named++;
     dwell.drop(payload);
