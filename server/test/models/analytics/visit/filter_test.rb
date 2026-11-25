@@ -61,6 +61,19 @@ class Analytics::Visit::FilterTest < ActiveSupport::TestCase
     assert_equal 0, filtered(outbound: "https://link.amazon/B05es09aX").count
   end
 
+  test "activation filter keeps the visits that activated a unit, the ones tracked before units were named among them" do
+    create_computed_visit("visit-1", "visitor-1", pages: [ "/briefing/activate" ])
+    create_computed_visit("visit-2", "visitor-2", pages: [ "/briefing/activate" ])
+    create_computed_visit("visit-3", "visitor-3", pages: [ "/briefing/activate" ])
+    named, unnamed = Ahoy::Visit.where(visit_token: %w[visit-1 visit-2]).order(:visit_token)
+    Ahoy::Event.create!(name: "unit_activated", time: named.started_at + 2.minutes, visit_id: named.id, properties: { "unit_id" => 4 })
+    Ahoy::Event.create!(name: "registrations#create", time: unnamed.started_at + 2.minutes, visit_id: unnamed.id,
+                        properties: { "controller" => "activation/registrations", "action" => "create" })
+
+    assert_equal [ named.id, unnamed.id ].sort, filtered(activation: "activated").pluck(:ahoy_visit_id).sort
+    assert_equal 0, filtered(activation: "anything else").count
+  end
+
   # --- Unknown filters ---
 
   test "unknown entry matches visits with nil or blank entry path" do

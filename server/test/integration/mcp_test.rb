@@ -143,6 +143,20 @@ class McpTest < ActionDispatch::IntegrationTest
     assert response.parsed_body.dig("result", "isError")
   end
 
+  # The agent goes from the visitors who activated to a unit and the briefing journal that activated it, and back.
+  test "an activation ties the analytics to the unit and to the support code of the briefing that asked" do
+    token = connect(client_id: CLAUDE_CODE).fetch("access_token")
+    clear_analytics
+    activate browse([ [ "/briefing/activate", 60 ] ], visitor: "pilot", started_at: 1.day.ago), units(:bound), browser: "5G3GRZ31"
+    browse [ [ "/buy", 10 ] ], visitor: "reader", started_at: 1.day.ago
+
+    assert_equal [ 2, 1 ], JSON.parse(call_tool("get_analytics", { days: 7 }, token:))["metrics"].values_at("visitors", "activated_visitors")
+    assert_equal [ "pilot" ], JSON.parse(call_tool("list_visitors", { activation: "activated" }, token:))["visitors"].pluck("visitor_token")
+    activations = JSON.parse(call_tool("get_visitor", { visitor_token: "pilot" }, token:))["activations"]
+    assert_equal [ [ units(:bound).slug, "5G3GRZ31" ] ], activations.map { it.values_at("device", "support_code") }
+    assert_equal [ "pilot" ], JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:)).sole["activated_by"]
+  end
+
   # An admin demoted after connecting an agent reads nothing more through it.
   test "an agent whose admin was demoted reads nothing" do
     token = connect(client_id: CLAUDE_CODE).fetch("access_token")
