@@ -37,12 +37,13 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
-  test "a device on a release is named by the release's tag, not by its build" do
+  test "a device on a release is named by the release's tag alone, not by its build or its track" do
     in_range a_go(running: "0.1.0+1765", key: "88A4BEF5", downgrade: false)
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-row", text: "v0.1.0, release", wait: 15
+      assert_selector ".unit-facts", exact_text: "Connected · 82 % · On the ground · v0.1.0", wait: 15
+      assert_selector ".unit-row", text: /\AFirmware\s+v0\.1\.0\z/
       assert_no_selector ".unit-row", text: "0.1.0+1765"
       screen "28-release-named-by-tag"
     end

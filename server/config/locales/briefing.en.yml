@@ -318,7 +318,6 @@ en:
         airborne: Airborne
         unknown: No GPS fix yet
       track:
-        release: release
         development: development
       running: "%{version}, %{track}"
       firmware_current: up to date
