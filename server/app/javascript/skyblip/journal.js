@@ -189,18 +189,18 @@ export function httpTransport({ url, token = null, fetch = globalThis.fetch }) {
 
 let shared = null;
 
-function localStorageOrNull() {
+export function localStorageOrNull(consequence) {
   try {
     return globalThis.localStorage ?? null;
   } catch (error) {
-    console.warn('This browser blocks site data, so the journal waits in the page:', error.message);
+    console.warn(`This browser blocks site data, so ${consequence}:`, error.message);
     return null;
   }
 }
 
 export function sharedJournal() {
   shared ??= new Journal({
-    storage: localStorageOrNull(),
+    storage: localStorageOrNull('the journal waits in the page'),
     send: entries => httpTransport({ url: '/events', token: document.querySelector('meta[name="csrf-token"]')?.content })(entries),
   });
   return shared;

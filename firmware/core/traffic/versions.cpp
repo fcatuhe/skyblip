@@ -4,6 +4,7 @@
 
 #include "core/traffic/alarm.h"
 #include "core/traffic/lease.h"
+#include "core/units/units.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/soft_versioning.h"
 
@@ -112,7 +113,19 @@ bool VersionTable::close_to(const model::Ownship& own, const Client& client, uin
     const AlarmAssessment seen = assess(own, client.observation(), now_ms);
     if (!seen.valid) return false;
     const int32_t vertical_m = seen.relative_altitude_valid ? seen.relative_altitude_m : 0;
-    return adsl::close_client(seen.relative_distance_m, vertical_m, seen.closing_mm_s);
+    const int32_t closing_mm_s =
+        model::velocity_valid(own) ? seen.closing_mm_s : fastest_closing_mm_s(client.observation());
+    return adsl::close_client(seen.relative_distance_m, vertical_m, closing_mm_s);
+}
+
+// INFO: fc 22nov26 B.5 with no own velocity: own-ship may close at the fastest speed G.1.8 encodes
+int32_t VersionTable::fastest_closing_mm_s(const model::AircraftObservation& client) {
+    const QuarterMetresPerSecond fastest_q{static_cast<uint16_t>(
+        adsl::Packet::kSpeedCode.decode(adsl::Packet::kSpeedInvalidCode - 1))};
+    const int32_t client_mm_s = client.speed_valid
+                                    ? to_mm_s(QuarterMetresPerSecond(client.speed_q)).value
+                                    : kUnknownTargetSpeedMps * kMillimetresPerMetre;
+    return to_mm_s(fastest_q).value + client_mm_s;
 }
 
 uint8_t VersionTable::readable_version(const model::Ownship& own, uint32_t now_ms) const {

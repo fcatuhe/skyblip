@@ -13,8 +13,10 @@ constexpr uint64_t kIdentificationPeriodUs = 5000000;
 // INFO: fc 13nov26 the same table, still on the ground: position 0.2 Hz, identification 0.1 Hz
 constexpr uint64_t kStillPositionPeriodUs = 5000000;
 constexpr uint64_t kStillIdentificationPeriodUs = 10000000;
-// INFO: fc 13nov26 the world models no 1090 MHz path loss, so every squitter lands at -70 dBm
+// INFO: fc 13nov26 the world models no 1090 MHz path loss, so other squitters land at -70 dBm
 constexpr int8_t kSquitterLevelDbm = -70;
+// INFO: fc 25nov26 Bravo names a transponder from -30 dBm and 10 dB ahead, so ours clears both
+constexpr int8_t kAboardLevelDbm = -20;
 // INFO: fc 13nov26 the capability protocols/adsb/assembly.cpp reads: 4 on ground, 5 airborne
 constexpr uint8_t kGroundCapability = 4;
 constexpr uint8_t kAirborneCapability = 5;
@@ -60,6 +62,7 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
     const AdsbOut& out = aircraft.adsb;
     const bool still = out.on_ground && aircraft.speed_mps <= 0;
     const uint8_t capability = out.on_ground ? kGroundCapability : kAirborneCapability;
+    const int8_t level = out.aboard ? kAboardLevelDbm : kSquitterLevelDbm;
 
     const uint64_t position_period_us = still ? kStillPositionPeriodUs : kSquitterPeriodUs;
     const Due positions = due(from_us, to_us, position_period_us, phase % position_period_us);
@@ -74,14 +77,14 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
             adsb::set_message_bits(frame, 13, 13, 1);
             adsb::set_message_bits(frame, 14, 20,
                                    static_cast<uint64_t>(aircraft.track_deg * 128 / 360) & 0x7F);
-            send(frame, radio);
+            send(frame, level, radio);
         } else {
             const double hae_mm = datum.own_hae_mm + aircraft.up_m * 1000;
             const double pressure_mm =
                 hae_mm - datum.geoid_separation_mm + datum.pressure_offset_mm;
             send(adsb::airborne_position(aircraft.address, capability, latitude, longitude, odd,
                                          feet_of(pressure_mm)),
-                 radio);
+                 level, radio);
         }
     }
 
@@ -100,7 +103,7 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
         adsb::Squitter frame = adsb::ground_velocity(aircraft.address, capability, east_kt,
                                                      north_kt, climb_fpm, gnss_minus_pressure_ft);
         if (out.pressure_only) adsb::set_message_bits(frame, 49, 56, 0);
-        send(frame, radio);
+        send(frame, level, radio);
     }
 
     const uint64_t identification_period_us =
@@ -111,13 +114,13 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
          identification++)
         send(adsb::identification(aircraft.address, capability, out.category_type_code,
                                   out.category, aircraft.callsign),
-             radio);
+             level, radio);
 }
 
-void Sky::send(const adsb::Squitter& frame, models::Lr2021& radio) {
+void Sky::send(const adsb::Squitter& frame, int8_t level_dbm, models::Lr2021& radio) {
     const AdsbAir air = adsb_air(frame);
     adsb_sent_++;
-    if (radio.receive_air(air.chips, sizeof(air.chips), kSquitterLevelDbm)) adsb_heard_++;
+    if (radio.receive_air(air.chips, sizeof(air.chips), level_dbm)) adsb_heard_++;
 }
 
 }  // namespace skyblip::simulator

@@ -32,7 +32,6 @@ std::string refusal(const char* word) {
 struct Bench {
     Rig rig{platform::host::Platform::kFullyFitted, std::nullopt};
     ActivationVectors vectors;
-    uint32_t now_ms{0};
 
     Bench() {
         rig.platform.dfu().running_version_valid = true;
@@ -45,8 +44,8 @@ struct Bench {
     common::ConfigService& config() { return rig.product.config_link().config(); }
 
     void pass(uint32_t for_ms) {
-        rig.run(now_ms, now_ms + for_ms);
-        now_ms += for_ms + 50;
+        rig.run_for(for_ms);
+        rig.now_ms += 50;
     }
 
     std::string say(const std::string& json) {
@@ -131,7 +130,7 @@ TEST_CASE("browser register: the press that allows an untrusted browser's regist
 
     bench.pass(3000);
     const size_t before = bench.rig.platform.link().sent.size();
-    bench.rig.press(bench.now_ms);
+    bench.rig.press();
     bench.pass(500);
     CHECK(bench.answer_since(before).rfind("{\"command\":\"registration\"", 0) == 0);
     CHECK(bench.config().trusted_browsers().count() == 1);

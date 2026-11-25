@@ -27,6 +27,13 @@ int Transmitter::last_instant(Payload payload, int slot) {
     return last_instant_ms(window_of(payload, slot), kAirTimeMs * 1000);
 }
 
+int Transmitter::last_key(Payload payload, int slot, int32_t fix_lag_ms) {
+    int end_ms = window_of(payload, slot).end_ms;
+    if (payload == Payload::Position)
+        end_ms = std::min(end_ms, static_cast<int>(kFixMaxAgeMs - fix_lag_ms));
+    return last_key_ms(end_ms);
+}
+
 // INFO: fc 13nov26 one hash round more for a Status, two for a name, so no two bursts share a draw
 int Transmitter::instant_in(Payload payload, int slot, uint32_t utc_s) const {
     uint32_t drawn = hash(address_ ^ hash(utc_s));

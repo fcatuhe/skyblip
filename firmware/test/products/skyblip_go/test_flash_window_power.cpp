@@ -26,7 +26,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
 
     const uint32_t before = writes(rig);
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, rig.now_ms, rig.now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
+    step_until(rig, rig.now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
     CHECK(writes(rig) == before);
     // Refused, counted once, and never handed to the placement policy - a pending
     // change is one the bound would eventually force onto flash, which is the
@@ -86,17 +86,17 @@ TEST_CASE("flash window: a cell at its cutoff powers off without touching the se
 TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    fly(rig, rig.now_ms);
-    step_until(rig, rig.now_ms, rig.now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
+    fly(rig);
+    step_until(rig, rig.now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
     REQUIRE(rig.state().rf.plan.tx_allowed);
     const uint32_t before = writes(rig);
 
     change_alarm(rig, go::Alarm::Soft);
-    step_one(rig, rig.now_ms);
+    step_one(rig);
     REQUIRE(writes(rig) == before);
 
     rig.product.shutdown().request(power::ShutdownReason::LinkRequest, rig.now_ms);
-    step_one(rig, rig.now_ms);
+    step_one(rig);
     CHECK(writes(rig) - before == 1);
     CHECK(rig.product.config_link().refused_writes() == 0);
 }
@@ -107,20 +107,20 @@ TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
 TEST_CASE("flash window: a fired power-failure comparator stops settings writes") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    stand_on_the_ground(rig, rig.now_ms);
+    stand_on_the_ground(rig);
     REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
 
     const uint32_t before = writes(rig);
     rig.platform.system_power().supply_warning = true;
-    step_one(rig, rig.now_ms);
+    step_one(rig);
     CHECK(rig.product.power().cutoff_monitor().supply_warned());
     CHECK(rig.product.power().supply_warnings() == 1);
     // Read and cleared, so one warning is one warning however many passes run.
-    step_until(rig, rig.now_ms, rig.now_ms + 200);
+    step_until(rig, rig.now_ms + 200);
     CHECK(rig.product.power().supply_warnings() == 1);
 
     change_alarm(rig, go::Alarm::Soft);
-    step_until(rig, rig.now_ms, rig.now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
+    step_until(rig, rig.now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
     CHECK(writes(rig) == before);
     // Latching: a rail that came back up does not make it un-happen.
     CHECK_FALSE(rig.product.power().cutoff_monitor().may_write(power::DurableWrite::Settings));

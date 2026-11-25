@@ -11,10 +11,9 @@ using namespace skyblip;
 
 namespace {
 
-inline void on_ground(Rig& rig, uint32_t& now_ms) {
+inline void on_ground(Rig& rig) {
     rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
 }
 
 inline void receiver_speaks_without_a_fix(Rig& rig) {
@@ -29,16 +28,15 @@ inline common::ConfigService& config(Rig& rig) { return rig.product.config_link(
 constexpr ports::ImageVersion kRunning{0, 1, 0, 12};
 constexpr ports::ImageVersion kStaged{0, 2, 0, 15};
 
-inline void pass(Rig& rig, uint32_t& now_ms) {
-    now_ms += 50;
-    rig.run(now_ms, now_ms);
+inline void pass(Rig& rig) {
+    rig.now_ms += 50;
+    rig.run_for(0);
 }
 
-inline void open_upload_window(Rig& rig, uint32_t& now_ms) {
-    on_ground(rig, now_ms);
+inline void open_upload_window(Rig& rig) {
+    on_ground(rig);
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+    rig.run_for(200);
     config(rig).confirm();
 }
 
@@ -56,16 +54,15 @@ inline void sign(Rig& rig, uint8_t trusted, uint8_t signer) {
     rig.platform.dfu().staged_signer.fill(signer);
 }
 
-inline void land_upload(Rig& rig, uint32_t& now_ms) {
+inline void land_upload(Rig& rig) {
     rig.platform.dfu().finished_upload = true;
-    pass(rig, now_ms);
+    pass(rig);
 }
 
 inline void install_and_swap(Rig& rig) {
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
+    open_upload_window(rig);
+    land_upload(rig);
+    rig.run_for(power::kParkSettleMs + power::kReleaseSettleMs + 500);
 }
 
 // The device after the bootloader has run: same flash, a fresh boot, and what slot 1 kept.

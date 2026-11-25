@@ -18,6 +18,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
             if (built && outgoing_.protocol_version() > readable_version_at(tx_at_us) &&
                 !protocol::issue1_form(outgoing_, context_.state.own)) {
                 built = false;
+                hold_position();
                 if (!held_for_b5_ || held_for_b5_s_ != utc_s) context_.state.air.tx_held_for_b5++;
                 held_for_b5_ = true;
                 held_for_b5_s_ = utc_s;
@@ -36,8 +37,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
     const uint8_t bytes = outgoing_.data_bytes();
     outgoing_.scramble(bytes);
     outgoing_.set_crc(bytes);
-    return static_cast<uint8_t>(
-        protocol::m_band_payload(adsl::sync_word(bytes), outgoing_.data, bytes, chips));
+    return static_cast<uint8_t>(protocol::adsl_m_band_fifo(outgoing_.data, bytes, chips));
 }
 
 uint8_t RadioService::readable_version_at(uint64_t tx_at_us) const {

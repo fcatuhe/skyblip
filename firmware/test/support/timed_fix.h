@@ -35,6 +35,8 @@ inline gnss::GnssSolution timed_fix(const FixAt& at) {
     solution.geoid_measured = true;
     solution.speed_mm_s = at.speed_mm_s;
     solution.track_cdeg = at.track_cdeg;
+    solution.speed_valid = true;
+    solution.track_valid = true;
     solution.satellites = 10;
     solution.hdop_e2 = 100;
     solution.vdop_e2 = 150;

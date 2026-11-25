@@ -19,4 +19,16 @@ class Analytics::Visit::MeasurableTest < ActiveSupport::TestCase
     assert_equal 3, metrics[:pageviews]
     assert_equal 0.5, metrics[:bounce_rate]
   end
+
+  test "counts the visitors who activated a unit once, however many visits or units" do
+    first = browse [ [ "/briefing/activate", 30 ] ], visitor: "pilot", started_at: 2.days.ago
+    second = browse [ [ "/briefing/activate", 30 ] ], visitor: "pilot", started_at: 1.day.ago
+    browse [ [ "/buy", 5 ] ], visitor: "prospect", started_at: 1.day.ago
+    [ first, second ].each { Ahoy::Event.create!(name: "unit_activated", visit_id: it.id, time: it.started_at, properties: {}) }
+
+    metrics = Analytics::Visit.where(segment: "non_user").metrics
+
+    assert_equal 2, metrics[:visitors]
+    assert_equal 1, metrics[:activated_visitors]
+  end
 end

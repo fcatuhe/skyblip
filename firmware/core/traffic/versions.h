@@ -70,6 +70,7 @@ class VersionTable {
     };
 
     static bool close_to(const model::Ownship& own, const Client& client, uint32_t now_ms);
+    static int32_t fastest_closing_mm_s(const model::AircraftObservation& client);
     static bool matters_less(const Weight& weight, const Weight& other);
     Weight weight_of(const Client& client, uint32_t now_s) const;
     void file(const Client& heard, int index, uint32_t now_s);

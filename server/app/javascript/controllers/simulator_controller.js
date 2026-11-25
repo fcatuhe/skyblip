@@ -1,124 +1,40 @@
 import { Controller } from "@hotwired/stimulus"
+import { FEET_PER_METRE, FPM_PER_METRE_SECOND, KNOTS_PER_METRE_SECOND, degrees, radians } from "#skyblip/geo"
+import { EQUIPMENT, addAircraft, airliner, callsign, nearbyAircraft } from "#skyblip/simulated_traffic"
+import { movePart } from "controllers/simulator/gauge"
 
 const MAX_CATCHUP_MS = 250
 const ACTIVATION_KEYS = [" ", "Enter"]
 
-const TRAFFIC_MIN_RANGE_M = 800
-const TRAFFIC_MAX_RANGE_M = 4800
-const TRAFFIC_VERT_SPREAD_M = 600
-const ADSB_MIN_RANGE_M = 8000
-const ADSB_MAX_RANGE_M = 30_000
-const ADSB_MAX_ABOVE_M = 8500
-const ADSB_MIN_CRUISE_KT = 105
-const ADSB_MAX_CRUISE_KT = 460
-const KT_TO_MPS = 0.514444
-const TRAFFIC_MIN_CRUISE_KT = 90
-const TRAFFIC_MAX_CRUISE_KT = 180
-const TRAFFIC_MIN_SLOW_KT = 35
-const TRAFFIC_CRUISE_TURN_DPS_E1 = 20
-const TRAFFIC_THERMAL_MIN_TURN_DPS_E1 = 80
-const TRAFFIC_THERMAL_MAX_TURN_DPS_E1 = 150
-const TRAFFIC_CRUISE_CLIMB_MM_S = 4000
-const TRAFFIC_STRONG_MIN_CLIMB_MM_S = 4000
-const TRAFFIC_STRONG_MAX_CLIMB_MM_S = 8000
-const TRAFFIC_EXCEPTIONAL_SHARE = 0.2
-const TRAFFIC_ADDRESS_MAX = 0xffffff
-const TRAFFIC_NAMED_SHARE = 0.6
-const CALLSIGN_PREFIXES = ["F-G", "F-H", "F-J", "F-C", "D-E", "D-K", "G-", "HB-", "OO-", "EC-", "I-"]
-const REGISTRATION_LENGTH = 6
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const ADSL = 0
-const FLARM = 1
-const ADSB = 2
-const FLARM_SHARE = 0.25
-
-const FEET_PER_METRE = 3.28084
-const FPM_PER_MPS = 196.85
 const MM_PER_METRE = 1000
+const GRAVITY_M_S2 = 9.80665
 const signed = value => (Number(value) > 0 ? `+${value}` : `${value}`)
 const clamp = (value, limit) => Math.min(Math.max(value, -limit), limit)
-const degrees = radians => (radians * 180) / Math.PI
-
-const ASI_ZERO_DEG = 180
-const ASI_SPAN_DEG = 315
-const ASI_FULL_KT = 175
-const ALT_DEG_PER_HUNDRED_FT = 0.36
-const ALT_DEG_PER_THOUSAND_FT = 0.036
-const RATE_MARK_DEG = 20
-const STANDARD_RATE_DPS = 3
-const RATE_LIMIT_DEG = 45
-const SLIP_FULL_MG = 200
-const BALL_TRAVEL = 16
-const VSI_ZERO_DEG = -90
-const VSI_FULL_FPM = 2000
-const VSI_KNEE_FPM = 1000
-const VSI_KNEE_DEG = 90
-const VSI_OUTER_DEG = 80
-
-const vsiAngle = fpm => {
-  const rate = Math.min(Math.abs(fpm), VSI_FULL_FPM)
-  const inner = (Math.min(rate, VSI_KNEE_FPM) * VSI_KNEE_DEG) / VSI_KNEE_FPM
-  const outer =
-    (Math.max(rate - VSI_KNEE_FPM, 0) * VSI_OUTER_DEG) / (VSI_FULL_FPM - VSI_KNEE_FPM)
-  return VSI_ZERO_DEG + Math.sign(fpm) * (inner + outer)
-}
-const BANK_LIMIT_DEG = 60
-const PITCH_FULL_DEG = 20
-const GAUGE_RADIUS = 49
-
-const turned = (gauge, part, deg) =>
-  gauge.querySelector(part).setAttribute("transform", `rotate(${deg})`)
-
-const upright = (gauge, deg) => {
-  for (const numeral of gauge.querySelectorAll(".gauge-numeral"))
-    numeral.setAttribute(
-      "transform", `rotate(${deg}, ${numeral.getAttribute("x")}, ${numeral.getAttribute("y")})`
-    )
-}
 
 const AXES = {
   speed: {
     flown: (sim, kt) => sim.setSpeed(kt),
-    read: kt => `${kt} kt`,
-    paint: (gauge, kt) =>
-      turned(gauge, ".gauge-needle",
-             ASI_ZERO_DEG + (Math.min(kt, ASI_FULL_KT) * ASI_SPAN_DEG) / ASI_FULL_KT)
+    read: kt => `${kt} kt`
   },
   altitude: {
     flown: (sim, ft) => sim.setAltitude(Math.round(ft / FEET_PER_METRE)),
-    read: ft => `${ft} ft`,
-    paint: (gauge, ft) => {
-      turned(gauge, ".gauge-needle", (ft % 1000) * ALT_DEG_PER_HUNDRED_FT)
-      turned(gauge, ".gauge-hand", (ft % 10000) * ALT_DEG_PER_THOUSAND_FT)
-    }
+    read: ft => `${ft} ft`
   },
   track: {
     flown: (sim, deg) => sim.setTrack(deg),
-    read: deg => `${String(deg).padStart(3, "0")}°`,
-    paint: (gauge, deg) => {
-      turned(gauge, ".gauge-card", -deg)
-      upright(gauge, deg)
-    }
+    read: deg => `${String(deg).padStart(3, "0")}°`
   },
   turn: {
     flown: (sim, e1) => sim.setTurn(e1),
-    read: e1 => `${signed((e1 / 10).toFixed(1))} °/s`,
-    paint: (gauge, e1) =>
-      turned(gauge, ".gauge-plane",
-             clamp((e1 * RATE_MARK_DEG) / (10 * STANDARD_RATE_DPS), RATE_LIMIT_DEG))
+    read: e1 => `${signed((e1 / 10).toFixed(1))} °/s`
   },
   slip: {
     flown: (sim, mg) => sim.setSlip(mg),
-    read: mg => `${signed(mg)} mg`,
-    paints: "turn",
-    paint: (gauge, mg) => gauge.querySelector(".gauge-ball").setAttribute(
-      "transform", `translate(${(clamp(mg, SLIP_FULL_MG) * BALL_TRAVEL) / SLIP_FULL_MG}, 0)`
-    )
+    read: mg => `${signed(mg)} mg`
   },
   climb: {
-    flown: (sim, fpm) => sim.setClimb(Math.round((fpm * MM_PER_METRE) / FPM_PER_MPS)),
-    read: fpm => `${signed(fpm)} fpm`,
-    paint: (gauge, fpm) => turned(gauge, ".gauge-needle", vsiAngle(fpm))
+    flown: (sim, fpm) => sim.setClimb(Math.round((fpm * MM_PER_METRE) / FPM_PER_METRE_SECOND)),
+    read: fpm => `${signed(fpm)} fpm`
   }
 }
 
@@ -143,11 +59,12 @@ const TRAFFIC_TICK_MAX_MS = 30_000
 const TRAFFIC_ARRIVAL_SHARE = 0.5
 const TRAFFIC_STAY_MIN_MS = 60_000
 const TRAFFIC_STAY_MAX_MS = 180_000
+const TRAFFIC_NAMED_SHARE = 0.6
+const FLARM_SHARE = 0.25
 
 export default class extends Controller {
-  static targets = ["canvas", "status", "pad", "lamp", "charge", "bravo", "bravoControl",
-                    "horizonGauge", "attitudeReadout",
-                    ...Object.keys(AXES).flatMap(axis => [axis, `${axis}Readout`, `${axis}Gauge`])]
+  static targets = ["canvas", "status", "pad", "lamp", "charge", "bravo", "bravoControl", "part", "attitude", "attitudeReadout",
+                    ...Object.keys(AXES).flatMap(axis => [axis, `${axis}Readout`])]
   static values = { src: String, screens: Object }
 
   // INFO: fc 18nov26 a load superseded by another boot or a Turbo visit must not start the simulator
@@ -170,14 +87,13 @@ export default class extends Controller {
     clearTimeout(this.bootTimer)
     this.#stop()
     const generation = ++this.#generation
-    const { load, PAGES, PRODUCT } = await import(this.srcValue)
+    const { load, PAGES } = await import(this.srcValue)
     if (generation !== this.#generation) return
     this.pages = PAGES
     const sim = await load()
     if (generation !== this.#generation) return
-    const supportsBravo = PRODUCT?.includes("paired") && typeof sim.loadScenario === "function"
-    this.bravoControlTarget.hidden = !supportsBravo
-    this.paired = supportsBravo && this.bravoTarget.checked
+    this.bravoControlTarget.hidden = false
+    this.paired = this.bravoTarget.checked
     if (this.paired) {
       const scenario = JSON.stringify({ product: "paired" })
       if (!sim.loadScenario(scenario, scenario.length)) throw new Error("The firmware rejected the paired scenario")
@@ -240,20 +156,18 @@ export default class extends Controller {
   }
 
   #show(axis, value) {
-    const { read, paint, paints } = AXES[axis]
-    this[`${axis}ReadoutTarget`].textContent = read(value)
-    paint(this[`${paints || axis}GaugeTarget`], value, this[`${axis}Target`])
+    this[`${axis}ReadoutTarget`].textContent = AXES[axis].read(value)
+    for (const part of this.partTargets) if (part.dataset.gaugeAxis === axis) movePart(part, value)
   }
 
   #attitude() {
-    const kt = Number(this.speedTarget.value)
-    const dps = Number(this.turnTarget.value) / 10
-    const fpm = Number(this.climbTarget.value)
-    const bank = clamp(degrees(Math.atan2(dps * kt, 1093)), BANK_LIMIT_DEG)
-    const pitch = clamp(degrees(Math.atan2(fpm * 10, kt * 1013)), PITCH_FULL_DEG)
-    this.horizonGaugeTarget.querySelector(".gauge-attitude").setAttribute(
-      "transform", `translate(0, ${(pitch * GAUGE_RADIUS) / PITCH_FULL_DEG}) rotate(${-bank})`
-    )
+    const speedMps = Number(this.speedTarget.value) / KNOTS_PER_METRE_SECOND
+    const turnRadS = radians(Number(this.turnTarget.value) / 10)
+    const climbMps = Number(this.climbTarget.value) / FPM_PER_METRE_SECOND
+    const { pixelsPerDegree, pitchLimit, bankLimit } = this.attitudeTarget.dataset
+    const bank = clamp(degrees(Math.atan2(turnRadS * speedMps, GRAVITY_M_S2)), Number(bankLimit))
+    const pitch = clamp(degrees(Math.atan2(climbMps, speedMps)), Number(pitchLimit))
+    this.attitudeTarget.setAttribute("transform", `translate(0, ${pitch * Number(pixelsPerDegree)}) rotate(${-bank})`)
     this.attitudeReadoutTarget.textContent = `${Math.round(Math.abs(bank))}\u00b0 ${bank < 0 ? "L" : "R"}`
   }
 
@@ -272,63 +186,12 @@ export default class extends Controller {
   #addAircraft(group) {
     const departures = this.departures[group]
     if (departures.size >= TRAFFIC_MAX_PER_GROUP) return
-    const adsb = group === "adsb"
-    const bearing = Math.random() * 2 * Math.PI
-    const range = adsb ? this.#between(ADSB_MIN_RANGE_M, ADSB_MAX_RANGE_M)
-                       : this.#between(TRAFFIC_MIN_RANGE_M, TRAFFIC_MAX_RANGE_M)
-    const index = this.sim.addAircraft(
-      Math.round(Math.cos(bearing) * range),
-      Math.round(Math.sin(bearing) * range),
-      Math.round(this.#between(-TRAFFIC_VERT_SPREAD_M, adsb ? ADSB_MAX_ABOVE_M : TRAFFIC_VERT_SPREAD_M)),
-      adsb ? Math.round(this.#between(ADSB_MIN_CRUISE_KT, ADSB_MAX_CRUISE_KT) * KT_TO_MPS) : this.#speedMps(),
-      Math.round(Math.random() * 359),
-      adsb ? 0 : this.#turnDpsE1(),
-      adsb ? 0 : this.#climbMmS(),
-      adsb ? ADSB : (Math.random() < FLARM_SHARE ? FLARM : ADSL),
-      this.#address()
-    )
+    const index = group === "adsb"
+      ? addAircraft(this.sim, airliner(), EQUIPMENT.adsb)
+      : addAircraft(this.sim, nearbyAircraft(), Math.random() < FLARM_SHARE ? EQUIPMENT.alptas : EQUIPMENT.adsl)
     if (index < 0) return
     departures.set(index, this.sim.elapsedMs() + this.#between(TRAFFIC_STAY_MIN_MS, TRAFFIC_STAY_MAX_MS))
-    if (Math.random() < TRAFFIC_NAMED_SHARE) this.sim.nameAircraft(index, this.#callsign())
-  }
-
-  #callsign() {
-    const prefix = CALLSIGN_PREFIXES[Math.floor(Math.random() * CALLSIGN_PREFIXES.length)]
-    let callsign = prefix
-    while (callsign.length < REGISTRATION_LENGTH) callsign += LETTERS[Math.floor(Math.random() * LETTERS.length)]
-    return callsign
-  }
-
-  #address() {
-    return 1 + Math.floor(Math.random() * TRAFFIC_ADDRESS_MAX)
-  }
-
-  #speedMps() {
-    const kt = this.#exceptional()
-      ? this.#between(TRAFFIC_MIN_SLOW_KT, TRAFFIC_MIN_CRUISE_KT)
-      : this.#between(TRAFFIC_MIN_CRUISE_KT, TRAFFIC_MAX_CRUISE_KT)
-    return Math.round(kt * KT_TO_MPS)
-  }
-
-  #turnDpsE1() {
-    if (!this.#exceptional())
-      return Math.round(this.#between(-TRAFFIC_CRUISE_TURN_DPS_E1, TRAFFIC_CRUISE_TURN_DPS_E1))
-    return this.#eitherHand(TRAFFIC_THERMAL_MIN_TURN_DPS_E1, TRAFFIC_THERMAL_MAX_TURN_DPS_E1)
-  }
-
-  #climbMmS() {
-    if (!this.#exceptional())
-      return Math.round(this.#between(-TRAFFIC_CRUISE_CLIMB_MM_S, TRAFFIC_CRUISE_CLIMB_MM_S))
-    return this.#eitherHand(TRAFFIC_STRONG_MIN_CLIMB_MM_S, TRAFFIC_STRONG_MAX_CLIMB_MM_S)
-  }
-
-  #exceptional() {
-    return Math.random() < TRAFFIC_EXCEPTIONAL_SHARE
-  }
-
-  #eitherHand(low, high) {
-    const size = this.#between(low, high)
-    return Math.round(Math.random() < 0.5 ? -size : size)
+    if (Math.random() < TRAFFIC_NAMED_SHARE) this.sim.nameAircraft(index, callsign())
   }
 
   #between(low, high) {
@@ -395,8 +258,7 @@ export default class extends Controller {
     const powered = this.sim.powered() === 1
     this.element.classList.toggle("simulator--off", !powered)
     this.statusTarget.textContent = this.#screen()
-    // TODO: fc 09nov26 builds before simulator_lamp cannot report it, drop the ?. once the newest main dev build exports it
-    this.lampTarget.dataset.lamp = this.sim.lamp?.() ?? "dark"
+    this.lampTarget.dataset.lamp = this.sim.lamp()
     this.chargeTarget.classList.toggle("sb-led--lit", this.sim.batteryCharging() === 1)
   }
 

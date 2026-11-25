@@ -1,117 +1,262 @@
 ---
 title: "Open questions on ADS-L"
 nav_title: ADS-L questions
-description: "skyBlip's open questions to EASA on ADS-L Issue 2, grouped by theme, with the source clauses, current firmware behaviour and answer status."
+description: "skyBlip's open questions to EASA on ADS-L Issue 2, numbered SB-Q1 to SB-Q11, each with the source clauses, current firmware behaviour and answer status."
 published_on: "2026-11-14"
 parent: ads-l
-updated_on: "2026-11-19"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
   <h1>Our open questions on ADS-L Issue 2.</h1>
-  <p class="lede">These are the questions skyBlip puts to EASA on ADS-L 4 SRD-860 Issue 2, where the text leaves a reading open. Each theme quotes the clause, records what our firmware does today and says whether the question has been sent and answered. Until EASA answers, Go flies the reading described here.</p>
+  <p class="lede">We ask EASA how to apply ADS-L 4 SRD-860 where we see more than one way to read it. Open any question, from SB-Q1 to SB-Q11, to see the clause, what Go&rsquo;s firmware does and what we ask. Each question shows whether we have sent it and whether EASA has answered. Until EASA answers, Go follows the readings described below.</p>
   <p>skyBlip is open-source electronic conspicuity equipment for general aviation. skyBlip Go transmits and receives ADS-L. skyBlip Bravo receives ADS-B on 1090&nbsp;MHz and transmits nothing. Paired with a Go, on the ground, Bravo can name the transponder it takes for the aircraft&rsquo;s own.</p>
 </section>
 
-<section>
-  <h2 class="kicker">The ICAO address</h2>
-  <h3>Which address should Go send, and which settings must it refuse?</h3>
-  <p>Clause <strong>ADS-L.4.SRD860.F.2.3, &ldquo;ICAO Address&rdquo;</strong>, in <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860, ED Decision 2022/024/R, Issue 2</a>, says:</p>
-  <blockquote>
-    <p>For this setting, the ICAO address shall be configurable and entered by the user of the ADS-L system, thereby overriding the address given by the manufacturer. This is the preferred mode for aircraft that have an ICAO address (Mode-S transponder code). This setting shall be revertible by user configuration. For aircraft that concurrently transmit using other e-conspicuity systems such as ADS-B, or aircraft that use a Mode-S transponder, it shall use this type of address to allow for disambiguation and attribution of the different radio transmissions on the receiver side. The ADS-L system shall enforce this by disallowing inconsistent user configurations.</p>
-  </blockquote>
-  <p>Today Go uses the pilot&rsquo;s configured ICAO address on every payload and refuses an address no aircraft holds (<code>FFFFFF</code>) or an entered address that conflicts with the transponder Bravo identifies on the ground.</p>
-  <ol>
-    <li>
-      <p><strong>Should every payload use the ICAO address?</strong> When the pilot enters the aircraft&rsquo;s ICAO address, Go sends every payload under Address Mapping Table (AMT) entry 5, ICAO, with that address. This includes Traffic, Status and payload type 66, which carries the aircraft&rsquo;s registration.</p>
-      <p>Go no longer transmits under skyBlip&rsquo;s manufacturer address: AMT entry 58, manufacturer page 49, prefix 0, with the unit&rsquo;s serial in the remaining 16 bits. The ADS-L registry assigned that range to skyBlip. Clearing the ICAO setting restores AMT entry 58 and the unit&rsquo;s address from the next burst. Is this the intent of F.2.3, or should some payloads stay under the manufacturer&rsquo;s address?</p>
-    </li>
-    <li>
-      <p><strong>What must &ldquo;disallowing inconsistent user configurations&rdquo; cover?</strong> Go refuses <code>FFFFFF</code>, an address no aircraft holds. On the ground, while a paired Bravo names the transponder it takes for the aircraft&rsquo;s own, Go also refuses an entered address that differs from it.</p>
-      <p>Go does not refuse an unset ICAO address when Bravo identifies a Mode-S transponder on the aircraft. It proposes the address Bravo hears and lets the pilot accept it. Does F.2.3 require Go to refuse that configuration, or to enforce the address itself? Are there other configurations EASA intends the device to disallow?</p>
-    </li>
-  </ol>
-  <p class="note">Asked: [asked on date]. No answer from EASA yet.</p>
+<section class="questions" data-controller="anchored-details" data-action="hashchange@window->anchored-details#open">
+  <details id="sb-q1">
+    <summary>
+      <span class="kicker"><a href="#sb-q1">SB-Q1</a> &middot; The manufacturer prefix &middot; F.2.2</span>
+      <h3>Should the manufacturer prefix sit in the high byte of the address?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.B.3, &ldquo;Bit and Byte Order&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>The following principles apply unless noted otherwise. [&hellip;] Bit numbering: Bits are counted from least significant bit to most significant bit, where the counting starts with zero (0).</p>
+    </blockquote>
+    <p>Clause <strong>ADS-L.4.SRD860.F.2.2, &ldquo;Sender Address&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>Entries 9 and higher of the address mapping table imply a further structuring of the address:</p>
+    </blockquote>
+    <p>The table that follows gives the Manufacturer prefix at offset 0, width 8 bits, and the Base address at offset 8, width 16 bits. The clause continues:</p>
+    <blockquote>
+      <p>The combination AMT page + manufacturer prefix shall be uniquely assigned to only one manufacturer. The manufacturer shall use the remaining 16-bit base address space as densely as possible.</p>
+    </blockquote>
+    <p>Applying B.3 puts the prefix in address bits 0 to 7 and the base address in bits 8 to 23. Prefix <code>0xAB</code> with base address <code>0x1234</code> therefore gives address <code>0x1234AB</code>. The outer table follows the same rule: the Address Mapping Table (AMT) entry at offset 0 occupies the sender field&rsquo;s low 6 bits, with the 24-bit address above it.</p>
+    <p>We think the manufacturer sub-table has its fields in the wrong order. It appears to list them most significant first, against B.3, without stating an exception. Calling the field a prefix suggests the leading byte. ICAO allocates 24-bit aircraft addresses in blocks defined by their leading bits, and FLARM IDs are commonly written with a leading byte such as <code>DD</code>.</p>
+    <p>The registry&rsquo;s uniqueness rule depends on every manufacturer using the same byte. On one AMT page, a manufacturer with prefix <code>0x00</code> in the low byte sends base address <code>0x0101</code> as <code>0x010100</code>. Another with prefix <code>0x01</code> in the high byte sends base address <code>0x0100</code> as <code>0x010100</code>. Two aircraft then share the same AMT and address despite holding different prefixes.</p>
+<p>The ADS-L registry assigned skyBlip manufacturer page 49, AMT entry 58 and prefix 0 on 5 October 2026. When a Go is activated, skyblip.eu assigns it a 16-bit serial. Serials run consecutively from 1. Go puts prefix <code>0x00</code> in the high byte, address bits 16 to 23, and the serial in bits 0 to 15. A Go with serial <code>0x012A</code> transmits address <code>0x00012A</code>.</p>
+<p>Go puts the prefix first in the address, as the name suggests. The table as written puts it in the low byte. Under B.3, <code>0x00012A</code> has prefix <code>0x2A</code> and base address <code>0x0001</code>. That reading takes the low byte of each Go&rsquo;s serial as its prefix, so Go units appear under prefixes on page 49 that the registry did not assign to skyBlip.</p>
+<p>Go will keep using the high byte until EASA answers. We have a change ready that follows the table as written. It puts the prefix in bits 0 to 7 and the serial in bits 8 to 23, so serial <code>0x012A</code> would transmit as <code>0x012A00</code>.</p>
+    <ol>
+      <li><p><strong>Is the manufacturer prefix intended to occupy the high byte, address bits 16 to 23, with the base address in bits 0 to 15?</strong></p></li>
+      <li><p><strong>If so, could a corrigendum or the next issue correct the offsets to base address at 0 and manufacturer prefix at 16?</strong> F.2.2 could instead say explicitly that B.3 does not apply here. If the prefix belongs in the low byte, please say so in the clause so manufacturers use the same byte.</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q2">
+    <summary>
+      <span class="kicker"><a href="#sb-q2">SB-Q2</a> &middot; The age of the position &middot; G.1.1 and G.1.16</span>
+      <h3>Must every position come from a quarter-second fix sent within 500&nbsp;ms of measurement?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.G.1.1, &ldquo;Timestamp&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>The Timestamp field indicates the number of quarter seconds since the full hour, modulo 60. [&hellip;] The timestamp refers to the time of the navigation solution (PVT fix) obtained by the GNSS receiver (e.g. on the full second) and included in the Traffic payload. It shall be accurate to &plusmn;&nbsp;10&nbsp;ms.</p>
+    </blockquote>
+    <p>Clause <strong>ADS-L.4.SRD860.G.1.16, &ldquo;Transmit Rate and Timing&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>A message shall be replaced with a new message if the total delay of 500 ms from obtaining (measuring) the PVT fix is exceeded, e.g. due to the frequency being occupied, to prevent old data being sent. No Traffic message shall be sent containing navigation data older than 500 ms.</p>
+    </blockquote>
+    <p>We read G.1.1 and G.1.16 to mean that the GNSS receiver must measure each fix within 10&nbsp;ms of a quarter second and the device must send it within 500&nbsp;ms of measurement. That makes it hard for common GNSS receivers to use the full direct slot, which runs from 450 to 1000&nbsp;ms under C.5. Go does not extrapolate a fix to a quarter second because the result would not be a fix the receiver measured.</p>
+    <p>Most GNSS receivers on the market offer solution rates of 1, 2, 5 and 10&nbsp;Hz. At 1 and 5&nbsp;Hz, only the solution on the full second (.000) falls on a quarter. It can serve at most the first 50&nbsp;ms of the 550&nbsp;ms slot, up to 500&nbsp;ms. Only 2 and 10&nbsp;Hz also give a solution at .500 for the rest of the slot once that solution arrives. The other eight solutions at 10&nbsp;Hz fall off the quarters, so 10&nbsp;Hz gives no more usable solutions than 2&nbsp;Hz. Only 4&nbsp;Hz, or a multiple of it, gives a solution on every quarter when the sequence starts on the full second.</p>
+    <p>Go runs its Quectel L76K at 2&nbsp;Hz because it gives solutions at .000 and .500. Quectel documents 1, 2 and 5&nbsp;Hz, and the receiver ignored a request for 4&nbsp;Hz on the bench. Go starts bursts between 450 and 810&nbsp;ms on 868.2&nbsp;MHz and between 830 and 990&nbsp;ms on 868.4&nbsp;MHz (<a href="#sb-q4">SB-Q4</a>). The .000 solution serves bursts up to 490&nbsp;ms, leaving 10&nbsp;ms for transmission to finish. The .500 solution reaches Go 40 to 160&nbsp;ms after measurement. Between 490&nbsp;ms and its arrival, Go has no solution it can send under both clauses. The gap falls inside the 868.2&nbsp;MHz window. In 26 minutes on the bench, before the change below, Go did not send 21 of the 81 positions due on that channel.</p>
+<p>If Go picks a burst start time in the gap, it now waits for the .500 solution. If the scheduled start has passed when the solution arrives, Go uses its address and the second to pick a new start time in the rest of the window. That keeps units from all transmitting as soon as the solution arrives. Go misses the position because of the gap only if the solution arrives after 810&nbsp;ms.</p>
+<p>About a quarter of bursts move from 490&ndash;590&nbsp;ms into 590&ndash;810&nbsp;ms. The later interval carries about 40&nbsp;% more bursts, and the chance of a collision on 868.2&nbsp;MHz rises from about 2.8&nbsp;% to about 3.9&nbsp;% per neighbour. Every Go has the same receiver, so bursts from different units bunch up in the same part of the window. How much they bunch up depends on a receiver delay that Go measures but does not control.</p>
+    <p>With 200&nbsp;ms Timestamp steps, a device could use every fix at 5&nbsp;Hz and every other fix at 10&nbsp;Hz. Either way, it would have a fix it could timestamp every 200&nbsp;ms. The newest usable fix would stay under 500&nbsp;ms old if the receiver kept delivering fixes in the 40 to 160&nbsp;ms range we measured on Go at 2&nbsp;Hz. A 200&nbsp;ms step could not represent the .500 fix at 2&nbsp;Hz. A 100&nbsp;ms step could represent every fix at all four rates.</p>
+    <ol>
+      <li><p><strong>Do G.1.1 and G.1.16 require the receiver to measure each solution within 10&nbsp;ms of the quarter second it names?</strong> Or may a device carry its latest solution forward to that quarter, with the 500&nbsp;ms still counted from the original measurement?</p></li>
+      <li><p><strong>Could a later issue let the Timestamp name the solution&rsquo;s own time in finer steps?</strong> Could it use 200&nbsp;ms steps to make 5 and 10&nbsp;Hz practical, or 100&nbsp;ms steps to cover all four rates?</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q3">
+    <summary>
+      <span class="kicker"><a href="#sb-q3">SB-Q3</a> &middot; The age of the vertical rate &middot; G.1.16</span>
+      <h3>Does the age of a vertical rate run from the newest sample or from the time it describes?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.G.1.16, &ldquo;Transmit Rate and Timing&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>No Traffic message shall be sent containing navigation data older than 500&nbsp;ms.</p>
+    </blockquote>
+    <p>Go calculates vertical rate from the change in barometric height between two samples a second apart. The BME280 pressure sensor&rsquo;s filter delays a step change by about 0.75&nbsp;s. Go counts the rate&rsquo;s age from the newest pressure sample and sends it only if that sample is still under 500&nbsp;ms old when the burst ends. If we take the midpoint between the samples and allow for the filter delay, the rate describes the aircraft about 1.25&nbsp;s before the newest sample.</p>
+    <p>This behaviour is in <a href="https://github.com/fcatuhe/skyblip/pull/477">pull request #477</a>, which has not been merged.</p>
+    <ol>
+      <li><p><strong>Does the 500&nbsp;ms limit run from the newest pressure sample or from the instant the rate describes?</strong> If the limit runs from the time the rate describes, Go would need to shorten the interval between samples and reduce the filtering. That would roughly double the noise in each reading.</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q4">
+    <summary>
+      <span class="kicker"><a href="#sb-q4">SB-Q4</a> &middot; The timing &middot; C.2, C.2.5, C.5, G.1.16 and G.2.11</span>
+      <h3>Does Go&rsquo;s transmit timing comply with ADS-L?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.C.5, &ldquo;Time Multiplexing&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>Transmissions must be completed before the end of the slot. [&hellip;] Direct: Reserved for payloads of immediate relevance, urgency and with implications to safety, transmitted from an airborne ADS-L client. This slot lasts from 450 ms to 1000 ms, relative to the full UTC seconds.</p>
+    </blockquote>
+    <p>Clause <strong>ADS-L.4.SRD860.C.2.5, &ldquo;Frequency Diversity&rdquo;</strong>, says that &ldquo;An ADS-L sender is free to select either frequency for transmission&rdquo;, except that Traffic and Status alternate. Clause <strong>ADS-L.4.SRD860.G.1.16, &ldquo;Transmit Rate and Timing&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>If the flight state is &ldquo;On ground&rdquo;, the transmit rate shall be reduced to 0.1 Hz (once every 10 seconds).</p>
+    </blockquote>
+    <p>Clause C.2 sets the backoff interval to 15 to 250&nbsp;ms, and clause G.2.11 sets the Status&rsquo;s minimum rate to once per 20 seconds.</p>
+    <p>Go has one radio, so it listens to one channel at a time. It divides each second into three listening windows: the uplink on 869.525&nbsp;MHz from 210 to 440&nbsp;ms, 868.2&nbsp;MHz from 450 to 820&nbsp;ms and 868.4&nbsp;MHz from 830 to 1200&nbsp;ms. The two 868&nbsp;MHz windows follow the channels FLARM-generation devices use in each second, so Go hears both systems. Go transmits only on the channel it is listening to. Positions and Status start between 450 and 810&nbsp;ms on 868.2&nbsp;MHz and between 830 and 990&nbsp;ms on 868.4&nbsp;MHz, so every burst ends before 1000&nbsp;ms. The callsign goes after the slot, which <a href="#sb-q7">SB-Q7</a> asks about.</p>
+
+    <%= render "shared/second" %>
+
+    <p>Each channel therefore gets part of the direct slot, not all of it. The channel follows the parity of the UTC second, so in a given second every Go in flight sends its position on the same channel. Two 4.64&nbsp;ms bursts overlap when their starts fall within 5&nbsp;ms of each other. Over the 360&nbsp;ms of start instants on 868.2&nbsp;MHz, that gives about 2.8&nbsp;% per neighbour, or 3.9&nbsp;% with the redraw of <a href="#sb-q2">SB-Q2</a>. Over the 160&nbsp;ms on 868.4&nbsp;MHz, it gives about 6&nbsp;%. Spread over the whole 550&nbsp;ms slot, it would be about 1.8&nbsp;%.</p>
+    <p>When listen-before-talk delays a burst, Go keeps it on the same channel and within the same window. Go picks a wait from C.2&rsquo;s 15 to 250&nbsp;ms range, capping the range at the time left in the window. On 868.4&nbsp;MHz the wait never exceeds 160&nbsp;ms. If less than 15&nbsp;ms remains, Go skips the burst. On the ground it retries 2&nbsp;s later on the same channel. In flight it does not retry a missed position because the next one is due a second later.</p>
+    <p>Each Go follows a 20&nbsp;s cycle. It starts at an even second set by the unit&rsquo;s serial, <span class="mono">c = 2 &times; (serial mod 10)</span>, so a fleet spreads over ten start seconds. On the ground, Go schedules a position at c on 868.2&nbsp;MHz and at c + 9 on 868.4&nbsp;MHz. It schedules a Status at c + 2 on 868.4&nbsp;MHz and at c + 11 on 868.2&nbsp;MHz, and its callsign at c + 4 and c + 14. In flight it adds a position in each of the other seconds and keeps the Status and callsign seconds.</p>
+
+    <%= render "shared/cycle" %>
+
+    <p>Ground positions are 9 then 11&nbsp;s apart, one every 10&nbsp;s on average. At exactly 10&nbsp;s, the parity rule would put two positions in a row on one channel, which C.2.5 forbids. The odd gap also spreads a fleet evenly: across the ten start seconds, each channel window of the 20&nbsp;s carries one ground burst. Each channel carries a Status every 20&nbsp;s, so a receiver that hears one channel still gets G.2.11&rsquo;s rate. The <%= link_to_page "timing", label: "timing guide" %> gives each rule in full.</p>
+    <ol>
+      <li><p><strong>Does transmitting on each channel in only part of the direct slot meet C.5 and C.2.5?</strong> Or does ADS-L expect a sender to spread its bursts on both channels over the whole slot, from 450 to 1000&nbsp;ms?</p></li>
+      <li><p><strong>Does a ground position every 9 then 11&nbsp;s meet G.1.16&rsquo;s 0.1&nbsp;Hz?</strong> Or must ground positions be exactly 10&nbsp;s apart?</p></li>
+      <li><p><strong>May a deferred burst miss its turn when less than 15&nbsp;ms of its window is left?</strong> Or should the backoff reach past the window, up to the end of the direct slot?</p></li>
+      <li><p><strong>Does any other part of this timing conflict with ADS-L as EASA reads it?</strong></p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q5">
+    <summary>
+      <span class="kicker"><a href="#sb-q5">SB-Q5</a> &middot; Channel alternation &middot; C.2.5</span>
+      <h3>After a missed burst, may Go keep the next burst&rsquo;s scheduled channel?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.C.2.5, &ldquo;Frequency Diversity&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>For the &ldquo;Traffic&rdquo; and &ldquo;Status&rdquo; payloads (see Subpart G), the sender shall alternate between these frequencies for every transmission to facilitate reception of these payloads for restricted, single-channel receivers.</p>
+    </blockquote>
+    <p>Go sends positions on 868.2&nbsp;MHz in even UTC seconds and on 868.4&nbsp;MHz in odd ones. Status uses the opposite channel. If the channel stays busy and Go skips a burst, the next burst uses the channel scheduled for its own second. Two successive positions can then go out on the same frequency. Go also changes its transmit rate at takeoff or landing. About one transition in two puts a single pair of consecutive positions on the same channel. A single-channel receiver still hears every other scheduled position, which is the purpose the clause gives.</p>
+    <ol>
+      <li><p><strong>Does alternation by the schedule meet C.2.5?</strong> Or must Go switch channels after each burst it sends?</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q6">
+    <summary>
+      <span class="kicker"><a href="#sb-q6">SB-Q6</a> &middot; The ICAO address &middot; F.2.3</span>
+      <h3>Should every payload use the configured ICAO address, and which settings must Go refuse?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.F.2.3, &ldquo;ICAO Address&rdquo;</strong>, in <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860, ED Decision 2022/024/R, Issue 2</a>, says:</p>
+    <blockquote>
+      <p>For this setting, the ICAO address shall be configurable and entered by the user of the ADS-L system, thereby overriding the address given by the manufacturer. This is the preferred mode for aircraft that have an ICAO address (Mode-S transponder code). This setting shall be revertible by user configuration. For aircraft that concurrently transmit using other e-conspicuity systems such as ADS-B, or aircraft that use a Mode-S transponder, it shall use this type of address to allow for disambiguation and attribution of the different radio transmissions on the receiver side. The ADS-L system shall enforce this by disallowing inconsistent user configurations.</p>
+    </blockquote>
+    <p>Go uses the ICAO address the pilot enters on every payload. It rejects <code>FFFFFF</code>, which no aircraft holds. It also rejects an address that does not match the transponder Bravo identifies on the ground.</p>
+    <ol>
+      <li>
+        <p><strong>Should every payload use the ICAO address?</strong> When the pilot enters the aircraft&rsquo;s ICAO address, Go sends every payload under Address Mapping Table (AMT) entry 5, ICAO, with that address. This includes Traffic, Status and payload type 66, which carries the aircraft&rsquo;s registration.</p>
+        <p>Go no longer transmits under skyBlip&rsquo;s manufacturer address: AMT entry 58, manufacturer page 49, prefix 0, with the unit&rsquo;s serial in the remaining 16 bits. The ADS-L registry assigned that range to skyBlip. Clearing the ICAO setting restores AMT entry 58 and the unit&rsquo;s address from the next burst. Is this the intent of F.2.3, or should some payloads stay under the manufacturer&rsquo;s address?</p>
+      </li>
+      <li>
+        <p><strong>What must &ldquo;disallowing inconsistent user configurations&rdquo; cover?</strong> Go refuses <code>FFFFFF</code>, an address no aircraft holds. On the ground, if a paired Bravo identifies a transponder as the aircraft&rsquo;s own, Go also refuses an entered address that does not match the transponder&rsquo;s address.</p>
+        <p>Go does not refuse an unset ICAO address when Bravo identifies a Mode-S transponder on the aircraft. It proposes the address Bravo hears and lets the pilot accept it. Does F.2.3 require Go to refuse that configuration, or to enforce the address itself? Are there other configurations EASA intends the device to disallow?</p>
+      </li>
+    </ol>
+  </details>
+
+  <details id="sb-q7">
+    <summary>
+      <span class="kicker"><a href="#sb-q7">SB-Q7</a> &middot; The callsign &middot; C.5 and F.2.1</span>
+      <h3>May Go send the callsign in payload type 66 after the direct slot, or can EASA share the Issue 3 format early?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.C.5</strong> gives aircraft the direct slot, from 450 to 1000&nbsp;ms of each UTC second, and says of the rest of the second:</p>
+    <blockquote>
+      <p>Reserved: The unused time is reserved for future extensions and shall not be used for any ADS-L transmissions.</p>
+    </blockquote>
+    <p>Clause <strong>ADS-L.4.SRD860.F.2.1, &ldquo;Payload Type Identifier&rdquo;</strong>, lists payload type 66 as &ldquo;OGN Diagnostics&rdquo; and says its &ldquo;Payload definition is outside the scope of this document.&rdquo;</p>
+    <p>Go sends OGN&rsquo;s payload type 66 registration record in an ADS-L frame to carry its callsign. It sends the record between 0 and 200&nbsp;ms into the second after its slot. The <%= link_to_page "ads-l/callsign", label: "callsign page" %> explains the record. In our conversation on 2 October 2026, EASA said Issue 3 will carry a callsign. Go handles the callsign outside its ADS-L stack, so we can change how it sends the callsign without changing the ADS-L version.</p>
+    <ol>
+      <li><p><strong>Is a payload the specification does not define an ADS-L transmission in the sense of C.5?</strong> We read C.5 as excluding this payload from the rule. Should Go send payload type 66 in the direct slot instead?</p></li>
+      <li><p><strong>Could EASA share a preview of how Issue 3 carries the callsign?</strong> We would use the preview to prepare the encoding. Once Issue 3 is published, we would stop sending payload type 66, so the first question would no longer apply.</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q8">
+    <summary>
+      <span class="kicker"><a href="#sb-q8">SB-Q8</a> &middot; The flight state &middot; G.1.2</span>
+      <h3>Should aircraft that can hover report Undefined instead of On ground?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.G.1.2, &ldquo;Flight State&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>The &ldquo;Undefined&rdquo; value shall be used if no reasonable decision is possible by the ADS-L device.</p>
+    </blockquote>
+    <p>Go uses ground speed to decide whether the aircraft is in flight. A paraglider soaring a ridge into wind, a balloon or a hovering helicopter can all be airborne with no ground speed. For those aircraft, ground speed alone cannot tell Go whether they have landed. For categories 3, 5, 7 to 13 and 15 to 17, Go reports Undefined instead of On ground. It keeps transmitting at the 1&nbsp;Hz rate in G.1.16 instead of dropping to the ground rate of 0.1&nbsp;Hz.</p>
+    <ol>
+      <li><p><strong>Is this the use of Undefined the clause intends?</strong> Or should these categories announce On ground whenever their ground speed is low, and transmit at the ground rate?</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q9">
+    <summary>
+      <span class="kicker"><a href="#sb-q9">SB-Q9</a> &middot; Velocity accuracy &middot; G.1.16 and G.1.17</span>
+      <h3>May a device with no measured velocity bound send its velocity accuracy as Unknown?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.G.1.17, &ldquo;Quality Indicators&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>Unlike the ADS-B certification approach (CS-STAN Configuration 3 in particular), uncertified ADS-L devices shall however not report all quality values as 0. Instead, they shall report their positioning performance dynamically as defined in the previous sections.</p>
+    </blockquote>
+    <p>Go&rsquo;s receiver reports horizontal and vertical dilution of precision but gives no estimate of velocity error. Go updates horizontal and vertical accuracy with each fix. It reports velocity accuracy as 0, &ldquo;Unknown&rdquo;, a value the &ldquo;Velocity Accuracy&rdquo; table in G.1.16 allows.</p>
+    <ol>
+      <li><p><strong>Does that meet G.1.17?</strong> Not every quality value is 0, but the velocity accuracy always is.</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q10">
+    <summary>
+      <span class="kicker"><a href="#sb-q10">SB-Q10</a> &middot; Clients heard through a relay &middot; B.5</span>
+      <h3>Should relayed clients count when Go chooses a Traffic version?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.B.5, &ldquo;Soft Versioning and Protocol Evolution&rdquo;</strong>, says:</p>
+    <blockquote>
+      <p>An ADS-L client with air-to-air connectivity shall keep track of the Max. Protocol Version of other clients. [&hellip;] When sending a Traffic Payload, the client shall use a protocol version compatible with all other clients according to their declared Max. Protocol Version if one [of] the following conditions holds:</p>
+      <ol>
+        <li>The other client is closer than 1&nbsp;km horizontal and 800&nbsp;m vertical separation</li>
+        <li>The Time to Closest Point of Approach (TCPA) to the other client is less than 30&nbsp;seconds, and the vertical separation is under 800&nbsp;m.</li>
+      </ol>
+    </blockquote>
+    <p>B.5 does not say whether a client must hear the other client directly. Go counts only clients it hears directly when it chooses a Traffic version. For that decision, it leaves out Traffic or Status with the F.2 relay flag set, as well as targets in a G.3 Traffic Uplink. A client Go hears only through a relay may be too far away to receive Go&rsquo;s Traffic.</p>
+    <p>This behaviour is in <a href="https://github.com/fcatuhe/skyblip/pull/471">pull request #471</a>, which has not been merged.</p>
+    <ol>
+      <li><p><strong>Does B.5 cover clients heard only through a relay?</strong> Counting them would make Go send a lower version more often and could never make it send a higher one.</p></li>
+    </ol>
+  </details>
+
+  <details id="sb-q11">
+    <summary>
+      <span class="kicker"><a href="#sb-q11">SB-Q11</a> &middot; The absent vertical rate in Issue 1 &middot; Issue 1 G.1, G.1.6 and G.1.9</span>
+      <h3>Does 0x100 mean an absent vertical rate in Issue 1 Traffic?</h3>
+      <span class="note">Asked on 25 November 2026. No answer from EASA yet.</span>
+    </summary>
+    <p>Clause <strong>ADS-L.4.SRD860.G.2.1, &ldquo;Max. Protocol Version&rdquo;</strong>, in Issue 2, says:</p>
+    <blockquote>
+      <p>The sender shall be capable of receiving and parsing payloads of all versions of the protocol up to and including the version indicated in this field.</p>
+    </blockquote>
+    <p>Go must therefore read Issue 1 Traffic. The vertical rate row in Issue 1&rsquo;s G.1 table lists a &ldquo;special value for &lsquo;absent&rsquo;&rdquo;, but G.1.9 does not name the code.</p>
+    <p>Clause <strong>ADS-L.4.SRD860.G.1.6, &ldquo;Exponential Encoding&rdquo;</strong>, in Issue 1, says:</p>
+    <blockquote>
+      <p>A value of 0 shall always be encoded as non-negative, i.e. the sign bit shall be cleared.</p>
+    </blockquote>
+    <p>Every nonzero magnitude has a positive and a negative encoding, so negative zero, <code>0x100</code>, is the only spare signed code. OGN&rsquo;s Issue 1 implementation sends it for absent climb. Go reads it as absent in direct version 0 Traffic, rather than as level flight, and does not transmit it.</p>
+    <p>This behaviour is in <a href="https://github.com/fcatuhe/skyblip/pull/466">pull request #466</a>, which has not been merged.</p>
+    <ol>
+      <li><p><strong>Did Issue 1 intend <code>0x100</code> as the special value for an absent vertical rate?</strong></p></li>
+    </ol>
+  </details>
 </section>
 
 <section>
-  <h2 class="kicker">The flight state</h2>
-  <h3>Should a craft that can hover announce Undefined rather than On ground?</h3>
-  <p>Clause <strong>ADS-L.4.SRD860.G.1.2, &ldquo;Flight State&rdquo;</strong>, says:</p>
-  <blockquote>
-    <p>The &ldquo;Undefined&rdquo; value shall be used if no reasonable decision is possible by the ADS-L device.</p>
-  </blockquote>
-  <p>Go decides the flight state from ground speed. A paraglider soaring a ridge into wind, a balloon or a hovering helicopter can fly with no ground speed, so for those aircraft categories Go cannot tell a landing from flight. For categories 3, 5, 7 to 13 and 15 to 17 it sends Undefined instead of On ground. It therefore keeps the 1&nbsp;Hz rate of G.1.16 instead of dropping to the ground rate of 0.1&nbsp;Hz.</p>
-  <ol>
-    <li><p><strong>Is this the use of Undefined the clause intends?</strong> Or should these categories announce On ground whenever their ground speed is low, and transmit at the ground rate?</p></li>
-  </ol>
-  <p class="note">Not sent yet.</p>
-</section>
-
-<section>
-  <h2 class="kicker">The callsign</h2>
-  <h3>May payload type 66 go out after the direct slot?</h3>
-  <p>Clause <strong>ADS-L.4.SRD860.C.5</strong> gives aircraft the direct slot, from 450 to 1000&nbsp;ms of each UTC second, and says of the rest of the second:</p>
-  <blockquote>
-    <p>Reserved: The unused time is reserved for future extensions and shall not be used for any ADS-L transmissions.</p>
-  </blockquote>
-  <p>Clause <strong>ADS-L.4.SRD860.F.2.1, &ldquo;Payload Type Identifier&rdquo;</strong>, lists payload type 66 as &ldquo;OGN Diagnostics&rdquo; and says its &ldquo;Payload definition is outside the scope of this document.&rdquo;</p>
-  <p>Go sends its callsign in OGN&rsquo;s payload type 66 registration record, on the ADS-L frame, between 0 and 200&nbsp;ms of the second after its slot. The <%= link_to_page "ads-l/callsign", label: "callsign page" %> explains that record.</p>
-  <ol>
-    <li><p><strong>Is a payload the specification does not define an ADS-L transmission in the sense of C.5?</strong> We read it as not being one. Or does payload type 66 belong in the direct slot?</p></li>
-  </ol>
-  <p class="note">Not sent yet. The callsign lives outside Go&rsquo;s ADS-L stack, so a different answer changes the callsign code and not the ADS-L version.</p>
-</section>
-
-<section>
-  <h2 class="kicker">The age of the position</h2>
-  <h3>Must every position be a solution measured on a quarter second and sent within 500&nbsp;ms?</h3>
-  <p>Clause <strong>ADS-L.4.SRD860.G.1.1, &ldquo;Timestamp&rdquo;</strong>, says:</p>
-  <blockquote>
-    <p>The Timestamp field indicates the number of quarter seconds since the full hour, modulo 60. [&hellip;] The timestamp refers to the time of the navigation solution (PVT fix) obtained by the GNSS receiver (e.g. on the full second) and included in the Traffic payload. It shall be accurate to &plusmn;&nbsp;10&nbsp;ms.</p>
-  </blockquote>
-  <p>Clause <strong>ADS-L.4.SRD860.G.1.16, &ldquo;Transmit Rate and Timing&rdquo;</strong>, says:</p>
-  <blockquote>
-    <p>A message shall be replaced with a new message if the total delay of 500 ms from obtaining (measuring) the PVT fix is exceeded, e.g. due to the frequency being occupied, to prevent old data being sent. No Traffic message shall be sent containing navigation data older than 500 ms.</p>
-  </blockquote>
-  <p>Read together with the direct slot of C.5, from 450 to 1000&nbsp;ms, every position must be a solution the receiver measured within 10&nbsp;ms of a quarter second, and it must leave within 500&nbsp;ms of that measurement. Go does not move a position forward to a quarter second, because the result would no longer be a solution the receiver obtained.</p>
-  <p>This ties each transmission to the receiver&rsquo;s solution schedule, which we have not met in other systems. A receiver solving once a second, on the full second, serves only bursts between 450 and 500&nbsp;ms: 50&nbsp;ms of the 550&nbsp;ms slot. At 5 solutions a second, only the full second falls on a quarter. Only 4 solutions a second, or a multiple, puts every solution on a quarter. Go&rsquo;s receiver, a Quectel L76K, documents 1, 2 and 5 solutions a second, and on the bench it ignored a request for 4. Go therefore runs it at 2, with solutions on .000 and .500 of each second.</p>
-  <p>At 2 solutions a second, part of the slot has no usable solution. Go sends on 868.2&nbsp;MHz between 450 and 810&nbsp;ms and on 868.4&nbsp;MHz between 830 and 990&nbsp;ms (<%= link_to_page "timing", label: "timing page" %>). The .000 solution serves bursts up to 490&nbsp;ms, keeping 10&nbsp;ms for the burst&rsquo;s air time. The .500 solution reaches Go 40 to 160&nbsp;ms after it was measured. Between 490&nbsp;ms and its arrival, no solution meets both clauses. That gap falls inside the 868.2&nbsp;MHz window. In 26 minutes on the bench, before the change below, 21 of the 81 positions due on 868.2&nbsp;MHz were not sent.</p>
-  <p>Go now holds a position that falls in the gap until the .500 solution arrives. If the position&rsquo;s instant has passed by then, Go draws a new instant at random over the rest of the window, from its address and the second, so units do not all transmit on the solution&rsquo;s arrival. A position is lost only if the .500 solution arrives after 810&nbsp;ms, the window&rsquo;s last instant. This is not ideal. On 868.2&nbsp;MHz the bursts no longer spread evenly: about a quarter move from 490&ndash;590&nbsp;ms into 590&ndash;810&nbsp;ms, which then carries about 40&nbsp;% more bursts, and the chance of two units colliding rises from about 2.8&nbsp;% to about 3.9&nbsp;% per neighbour. Every Go has the same receiver and the same gap, so the uneven load adds up across a fleet. It also depends on the receiver&rsquo;s delay, which Go measures but does not control.</p>
-  <ol>
-    <li><p><strong>Do G.1.1 and G.1.16 intend to bind each position to a solution measured on a quarter second?</strong> Or may a device carry its latest solution forward to the quarter the Timestamp names, with the 500&nbsp;ms counted from that measurement?</p></li>
-    <li><p><strong>Could a later issue let the Timestamp name the solution&rsquo;s own time more finely than a quarter second?</strong> Receivers solving 1, 5 or 10 times a second could then meet both clauses, and devices could keep an even spread over the slot.</p></li>
-  </ol>
-  <p class="note">Not sent yet.</p>
-</section>
-
-<section>
-  <h2 class="kicker">Channel alternation</h2>
-  <h3>Does alternation by the schedule meet the rule after a burst that did not go out?</h3>
-  <p>Clause <strong>ADS-L.4.SRD860.C.2.5, &ldquo;Frequency Diversity&rdquo;</strong>, says:</p>
-  <blockquote>
-    <p>For the &ldquo;Traffic&rdquo; and &ldquo;Status&rdquo; payloads (see Subpart G), the sender shall alternate between these frequencies for every transmission to facilitate reception of these payloads for restricted, single-channel receivers.</p>
-  </blockquote>
-  <p>Go picks the channel from the parity of the UTC second: a position on 868.2&nbsp;MHz in an even second and on 868.4&nbsp;MHz in an odd one, and the Status the other way round. When a burst does not go out, because the channel stayed busy, the next one keeps its own second&rsquo;s channel, so two positions in a row can leave on the same frequency. A takeoff or a landing changes the rate, and in about one case in two it puts two positions in a row on one channel, once. A single-channel receiver still hears Go every other second, which is the purpose the clause gives.</p>
-  <ol>
-    <li><p><strong>Does alternation by the schedule meet C.2.5?</strong> Or must each transmission take the channel opposite to the last one that actually went out?</p></li>
-  </ol>
-  <p class="note">Not sent yet.</p>
-</section>
-
-<section>
-  <h2 class="kicker">Velocity accuracy</h2>
-  <h3>May a device with no measured velocity bound send it as unknown?</h3>
-  <p>Clause <strong>ADS-L.4.SRD860.G.1.17, &ldquo;Quality Indicators&rdquo;</strong>, says:</p>
-  <blockquote>
-    <p>Unlike the ADS-B certification approach (CS-STAN Configuration 3 in particular), uncertified ADS-L devices shall however not report all quality values as 0. Instead, they shall report their positioning performance dynamically as defined in the previous sections.</p>
-  </blockquote>
-  <p>Go&rsquo;s receiver reports its horizontal and vertical dilution of precision, but no velocity error. Go&rsquo;s horizontal and vertical accuracy change with each fix, while its velocity accuracy is sent as 0, &ldquo;Unknown&rdquo;, which the table of G.1.16, &ldquo;Velocity Accuracy&rdquo;, allows.</p>
-  <ol>
-    <li><p><strong>Does that meet G.1.17?</strong> Not every quality value is 0, but the velocity accuracy always is.</p></li>
-  </ol>
-  <p class="note">Not sent yet.</p>
+  <%= render "shared/pager", page: @page %>
 </section>
 
 <section>
@@ -120,7 +265,12 @@ updated_on: "2026-11-19"
     <li>
       <strong>EASA</strong> &middot;
       <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2.
-      <span class="support">C.2.5, C.5, F.2.1, F.2.3, G.1.1, G.1.2, G.1.16 and G.1.17, quoted above.</span>
+      <span class="support">B.3, B.5, C.2, C.2.5, C.5, F.2.1, F.2.2, F.2.3, G.1.1, G.1.2, G.1.16, G.1.17, G.2.1 and G.2.11, quoted above.</span>
+    </li>
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 1.
+      <span class="support">G.1, G.1.6 and G.1.9, cited in SB-Q11.</span>
     </li>
     <li>
       <strong>skyBlip firmware</strong> &middot;
@@ -129,9 +279,13 @@ updated_on: "2026-11-19"
     </li>
     <li>
       <strong>skyBlip firmware</strong> &middot;
+      <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/timing/README.md"><code>core/timing/README.md</code></a>.
+      <span class="support">The windows, the 20&nbsp;s cycle, listen-before-talk and the age of a position, with the code behind each.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot;
       <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/ADSL_EASA_QUESTIONS.md"><code>docs/ADSL_EASA_QUESTIONS.md</code></a>.
       <span class="support">The same questions, with the firmware files behind each reading.</span>
     </li>
   </ul>
-  <p><%= link_to_page "ads-l/nmea", class: "cta cta--previous" %></p>
 </section>

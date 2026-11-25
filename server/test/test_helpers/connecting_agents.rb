@@ -48,7 +48,7 @@ module ConnectingAgents
   end
 
   def mcp(method, params = {}, token:)
-    post mcp_path, params: { jsonrpc: "2.0", id: 1, method:, params: }.to_json,
+    post admin_mcp_path, params: { jsonrpc: "2.0", id: 1, method:, params: }.to_json,
       headers: { "Content-Type" => "application/json", "Accept" => "application/json, text/event-stream",
                  "MCP-Protocol-Version" => "2025-06-18", **({ "Authorization" => "Bearer #{token}" } if token) }
   end

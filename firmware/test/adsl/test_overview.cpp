@@ -33,6 +33,8 @@ model::Ownship flying_own() {
     own.altitude_hae_mm = 1000000;
     own.speed_mm_s = 30000;
     own.track_cdeg = 9000;
+    own.speed_valid = true;
+    own.track_valid = true;
     own.hdop_e2 = 90;
     own.vdop_e2 = 120;
     own.climb_valid = true;
@@ -77,6 +79,17 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour that is neither close nor closing lea
     CHECK(stacked.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
 }
 
+// A 2D fix knows no height, so an Issue 1 client 900 m above may be level with us, and is close.
+TEST_CASE("ADS-L.4.SRD860.B.5: with no height of its own, a Go counts a client overhead as close") {
+    model::Ownship own = flying_own();
+    own.altitude_hae_valid = false;
+    model::AircraftObservation above = neighbour(own, 500, 0);
+    above.altitude_m = 1900;
+    traffic::VersionTable versions;
+    versions.hear_traffic(above, own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+}
+
 // 4 km ahead, closing at 150 m/s head-on: 27 s to CPA, inside B.5's 30.
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour less than 30 s from CPA counts as close") {
     model::Ownship own = flying_own();
@@ -87,6 +100,29 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour less than 30 s from CPA counts as clo
     head_on.track_c9 = 384;
     versions.hear_traffic(head_on, own.utc_s);
     CHECK(versions.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+}
+
+// Own speed unknown, the closure is too: 30 s at G.1.8's fastest 236 m/s is 7080 m, plus its own.
+TEST_CASE("ADS-L.4.SRD860.B.5: with no own speed, a client 30 s away at 236 m/s counts as close") {
+    model::Ownship own = flying_own();
+    own.speed_mm_s = 0;
+    own.speed_valid = false;
+    const auto readable = [&](const model::Ownship& from, int32_t east_m) {
+        traffic::VersionTable versions;
+        model::AircraftObservation hovering = neighbour(from, east_m, 0);
+        hovering.speed_q = 0;
+        versions.hear_traffic(hovering, from.utc_s);
+        return versions.readable_version(from, from.fix_at_ms);
+    };
+    CHECK(readable(own, 2500) == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(readable(own, 7000) == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(readable(own, 7200) == adsl::Packet::kMaxProtocolVersion);
+
+    model::Ownship trackless = flying_own();
+    trackless.track_cdeg = 27000;
+    trackless.track_valid = false;
+    CHECK(readable(trackless, 2500) == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(readable(flying_own(), 2500) == adsl::Packet::kMaxProtocolVersion);
 }
 
 // B.5 reads a Traffic packet's version only for a client whose Status has not been heard.

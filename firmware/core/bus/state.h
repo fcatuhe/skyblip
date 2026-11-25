@@ -58,6 +58,7 @@ struct RfState {
         uint64_t tx_at_us{0};
         int8_t level_dbm{0};
         bool level_valid{false};
+        uint64_t heard_at_us{0};
     };
     static constexpr uint32_t kBusyKept = 4;
     Busy busy_ring[kBusyKept]{};

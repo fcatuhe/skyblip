@@ -30,12 +30,12 @@ bool link_action(const std::vector<diagnostics::Record>& records, diagnostics::L
 }
 
 // The receiver model doing the talking, rather than the rig pushing solutions past it.
-void receiver_seconds(Rig& rig, uint32_t& now_ms, uint32_t seconds) {
+void receiver_seconds(Rig& rig, uint32_t seconds) {
     for (uint32_t elapsed = 0; elapsed < seconds * 1000; elapsed += 50) {
-        rig.platform.chips().gnss.tick(now_ms);
-        rig.platform.clock().set_milliseconds(now_ms);
-        rig.product.run_pass(now_ms);
-        now_ms += 50;
+        rig.platform.chips().gnss.tick(rig.now_ms);
+        rig.platform.clock().set_milliseconds(rig.now_ms);
+        rig.product.run_pass(rig.now_ms);
+        rig.now_ms += 50;
     }
 }
 
@@ -44,7 +44,7 @@ void receiver_seconds(Rig& rig, uint32_t& now_ms, uint32_t seconds) {
 TEST_CASE("diagnostics boot: arming names the build and the parts that produced the corpus") {
     Rig rig;
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 3);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 3);
 
     CHECK(count_of(records, diagnostics::Type::Boot) == 1);
     diagnostics::Boot boot{};
@@ -63,10 +63,10 @@ TEST_CASE("diagnostics config: arming names the settings every other record was 
     rig.settings().battery_offset_mv = -30;
     rig.settings().battery_offset_manual = true;
     rig.settings().units = go::Units::Metric;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
-    taxi(rig, rig.now_ms, 2);
-    stop(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
+    taxi(rig, 2);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Config) == 1);
@@ -87,7 +87,7 @@ TEST_CASE(
     "diagnostics config: arming names the power the radio transmits at, as its executor set it") {
     Rig rig;
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 2);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 2);
 
     diagnostics::Config config{};
     REQUIRE(first_of(records, config));
@@ -98,7 +98,7 @@ TEST_CASE(
 TEST_CASE("diagnostics gnss: every solution is recorded with what the sky gave it") {
     Rig rig;
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 5);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 5);
 
     CHECK(count_of(records, diagnostics::Type::Gnss) >= 4);
     diagnostics::Gnss gnss{};
@@ -114,11 +114,11 @@ TEST_CASE("diagnostics gnss: a solution the receiver refused carries the reason 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
     rig.platform.chips().gnss.fix_valid = false;
-    receiver_seconds(rig, rig.now_ms, 5);
-    stop(rig, rig.now_ms);
+    receiver_seconds(rig, 5);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     diagnostics::Gnss gnss{};
@@ -131,10 +131,10 @@ TEST_CASE("diagnostics gnss: a solution the receiver accepted carries no reject 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
-    receiver_seconds(rig, rig.now_ms, 5);
-    stop(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
+    receiver_seconds(rig, 5);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     diagnostics::Gnss gnss{};
@@ -146,7 +146,7 @@ TEST_CASE("diagnostics gnss: a solution the receiver accepted carries no reject 
 TEST_CASE("diagnostics pps: one record an edge, and the interval it measured against a second") {
     Rig rig;
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 6);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 6);
 
     CHECK(count_of(records, diagnostics::Type::Pps) >= 5);
     CHECK(count_of(records, diagnostics::Type::Pps) <= 8);
@@ -162,11 +162,11 @@ TEST_CASE("diagnostics pps: a receiver that lost its edge still writes a record 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
     rig.platform.pps().set_locked(false);
-    taxi(rig, rig.now_ms, 5);
-    stop(rig, rig.now_ms);
+    taxi(rig, 5);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Pps) >= 4);
@@ -179,7 +179,7 @@ TEST_CASE("diagnostics pps: a receiver that lost its edge still writes a record 
 TEST_CASE("diagnostics dwell: every dwell the radio arms is a record, band edges and hop alike") {
     Rig rig;
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 4);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 4);
 
     CHECK(count_of(records, diagnostics::Type::Dwell) >= 3 * 4);
     bool uplink = false;
@@ -204,7 +204,7 @@ TEST_CASE("diagnostics dwell: every dwell the radio arms is a record, band edges
 TEST_CASE("diagnostics switch: every dwell change is recorded, with the channel it tuned to") {
     Rig rig;
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 4);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 4);
 
     CHECK(count_of(records, diagnostics::Type::Switch) >= 3 * 3);
     bool hop = false;
@@ -229,7 +229,7 @@ TEST_CASE("diagnostics switch: every dwell change is recorded, with the channel 
 TEST_CASE("diagnostics barometer: a sample carries the altitude and the rate taken from it") {
     Rig rig;
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 6);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 6);
 
     CHECK(count_of(records, diagnostics::Type::Barometer) >= 4);
     diagnostics::Barometer barometer{};
@@ -243,7 +243,7 @@ TEST_CASE("diagnostics motion: the hub's axes are recorded on their own cadence"
     Rig rig;
     rig.now_ms = 100;
     const int seconds = 6;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, seconds);
 
     CHECK(count_of(records, diagnostics::Type::Motion) >= seconds - 1);
     CHECK(count_of(records, diagnostics::Type::Motion) <= seconds + 1);
@@ -259,7 +259,7 @@ TEST_CASE("diagnostics motion: a unit with no hub writes no motion record at all
         ~static_cast<uint32_t>(ports::Capability::Inclinometer));
     Rig rig{kNoHub};
     rig.now_ms = 100;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, 4);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, 4);
 
     CHECK(count_of(records, diagnostics::Type::Motion) == 0);
     CHECK(count_of(records, diagnostics::Type::Power) > 0);
@@ -270,11 +270,11 @@ TEST_CASE(
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
     rig.press();
     rig.run_for(200);
-    stop(rig, rig.now_ms);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Contact) == 2);
@@ -294,13 +294,13 @@ TEST_CASE("diagnostics link: a central connecting is a record, with the payload 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
     rig.raise_link(7);
     rig.run_for(200);
     rig.send("{\"command\":\"status\"}");
     rig.run_for(200);
-    stop(rig, rig.now_ms);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     diagnostics::Link up{};
@@ -325,8 +325,8 @@ TEST_CASE(
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     rig.raise_link(4);
     rig.run_for(200);
@@ -334,7 +334,7 @@ TEST_CASE(
     rig.run_for(200);
     rig.drop_link(4);
     rig.run_for(200);
-    stop(rig, rig.now_ms);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     diagnostics::Link down{};
@@ -349,8 +349,8 @@ TEST_CASE(
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
 
     for (int i = 0; i < 4; i++) {
         model::AircraftObservation observation{};
@@ -367,9 +367,9 @@ TEST_CASE(
         observation.source = model::Source::AdslDirect;
         observation.received.at_s = rig.state().traffic_now_s(rig.now_ms);
         rig.state().traffic.update(observation, rig.state().traffic_now_s(rig.now_ms));
-        taxi(rig, rig.now_ms, 1);
+        taxi(rig, 1);
     }
-    stop(rig, rig.now_ms);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Traffic) >= 3);
@@ -390,12 +390,12 @@ TEST_CASE(
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
-    arm(rig, rig.now_ms);
+    taxi(rig, 3);
+    arm(rig);
     rig.settings().alarm = go::Alarm::Soft;
     rig.product.config_link().config().note_settings_changed();
-    taxi(rig, rig.now_ms, 6);
-    stop(rig, rig.now_ms);
+    taxi(rig, 6);
+    stop(rig);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Write) > 1);
@@ -416,7 +416,7 @@ TEST_CASE("diagnostics screen: what was on the glass is recorded on the render c
     Rig rig;
     rig.now_ms = 100;
     const int seconds = 8;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, seconds);
 
     CHECK(count_of(records, diagnostics::Type::Screen) >= seconds - 1);
     CHECK(count_of(records, diagnostics::Type::Screen) <= seconds + 1);
@@ -435,7 +435,7 @@ TEST_CASE(
     Rig rig;
     rig.now_ms = 100;
     const int seconds = 8;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, rig.now_ms, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, seconds);
 
     CHECK(count_of(records, diagnostics::Type::Loop) >= seconds - 1);
     CHECK(count_of(records, diagnostics::Type::Loop) <= seconds + 1);
@@ -450,8 +450,8 @@ TEST_CASE("diagnostics: the rate a capture is priced at covers a quiet airborne 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 8);
-    arm(rig, rig.now_ms);
+    taxi(rig, 8);
+    arm(rig);
     const uint32_t before = rig.product.capture().records_written();
     const uint32_t seconds = 20;
     rig.seconds(seconds, 50000, 800);
@@ -467,12 +467,12 @@ TEST_CASE("diagnostics: a device nobody armed records nothing at all" *
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.now_ms = 100;
-    taxi(rig, rig.now_ms, 3);
+    taxi(rig, 3);
     rig.raise_link(3);
     rig.press();
     rig.settings().alarm = go::Alarm::Soft;
     rig.product.config_link().config().note_settings_changed();
-    taxi(rig, rig.now_ms, 6);
+    taxi(rig, 6);
 
     CHECK(rig.product.diagnostics().written() == 0);
     CHECK(rig.product.diagnostics().queued() == 0);

@@ -15,6 +15,7 @@
 
 <%= hreflang_link_tags %>
 <%= tag :link, rel: "alternate", type: "text/markdown", href: Content.canonical_url(@page.markdown_path) if @page %>
+<%= tag :link, rel: "alternate", type: "application/atom+xml", title: "skyBlip", href: Content.canonical_url(content_feed_path) if @page %>
 
 <%= tag :meta, name: "robots", content: robots_content %>
 

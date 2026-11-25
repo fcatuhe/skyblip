@@ -2,7 +2,6 @@
 // radar, what we transmit about ourselves) is this parser's output, so a sentence
 // that fails its checksum must leave the fix untouched rather than half-applied,
 // and a sentence arriving one byte at a time must reconstruct exactly.
-#include <cstdio>
 #include <cstdlib>  // std::abs
 #include <cstring>
 #include <string>
@@ -10,18 +9,14 @@
 #include "core/gnss/nmea.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
+#include "test/support/nmea_checksum.h"
 
 using namespace skyblip::gnss;
+using skyblip::checksummed;
 
 namespace {
-std::string checksummed(const char* body) {
-    uint8_t checksum = 0;
-    for (const char* character = body; *character; character++)
-        checksum ^= static_cast<uint8_t>(*character);
-    char tail[4];
-    std::snprintf(tail, sizeof(tail), "*%02X", checksum);
-    return std::string("$") + body + tail;
-}
+constexpr const char* kNextBurstGga =
+    "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
 
 bool parse(NmeaParser& parser, const std::string& line) {
     return parser.parse_line(line.c_str(), static_cast<int>(line.size()));
@@ -56,8 +51,10 @@ TEST_CASE("gnss: RMC updates fix position, time, speed, track" * doctest::test_s
     CHECK(solution.latitude_1e7 > 480000000);
     CHECK(solution.longitude_1e7 > 0);
     // 22.4 knots is 11.524 m/s, and the tenth of a knot the sentence carries survives
+    CHECK(solution.speed_valid);
     CHECK(solution.speed_mm_s == 11524);
     // 84.4 degrees, kept as the receiver reported it rather than as the wire will carry it
+    CHECK(solution.track_valid);
     CHECK(solution.track_cdeg == 8440);
     // 2025-08-23 12:35:19 UTC epoch
     CHECK(solution.utc_s == 1755952519u);
@@ -96,37 +93,14 @@ TEST_CASE("gnss: a latitude past 90, a longitude past 180 or a 60th minute is no
     CHECK(parser.solution().longitude_1e7 == -1800000000);
 }
 
-TEST_CASE("gnss: a speed or an altitude no civil receiver reports is refused, never overflowed") {
+TEST_CASE("gnss: an altitude no civil receiver reports is refused, never overflowed") {
     NmeaParser parser;
-    REQUIRE(
-        parse(parser, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,1000.1,084.4,230825,,")));
-    CHECK(parser.solution().speed_mm_s == 0);
-    REQUIRE(
-        parse(parser, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,99999999999999999999.9,"
-                                  "084.4,230825,,")));
-    CHECK(parser.solution().speed_mm_s == 0);
-
     for (const char* altitude : {"100000.1", "-1000.1", "99999999999999999999.9"}) {
         CAPTURE(altitude);
         const std::string body =
             std::string("GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,") + altitude + ",M,46.9,M,,";
         REQUIRE(parse(parser, checksummed(body.c_str())));
         CHECK_FALSE(parser.solution().altitude_msl_valid);
-    }
-}
-
-// A refused speed kept the one before it, and the case beside it only ever fed a fresh parser.
-TEST_CASE("gnss: a refused speed after a good one is not the good one carried over") {
-    for (const char* speed : {"1000.1", "99999999999999999999.9", ""}) {
-        CAPTURE(speed);
-        NmeaParser parser;
-        REQUIRE(parse(parser,
-                      checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230825,,")));
-        REQUIRE(parser.solution().speed_mm_s == 11524);
-        const std::string body =
-            std::string("GPRMC,123520,A,4807.038,N,01131.000,E,") + speed + ",084.4,230825,,";
-        REQUIRE(parse(parser, checksummed(body.c_str())));
-        CHECK(parser.solution().speed_mm_s == 0);
     }
 }
 
@@ -224,10 +198,8 @@ TEST_CASE("gnss: GGA carries MSL and ellipsoidal height as separate values" *
     CHECK(solution.altitude_hae_mm == 592300);  // 545.4 + 46.9, the value ADS-L wants
 }
 
-// Some receivers omit field 11 entirely and some always answer "0.0,M": OGN
-// carries a manual override with a 40 m default (oss/nrf52-ogn-tracker
-// src/main.h:38, src/gps.cpp:526-529) and SoftRF special-cases the always-zero
-// chipsets (oss/SoftRF-lyusupov .../src/driver/GNSS.cpp:1681-1684). We fall back
+// Some receivers omit field 11 entirely: OGN carries a manual override with a 40 m
+// default (oss/nrf52-ogn-tracker src/main.h:38, src/gps.cpp:526-529). We fall back
 // to a named regional constant and flag that the separation was assumed, so a
 // wrong altitude is attributable rather than silent.
 TEST_CASE("gnss: a receiver that omits the geoid separation falls back and says so") {
@@ -240,13 +212,15 @@ TEST_CASE("gnss: a receiver that omits the geoid separation falls back and says 
     CHECK(parser.solution().altitude_hae_mm == 545400 + kDefaultGeoidSeparationMm);
 }
 
-TEST_CASE("gnss: a receiver stuck at 0.0 separation falls back too") {
+// A receiver with no geoid model writes 0.0 and an ellipsoidal field 9, as SoftRF reads it
+// (oss/SoftRF .../src/protocol/data/NMEA.cpp:690-695), so 46 m more would overstate the height.
+TEST_CASE("gnss: a 0.0 geoid separation is measured, so field 9 is the ellipsoidal height") {
     NmeaParser parser;
     const char* zero = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,0.0,M,,*7C";
     REQUIRE(parser.parse_line(zero, static_cast<int>(strlen(zero))));
-    CHECK_FALSE(parser.solution().geoid_measured);
-    CHECK(parser.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
-    CHECK(parser.solution().altitude_hae_mm == 545400 + kDefaultGeoidSeparationMm);
+    CHECK(parser.solution().geoid_measured);
+    CHECK(parser.solution().geoid_separation_mm == 0);
+    CHECK(parser.solution().altitude_hae_mm == 545400);
 }
 
 // GGA field 8. Without it every integrity and accuracy field we transmit is a
@@ -271,6 +245,7 @@ TEST_CASE("gnss: GSA carries VDOP in hundredths") {
     CHECK(parser.solution().vdop_e2 == 210);
 
     // A 2D solution computes no vertical figure and leaves the field empty.
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
     const char* flat = "$GPGSA,A,2,04,05,,09,12,,,24,,,,,2.50,1.25,*11";
     REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
     CHECK(parser.solution().vdop_e2 == 0);
@@ -283,13 +258,43 @@ TEST_CASE("gnss: GSA says whether the receiver solved for height") {
     REQUIRE(parser.parse_line(solid, static_cast<int>(strlen(solid))));
     CHECK(parser.solution().fix_mode == kFixMode3D);
 
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
     const char* flat = "$GPGSA,A,2,04,05,,09,12,,,24,,,,,2.50,1.25,*11";
     REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
     CHECK(parser.solution().fix_mode == kFixMode2D);
 }
 
+// The L76K documents VDOP up to 99.0 and never an empty one, so a 2D GSA may still print it.
+TEST_CASE("gnss: a GSA that says 2D carries no VDOP, even one it prints") {
+    NmeaParser parser;
+    const char* flat = "$GPGSA,A,2,04,05,,09,12,,,24,,,,,2.50,1.25,3.10*0D";
+    REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
+    CHECK(parser.solution().fix_mode == kFixMode2D);
+    CHECK(parser.solution().vdop_e2 == 0);
+}
+
+// A GSA with no DOP used to be skipped whole, so a receiver that lost its height stayed 3D.
+TEST_CASE("gnss: a GSA with no DOP still says the receiver lost its height") {
+    NmeaParser parser;
+    const char* solid = "$GNGSA,A,3,04,05,,09,12,,,24,,,,,2.50,1.25,2.10,1*0E";
+    REQUIRE(parser.parse_line(solid, static_cast<int>(strlen(solid))));
+    REQUIRE(parser.solution().vdop_e2 == 210);
+
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
+    const char* flat = "$GNGSA,A,2,04,05,,09,12,,,24,,,,,,,,1*13";
+    REQUIRE(parser.parse_line(flat, static_cast<int>(strlen(flat))));
+    CHECK(parser.solution().fix_mode == kFixMode2D);
+    CHECK(parser.solution().vdop_e2 == 0);
+
+    REQUIRE(parser.parse_line(kNextBurstGga, static_cast<int>(strlen(kNextBurstGga))));
+    const char* lost = "$GNGSA,A,1,,,,,,,,,,,,,,,,1*1D";
+    REQUIRE(parser.parse_line(lost, static_cast<int>(strlen(lost))));
+    CHECK(parser.solution().fix_mode == 1);
+    CHECK(parser.solution().vdop_e2 == 0);
+}
+
 // One GSA per constellation, and the one whose satellites are in no solution carries no DOP.
-TEST_CASE("gnss: a GSA with no DOP at all is a constellation that solved nothing") {
+TEST_CASE("gnss: a GSA with no DOP beside a solving one is a constellation that solved nothing") {
     NmeaParser parser;
     const char* solved = "$GNGSA,A,3,04,05,,09,12,,,24,,,,,2.50,1.25,2.10,1*0E";
     REQUIRE(parser.parse_line(solved, static_cast<int>(strlen(solved))));

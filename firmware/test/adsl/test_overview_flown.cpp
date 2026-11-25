@@ -11,6 +11,7 @@
 #include "core/protocol/air.h"
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
+#include "core/timing/transmit_gate.h"
 #include "core/traffic/table.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
@@ -39,12 +40,13 @@ struct Flown {
     uint32_t given_up{0};
     uint8_t version{0};
     uint8_t category{0};
+    timing::NoTx unmet{timing::NoTx::None};
 };
 
 // Every simulated aircraft sends version 0, so to a Go it is an Issue 1 client until a Status says
 // more. A VDOP of 0 is a 2D fix, whose altitude goes out as unknown.
 Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int speed_kt = 60,
-            uint32_t for_ms = 15000) {
+            uint32_t for_ms = 15000, bool speed_reported = true) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.product().settings().aircraft_type = category;
@@ -52,7 +54,13 @@ Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int sp
     simulator.world().set_speed_kt(speed_kt);
     simulator.world().gnss().vdop_e2 = vdop_e2;
     if (beside_issue1) simulator.world().add_aircraft(0, 400, 0, speed_kt == 0 ? 1 : 30, 90);
-    const uint32_t settled_ms = past_settling(simulator);
+    uint32_t settled_ms = past_settling(simulator);
+    if (!speed_reported) {
+        simulator.world().gnss().emit_speed = false;
+        run_on(simulator, settled_ms, 1000);
+        simulator.world().air().clear();
+        settled_ms += 1000 + simulator::Simulator::kStepMs;
+    }
     const uint32_t held_before = simulator.product().state().air.tx_held_for_b5;
     const uint32_t given_up_before = simulator.product().state().air.tx_given_up;
     run_on(simulator, settled_ms, for_ms);
@@ -73,6 +81,7 @@ Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int sp
     }
     out.held = simulator.product().state().air.tx_held_for_b5 - held_before;
     out.given_up = simulator.product().state().air.tx_given_up - given_up_before;
+    out.unmet = simulator.product().state().transmit.unmet();
     return out;
 }
 
@@ -99,8 +108,23 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a 2D fix beside an Issue 1 client puts no positio
     const Flown beside = flown(4, true, /*vdop_e2=*/0);
     CHECK(beside.sent == 0);
     CHECK(beside.held > 10);
+    CHECK(beside.unmet == timing::NoTx::Held);
 
     const Flown alone = flown(4, false, /*vdop_e2=*/0);
+    CHECK(alone.sent > 10);
+    CHECK(alone.held == 0);
+    CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
+    CHECK(alone.unmet == timing::NoTx::None);
+}
+
+// Issue 1 has no code for an unknown speed either, and the Go sent 0 m/s in its place.
+TEST_CASE(
+    "ADS-L.4.SRD860.B.5: a fix with no ground speed beside an Issue 1 client puts none on air") {
+    const Flown beside = flown(4, true, 150, 60, 15000, /*speed_reported=*/false);
+    CHECK(beside.sent == 0);
+    CHECK(beside.held > 10);
+
+    const Flown alone = flown(4, false, 150, 60, 15000, /*speed_reported=*/false);
     CHECK(alone.sent > 10);
     CHECK(alone.held == 0);
     CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
@@ -268,7 +292,7 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a close Issue 1 client on the ground counts besid
 }
 
 // F.2's relay flag says another station sent it on the sender's behalf, so the sender may be out
-// of our range (docs/ADSL_EASA_QUESTIONS.md, question 7).
+// of our range (docs/ADSL_EASA_QUESTIONS.md, SB-Q10).
 TEST_CASE("ADS-L.4.SRD860.B.5: a relayed Traffic leaves the version to the clients heard direct") {
     Flight flight;
     flight.simulator.world().air().clear();

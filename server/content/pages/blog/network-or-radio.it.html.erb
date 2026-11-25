@@ -1,0 +1,62 @@
+---
+title: "SafeSky e ADS-L: rete o radio?"
+nav_title: Rete o radio
+slug: blog/rete-o-radio
+description: "SafeSky via rete mobile, ADS-L via radio diretta: dove funzionano, dove perdi il traffico e perché voliamo con entrambi."
+published_on: "2026-11-13"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 13 novembre 2026</p>
+  <h1>SafeSky e ADS-L: rete o radio?</h1>
+  <p class="lede">Alcuni piloti vedono con SafeSky gli alianti vicino al loro campo. Altri perdono il traffico proprio dove gli aerei leggeri volano di più, lontano dalle città. Hanno ragione tutti: queste esperienze dipendono anche dalla copertura mobile. ADS-L usa un&rsquo;altra via, la radio diretta fra aeromobili.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Due strade</h2>
+  <h3>SafeSky passa dalla rete. ADS-L va da aeromobile ad aeromobile.</h3>
+  <p>SafeSky è un&rsquo;app. Il tuo telefono invia la tua posizione tramite la rete mobile ai server di SafeSky. I server la uniscono al traffico di oltre trenta fonti, fra cui le stazioni a terra OGN, i ricevitori ADS-B e gli altri utenti di SafeSky. Poi rimandano il quadro completo a ogni telefono. L&rsquo;app da sola è gratuita. Per vedere il suo traffico nella tua app di navigazione, o ricevere il traffico da un dispositivo radio come un ricevitore FLARM, serve SafeSky Premium, a 39,99&nbsp;€ all&rsquo;anno.</p>
+  <p>ADS-L permette di condividere le posizioni via radio. Un dispositivo a bordo trasmette la tua posizione ogni secondo su 868&nbsp;MHz e ogni ricevitore entro alcuni chilometri la riceve direttamente. Niente server, niente SIM, niente abbonamento.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Dove ciascuno diventa cieco</h2>
+  <h3>La rete si ferma senza copertura mobile. La radio si ferma quando nessuno trasmette.</h3>
+  <ul>
+    <li><strong>La copertura mobile.</strong> In volo un telefono può perdere la rete. La sua posizione arriva allora al server in ritardo, o non arriva affatto. Aerei leggeri e alianti passano il loro tempo sopra la campagna, dove la copertura è più debole. ADS-L non ne dipende.</li>
+    <li><strong>Chi partecipa.</strong> Quando la rete lo permette, SafeSky mostra ogni utente dell&rsquo;app e ogni aeromobile ricevuto da una stazione a terra, anche lontano da te. Un ricevitore ADS-L mostra solo gli aeromobili a portata che trasmettono un segnale compatibile, ma li riceve direttamente.</li>
+    <li><strong>Chi ti vede.</strong> Un jet militare a bassa quota non usa SafeSky e non ha nemmeno ADS-L. Nessuno dei due ti rende visibile a un aeromobile che legge solo i transponder.</li>
+  </ul>
+  <p>Gli istruttori sottolineano un punto che condividiamo: ogni schermo in cabina porta lo sguardo dentro. Un sistema di traffico serve a dirti dove guardare, poi a lasciarti guardare fuori. Per questo l&rsquo;allarme del Go accende il quarto di schermo rivolto verso il traffico, e niente di più.</p>
+</section>
+
+<section>
+  <h2 class="kicker">In pratica</h2>
+  <h3>Usali entrambi. Si completano a vicenda.</h3>
+  <p>Un Go in cabina ti rende visibile a ogni ricevitore ADS-L intorno a te, che ci sia campo o no. Le stazioni OGN che ricevono il tuo segnale possono ritrasmettere la tua posizione sulla rete. Gli utenti di SafeSky possono così vederti. Il tuo telefono continua a usare SafeSky per il traffico che solo la rete conosce.</p>
+  <p>Se usi l&rsquo;AERO Tracker di SafeSky, trasmetti già in ADS-L. Anche il Go trasmette la tua posizione in ADS-L, per una frazione del prezzo. Il nostro <%= link_to_page "compare", label: "confronto" %> li mette uno accanto all&rsquo;altro.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Fonti</h2>
+  <ul class="sources">
+    <li>
+      <strong>SafeSky</strong> &middot; pagina <a href="https://www.safesky.app/application">App</a>, consultata il 13 novembre 2026.
+      <span class="support">Cosa fa l&rsquo;app gratuita e cosa richiede Premium: le app di navigazione e i dispositivi radio.</span>
+    </li>
+    <li>
+      <strong>SafeSky</strong> &middot; pagina <a href="https://www.safesky.app/device">Electronic device</a>, consultata il 13 novembre 2026.
+      <span class="support">Il traffico da oltre 30 fonti e i piani dati mobili dell&rsquo;AERO Tracker.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

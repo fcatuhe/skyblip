@@ -1,7 +1,8 @@
 class Releases::AssetsController < ApplicationController
-  # INFO: fc 17oct26 Rails refuses a GET answered with JavaScript unless forgery protection is off, and embed.js is one.
+  # INFO: fc 17oct26 Rails refuses a GET answered with JavaScript unless forgery protection is off, and the simulator's embed is one.
   skip_forgery_protection
   allow_unauthenticated_access
+  rate_limit to: 30, within: 1.minute, unless: -> { params[:release_tag] == Release::LOCAL_TAG }, with: -> { head :too_many_requests, retry_after: 1.minute.to_i }
   # INFO: fc 17oct26 a response cached a year by anyone must not carry a visitor's cookie
   skip_before_action :track_ahoy_visit
   skip_after_action :track_action

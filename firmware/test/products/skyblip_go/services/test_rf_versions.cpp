@@ -43,8 +43,8 @@ const ports::RfPlan* last_with_burst(const Armings& armings) {
 adsl::Packet packet_in(const ports::RfPlan& plan) {
     simulator::AirRecord record{};
     record.event = simulator::AirEvent::Tx;
-    const uint8_t sync_bytes = plan.sync_bits / 8;
-    std::memcpy(record.chips, plan.sync, sync_bytes);
+    const uint8_t sync_bytes = plan.tx_sync_bits / 8;
+    std::memcpy(record.chips, plan.tx_sync, sync_bytes);
     std::memcpy(record.chips + sync_bytes, plan.tx, plan.tx_bytes);
     record.bytes = static_cast<uint16_t>(sync_bytes + plan.tx_bytes);
     adsl::Packet packet{};

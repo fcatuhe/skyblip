@@ -6,7 +6,7 @@ void TransmitGate::judge(const Requirements& met, uint32_t now_ms) {
     met_ = met;
     if (met.fix && !first_fix_ms_) first_fix_ms_ = now_ms;
     unmet_ = first_unmet(met);
-    transmits_ = unmet_ == NoTx::None && met.settled;
+    transmits_ = (unmet_ == NoTx::None || unmet_ == NoTx::Held) && met.settled;
     if (unmet_ == NoTx::None) {
         unmet_since_ms_.reset();
         if (!met_since_ms_) met_since_ms_ = now_ms;
@@ -39,6 +39,7 @@ NoTx first_unmet(const Requirements& met) {
     if (!met.fix) return NoTx::Fix;
     if (!met.utc) return NoTx::Utc;
     if (!met.pps) return NoTx::Pps;
+    if (!met.positions) return NoTx::Held;
     return NoTx::None;
 }
 

@@ -36,6 +36,14 @@ class RenamedPagesTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/briefing/ownship?type=glider&rows=ff"
   end
 
+  test "an old French briefing address with doubled slashes stays on this site" do
+    get "/fr//briefing"
+    assert_redirected_to "http://www.example.com/briefing"
+
+    get "/fr///briefing/console"
+    assert_redirected_to "http://www.example.com/briefing/console"
+  end
+
   test "the ADS-L pages' old addresses lead to their place under /ads-l" do
     get "/ads-l-registry"
     assert_response :moved_permanently

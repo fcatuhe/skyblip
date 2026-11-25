@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   constraints ->(request) { request.original_fullpath.match?(%r{\A/[^?]+/(\?|\z)}) } do
-    get "*path", format: false, to: redirect { |_params, request| request.original_fullpath.sub(%r{/+(\?|\z)}, '\\1') }
+    get "*path", format: false, to: redirect { |_params, request| request.fullpath }
   end
 
   get "up" => "rails/health#show", as: :rails_health_check
@@ -15,7 +15,7 @@ Rails.application.routes.draw do
 
   scope ".well-known", module: :oauth do
     resource :authorization_server, only: :show, path: "oauth-authorization-server"
-    resource :protected_resource, only: :show, path: "oauth-protected-resource/mcp"
+    resource :protected_resource, only: :show, path: "oauth-protected-resource/admin/mcp"
   end
 
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
@@ -26,6 +26,7 @@ Rails.application.routes.draw do
   resources :events, only: :create
 
   namespace :admin do
+    resource :mcp, only: %i[show create destroy]
     resource :analytics, only: :show do
       scope module: :analytics do
         resources :visitors, only: %i[index show], param: :visitor_token
@@ -65,8 +66,9 @@ Rails.application.routes.draw do
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }
   end
 
-  # INFO: fc 11nov26 the glass prints skyblip.eu/activate, and the device pages lived on the public site before the briefing app | 13nov26 the briefing dropped its /fr addresses for a language setting | 13nov26 the Go's page moved from /features to /go | 13nov26 the ADS-L pages moved under /ads-l
+  # INFO: fc 11nov26 the glass prints skyblip.eu/activate, and the device pages lived on the public site before the briefing app | 13nov26 the briefing dropped its /fr addresses for a language setting | 13nov26 the Go's page moved from /features to /go | 13nov26 the ADS-L pages moved under /ads-l | 25nov26 the setup asks a pilot to type skyblip.eu/setup on the other device
   get "activate", to: redirect("/briefing/activate")
+  get "setup", to: redirect("/briefing/setup")
   get "fr/activer", to: redirect("/briefing/activate")
   %w[update configure manage].each { |path| get path, to: redirect("/briefing") }
   %w[mettre-a-jour regler mise-a-jour].each { |path| get "fr/#{path}", to: redirect("/briefing") }
@@ -85,7 +87,9 @@ Rails.application.routes.draw do
       resources :captures, only: :create, module: :devices
     end
     resource :activation, only: :show, path: "activate"
-    resource :setup, only: :show
+    resource :setup, only: :show do
+      resource :handoff, only: :show, module: :setups, defaults: { format: :svg }
+    end
     resource :installer, only: :show
     resource :preferences, only: %i[show update]
     resource :tools, only: :show
@@ -98,12 +102,13 @@ Rails.application.routes.draw do
     resource :ownship, only: :show
   end
 
-  scope module: :content, as: :content, format: false, defaults: { format: :text } do
-    resource :llms, only: :show, path: "llms.txt"
-    resource :llms_full, only: :show, path: "llms-full.txt", controller: :llms_full
-  end
-
   scope "(:locale)", locale: /#{I18n.available_locales.without(I18n.default_locale).join("|")}/ do
+    scope module: :content, as: :content, format: false do
+      resource :llms, only: :show, path: "llms.txt", defaults: { format: :text }
+      resource :llms_full, only: :show, path: "llms-full.txt", controller: :llms_full, defaults: { format: :text }
+      resource :feed, only: :show, path: "feed.atom", defaults: { format: :atom }
+    end
+
     draw :content
   end
 end

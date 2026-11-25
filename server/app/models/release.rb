@@ -9,8 +9,7 @@ class Release
   FIRMWARE = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   INSTALLER = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+\.uf2\z/
-  FILE = /#{FIRMWARE}|#{INSTALLER}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
-  SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
+  FILE = /#{FIRMWARE}|#{INSTALLER}|\A#{Regexp.union(SimulatorFiles::NAMINGS.flat_map(&:names))}\z/
   LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
@@ -54,13 +53,13 @@ class Release
     [ newest_first.find(&:stable?), *newest_first.select(&:development?) ].compact
   end
 
-  def self.prompt_glass_tag
+  def self.prompt_glass_embed
     if local_simulator
-      LOCAL_TAG
+      [ LOCAL_TAG, SimulatorFiles::CURRENT.embed ]
     elsif Rails.configuration.x.local_simulator_only
       raise Unavailable, "No local simulator build"
     elsif (release = simulator)
-      release.tag
+      [ release.tag, release.simulator_files.embed ]
     else
       raise Unavailable, "No release holds the simulator"
     end
@@ -84,12 +83,12 @@ class Release
   # INFO: fc 14nov26 development and test serve the WASM `make -C firmware browser` built, which no release holds yet
   def self.local_simulator
     directory = Rails.configuration.x.simulator_build
-    directory if directory && SIMULATOR_FILES.all? { File.file?(File.join(directory, it)) }
+    directory if directory && SimulatorFiles::CURRENT.runtime.all? { File.file?(File.join(directory, it)) }
   end
 
   def self.download(tag, file)
     return local_file(file) if tag == LOCAL_TAG
-    raise NotFound unless TAG.match?(tag) && FILE.match?(file)
+    raise NotFound unless TAG.match?(tag) && FILE.match?(file) && published.any? { it.tag == tag && it.assets.include?(file) }
 
     uri = URI("https://github.com/#{REPOSITORY}/releases/download/#{tag}/#{file}")
     request(uri, downloads: true).body
@@ -141,7 +140,7 @@ class Release
 
   def self.local_file(file)
     directory = local_simulator
-    raise NotFound unless directory && SIMULATOR_FILES.include?(file)
+    raise NotFound unless directory && SimulatorFiles::CURRENT.runtime.include?(file)
 
     File.binread(File.join(directory, file))
   end
@@ -177,7 +176,8 @@ class Release
   def channel = development? ? "development" : "release"
   def key = KEYS.fetch(channel)
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
-  def simulator? = (SIMULATOR_FILES - assets).empty?
+  def simulator_files = SimulatorFiles.in(assets)
+  def simulator? = !simulator_files.nil?
   def firmware_files = assets.grep(FIRMWARE)
   def installer_file(product) = assets.find { |asset| asset[INSTALLER, 1] == product }
 end
