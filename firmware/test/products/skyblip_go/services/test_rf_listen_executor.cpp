@@ -254,7 +254,7 @@ TEST_CASE("rf: a jammed site defers every airborne position, and reports the flo
     CHECK(pass.radio_service.noise_floor().level_dbm() == timing::NoiseFloor::kSeedDbm);
 
     pass.chip.rssi_dbm = -50;  // a neighbour sitting on the channel, 55 dB over the floor
-    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) pass.whole_pass(now_us);
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 1000) pass.whole_pass(now_us);
 
     CHECK_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
     CHECK(pass.state.air.tx_deferred > 0);

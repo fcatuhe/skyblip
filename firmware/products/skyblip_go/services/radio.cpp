@@ -236,9 +236,26 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     if (!context_.state.transmit.transmits()) return timing::Transmitter::Attempt{};
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
+    const uint32_t utc_s = slot_utc_s(now_ms);
+    const Contention& contention = contention_[static_cast<int>(payload)];
+    const bool contended = contention.open && contention.second_s == utc_s;
+    if (contended && !contention.not_before_us) return timing::Transmitter::Attempt{};
+
     timing::Transmitter::Attempt owed =
-        transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate(), fix_lag_ms(origin_us),
-                             payload, fix_in_hand_ms(origin_us));
+        transmitter_.attempt(plan, utc_s, now_ms, full_rate(), fix_lag_ms(origin_us), payload,
+                             fix_in_hand_ms(origin_us));
+    if (contended && owed.go) {
+        const int64_t not_before_us = static_cast<int64_t>(*contention.not_before_us) - origin_us;
+        const int not_before_ms = static_cast<int>((not_before_us + 999) / 1000);
+        owed.at_ms = std::max(owed.at_ms, not_before_ms);
+        owed.redrawn = true;
+        const int slot = timing::Scheduler::slot_of(plan.start_ms);
+        if (owed.at_ms > timing::Transmitter::last_instant(payload, slot) ||
+            fix_too_old_at(instant_us(owed, origin_us))) {
+            owed.go = false;
+            owed.stale = true;
+        }
+    }
     // INFO: fc 18nov26 a fix no timely fix anchored has no age a position can be judged by
     if (payload == Payload::Position && owed.go && !own.fix_dated) {
         owed.go = false;

@@ -107,6 +107,8 @@ class RadioService : public runtime::Service {
         bool open{false};
         uint32_t turn_s{0};
         uint64_t first_us{0};
+        uint32_t second_s{0};
+        std::optional<uint64_t> not_before_us{};
     };
 
     bool identified();

@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "products/skyblip_go/services/radio.h"
 
 namespace skyblip::go {
@@ -32,7 +34,9 @@ RadioService::Armed* RadioService::carrying(uint64_t tx_at_us, Payload& payload)
 // INFO: fc 14nov26 nothing is forced airborne, where a 2 s silence would cost two positions
 void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Busy& busy,
                            uint32_t now_ms) {
-    const uint64_t busy_at_us = busy.tx_at_us;
+    // INFO: fc 22nov26 EN 300 220-1 5.21.1 counts the deferral from the busy assessment, never
+    // earlier
+    const uint64_t busy_at_us = std::max(busy.tx_at_us, busy.heard_at_us);
     dwell.drop(payload);
     const bool airborne = full_rate();
     Contention& contention = contention_[static_cast<int>(payload)];
@@ -57,8 +61,11 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
     bus::State::AirCounts& air = context_.state.air;
     const bool forced = verdict.access == adsl::Access::Force;
     const bool deferred = forced || verdict.access == adsl::Access::Defer;
-    // INFO: fc 19nov26 a deferral its fix is too old for waits for the next fix, then is redrawn
+    contention.second_s = dwell.utc_s;
+    contention.not_before_us.reset();
+    // INFO: fc 22nov26 only a deferral waiting for a fix can return to the normal scheduler
     if (deferred && payload == Payload::Position && fix_too_old_at(verdict.at_us)) {
+        contention.not_before_us = verdict.at_us;
         await_fix(dwell.utc_s);
         air.tx_deferred++;
         log_access(radio::Verdict::Deferred, dwell, payload, busy, now_ms);
