@@ -1,7 +1,7 @@
 ---
 title: "Switch on your skyBlip Go with the aircraft master"
 nav_title: Cable mode
-description: "Set up cable mode once. With firmware 0.8.1, Go starts on master-switched USB power and shuts off five minutes after power is cut on the ground."
+description: "Cable mode is available in firmware 0.8.1. Go starts on master-switched USB power and shuts off five minutes after power is cut on the ground."
 published_on: "2026-11-25"
 parent: blog
 updated_on: "2026-11-25"
@@ -10,7 +10,7 @@ updated_on: "2026-11-25"
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 November 2026</p>
   <h1>Master on, Go on.</h1>
-  <p class="lede">Leave a skyBlip Go in the aircraft, with its battery in and its cable plugged into a USB socket powered by the master switch. In cable mode, the Go starts with the master and switches itself off five minutes after you turn the master off on the ground. Set it up once. Whoever flies next has no extra switch to touch. Cable mode comes in firmware 0.8.1, the next release. It is not in 0.8.0.</p>
+  <p class="lede">Leave a skyBlip Go in the aircraft, with its battery in and its cable plugged into a USB socket powered by the master switch. In cable mode, the Go starts with the master and switches itself off five minutes after you turn the master off on the ground. Set it up once. Whoever flies next has no extra switch to touch. Firmware 0.8.1 adds cable mode. The update is available in Briefing.</p>
 </section>
 
 <section>
@@ -24,7 +24,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Set it up once</h2>
   <h3>Use a USB socket that goes off with the master.</h3>
   <ol>
-    <li><strong>Update to 0.8.1 when it is available.</strong> Connect the Go over Bluetooth in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> using Chrome or Edge. Confirm the update on the Go. If you are starting with a new unit, follow the <%= link_to_page "install", label: "installation guide" %>. An update from 0.8.0 keeps your settings and starts in <span class="mono">BUTTON</span>.</li>
+    <li><strong>Update to 0.8.1.</strong> Connect the Go over Bluetooth in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> using Chrome or Edge. Confirm the update on the Go. If you are starting with a new unit, follow the <%= link_to_page "install", label: "installation guide" %>. An update from 0.8.0 keeps your settings and starts in <span class="mono">BUTTON</span>.</li>
     <li><strong>Set the aircraft type and callsign.</strong> Use Briefing or the <%= link_to_page "go-first-steps", label: "menu on the Go", anchor: "type" %>. If the aircraft transmits Mode S or ADS-B, set its transponder&rsquo;s ICAO address once in Briefing. ADS-L should use the same address so receivers know both signals come from one aircraft. Give each such aircraft its own Go.</li>
     <li><strong>Mount the Go with the antenna up.</strong> Give it a clear view of the sky. The <%= link_to_page "mount", label: "mounting guide" %> shows where it can go. Leave the battery in and plug in the USB-C cable. If the socket stays live when the master is off, the Go stays on.</li>
     <li><strong>Set <span class="mono">POWER</span> to <span class="mono">CABLE</span> on the Go.</strong> From the radar, press the side button to open <span class="mono">SETTINGS</span>. Tap the top pad until you reach <span class="mono">POWER</span>, the last row. Press the button once to change <span class="mono">BUTTON</span> to <span class="mono">CABLE</span>. The Go saves this setting. You cannot change it in Briefing.</li>
