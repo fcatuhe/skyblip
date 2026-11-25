@@ -45,11 +45,11 @@ class Unit < ApplicationRecord
     key
   end
 
-  # INFO: fc 15nov26 a registration signs no product nor variant, so it names neither
-  def attest_firmware(version:, release:, product: nil, variant: nil)
+  # INFO: fc 25nov26 a registration of v1, from firmware as old as v0.8.0, signs no product nor variant, so it names neither
+  def attest_firmware(version:, release:, product: nil, variant: nil, **seen)
     firmware = transaction do
       if product
-        identify(product:, variant:, version:, source: "attested")
+        identify(product:, variant:, version:, source: "attested", **seen)
       else
         touch
       end

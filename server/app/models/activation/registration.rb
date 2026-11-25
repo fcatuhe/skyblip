@@ -7,6 +7,9 @@ class Activation::Registration
   attribute :version, :string
   attribute :server_key_id, :string
   attribute :release
+  attribute :product, :string
+  attribute :variant, :string
+  attribute :bluetooth_tag
   attribute :server_nonce, :string
   attribute :signature, :string
   attribute :ip_address, :string
@@ -17,6 +20,9 @@ class Activation::Registration
   validates :server_key_id, format: { with: Activation::SERVER_KEY_ID }
   validates :server_nonce, format: { with: Activation::NONCE }
   validates :signature, format: { with: Activation::SIGNATURE }
+  validates :product, inclusion: { in: Identity::Message::PRODUCTS.keys }, if: :named?
+  validates :variant, inclusion: { in: Identity::Message::VARIANTS.keys }, if: :named?
+  validate :bluetooth_tag_a_tag, if: :named?
   validate :release_a_boolean, :public_key_strong
 
   attr_reader :unit
@@ -35,7 +41,7 @@ class Activation::Registration
       key = Unit.register(device_id:, public_key:, version:, server_key_id:, release:, ip_address:)
       @unit = key.unit
       if key.active?
-        key.unit.attest_firmware(version:, release:)
+        key.unit.attest_firmware(version:, release:, **named_unit)
         unlock_code_for(key.unit.serial, challenge.unit_nonce)
       end
     end
@@ -43,9 +49,17 @@ class Activation::Registration
   end
 
   private
+    def named? = [ product, variant, bluetooth_tag ].any?
+
+    def named_unit = named? ? { product:, variant:, bluetooth_tag: } : {}
+
     # INFO: fc 09nov26 the inclusion validator checks each element of an array, so [true] would pass as a release
     def release_a_boolean
       errors.add(:release, :inclusion) unless release == true || release == false
+    end
+
+    def bluetooth_tag_a_tag
+      errors.add(:bluetooth_tag, :inclusion) unless bluetooth_tag.is_a?(Integer) && Unit::BLUETOOTH_TAGS.cover?(bluetooth_tag)
     end
 
     def public_key_strong
@@ -55,7 +69,8 @@ class Activation::Registration
     end
 
     def signed_by_unit?(unit_nonce)
-      message = Identity::Message.registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, version:)
+      signed = { device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, version: }
+      message = named? ? Identity::Message.registration(**signed, **named_unit) : Identity::Message.registration_v1(**signed)
       unit_key = OpenSSL::PKey.new_raw_public_key("ED25519", [ public_key ].pack("H*"))
       unit_key.verify(nil, [ signature ].pack("H*"), message)
     end

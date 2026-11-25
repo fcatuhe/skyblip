@@ -33,7 +33,7 @@
     }
     return out;
   };
-  const label = purpose => encoder.encode(`skyblip:${purpose}:v1`);
+  const label = (purpose, version = 1) => encoder.encode(`skyblip:${purpose}:v${version}`);
   const recordsPerChunk = payload => {
     for (let records = MAX_RECORDS_PER_CHUNK; records > 0; records--) {
       const raw = records * RECORD_BYTES;
@@ -42,7 +42,7 @@
     return 0;
   };
 
-  // INFO: fc 15nov26 the codes schemas/link.v1.json gives product and variant, one byte each in the attestation
+  // INFO: fc 15nov26 the codes schemas/link.v1.json gives product and variant, one byte each in the attestation and the registration
   const PRODUCT_CODES = { go: 0, bravo: 1 };
   const VARIANT_CODES = { standard: 0, plus: 1 };
   // INFO: fc 15nov26 each fake unit gets a DEVICEID of its own from its name, so two in range are two units on the server
@@ -428,10 +428,14 @@
     async register() {
       const { device_id, unit_public_key, unit_seed, server_key_id, release, version } = this.vectors;
       const key = await crypto.subtle.importKey('pkcs8', bytes(PKCS8_ED25519, unit_seed), { name: 'Ed25519' }, false, ['sign']);
-      const message = join(label('registration'), bytes(device_id, unit_public_key, this.nonce, this.serverNonce, server_key_id),
-        Uint8Array.of(release ? 1 : 0), encoder.encode(version));
+      const named = Uint8Array.of(release ? 1 : 0, PRODUCT_CODES[this.product], VARIANT_CODES[this.variant], this.bluetoothTag >> 8, this.bluetoothTag & 0xff);
+      const message = join(label('registration', 2), bytes(device_id, unit_public_key, this.nonce, this.serverNonce, server_key_id),
+        named, encoder.encode(version));
       const signature = hex(await crypto.subtle.sign('Ed25519', key, message));
-      this.reply({ command: 'registration', device_id, public_key: unit_public_key, version, server_key_id, release, signature });
+      this.reply({
+        command: 'registration', device_id, public_key: unit_public_key, version, server_key_id, release, signature,
+        product: this.product, variant: this.variant, bluetooth_tag: this.bluetoothTag,
+      });
     }
 
     async unlock(fields) {

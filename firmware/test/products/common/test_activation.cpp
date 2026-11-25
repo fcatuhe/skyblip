@@ -175,7 +175,10 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
               "\",\"public_key\":\"" + bench.vectors.text("unit_public_key") + "\",\"version\":\"" +
               bench.vectors.text("version") + "\",\"server_key_id\":\"" +
               bench.vectors.text("server_key_id") + "\",\"release\":true,\"signature\":\"" +
-              bench.vectors.text("registration_signature") + "\"}");
+              bench.vectors.text("registration_signature") + "\",\"product\":\"" +
+              bench.vectors.text("product") + "\",\"variant\":\"" + bench.vectors.text("variant") +
+              "\",\"bluetooth_tag\":" + std::to_string(bench.vectors.number("bluetooth_tag")) +
+              "}");
     CHECK_FALSE(bench.activation().activated());
 
     CHECK(bench.unlock_with_vectors() ==
@@ -629,6 +632,7 @@ struct Desk {
         dfu.running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         unit.load();
         config.set_identity(&identity);
+        config.set_variant(identity::Variant::Plus);
     }
 
     std::string say(const std::string& json) {
@@ -780,7 +784,8 @@ TEST_CASE("activation: the registration says whether the build is a release, and
         const identity::Message signed_over = identity::registration_message(
             Identity::kDeviceId, crypto::Ed25519::public_key_of(Identity::kUnitSeed),
             desk.identity.unit_nonce(), server_nonce, desk.unit.server_key_id(), release,
-            "0.3.0+1234");
+            static_cast<uint8_t>(dfu::Product::Go), static_cast<uint8_t>(identity::Variant::Plus),
+            Identity::kBluetoothTag, "0.3.0+1234");
         crypto::Ed25519::Signature signature{};
         const size_t at = frame.find("\"signature\":\"") + 13;
         REQUIRE(

@@ -352,6 +352,9 @@ enum : uint32_t {
     kServerKeyId = 4,
     kRelease = 5,
     kSignature = 6,
+    kProduct = 7,
+    kVariant = 8,
+    kBluetoothTag = 9,
 };
 }
 

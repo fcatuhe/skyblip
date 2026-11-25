@@ -1755,6 +1755,26 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "bytes",
           "bytes": 64,
           "required": true
+        },
+        {
+          "name": "product",
+          "number": 7,
+          "type": "enum",
+          "enum": "product",
+          "required": true
+        },
+        {
+          "name": "variant",
+          "number": 8,
+          "type": "enum",
+          "enum": "variant",
+          "required": true
+        },
+        {
+          "name": "bluetooth_tag",
+          "number": 9,
+          "type": "unsigned",
+          "required": true
         }
       ]
     },

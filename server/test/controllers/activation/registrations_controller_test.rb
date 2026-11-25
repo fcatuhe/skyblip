@@ -24,6 +24,38 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_not unit.active_key.has_attribute?(:ip_address)
   end
 
+  # A unit activated without them waited for its next connection to be named, and its tag never came.
+  test "records the product, the variant and the tag the unit signed, beside its firmware" do
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json
+
+    unit = Unit.find_by!(device_id: vectors["device_id"])
+    assert_equal [ "go", "plus", 0x3F2A ], [ unit.product, unit.variant, unit.bluetooth_tag ]
+    assert_equal [ [ vectors["version"], true, "plus", "attested" ] ], unit.firmwares.pluck(:version, :release, :variant, :source)
+  end
+
+  test "activates a unit on older firmware, whose registration of v1 names no product, variant nor tag" do
+    post activation_registrations_path, params: signed_registration_v1(@challenge), as: :json
+
+    assert_response :created
+    unit = Unit.find_by!(device_id: vectors["device_id"])
+    assert unit.activated?
+    assert_equal [ nil, nil, nil ], [ unit.product, unit.variant, unit.bluetooth_tag ]
+    assert_equal [ [ vectors["version"], true, nil ] ], unit.firmwares.pluck(:version, :release, :variant)
+  end
+
+  test "refuses a product, a variant or a tag the unit did not sign, and one of v1 that names them" do
+    [ { variant: "standard" }, { product: "bravo" }, { bluetooth_tag: 0x3F2B } ].each do |forged|
+      post activation_registrations_path, params: signed_registration(@challenge).merge(forged), as: :json
+
+      assert_response :unprocessable_content
+      assert_equal({ "error" => "bad_signature" }, response.parsed_body)
+    end
+
+    post activation_registrations_path, params: signed_registration_v1(@challenge).merge(product: "go", variant: "plus", bluetooth_tag: 0x3F2A), as: :json
+    assert_equal({ "error" => "bad_signature" }, response.parsed_body)
+    assert_not Unit.exists?(device_id: vectors["device_id"])
+  end
+
   test "records the firmware an active key signed, and none for a key it refuses" do
     post activation_registrations_path, params: signed_registration(@challenge, release: false), as: :json
     assert_equal [ [ vectors["version"], false ] ], Unit.find_by!(device_id: vectors["device_id"]).firmwares.pluck(:version, :release)

@@ -7,6 +7,14 @@ class Identity::MessageTest < ActiveSupport::TestCase
     assert_equal vectors["unlock_message"], hex(Identity::Message.unlock(**unlock_fields))
   end
 
+  test "builds the registration of v1 that older firmware signs, and the vectors' signature verifies" do
+    message = Identity::Message.registration_v1(**registration_fields.except(:product, :variant, :bluetooth_tag))
+
+    assert_equal vectors["v1_registration_message"], hex(message)
+    assert unit_public_key.verify(nil, bytes(vectors["v1_registration_signature"]), message)
+    assert_not unit_public_key.verify(nil, bytes(vectors["v1_registration_signature"]), bytes(vectors["registration_message"]))
+  end
+
   test "a development build's registration carries release 0, and its signature is the vectors'" do
     message = Identity::Message.registration(**registration_fields, release: false)
 
@@ -40,7 +48,7 @@ class Identity::MessageTest < ActiveSupport::TestCase
 
   private
     def registration_fields
-      vectors.slice("device_id", "unit_nonce", "server_nonce", "server_key_id", "release", "version").symbolize_keys.merge(public_key: vectors["unit_public_key"])
+      vectors.slice("device_id", "unit_nonce", "server_nonce", "server_key_id", "release", "product", "variant", "bluetooth_tag", "version").symbolize_keys.merge(public_key: vectors["unit_public_key"])
     end
 
     def unlock_fields

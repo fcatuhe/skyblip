@@ -24,7 +24,8 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
       assert_no_selector ".unit-banner"
       assert_selector ".fleet-unit.is-linked", text: "Go 000003"
       assert_field "Callsign"
-      assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
+      unit = Unit.find_by!(device_id: vectors["device_id"])
+      assert_equal [ 3, "go", "standard", 0x3F2A ], [ unit.serial, unit.product, unit.variant, unit.bluetooth_tag ]
       screen "33-activated"
 
       click_button "Done"

@@ -105,11 +105,12 @@ void ConfigService::send_registration() {
         return;
     }
     const bool release = dfu_ != nullptr && dfu_->release_build();
-    const std::optional<crypto::Ed25519::Signature> signature =
-        unit.sign(identity::registration_message(unit.device_id(), unit.public_key(),
-                                                 identity_->unit_nonce(), identity_->server_nonce(),
-                                                 unit.server_key_id(), release, version)
-                      .bytes());
+    const std::optional<crypto::Ed25519::Signature> signature = unit.sign(
+        identity::registration_message(
+            unit.device_id(), unit.public_key(), identity_->unit_nonce(), identity_->server_nonce(),
+            unit.server_key_id(), release, static_cast<uint8_t>(product_),
+            static_cast<uint8_t>(variant_), unit.activation().bluetooth_tag, version)
+            .bytes());
     if (!signature) {
         refuse(link::Reason::Keyless);
         return;
@@ -127,6 +128,9 @@ void ConfigService::send_registration() {
     writer.add_boolean(link::registration_key::kRelease, release);
     add_bytes<link::registration_bytes::kSignature>(writer, link::registration_key::kSignature,
                                                     *signature);
+    writer.add_code(link::registration_key::kProduct, product_);
+    writer.add_code(link::registration_key::kVariant, variant_);
+    writer.add_unsigned(link::registration_key::kBluetoothTag, unit.activation().bluetooth_tag);
     const int bytes = writer.finish();
     if (bytes == 0) {
         diagnostics_.link_drops++;

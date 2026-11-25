@@ -249,14 +249,17 @@
     },
     {
       "command": "registration", "code": 16, "endpoint": "config", "sender": "unit",
-      "description": "Unit to host after the press that answers register, at most 138 bytes in one notification, which an iPhone's 182-byte payload carries. The browser posts its keys to /activation/registrations as they are, byte strings in hexadecimal (schemas/activation.v1.schema.json).",
+      "description": "Unit to host after the press that answers register, at most 146 bytes in one notification, which an iPhone's 182-byte payload carries. It names the unit as the identity frame does, so the server records an activated unit whole on the unit's own signature. The browser posts its keys to /activation/registrations as they are, byte strings in hexadecimal (schemas/activation.v1.schema.json).",
       "keys": [
         {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian"},
         {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "public_key, the raw 32-byte Ed25519 public key of the unit, whose seed comes from its key slot in UICR CUSTOMER (firmware/core/identity/README.md)"},
         {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
         {"name": "server_key_id", "number": 4, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the unit trusts, as in the challenge reply"},
         {"name": "release", "number": 5, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build. Only told to the server, which keeps it beside the key: the air shows no difference, a development unit being a real aircraft with a real serial"},
-        {"name": "signature", "number": 6, "type": "bytes", "bytes": 64, "required": true, "description": "S, the unit's Ed25519 signature over the registration message (schemas/activation.v1.schema.json)"}
+        {"name": "signature", "number": 6, "type": "bytes", "bytes": 64, "required": true, "description": "S, the unit's Ed25519 signature over the registration message (schemas/activation.v1.schema.json)"},
+        {"name": "product", "number": 7, "type": "enum", "enum": "product", "required": true, "description": "The product the unit runs, as the identity frame names it. Firmware as old as v0.8.0 leaves it out, with variant and bluetooth_tag, and signs the registration message of v1, which names none of them"},
+        {"name": "variant", "number": 8, "type": "enum", "enum": "variant", "required": true, "description": "The product's hardware build, as the identity frame names it, worked out at this boot"},
+        {"name": "bluetooth_tag", "number": 9, "type": "unsigned", "required": true, "description": "The four hex digits the unit advertised until this activation, activate 3F2A skyBlip, as the identity frame names them: the low 16 bits of FICR DEVICEADDR, 0 to 65535"}
       ]
     },
     {

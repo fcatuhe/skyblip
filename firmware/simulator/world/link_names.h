@@ -591,6 +591,9 @@ inline constexpr Key kRegistrationKeys[] = {
     {"server_key_id", 4, Type::Bytes, nullptr, 4, true},
     {"release", 5, Type::Boolean, nullptr, 0, true},
     {"signature", 6, Type::Bytes, nullptr, 64, true},
+    {"product", 7, Type::Enum, &kProduct, 0, true},
+    {"variant", 8, Type::Enum, &kVariant, 0, true},
+    {"bluetooth_tag", 9, Type::Unsigned, nullptr, 0, true},
 };
 
 inline constexpr Key kUnlockKeys[] = {
@@ -834,7 +837,7 @@ inline constexpr Frame kFrames[] = {
     {"power_off", 13, events::Endpoint::Config, Sender::Host, kPowerOffKeys, 1},
     {"challenge", 14, events::Endpoint::Config, Sender::Both, kChallengeKeys, 3},
     {"register", 15, events::Endpoint::Config, Sender::Host, kRegisterKeys, 3},
-    {"registration", 16, events::Endpoint::Config, Sender::Unit, kRegistrationKeys, 7},
+    {"registration", 16, events::Endpoint::Config, Sender::Unit, kRegistrationKeys, 10},
     {"unlock", 17, events::Endpoint::Config, Sender::Host, kUnlockKeys, 3},
     {"list", 18, events::Endpoint::Log, Sender::Host, kListKeys, 3},
     {"read", 19, events::Endpoint::Log, Sender::Host, kReadKeys, 5},

@@ -44,6 +44,7 @@ struct Exchange {
     identity::Nonce server_nonce = vectors.bytes<16>("server_nonce");
     std::string version = vectors.text("version");
     bool release = vectors.flag("release");
+    uint16_t bluetooth_tag = static_cast<uint16_t>(vectors.number("bluetooth_tag"));
     uint16_t serial = static_cast<uint16_t>(vectors.number("serial"));
 };
 
@@ -71,11 +72,16 @@ TEST_CASE(
 
 // Ed25519 is deterministic, so the unit's S comes out byte-identical to the server's.
 TEST_CASE(
-    "identity: the registration message ends in the version, and the unit's S is the vectors'") {
+    "identity: the registration message names the product, the variant and the tag, ends in the "
+    "version, and the unit's S is the vectors'") {
     Exchange x;
+    REQUIRE(x.vectors.text("product") == "go");
+    REQUIRE(x.vectors.text("variant") == "plus");
+    REQUIRE(x.bluetooth_tag == 0x3F2A);
     const identity::Message message = identity::registration_message(
         x.device_id, x.unit_key, x.unit_nonce, x.server_nonce,
-        identity::server_key_id(x.server_key), x.release, x.version.c_str());
+        identity::server_key_id(x.server_key), x.release, static_cast<uint8_t>(dfu::Product::Go),
+        static_cast<uint8_t>(identity::Variant::Plus), x.bluetooth_tag, x.version.c_str());
     CHECK(same(message.bytes(), x.vectors.message("registration_message")));
     const auto registration_signature = x.vectors.bytes<64>("registration_signature");
     CHECK(Ed25519::sign(x.unit_seed, message.bytes()) == registration_signature);
@@ -87,7 +93,8 @@ TEST_CASE(
     Exchange x;
     const identity::Message message = identity::registration_message(
         x.device_id, x.unit_key, x.unit_nonce, x.server_nonce,
-        identity::server_key_id(x.server_key), false, x.version.c_str());
+        identity::server_key_id(x.server_key), false, static_cast<uint8_t>(dfu::Product::Go),
+        static_cast<uint8_t>(identity::Variant::Plus), x.bluetooth_tag, x.version.c_str());
     CHECK(same(message.bytes(), x.vectors.message("development_registration_message")));
     const auto signature = x.vectors.bytes<64>("development_registration_signature");
     CHECK(Ed25519::sign(x.unit_seed, message.bytes()) == signature);

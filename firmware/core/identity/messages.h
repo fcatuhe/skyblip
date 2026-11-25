@@ -39,10 +39,11 @@ class Message {
 };
 
 Message register_message(const Nonce& unit_nonce, const Nonce& server_nonce);
-// INFO: fc 18oct26 release: one byte, 1 for a release build, after the server key id
+// INFO: fc 25nov26 release, product, variant a byte each, the tag big-endian, after the key id
 Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                              const Nonce& unit_nonce, const Nonce& server_nonce,
-                             const ServerKeyId& server_key_id, bool release, const char* version);
+                             const ServerKeyId& server_key_id, bool release, uint8_t product,
+                             uint8_t variant, uint16_t bluetooth_tag, const char* version);
 Message unlock_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                        uint16_t serial, const Nonce& unit_nonce);
 // INFO: fc 15nov26 product and variant: one byte each, the link's codes, after the release byte
