@@ -20,6 +20,8 @@ module PagesHelper
       "page"
     elsif slug == DEVICE_PAGES.first && DEVICE_PAGES.include?(@page&.base_slug)
       "true"
+    elsif @page&.parent&.base_slug == slug
+      "true"
     end
   end
 
