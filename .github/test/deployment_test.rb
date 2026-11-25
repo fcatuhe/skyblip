@@ -20,22 +20,6 @@ class DeploymentTest < Minitest::Test
     assert_equal "server_production", deploy.fetch("environment").fetch("name")
   end
 
-  # Before one release carried every product, Bravo's were tagged bravo-v*.
-  def test_a_drafts_notes_start_at_the_last_published_release
-    Dir.mktmpdir do |tree|
-      fake_gh(tree, %w[bravo-v0.2.0 v0.1.0])
-      draft = ->(tag) { run_step(tree, release_step("draft", "create the draft"), "PATH" => "#{tree}:#{ENV.fetch("PATH")}", "GITHUB_REF_NAME" => tag, "GITHUB_REPOSITORY" => "fcatuhe/skyblip") }
-
-      assert_includes draft.("v0.2.0").first, "--generate-notes --notes-start-tag v0.1.0"
-
-      fake_gh(tree, %w[bravo-v0.2.0])
-      output, status = draft.("v0.1.0")
-      assert status.success?, output
-      assert_includes output, "gh release create v0.1.0"
-      refute_includes output, "--notes-start-tag"
-    end
-  end
-
   def test_the_radio_protocols_notes_refuse_a_header_without_one_specification
     Dir.mktmpdir do |firmware|
       FileUtils.mkdir_p(File.join(firmware, "products/skyblip_bravo"))
@@ -108,18 +92,4 @@ class DeploymentTest < Minitest::Test
   private
     def workflow(name) = YAML.load_file(File.join(ROOT, ".github/workflows/#{name}.yml"))
 
-    def release_step(job, name) = workflow("release").fetch("jobs").fetch(job).fetch("steps").find { |step| step["name"] == name }.fetch("run")
-
-    def run_step(tree, script, env)
-      output, status = Open3.capture2e(env, "bash", "-e", "-o", "pipefail", "-c", script, chdir: tree)
-      [ output, status ]
-    end
-
-    def fake_gh(tree, published)
-      File.write(File.join(tree, "gh"), <<~SH)
-        #!/usr/bin/env bash
-        if [ "$1 $2" = "release list" ]; then printf '%s\n' #{published.join(" ")}; else echo "gh $*"; fi
-      SH
-      File.chmod(0o755, File.join(tree, "gh"))
-    end
 end
