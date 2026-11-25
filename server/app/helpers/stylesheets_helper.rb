@@ -1,6 +1,6 @@
 module StylesheetsHelper
   def site_stylesheet_link_tags
-    stylesheet_link_tag(*stylesheets_in("."), "data-turbo-track": "reload")
+    stylesheet_link_tag(*stylesheets_in("."))
   end
 
   def area_stylesheet_link_tags(*areas)

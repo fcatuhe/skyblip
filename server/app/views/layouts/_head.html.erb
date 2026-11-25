@@ -32,7 +32,8 @@
 <%= preload_link_tag "Inter-Regular.woff2" %>
 <%= preload_link_tag "FiraSans-Bold.woff2" %>
 
+<%= tag.meta name: "assets-digest", content: assets_digest %>
 <%= site_stylesheet_link_tags %>
 <%= content_for :stylesheets %>
-<%= javascript_importmap_tags %>
+<%= importmap_tags %>
 <%= javascript_import_module_tag "ahoy-module" unless Ahoy.api_only %>
