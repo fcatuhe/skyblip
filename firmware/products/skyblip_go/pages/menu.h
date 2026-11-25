@@ -29,6 +29,7 @@ enum class MenuRow : uint8_t {
     Aircraft,
     Detected,
     BravoLog,
+    Power,
     kCount
 };
 

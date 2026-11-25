@@ -11,11 +11,14 @@ class SystemPower : private power::PowerDownSink {
    public:
     power::ResetCause reset_causes() const { return causes; }
 
-    void system_off() {
+    void system_off(power::Switch power_switch) {
+        off_switch = power_switch;
         performed_count = 0;
         power::power_down(*this);
         system_offs++;
     }
+
+    void restart() { restarts++; }
 
     bool take_supply_warning() {
         if (!supply_warning) return false;
@@ -40,6 +43,8 @@ class SystemPower : private power::PowerDownSink {
     power::CellOnGlass retained_cell_on_glass{power::CellOnGlass::None};
     bool retained_went_dark_flat{false};
     int system_offs{0};
+    power::Switch off_switch{power::Switch::Button};
+    int restarts{0};
     power::PowerDownStep performed_steps[power::kPowerDownStepCount]{};
     int performed_count{0};
 

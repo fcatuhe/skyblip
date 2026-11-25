@@ -293,7 +293,7 @@ TEST_CASE("menu editor: the focus only ever advances, and walks out of the menu"
         CHECK(bench.move() == MenuAction::Moved);
         CHECK(bench.editor.focus() == menu_for(Page::Radar).rows[i]);
     }
-    REQUIRE(bench.editor.focus() == MenuRow::Bravo);
+    REQUIRE(bench.editor.focus() == MenuRow::Power);
 
     // One more tap leaves: a thumb that only knows the pad cannot be trapped here.
     CHECK(bench.move() == MenuAction::Leave);
@@ -470,4 +470,17 @@ TEST_CASE("menu editor: a menu nobody is pressing hands the traffic picture back
         bench.run(100);
     }
     CHECK(bench.editor.active());
+}
+
+TEST_CASE("menu editor: power starts on the button, and one press each way hands it to the cable" *
+          doctest::test_suite("main")) {
+    Bench bench;
+    bench.focus_on(MenuRow::Power);
+    REQUIRE(bench.values.settings.power_switch == power::Switch::Button);
+
+    CHECK(bench.change() == MenuAction::Changed);
+    CHECK(bench.values.settings.power_switch == power::Switch::Cable);
+    CHECK(go::validate(bench.values.settings) == Status::Ok);
+    CHECK(bench.change() == MenuAction::Changed);
+    CHECK(bench.values.settings.power_switch == power::Switch::Button);
 }

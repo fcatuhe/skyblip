@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "core/power/cable.h"
+
 namespace skyblip::power {
 
 // INFO: fc 12sep26 Stow is the long press with the pad held: same road out, blank glass
@@ -13,7 +15,8 @@ enum class ShutdownReason : uint8_t {
     LowBattery,
     LinkRequest,
     Install,
-    Recovery
+    Recovery,
+    CableGone
 };
 enum class ShutdownPhase : uint8_t { Running, Parking, AwaitRelease, Off };
 
@@ -26,7 +29,8 @@ constexpr bool ends_switched_off(ShutdownReason reason, bool recovery_powers_off
         case ShutdownReason::LongPress:
         case ShutdownReason::Stow:
         case ShutdownReason::LowBattery:
-        case ShutdownReason::LinkRequest: return true;
+        case ShutdownReason::LinkRequest:
+        case ShutdownReason::CableGone: return true;
     }
     return true;
 }
@@ -130,10 +134,18 @@ constexpr uint8_t kUf2MassStorageMagic = 0x57;
 
 enum class DfuButton : uint8_t { PressEntersDfu, HoldEntersDfu };
 
-constexpr uint8_t boot_magic_for_system_off(DfuButton button, bool recovery_armed) {
+// INFO: fc 26nov26 the skip magic is what makes the T-Echo's bootloader swallow a cable wake
+constexpr uint8_t boot_magic_for_system_off(DfuButton button, bool recovery_armed,
+                                            Switch power_switch) {
     if (recovery_armed) return kUf2MassStorageMagic;
+    if (power_switch == Switch::Cable) return kNoBootloaderMagic;
     if (button == DfuButton::PressEntersDfu) return kSkipBootloaderMagic;
     return kNoBootloaderMagic;
+}
+
+// INFO: fc 26nov26 without the skip magic, a press that wakes the T-Echo lands it in DFU
+constexpr bool button_wakes(DfuButton button, Switch power_switch) {
+    return power_switch == Switch::Button || button == DfuButton::HoldEntersDfu;
 }
 
 // INFO: fc 20nov26 long enough that it cannot be a page press, short enough to do with gloves on

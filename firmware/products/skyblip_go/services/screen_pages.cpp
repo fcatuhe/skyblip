@@ -149,6 +149,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.formation_members = context_.state.formation.members;
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.battery_low = battery_low();
+            snapshot.off_in_min = off_in_min();
             snapshot.bravo = context_.state.bravo;
             snapshot.bravo_heard = bravo_.health() != nullptr;
             if (const comms::PeerHealth* health = bravo_health_live()) {

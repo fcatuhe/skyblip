@@ -76,12 +76,13 @@ updated_on: "2026-11-25"
         la batterie à la même tension de coupure.
       </p>
       <p>
-        Branchez le câble pour pouvoir réutiliser l&rsquo;appareil. Le câble
+        Avec <span class="mono">POWER BUTTON</span> (le réglage par défaut), branchez le câble pour pouvoir réutiliser l&rsquo;appareil. Le câble
         seul ne change rien à l&rsquo;écran&nbsp;: le voyant rouge du chargeur
         indique que la batterie se remplit. Un appui câble branché démarre
         l&rsquo;appareil, quelle que soit la charge, et efface le message. Si la batterie s&rsquo;est vidée sur une étagère,
         l&rsquo;appareil n&rsquo;a laissé aucun message. Dans ce cas, un appui
         sur le bouton affiche le même message de batterie vide.
+        Avec <span class="mono">POWER CABLE</span>, après un arrêt pour batterie vide, il suffit de brancher le Go à une prise USB alimentée pour le démarrer et recharger sa batterie (voir le <%= link_to_page "power", label: "mode câble", anchor: "cable-mode" %>).
       </p>
       <p>
         Au démarrage suivant, l&rsquo;autotest signale la coupure pour batterie vide
@@ -95,10 +96,25 @@ updated_on: "2026-11-25"
     </figure>
   </div>
 
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="cable-mode">Allumer et éteindre le Go <span class="highlight">avec le contact général</span>.</h3>
+      <p>Laissez votre Go ou Go+ branché à la prise USB de l&rsquo;aéronef, avec sa batterie en place. Depuis le radar, appuyez sur le bouton pour ouvrir <span class="mono">SETTINGS</span>. Touchez brièvement le pavé pour atteindre <%= link_to_page "controls", label: "la dernière ligne", anchor: "two-contacts" %>, <span class="mono">POWER</span>. Sur cette ligne, appuyez une fois sur le bouton pour passer de <span class="mono">BUTTON</span>, le réglage par défaut, à <span class="mono">CABLE</span>. Faites ce réglage sur le Go, pas dans le Briefing.</p>
+      <p>Quand vous mettez le contact général, le Go s&rsquo;allume s&rsquo;il était éteint. Le voyant émet un éclat vert. Le Go+ vibre aussi. La batterie se recharge tant que la prise USB est alimentée.</p>
+      <p>Au sol, si l&rsquo;alimentation USB se coupe, le Go continue de fonctionner sur sa batterie. Dans le cercle du radar, <span class="mono">OFF IN</span> apparaît au-dessus des minutes restantes, de <span class="mono">5 MIN</span> à <span class="mono">1 MIN</span>. Ce compte à rebours remplace le message d&rsquo;état ou de batterie. Au bout de cinq minutes, le Go s&rsquo;éteint avec trois brefs éclats rouges. Si l&rsquo;alimentation revient avant, le compte à rebours disparaît et le Go reste allumé. En vol, une coupure de l&rsquo;alimentation USB n&rsquo;éteint pas le Go. Il fonctionne sur sa batterie et attend l&rsquo;atterrissage pour lancer le compte à rebours.</p>
+      <p>La batterie alimente le Go pendant que le démarreur tourne. Le délai de cinq minutes couvre la pause, contact général coupé, le temps que le démarreur refroidisse après une tentative ratée. Pour le 912, Rotax prévoit deux minutes de pause après dix secondes de démarreur. Pour l&rsquo;IO-320, Lycoming prévoit cinq minutes entre deux tentatives.</p>
+      <p>Pour allumer le Go sans alimentation USB, appuyez sur <span class="mono">RESET</span>, la commande du haut sur le côté gauche. Le logiciel de démarrage d&rsquo;origine ouvre le mode de mise à jour si le bouton est maintenu au démarrage. Le bouton ne peut donc pas allumer le Go en mode câble. Pour l&rsquo;éteindre, maintenez le bouton deux secondes. Il reste éteint jusqu&rsquo;au retour de l&rsquo;alimentation USB ou jusqu&rsquo;à un appui sur <span class="mono">RESET</span>.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "cable-off.png", alt: "La page radar au sol après la coupure de l'alimentation de bord : OFF IN au-dessus de 4 MIN dans le cercle" %>
+      <figcaption>Compte à rebours après la coupure de l&rsquo;alimentation USB au sol</figcaption>
+    </figure>
+  </div>
+
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Appareil éteint</th><th>Ce qui se passe</th></tr>
+        <tr><th>Appareil éteint avec <span class="mono">POWER BUTTON</span> (par défaut)</th><th>Ce qui se passe</th></tr>
       </thead>
       <tbody>
         <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">BATTERY EMPTY</span></td></tr>
@@ -107,6 +123,21 @@ updated_on: "2026-11-25"
         <tr><th>Chargeur branché sur un appareil à plat</th><td>charge et reste éteint. <span class="mono">BATTERY EMPTY</span> reste affiché jusqu&rsquo;au prochain appui</td></tr>
         <tr><th>Bouton maintenu, chargeur branché</th><td>démarre et charge</td></tr>
         <tr><th>Pression sur <span class="mono">RESET</span></th><td>redémarre. Deux pressions en moins d&rsquo;une demi-seconde lancent le programme d&rsquo;installation par USB, appelé bootloader</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Appareil éteint avec <span class="mono">POWER CABLE</span></th><th>Ce qui se passe</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Contact général mis</th><td>démarre et charge</td></tr>
+        <tr><th>Branchement à une prise USB alimentée après un arrêt pour batterie vide</th><td>démarre et charge</td></tr>
+        <tr><th>Pression sur le bouton</th><td>reste éteint</td></tr>
+        <tr><th>Pression sur <span class="mono">RESET</span></th><td>démarre, même sans alimentation USB</td></tr>
+        <tr><th>Bouton maintenu à l&rsquo;arrivée de l&rsquo;alimentation USB</th><td>ouvre le mode de mise à jour et y reste. Relâchez le bouton et appuyez sur <span class="mono">RESET</span> pour démarrer normalement</td></tr>
       </tbody>
     </table>
   </div>

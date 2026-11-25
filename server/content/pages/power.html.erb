@@ -69,11 +69,12 @@ updated_on: "2026-11-25"
         At 3.2&nbsp;V the device switches itself off. Its last message says the battery is empty. You pressed nothing, so the screen is the only explanation for the shutdown. Without that message, it could look as though the device had crashed or failed. The button stops responding at the same moment, because pressing it would bring the battery back to the same cutoff voltage.
       </p>
       <p>
-        Plug in the cable to use the device again. The cable alone
+        With <span class="mono">POWER BUTTON</span> (the default), plug in the cable to use the device again. The cable alone
         changes nothing on the screen: the charger&rsquo;s red light shows the
         battery filling. A press with the cable in starts the device,
         whatever the battery reads, and clears the message. If the battery ran out on a shelf, the device left no message.
         In that case, pressing the button displays the same flat-battery message.
+        With <span class="mono">POWER CABLE</span>, connecting USB power after a flat-battery shutdown starts and charges the Go (see <%= link_to_page "power", label: "cable mode", anchor: "cable-mode" %>).
       </p>
       <p>
         At the next startup, the self test reports the flat-battery shutdown with
@@ -86,10 +87,25 @@ updated_on: "2026-11-25"
     </figure>
   </div>
 
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="cable-mode">Switch the Go on and off <span class="highlight">with the master switch</span>.</h3>
+      <p>Leave your Go or Go+ plugged into the aircraft&rsquo;s USB socket, with its battery in. From the radar, press the button to open <span class="mono">SETTINGS</span>. Tap the pad to reach <%= link_to_page "controls", label: "the last row", anchor: "two-contacts" %>, <span class="mono">POWER</span>. Press the button once on that row to change <span class="mono">BUTTON</span>, the default, to <span class="mono">CABLE</span>. Set it on the Go, not in Briefing.</p>
+      <p>When the master comes on, a Go that is off starts with one green pulse. On the Go+, you feel it too. The battery charges while USB power is on.</p>
+      <p>On the ground, if USB power goes, the Go runs on its battery. The radar ring replaces its usual status or battery message with <span class="mono">OFF IN</span> above the minutes left, from <span class="mono">5 MIN</span> to <span class="mono">1 MIN</span>. After five minutes it switches off with three short red pulses. If power returns first, the countdown clears and the Go keeps running. Losing USB power in flight does not switch the Go off. It runs on its battery and waits until landing to start the countdown.</p>
+      <p>The battery carries the Go through cranking. The five-minute wait covers time with the master off while the starter cools after a failed start. Rotax gives the 912 two minutes after ten seconds of cranking. Lycoming gives the IO-320 five minutes between attempts.</p>
+      <p>Press <span class="mono">RESET</span>, the upper control on the left, to start the Go without USB power. The factory start-up software opens update mode if the button is held at start-up, so the button cannot wake the Go in this mode. Hold the button for two seconds to switch off. The Go stays off until USB power next comes on or you press <span class="mono">RESET</span>.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "cable-off.png", alt: "The radar page on the ground after aircraft power went off: OFF IN above 4 MIN in the ring" %>
+      <figcaption>Countdown after USB power is lost on the ground</figcaption>
+    </figure>
+  </div>
+
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>From off</th><th>What happens</th></tr>
+        <tr><th>From off with <span class="mono">POWER BUTTON</span> (default)</th><th>What happens</th></tr>
       </thead>
       <tbody>
         <tr><th>Press the button</th><td>starts, unless the battery is under 3.4&nbsp;V with no charger connected. In that case, the screen says <span class="mono">BATTERY EMPTY</span></td></tr>
@@ -98,6 +114,21 @@ updated_on: "2026-11-25"
         <tr><th>Plug the charger into a device with a flat battery</th><td>charges and stays off. <span class="mono">BATTERY EMPTY</span> stays on the screen until the next press</td></tr>
         <tr><th>Hold the button and plug the charger in</th><td>starts and charges</td></tr>
         <tr><th>Press <span class="mono">RESET</span></th><td>restarts. Press twice inside half a second to start the USB bootloader, which lets you install firmware over USB</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>From off with <span class="mono">POWER CABLE</span></th><th>What happens</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Switch aircraft power on</th><td>starts and charges</td></tr>
+        <tr><th>Plug in USB power after a flat-battery shutdown</th><td>starts and charges</td></tr>
+        <tr><th>Press the button</th><td>stays off</td></tr>
+        <tr><th>Press <span class="mono">RESET</span></th><td>starts, even without USB power</td></tr>
+        <tr><th>Hold the button while USB power comes on</th><td>opens update mode and waits there. Let go of the button and press <span class="mono">RESET</span> to start normally</td></tr>
       </tbody>
     </table>
   </div>

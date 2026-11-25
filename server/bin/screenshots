@@ -454,6 +454,14 @@ const scenes = [
     shot: device =>
       setCallsign(device, OWN_CALLSIGN).fly(CRUISE).run(20_000).openMenu(PAGE.Radar)
   },
+  // POWER is the last row, set once per aircraft, so the menu slides up to it.
+  {
+    name: "menu-power",
+    page: PAGE.Radar,
+    menu: true,
+    shot: device =>
+      setCallsign(device, OWN_CALLSIGN).fly(CRUISE).run(20_000).openMenu(PAGE.Radar, RADAR_MENU.Power)
+  },
   {
     name: "menu-callsign",
     page: PAGE.Radar,
@@ -563,6 +571,18 @@ const scenes = [
       device.fly({ kt: 6, ft: 340, track: 90, fpm: 0, dps: 0 }).run(30_000);
       device.sim.setBatteryMv(3400);
       device.run(20_000);
+    }
+  },
+  // Cable mode on the ground, the cable gone for 90 s: the ring counts down to the switch-off.
+  {
+    name: "cable-off",
+    page: PAGE.Radar,
+    shot(device) {
+      device.sim.setExternalPower(1);
+      device.fly({ ...CRUISE, kt: 0 }).run(GROUND_MS);
+      device.openMenu(PAGE.Radar, RADAR_MENU.Power).press().closeMenu();
+      device.sim.setExternalPower(0);
+      device.run(90_000);
     }
   },
   // The update page's last resort: off on this page, and the next press starts the bootloader.

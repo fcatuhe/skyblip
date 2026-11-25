@@ -66,9 +66,11 @@ The long touch on the pad dismisses (`../input/README.md`). With an alarm standi
 
 ### What is not a flight is said in the ring
 
-`NO FIX`, `GROUND` and `TAXI` stand in the ring at double height, centred between own ship's tail and the footer, so a glance at an empty plot says whether the sky is empty or the page is blind. The word clears its patch, and aircraft are drawn over it. Only one shows: without a fix the ring says `NO FIX` and the clock keeps the figure it froze at. In flight the ring carries the plot alone and `FLIGHT` stands over the clock. A dismissal has no word, since the sector going out says it.
+`NO FIX`, `GROUND` and `TAXI` stand in the ring at double height, so a glance at an empty plot says whether the sky is empty or the page is blind. The word clears its patch, and aircraft are drawn over it. Only one shows: without a fix the ring says `NO FIX` and the clock keeps the figure it froze at. In flight the ring carries the plot alone and `FLIGHT` stands over the clock. A dismissal has no word, since the sector going out says it.
 
-The ring has two slots, a double-height banner and a small line under it. A cell that needs charge takes the banner, `BAT 12%` from the knee down, because it is the one thing on the page a pilot can act on. Everything else moves down a slot, and the small line's word drops: a taxiing aircraft on a flat cell reads `BAT 4%` over `TAXI`, and a blind one `BAT 4%` over `NO FIX`. The level is `core/power`'s, `Low` and under (`core/power/README.md`), so a charger, which holds the level at `Normal`, clears it at once. The ring and the lamp start at the same knee.
+The ring has two slots, a double-height banner and a small line under it. The two are centred as a block between own ship's tail and the footer, or the range on the rim, and the banner keeps that place when the small line is empty. A line coming or going therefore never moves the banner, and the panel redraws only that line. A cell that needs charge takes the banner, `BAT 12%` from the knee down, because it is the one thing on the page a pilot can act on. Everything else moves down a slot, and the small line's word drops: a taxiing aircraft on a flat cell reads `BAT 4%` over `TAXI`, and a blind one `BAT 4%` over `NO FIX`. The level is `core/power`'s, `Low` and under (`core/power/README.md`), so a charger, which holds the level at `Normal`, clears it at once. The ring and the lamp start at the same knee.
+
+A Go in cable mode that lost its cable on the ground counts down in the ring: `OFF IN` over `4 MIN`, one banner split over two lines at double height and one `line_pitch` apart, as the parked `CHARGE THE` over `BATTERY`. `OFF IN` stands where every banner stands, and `4 MIN` takes the small line's place (`../../../core/power/README.md`, Cable mode). It outranks the cell and the state word, because the unit goes off before either matters. The minutes are whole and rounded up, so the last one reads `1 MIN` and the panel refreshes once a minute. The countdown never stands in flight, since the hold only runs on the ground, and it goes with the cable's return.
 
 The ring speaks for the Go alone, and a paired Bravo speaks in its own corner. A banner too wide for the `ALL` ring's chord rises a pixel at a time until it clears, with the small line. Every current word fits, so the rise guards the next one.
 
@@ -318,7 +320,7 @@ The button opens the menu of the page a pilot stands on, so a pilot with no phon
 
 | Menu | Rows |
 |---|---|
-| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `BRAVO` |
+| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `BRAVO`, `POWER` |
 | `AIRCRAFT` row | `AIRCRAFT`: what Bravo heard, `TYPE`, `CALLSIGN`, `ADS-B` |
 | `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `BRAVO LOG`, `SELF TEST` |
 
@@ -333,7 +335,8 @@ The radar's menu holds every setting changed on the glass, and the front light, 
 - `UNITS`, `RANGE` and `PLOT` follow, the three the radar is made of.
 - `RANGE` steps 1, 2, 4 and 8 NM, or 2, 4, 8 and 16 KM, and round. Each table doubles in whole units of its own rather than converting the other, and the step survives a change of unit.
 - `ALARM` steps `LOUD`, `SOFT`, `VISUAL`, `OFF` and round, so one stray press from the default still sounds. A Go with no buzzer and no haptic toggles `VISUAL` and `OFF`, and while paired steps `BRAVO LOUD`, `BRAVO SOFT`, `VISUAL` and `OFF`, the `BRAVO` steps sounding on Bravo alone. Pairing sets `BRAVO LOUD`, and unpairing turns a `BRAVO` step into `VISUAL`. While paired the row sets the alarm for both units (`../../../core/comms/README.md`, The alarm).
-- `BRAVO` is last, since a Bravo is paired once, on the ground. It shows the tag or `NONE` and opens the `bravo` page.
+- `BRAVO` follows, since a Bravo is paired once, on the ground. It shows the tag or `NONE` and opens the `bravo` page.
+- `POWER` is last, the one row the menu slides up to, because it is set once per aircraft. `BUTTON`, the default, keeps the button as the switch. `CABLE` hands it to USB power, so a Go wired to the aircraft's socket follows the master switch (`../../../core/power/README.md`, Cable mode).
 
 `TYPE` holds ADS-L G.1.3's codes 0 to 10 and 15 to 17, the categories a person flies in. The longest name, `HANG GLIDER`, fits the row with its label, and a code with no name prints as `CODE 12`.
 

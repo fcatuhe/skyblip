@@ -4,6 +4,7 @@
 // every target.
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/radar.h"
 #include "test/support/glass_ink.h"
 #include "test/support/glass_text.h"
@@ -13,6 +14,18 @@ using namespace skyblip::go;
 using skyblip::ink_in;
 using skyblip::reads_in;
 using skyblip::traffic::Level;
+
+namespace {
+
+constexpr int kBannerHeight = skyblip::ui::kCharacterHeight * 2;
+
+int banner_top(const Glass& glass, const char* word) {
+    for (int top = 0; top + kBannerHeight <= kGlassHeight; top++)
+        if (reads_in(glass, word, 40, top, 160, top + kBannerHeight, 2)) return top;
+    return -1;
+}
+
+}  // namespace
 
 TEST_CASE("radar page: renders rings, own symbol and plots targets") {
     Glass canvas;
@@ -350,19 +363,19 @@ TEST_CASE("radar page: a warned cell takes the ring, at the size the ring is rea
     parked.flight_running = false;
     const Glass ground = radar(parked);
     CHECK(reads_in(ground, "BAT 4%", 40, 120, 160, 160, 2));
-    CHECK(reads_in(ground, "GROUND", 40, 145, 160, 170));
+    CHECK(reads_in(ground, "GROUND", 40, 140, 160, 170));
     CHECK_FALSE(reads_in(ground, "GROUND", 40, 120, 160, 160, 2));
 
     RadarSnapshot rolling = parked;
     rolling.taxiing = true;
-    CHECK(reads_in(radar(rolling), "TAXI", 40, 145, 160, 170));
+    CHECK(reads_in(radar(rolling), "TAXI", 40, 140, 160, 170));
 
     RadarSnapshot blind = low;
     blind.fix_valid = false;
     blind.stage = skyblip::gnss::Stage::Blind;
     const Glass searching = radar(blind);
     CHECK(reads_in(searching, "BAT 4%", 40, 120, 160, 160, 2));
-    CHECK(reads_in(searching, "NO FIX", 40, 145, 160, 170));
+    CHECK(reads_in(searching, "NO FIX", 40, 140, 160, 170));
     CHECK_FALSE(reads_in(searching, "MOVE OUT", 0, 0, 200, 199));
 
     // A healthy cell writes nothing there at all.
@@ -375,7 +388,7 @@ TEST_CASE("radar page: a warned cell takes the ring, at the size the ring is rea
     const Glass charging = radar(cabled);
     CHECK_FALSE(reads_in(charging, "BAT", 0, 0, 200, 199, 2));
     CHECK(reads_in(charging, "NO FIX", 40, 120, 160, 160, 2));
-    CHECK(reads_in(charging, "MOVE OUT", 40, 145, 160, 170));
+    CHECK(reads_in(charging, "MOVE OUT", 40, 140, 160, 170));
 }
 
 // NO FIX says the plot is not being fed; the word under it says whether that is going anywhere.
@@ -385,15 +398,15 @@ TEST_CASE("radar page: under NO FIX stands how far the receiver has got" *
     searching.stage = skyblip::gnss::Stage::Blind;
     const Glass looking = radar(searching);
     CHECK(reads_in(looking, "NO FIX", 40, 120, 160, 160, 2));
-    CHECK(reads_in(looking, "MOVE OUT", 40, 145, 160, 170));
+    CHECK(reads_in(looking, "MOVE OUT", 40, 140, 160, 170));
 
     RadarSnapshot reading = searching;
     reading.stage = skyblip::gnss::Stage::Solving;
-    CHECK(reads_in(radar(reading), "FINDS FIX", 40, 145, 160, 170));
+    CHECK(reads_in(radar(reading), "FINDS FIX", 40, 140, 160, 170));
 
     RadarSnapshot quiet = searching;
     quiet.stage = skyblip::gnss::Stage::Silent;
-    CHECK(reads_in(radar(quiet), "GPS OFF", 40, 145, 160, 170));
+    CHECK(reads_in(radar(quiet), "GPS OFF", 40, 140, 160, 170));
 
     // A fix is the plot itself: no word, and no seconds ticking a partial refresh out of the panel.
     RadarSnapshot fixed = flying(0);
@@ -419,4 +432,56 @@ TEST_CASE("radar page: a blip on the state word is drawn over it, and the word s
     CHECK(canvas.get_pixel(107, 154));
     CHECK(canvas.get_pixel(100, 147));
     CHECK(canvas.get_pixel(100, 161));
+}
+
+// A Go on the cable that lost it says when it goes off, both lines at the size the ring is read at.
+TEST_CASE("radar page: a cable countdown takes the ring as two lines, OFF IN over the minutes" *
+          doctest::test_suite("main")) {
+    RadarSnapshot parked = flying(0);
+    parked.flight_running = false;
+    parked.off_in_min = 4;
+    const Glass going = radar(parked);
+    CHECK(reads_in(going, "OFF IN", 40, 110, 160, 160, 2));
+    CHECK(reads_in(going, "4 MIN", 40, 130, 160, 180, 2));
+    CHECK_FALSE(reads_in(going, "GROUND", 0, 0, 200, 199, 2));
+
+    // One message over two lines, one line pitch apart, as the parked CHARGE THE over BATTERY.
+    const int top = banner_top(going, "OFF IN");
+    CHECK(reads_in(going, "4 MIN", 40, top + line_pitch(2), 160,
+                   top + line_pitch(2) + kBannerHeight, 2));
+
+    // The countdown outranks a warned cell, since the unit goes off before the cell matters.
+    parked.battery_low = true;
+    parked.battery_percent = 4;
+    CHECK(reads_in(radar(parked), "OFF IN", 40, 110, 160, 160, 2));
+    CHECK_FALSE(reads_in(radar(parked), "BAT 4%", 0, 0, 200, 199, 2));
+
+    parked.plot = RadarPlot::ToScale;
+    CHECK(reads_in(radar(parked), "4 MIN", 40, 130, 160, 180, 2));
+}
+
+// A line under the banner never moves it, so the panel redraws only the line that changed.
+TEST_CASE("radar page: the banner stands on the same rows alone, over a small line, or split" *
+          doctest::test_suite("main")) {
+    for (const RadarPlot plot : {RadarPlot::All, RadarPlot::ToScale}) {
+        RadarSnapshot parked = flying(0);
+        parked.flight_running = false;
+        parked.plot = plot;
+        const int alone = banner_top(radar(parked), "GROUND");
+        REQUIRE(alone > 0);
+
+        RadarSnapshot low = parked;
+        low.battery_low = true;
+        low.battery_percent = 4;
+        CHECK(banner_top(radar(low), "BAT 4%") == alone);
+
+        RadarSnapshot going = parked;
+        going.off_in_min = 4;
+        CHECK(banner_top(radar(going), "OFF IN") == alone);
+
+        RadarSnapshot blind;
+        blind.plot = plot;
+        blind.stage = skyblip::gnss::Stage::Blind;
+        CHECK(banner_top(radar(blind), "NO FIX") == alone);
+    }
 }

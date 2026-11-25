@@ -59,7 +59,7 @@ updated_on: "2026-11-25"
         A 3,2&nbsp;V, el dispositivo se apaga por sí solo. Su último mensaje indica que la batería está agotada. Como no has pulsado nada, solo la pantalla puede explicar el apagado. Sin ese mensaje, parecería un bloqueo o una avería. El botón deja de responder al mismo tiempo, porque pulsarlo volvería a llevar la batería a la misma tensión de corte.
       </p>
       <p>
-        Enchufa el cable para volver a usar el dispositivo. Conectar el cable no cambia la pantalla. La luz roja del cargador indica que la batería se está cargando. Pulsa el botón con el cable conectado para arrancar el dispositivo, sea cual sea la carga, y borrar el mensaje. Si la batería se agotó mientras estaba guardado, el dispositivo no dejó ningún mensaje. En ese caso, al pulsar el botón aparece el mismo aviso de batería agotada.
+        Con <span class="mono">POWER BUTTON</span> (la opción predeterminada), enchufa el cable para volver a usar el dispositivo. Conectar el cable no cambia la pantalla. La luz roja del cargador indica que la batería se está cargando. Pulsa el botón con el cable conectado para arrancar el dispositivo, sea cual sea la carga, y borrar el mensaje. Si la batería se agotó mientras estaba guardado, el dispositivo no dejó ningún mensaje. En ese caso, al pulsar el botón aparece el mismo aviso de batería agotada. Con <span class="mono">POWER CABLE</span>, tras un apagado por batería agotada, basta con conectar el Go a una toma USB con alimentación para que arranque y se cargue (consulta el <%= link_to_page "power", label: "modo por cable", anchor: "cable-mode" %>).
       </p>
       <p>
         En el siguiente arranque, la comprobación de funcionamiento indica el apagado por batería agotada con el mensaje
@@ -72,10 +72,25 @@ updated_on: "2026-11-25"
     </figure>
   </div>
 
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="cable-mode">Enciende y apaga el Go <span class="highlight">con el interruptor general</span>.</h3>
+      <p>Deja el Go o Go+ enchufado a la toma USB de la aeronave, sin quitar la batería. Desde el radar, pulsa el botón para abrir <span class="mono">SETTINGS</span>. Toca el panel táctil hasta llegar a <%= link_to_page "controls", label: "la última fila", anchor: "two-contacts" %>, <span class="mono">POWER</span>. En esa fila, pulsa el botón una vez para cambiar de <span class="mono">BUTTON</span>, la opción predeterminada, a <span class="mono">CABLE</span>. Haz el cambio en el Go, no en Briefing.</p>
+      <p>Al activar el interruptor general, si el Go está apagado, se enciende con un pulso de luz verde. En el Go+ también notas la vibración. La batería se carga mientras hay alimentación USB.</p>
+      <p>En tierra, si se corta la alimentación USB, el Go sigue funcionando con su batería. En lugar del mensaje habitual de estado o de batería, el círculo del radar muestra <span class="mono">OFF IN</span> encima de los minutos que quedan, de <span class="mono">5 MIN</span> a <span class="mono">1 MIN</span>. A los cinco minutos, el Go se apaga con tres pulsos rojos cortos. Si vuelve la alimentación antes, la cuenta atrás desaparece y el Go sigue funcionando. Si se corta la alimentación USB en vuelo, el Go no se apaga. Funciona con su batería y espera hasta el aterrizaje para iniciar la cuenta atrás.</p>
+      <p>La batería mantiene el Go encendido mientras actúa el motor de arranque. La espera de cinco minutos cubre el tiempo que dejas el interruptor general apagado para que se enfríe el motor de arranque tras un intento fallido. Para el 912, Rotax indica una pausa de dos minutos tras diez segundos de arranque. Para el IO-320, Lycoming indica cinco minutos entre intentos.</p>
+      <p>Para encender el Go sin alimentación USB, pulsa <span class="mono">RESET</span>, el mando superior del lado izquierdo. Si mantienes pulsado el botón al arrancar, el software de fábrica abre el modo de actualización. Por eso el botón no enciende el Go en el modo por cable. Para apagarlo, mantén pulsado el botón dos segundos. El Go sigue apagado hasta que vuelva la alimentación USB o pulses <span class="mono">RESET</span>.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "cable-off.png", alt: "Pantalla del radar en tierra tras cortar la alimentación de la aeronave: OFF IN encima de 4 MIN dentro del círculo" %>
+      <figcaption>Cuenta atrás al perder la alimentación USB en tierra</figcaption>
+    </figure>
+  </div>
+
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Con el dispositivo apagado</th><th>Qué ocurre</th></tr>
+        <tr><th>Con el dispositivo apagado y <span class="mono">POWER BUTTON</span> (opción predeterminada)</th><th>Qué ocurre</th></tr>
       </thead>
       <tbody>
         <tr><th>Pulsa el botón</th><td>Arranca, salvo si la batería está por debajo de 3,4&nbsp;V y no hay cargador conectado. En ese caso, aparece <span class="mono">BATTERY EMPTY</span></td></tr>
@@ -84,6 +99,21 @@ updated_on: "2026-11-25"
         <tr><th>Enchufa el cargador a un dispositivo con la batería agotada</th><td>Se carga y sigue apagado. <span class="mono">BATTERY EMPTY</span> permanece en pantalla hasta la siguiente pulsación del botón</td></tr>
         <tr><th>Mantén pulsado el botón y enchufa el cargador</th><td>Arranca y se carga</td></tr>
         <tr><th>Pulsa <span class="mono">RESET</span></th><td>Reinicia el dispositivo. Dos pulsaciones en menos de medio segundo inician el gestor de arranque USB, llamado bootloader, que permite instalar firmware por USB</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Con el dispositivo apagado y <span class="mono">POWER CABLE</span></th><th>Qué ocurre</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Activa la alimentación de la aeronave</th><td>Arranca y se carga</td></tr>
+        <tr><th>Enchufa el cable USB tras un apagado por batería agotada</th><td>Arranca y se carga</td></tr>
+        <tr><th>Pulsa el botón</th><td>Sigue apagado</td></tr>
+        <tr><th>Pulsa <span class="mono">RESET</span></th><td>Arranca incluso sin alimentación USB</td></tr>
+        <tr><th>Mantén pulsado el botón al dar alimentación por USB</th><td>Entra en modo de actualización y se queda en ese modo. Suelta el botón y pulsa <span class="mono">RESET</span> para arrancar con normalidad</td></tr>
       </tbody>
     </table>
   </div>

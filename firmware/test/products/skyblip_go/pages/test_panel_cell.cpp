@@ -44,7 +44,7 @@ TEST_CASE("product: a cell that takes the device down names itself on the way ou
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
 
     // The button stays armed, so a press after it reaches the lockout and not a dead unit.
-    rig.platform.system_power().system_off();
+    rig.platform.system_power().system_off(power::Switch::Button);
     CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
           power::kPowerDownStepCount - 1);
 }
@@ -108,7 +108,7 @@ TEST_CASE("product: a press after a cutoff is refused and leaves the flat frame 
     CHECK(pressed.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
     CHECK(pressed.platform.system_power().went_dark_flat());
 
-    pressed.platform.system_power().system_off();
+    pressed.platform.system_power().system_off(power::Switch::Button);
     CHECK(pressed.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
           power::kPowerDownStepCount - 1);
 }

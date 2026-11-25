@@ -9,7 +9,7 @@ namespace {
 
 constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light, MenuRow::Aircraft, MenuRow::Units,
                                       MenuRow::Range, MenuRow::Plot,     MenuRow::Alarm,
-                                      MenuRow::Bravo};
+                                      MenuRow::Bravo, MenuRow::Power};
 constexpr MenuRow kAircraftMenuRows[] = {MenuRow::Detected, MenuRow::AircraftType,
                                          MenuRow::Callsign, MenuRow::AircraftAddress};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
@@ -117,6 +117,7 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::SelfTest: return "SELF TEST";
         case MenuRow::Bravo: return "BRAVO";
         case MenuRow::Aircraft: return "AIRCRAFT";
+        case MenuRow::Power: return "POWER";
         default: return "";
     }
 }
@@ -231,6 +232,10 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
                 format_string(out, values.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
             break;
         case MenuRow::Light: written = format_string(out, values.light ? "ON" : "OFF"); break;
+        case MenuRow::Power:
+            written = format_string(
+                out, values.settings.power_switch == power::Switch::Cable ? "CABLE" : "BUTTON");
+            break;
         case MenuRow::Bravo:
             written = paired(values.settings)
                           ? format_hex(out, events::bluetooth_tag(values.settings.bravo), 4)

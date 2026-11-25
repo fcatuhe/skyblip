@@ -10,6 +10,7 @@
 #include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/poweroff.h>
+#include <zephyr/sys/reboot.h>
 
 #include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
@@ -49,17 +50,26 @@ class PowerDown : protected power::PowerDownSink {
     power::ResetCause reset_causes() const { return causes_; }
     bool take_supply_warning() { return supply_monitor_.take_warning(); }
 
-    void system_off() {
+    void system_off(power::Switch power_switch) {
+        power_switch_ = power_switch;
         // INFO: fc 05oct26 first, as it outlives the rails, and without a retention area there is
         // no recovery either
-        (void)write_boot_magic(Dfu::boot_magic_for_system_off(factory_dfu_button_));
+        (void)write_boot_magic(Dfu::boot_magic_for_system_off(factory_dfu_button_, power_switch));
         power::power_down(*this);
         // INFO: fc 05aug26 after the walk, which arms a level wake: a stale DETECT wakes us at once
         clear_stale_latches();
         sys_poweroff();
     }
 
+    // INFO: fc 26nov26 a cable that came back during the park raises no VBUS wake from SYSTEM OFF
+    [[noreturn]] void restart() {
+        (void)write_boot_magic(power::kNoBootloaderMagic);
+        sys_reboot(SYS_REBOOT_COLD);
+    }
+
    protected:
+    bool button_wakes() const { return power::button_wakes(factory_dfu_button_, power_switch_); }
+
     static void lower(const struct gpio_dt_spec& pin) {
         (void)gpio_pin_configure_dt(&pin, GPIO_OUTPUT_INACTIVE);
     }
@@ -105,6 +115,7 @@ class PowerDown : protected power::PowerDownSink {
    private:
     SupplyMonitor supply_monitor_{};
     power::DfuButton factory_dfu_button_;
+    power::Switch power_switch_{power::Switch::Button};
     power::ResetCause causes_{power::ResetCause::None};
     bool causes_read_{false};
 };

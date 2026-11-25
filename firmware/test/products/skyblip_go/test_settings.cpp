@@ -93,11 +93,12 @@ TEST_CASE("settings: a corrupted blob is detected (CRC), caller falls back") {
     CHECK(from_blob(blob, blob_size(), out) == Status::Crc);
 }
 
-// Only dev units stored an older layout, so the unit comes up on defaults instead.
+// Only dev units stored a layout older than v0.8.0's, so the unit comes up on defaults instead.
 TEST_CASE("settings: a sealed blob of an older layout is Unsupported") {
     Settings settings = defaults();
     uint8_t blob[128];
-    settings::seal(kBlobVersion - 1, &settings, sizeof(Settings), blob, sizeof(blob));
+    settings::seal(kBlobVersionBeforePowerSwitch - 1, &settings, sizeof(Settings), blob,
+                   sizeof(blob));
     Settings out;
     CHECK(from_blob(blob, blob_size(), out) == Status::Unsupported);
 }
@@ -414,5 +415,38 @@ TEST_CASE(
     CHECK(settings.aircraft_address == kAircraftAddressUnset);
 
     settings.aircraft_address = 0x1000000;
+    CHECK(validate(settings) == Status::OutOfRange);
+}
+
+// v0.8.0 shipped blob version 14, whose padding byte now holds the switch.
+TEST_CASE("settings: a v0.8.0 blob keeps its settings and comes up switched by the button" *
+          doctest::test_suite("main")) {
+    Settings shipped = defaults();
+    std::memcpy(shipped.callsign, "DEABC", 6);
+    shipped.battery_offset_mv = 40;
+    shipped.power_switch = static_cast<power::Switch>(0xa5);
+    uint8_t blob[128];
+    settings::seal(kBlobVersionBeforePowerSwitch, &shipped, sizeof(Settings), blob, sizeof(blob));
+
+    Settings out;
+    REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
+    CHECK(std::string(out.callsign) == "DEABC");
+    CHECK(out.battery_offset_mv == 40);
+    CHECK(out.power_switch == power::Switch::Button);
+}
+
+TEST_CASE("settings: the power switch is stored, and a new unit ships on the button" *
+          doctest::test_suite("main")) {
+    Settings settings = defaults();
+    CHECK(settings.power_switch == power::Switch::Button);
+
+    settings.power_switch = power::Switch::Cable;
+    uint8_t blob[128];
+    to_blob(settings, blob, sizeof(blob));
+    Settings out;
+    REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
+    CHECK(out.power_switch == power::Switch::Cable);
+
+    settings.power_switch = static_cast<power::Switch>(2);
     CHECK(validate(settings) == Status::OutOfRange);
 }

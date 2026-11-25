@@ -104,6 +104,8 @@ class Product {
     power::ShutdownSequencer& shutdown() { return shell_.shutdown(); }
     const power::ShutdownSequencer& shutdown() const { return shell_.shutdown(); }
     bool ready_to_power_off() const { return shell_.ready_to_power_off(); }
+    bool cable_returned() const { return shell_.cable_returned(); }
+    power::Switch power_switch() const { return power::Switch::Button; }
     bool may_feed_watchdog(uint32_t now_ms) const { return shell_.may_feed_watchdog(now_ms); }
     uint32_t due_in_ms(uint32_t now_ms) const { return shell_.due_in_ms(now_ms); }
 

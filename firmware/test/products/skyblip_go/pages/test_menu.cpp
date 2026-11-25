@@ -121,26 +121,30 @@ TEST_CASE("radar menu: a paired Go that cannot sound reads BRAVO LOUD whole on i
     CHECK(row_value_reads(drawn, MenuRow::Alarm, "BRAVO LOUD", true));
 }
 
-// Seven rows and seven lines: the radar menu fits, and only a longer one slides under the focus.
-TEST_CASE("radar menu: the seven rows fit the glass, and a longer menu slides up under the focus") {
+// Eight rows on seven lines: POWER, set once per aircraft, is the one the menu slides up to.
+TEST_CASE("radar menu: seven rows fit the glass, and the focus on POWER slides the menu up one") {
     MenuValues values = default_menu_values();
     values.settings.alarm = go::Alarm::Visual;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.row_count == kMenuLines);
+    REQUIRE(menu.row_count == kMenuLines + 1);
 
-    const Drawn last = page_of(Page::Radar, values, MenuRow::Bravo);
-    CHECK(line_of(last, MenuRow::Light) == 0);
-    CHECK(line_of(last, MenuRow::Bravo) == kMenuLines - 1);
-    CHECK(row_label_reads(last, MenuRow::Bravo, true));
-    CHECK(row_value_reads(last, MenuRow::Alarm, "VISUAL", false));
+    const Drawn bravo = page_of(Page::Radar, values, MenuRow::Bravo);
+    CHECK(line_of(bravo, MenuRow::Light) == 0);
+    CHECK(line_of(bravo, MenuRow::Bravo) == kMenuLines - 1);
+    CHECK(row_value_reads(bravo, MenuRow::Alarm, "VISUAL", false));
+    CHECK(reads_pad_key(bravo.canvas, "NEXT"));
+
+    const Drawn last = page_of(Page::Radar, values, MenuRow::Power);
+    CHECK(line_of(last, MenuRow::Aircraft) == 0);
+    CHECK(line_of(last, MenuRow::Power) == kMenuLines - 1);
+    CHECK(row_label_reads(last, MenuRow::Power, true));
+    CHECK(row_value_reads(last, MenuRow::Power, "BUTTON", true));
     // Off the last row the pad hands the glass back, and the key says so.
     CHECK(reads_pad_key(last.canvas, "BACK"));
 
-    const MenuRow longer[] = {MenuRow::Light, MenuRow::Aircraft, MenuRow::Units, MenuRow::Range,
-                              MenuRow::Plot,  MenuRow::Alarm,    MenuRow::Bravo, MenuRow::Status};
-    const Menu eight{longer, kMenuLines + 1};
-    CHECK(menu_first_row(eight, MenuRow::Bravo) == 0);
-    CHECK(menu_first_row(eight, MenuRow::Status) == 1);
+    values.settings.power_switch = power::Switch::Cable;
+    CHECK(row_value_reads(page_of(Page::Radar, values, MenuRow::Power), MenuRow::Power, "CABLE",
+                          true));
 }
 
 TEST_CASE("menu page: the button's key names what a press does to the focused row" *

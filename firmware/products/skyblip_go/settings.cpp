@@ -15,6 +15,7 @@ namespace skyblip::go {
 namespace {
 
 constexpr size_t kPayload = sizeof(Settings);
+static_assert(kPayload == 36, "a version 14 blob is read with this payload size");
 
 bool callsign_is_typeable(const char* callsign) {
     for (size_t i = 0; i < kCallsignBytes; i++) {
@@ -53,6 +54,7 @@ Status validate(const Settings& settings) {
         !settings::icao_assignable(settings.aircraft_address))
         return Status::OutOfRange;
     if (settings.bravo.type > kBluetoothAddressTypeCeiling) return Status::OutOfRange;
+    if (settings.power_switch > power::Switch::Cable) return Status::OutOfRange;
     return Status::Ok;
 }
 
@@ -64,9 +66,12 @@ void to_blob(const Settings& settings, uint8_t* out, size_t capacity) {
 
 Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     if (length < settings::kBlobOverhead) return Status::Crc;
-    if (settings::blob_version(in) != kBlobVersion) return Status::Unsupported;
+    const uint8_t version = settings::blob_version(in);
+    if (version != kBlobVersion && version != kBlobVersionBeforePowerSwitch)
+        return Status::Unsupported;
     const Status status = settings::open(in, length, kPayload, &out);
     if (status != Status::Ok) return status;
+    if (version == kBlobVersionBeforePowerSwitch) out.power_switch = power::Switch::Button;
     if (validate(out) != Status::Ok) return Status::Invalid;
     return Status::Ok;
 }

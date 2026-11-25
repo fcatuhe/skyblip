@@ -139,8 +139,8 @@ class Dfu : public ports::Dfu {
         return ports::RecoveryPath::Rebooted;
     }
 
-    static uint8_t boot_magic_for_system_off(power::DfuButton button) {
-        return power::boot_magic_for_system_off(button, recovery_armed_);
+    static uint8_t boot_magic_for_system_off(power::DfuButton button, power::Switch power_switch) {
+        return power::boot_magic_for_system_off(button, recovery_armed_, power_switch);
     }
 
    private:

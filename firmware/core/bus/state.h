@@ -101,6 +101,7 @@ struct PowerState {
     power::PowerLevel level{power::PowerLevel::Unknown};
     power::ChargeCondition charge{power::ChargeCondition::Unknown};
     bool supply_warned{false};
+    std::optional<uint32_t> cable_off_in_ms{};
     int16_t die_dc{0};
     bool die_valid{false};
 };
