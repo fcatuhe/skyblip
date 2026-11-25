@@ -66,6 +66,9 @@ module Skyblip
     ]
     config.x.oauth_hosted_callbacks = %w[https://claude.ai/api/mcp/auth_callback]
 
+    # The public half of the key that proves to the MCP Registry that skyblip.eu publishes eu.skyblip/*, Ed25519 in base64.
+    config.x.mcp_registry_public_key = nil
+
     # The CNIL's terms for audience measurement without consent: a tracker lives 13 months, and what it collects is kept 25 months.
     config.x.tracker_lifetime = 13.months
     config.x.retention = 25.months

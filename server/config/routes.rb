@@ -22,6 +22,7 @@ Rails.application.routes.draw do
 
   scope ".well-known", format: false do
     resource :ai_catalog, only: :show, path: "ai-catalog.json"
+    resource :mcp_registry_proof, only: :show, path: "mcp-registry-auth"
   end
 
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }

@@ -22,3 +22,8 @@ description = "Edit the production credentials"
 env.RAILS_MASTER_KEY = "{{ secrets.RAILS_PRODUCTION_KEY }}"
 interactive = true
 run = "bin/rails credentials:edit --environment production"
+
+[tasks."mcp:registry:login"]
+description = "Log mcp-publisher in to the MCP Registry for the eu.skyblip namespace"
+env.MCP_PRIVATE_KEY = "{{ secrets.MCP_REGISTRY_PRIVATE_KEY }}"
+run = "mcp-publisher login http --domain skyblip.eu"
