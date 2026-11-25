@@ -40,7 +40,7 @@ class SimulatorHelperTest < ActionView::TestCase
   test "browser and node share app-owned protocol module names" do
     imports = JSON.parse(Rails.application.importmap.to_json(resolver: ApplicationController.helpers)).fetch("imports")
 
-    %w[ble cbor dev_simulator fleet image smp update].each do |name|
+    %w[ble cbor fleet image simulated_traffic smp update].each do |name|
       assert_match %r{\A/assets/skyblip/#{name}-[a-f0-9]+\.js\z}, imports.fetch("#skyblip/#{name}")
     end
   end
@@ -61,8 +61,9 @@ class SimulatorHelperTest < ActionView::TestCase
   test "the workbench keeps own-ship sensors editable without inline behavior" do
     render partial: "shared/simulator_dev", locals: { module_path: "/releases/v0.2.0/skyblip-simulator-embed.js" }
 
-    %w[spd alt trk trn clb slp sats air bat rng].each do |id|
-      assert_select "input##{id}[type=range][data-action='input->dev-simulator#control']", count: 1
+    %w[speed altitude track turn climb slip satellites airmass battery range].each do |axis|
+      assert_select "input[type=range][data-dev-simulator-target=#{axis}][data-dev-simulator-axis-param=#{axis}][data-action='dev-simulator#steer']", count: 1
+      assert_select "output[data-dev-simulator-target=#{axis}Readout]", count: 1
     end
     assert_select "[data-dev-simulator-src-value='/releases/v0.2.0/skyblip-simulator-embed.js']", count: 1
     assert_select "script, style, [style], [onclick], [oninput], [onpointerdown]", count: 0
