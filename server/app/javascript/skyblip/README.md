@@ -4,7 +4,7 @@ Reusable browser modules live here and their Node tests live in `server/test/jav
 
 The simulator loads `skyblip-simulator-embed.js`, Emscripten's loader and the WASM from same-origin `/releases/:tag/:file` URLs after a Turbo Frame selects a release. When a local browser build exists, `/try` and `/fr/essayer` use it instead. The simulator's case styling is app-owned in `server/app/assets/stylesheets/simulator/device.css`. The firmware's own `firmware/simulator/web/embed.js` remains usable by `server/bin/screenshots` without Rails.
 
-On the public simulator, the Bravo checkbox starts a fresh Go alone or loads the firmware's `paired` scenario. It appears only on builds that support the pair. Both modes generate ADS-L and FLARM traffic 0.8 to 4.8 km away. Paired mode adds a separate group of ADS-B aircraft 8 to 30 km away. The simulated Bravo receives those messages on 1090 MHz and relays the traffic to the Go over the firmware's peer link.
+On the public simulator, the Bravo checkbox starts a fresh Go alone or loads the firmware's `paired` scenario. It appears once the simulator runs. Both modes generate ADS-L and FLARM traffic 0.8 to 4.8 km away. Paired mode adds a separate group of ADS-B aircraft 8 to 30 km away. `simulated_traffic.js` draws that traffic for the public simulator and the workbench alike. The simulated Bravo receives those messages on 1090 MHz and relays the traffic to the Go over the firmware's peer link.
 
 ## The console
 
