@@ -1,32 +1,26 @@
 ---
 title: "Go screens and radar display modes"
 nav_title: Screens
-description: "See every skyBlip Go screen, from traffic to diagnostics. Compare PLOT ALL and PLOT TO SCALE with the same traffic scenes."
+description: "See the skyBlip Go screens, from traffic to diagnostics. Compare PLOT ALL and PLOT TO SCALE with the same traffic scenes."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Every screen, as the device draws it.</h1>
+  <h1>The screens, as the device draws them.</h1>
   <p class="lede">
-    Each picture shows the 200&times;200 pixels drawn by the
+    Each picture reproduces, pixel for pixel, the 200&times;200 pixels drawn by the
     <%= link_to_page "skyblip-go", label: "simulator", anchor: "simulator" %>,
-    set to that state and captured pixel for pixel. When a screen changes
-    on the device, we take a new capture.
+    set up for the situation shown. When a screen changes on the device, we take a new capture.
   </p>
 </section>
 
 <section>
   <h2 class="kicker" id="both-ways">The radar, both ways</h2>
   <p class="lede">
-    <span class="mono">PLOT</span> on the settings menu draws the radar one of
-    two ways. <span class="mono">ALL</span>, the first choice and the one a
-    device ships on, shrinks the ring and stands every aircraft past it on the
-    band around it, on its bearing. <span class="mono">TO SCALE</span> puts
-    every mark where the ring&rsquo;s scale puts it, and leaves off what does
-    not fit. Three skies, each captured both ways off the same firmware.
+    <span class="mono">PLOT</span> in the settings menu offers two radar display modes. <span class="mono">ALL</span> is the first option and the default on a new device. In this mode, the ring shrinks. Every aircraft beyond it appears on the surrounding band, on its bearing. <span class="mono">TO SCALE</span> displays aircraft to the ring&rsquo;s scale. Aircraft beyond the edges of the screen are not shown. These three situations were each captured in both modes using the same firmware.
   </p>
 
   <div class="plot" data-controller="plot" data-plot-view-value="both">
@@ -37,7 +31,7 @@ updated_on: "2026-11-20"
     </p>
 
     <div class="plot-situation">
-      <h3 id="quiet-sky">A sky that fits the ring.</h3>
+      <h3 id="quiet-sky">All traffic is inside the ring.</h3>
       <p>
         Three aircraft inside four miles. With <span class="mono">ALL</span>
         they sit in the smaller ring, and nothing else changes. To scale, the
@@ -57,11 +51,8 @@ updated_on: "2026-11-20"
     <div class="plot-situation">
       <h3 id="past-the-ring">Traffic past the ring.</h3>
       <p>
-        One aircraft approaching from five miles ahead, a group of three eight
-        miles ahead and to the right, one eleven miles to the left. With
-        <span class="mono">ALL</span>, each appears on the band. The group shares
-        one symbol labelled 3. A line showing the approaching aircraft&rsquo;s position in one minute already enters
-        the ring. To scale, only the aircraft ahead appears on screen.
+        One aircraft is approaching from five miles ahead. A group of three is eight miles ahead and to the right, and another aircraft is eleven miles to the left. With
+        <span class="mono">ALL</span>, they appear on the band. The group shares one symbol labelled 3. The approaching aircraft&rsquo;s track line already enters the ring and ends at its predicted position in one minute. Of these aircraft, only the one ahead appears on screen in the to-scale mode.
       </p>
       <div class="shots">
         <figure class="shot plot-all">
@@ -95,7 +86,7 @@ updated_on: "2026-11-20"
     </div>
   </div>
 
-  <p><%= link_to_page "radar", label: "How the band reads", anchor: "every-aircraft", class: "cta cta--next" %></p>
+  <p><%= link_to_page "radar", label: "Read the symbols on the band", anchor: "every-aircraft", class: "cta cta--next" %></p>
 </section>
 
 <section>
@@ -142,11 +133,11 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-blank.png", alt: "The callsign field with a blank as the first character, the bar under it, and the button's key now reading ERASE" %>
-      <figcaption>The first character blanked</figcaption>
+      <figcaption>A blank as the first character</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "The aircraft menu after the press, with the CALLSIGN row selected and reading NONE" %>
-      <figcaption>One press later</figcaption>
+      <figcaption>No callsign, one press later</figcaption>
     </figure>
   </div>
   <p>
@@ -184,11 +175,11 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="on-the-ground">On the ground, and off</h2>
+  <h2 class="kicker" id="on-the-ground">No position, low battery or switched off</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring shows NO FIX and, below it, the receiver's progress towards a position fix" %>
-      <figcaption>Waiting for the sky</figcaption>
+      <figcaption>Waiting for a position</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "low-battery.png", alt: "The radar page in flight with a low battery: BAT and the percentage in the ring, in place of the status word" %>
@@ -213,7 +204,7 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="asked">It asks for approval on screen.</h2>
+  <h2 class="kicker" id="asked">Confirmation and recovery</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "confirm.png", alt: "The authorization prompt for settings sent by the phone: SETTINGS under the large mark, the change it makes, CANCELS IN with the seconds left, the button's key ACCEPT and the pad's key CANCEL" %>
@@ -221,7 +212,7 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "recovery.png", alt: "The recovery page: RECOVERY under the large mark, the USB drive name TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET, and the button's key START" %>
-      <figcaption>Handed to the USB bootloader</figcaption>
+      <figcaption>USB recovery</figcaption>
     </figure>
   </div>
   <p>
@@ -232,7 +223,7 @@ updated_on: "2026-11-20"
 <section>
   <h2 class="kicker">Technical notes</h2>
 
-  <h3 id="screen">Why the screen behaves the way it does.</h3>
+  <h3 id="screen">How the screen works.</h3>
   <p class="lede">
     The screen is a 1.54&Prime; e-paper panel, 200&times;200 pixels. It keeps its last
     image with the power off and uses no power to keep it there. That is why
@@ -240,12 +231,7 @@ updated_on: "2026-11-20"
     storage.
   </p>
   <p class="lede">
-    In flight, each image uses a partial refresh. A full refresh, which
-    flashes the screen black and white for a second and a half, happens twice in
-    a session: at power on, and at power off. A page change uses a
-    single black wipe instead, and the alarm&rsquo;s one flash a second is the
-    panel&rsquo;s own limit rather than a rate we picked. Faster refreshes are possible,
-    and repeatedly switching a large black area that fast permanently marks the screen.
+    In flight, each image uses a partial refresh. A full refresh flashes the screen black and white for a second and a half. It happens twice in a session: at power on and power off. A page change uses a single black wipe. The alarm flashes once a second to stay within the panel&rsquo;s limit, rather than at a rate we picked. Faster refreshes are possible, but repeatedly flashing a large black area at that rate leaves a permanent mark on the screen.
   </p>
 
   <ul class="points">

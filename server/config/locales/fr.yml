@@ -3,6 +3,8 @@ fr:
   nav:
     label: "Site"
     devices: "Appareils"
+    open: "Ouvrir le menu"
+    close: "Fermer le menu"
   cta:
     prompt: "Envie d'essayer maintenant ou de vous équiper ?"
     try: "Essayer en ligne"

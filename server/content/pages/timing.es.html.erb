@@ -2,26 +2,26 @@
 title: "Cuándo transmite skyBlip Go, segundo a segundo"
 slug: temporizacion
 nav_title: "Temporización"
-description: "Cuándo transmite skyBlip Go: ventanas, ciclo de 20 s según el número de serie, un instante sorteado cada segundo, escucha previa y reintentos."
+description: "Cuándo transmite skyBlip Go: ventanas, ciclo de 20 s según su número de serie, cálculo cada segundo, escucha previa y reintentos."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Cada ráfaga tiene su segundo, su canal y su milisegundo.</h1>
-  <p class="lede">Un skyBlip Go programa cada ráfaga de radio en tres pasos. El número de serie fija los segundos. Si el segundo es par o impar se elige un canal u otro. Un sorteo que se repite cada segundo elige el milisegundo dentro de la ventana de ese canal.</p>
+  <p class="lede">El skyBlip Go decide cuándo transmitir en tres pasos. Su número de serie fija los segundos de transmisión. Según el segundo sea par o impar, elige un canal u otro. Un cálculo que se repite cada segundo fija después el instante de inicio dentro de la ventana de ese canal.</p>
 </section>
 
 <section>
-  <h3 id="second">El segundo, dividido en tres ventanas.</h3>
-  <p class="lede">El GPS marca el inicio de cada segundo UTC. El Go tiene una radio, así que escucha en tres ventanas, cada una en un canal distinto. <%= link_to_page "radio", label: "La guía de radio", anchor: "second" %> explica qué recibe en cada una. Aquí importa cuándo transmite. Todos los tiempos se miden desde el inicio del segundo.</p>
+  <h3 id="second">Tres ventanas para escuchar los tres canales.</h3>
+  <p class="lede">El GPS marca el inicio de cada segundo UTC. El Go solo tiene una radio. Por eso escucha los canales por turnos, en tres ventanas distintas. <%= link_to_page "radio", label: "La guía de radio", anchor: "second" %> explica qué recibe en cada una. Aquí importa cuándo transmite. Todos los tiempos se miden desde el inicio del segundo.</p>
 
   <div class="table-scroll">
     <table class="modules">
       <thead>
-        <tr><th>Ventana</th><th>Canal</th><th>Ventana de escucha completa</th><th>Inicio de las ráfagas del Go</th></tr>
+        <tr><th>Ventana</th><th>Canal</th><th>Intervalo de escucha</th><th>Inicios de transmisión permitidos para el Go</th></tr>
       </thead>
       <tbody>
         <tr><th>Enlace ascendente</th><td>869,525&nbsp;MHz</td><td>De 210 a 440&nbsp;ms</td><td>Nunca. Aquí transmite la estación terrestre y el Go solo escucha</td></tr>
@@ -36,11 +36,11 @@ updated_on: "2026-11-20"
   <p class="lede">La ventana 2 se prolonga 200&nbsp;ms en el segundo siguiente para recibir a los dispositivos de la generación FLARM que aún transmiten. El intervalo directo de ADS-L, reservado a las transmisiones entre aeronaves, acaba a los 1000&nbsp;ms. Las posiciones deben terminar antes. Una ráfaga dura 4,64&nbsp;ms en el aire. El último instante de inicio permitido deja espacio para el tiempo de emisión previsto y un margen de 5&nbsp;ms antes de que cierre la ventana. En el banco se midió un máximo de 5,5&nbsp;ms entre la orden de transmitir y el final de la ráfaga, dentro de ese margen.</p>
   <p class="lede">Cada cambio de ventana tarda 10&nbsp;ms: 2&nbsp;ms de escucha adicional en el canal anterior por si llega una ráfaga tardía, 5&nbsp;ms para resintonizar y 3&nbsp;ms de escucha en el nuevo canal antes de que abra su ventana. Esos 3&nbsp;ms también permiten comprobar el canal antes de una ráfaga programada para el primer instante de la ventana.</p>
 
-  <h3 id="channel">La paridad del segundo elige el canal.</h3>
-  <p class="lede">Una posición usa el canal A en un segundo UTC par y el canal B en uno impar, tanto en tierra como en vuelo. Un mensaje Status indica qué puede recibir el Go. Usa el canal opuesto al que usaría una posición en ese segundo. El indicativo usa siempre el canal B, al final de la ventana 2.</p>
+  <h3 id="channel">El canal cambia según el segundo sea par o impar.</h3>
+  <p class="lede">Tanto en tierra como en vuelo, el Go transmite sus posiciones por el canal A en los segundos UTC pares y por el canal B en los impares. Un mensaje Status indica qué puede recibir el Go. Usa el canal opuesto al que usaría una posición en ese segundo. El indicativo usa siempre el canal B, al final de la ventana 2.</p>
   <p class="lede">ADS-L exige que las posiciones consecutivas y los mensajes Status consecutivos cambien de canal. La regla par o impar permite predecir el canal de posición solo a partir de la hora. Un receptor que escucha en un solo canal puede recibir una de cada dos posiciones programadas. Al despegar o aterrizar, dos posiciones consecutivas pueden usar el mismo canal, una sola vez en el paso entre tierra y vuelo. Ocurre en casi uno de cada dos cambios, el 45&nbsp;% de las fases de despegue y aterrizaje cubiertas por las pruebas.</p>
 
-  <h3 id="cycle">Un ciclo de 20&nbsp;s fijado por el número de serie.</h3>
+  <h3 id="cycle">El número de serie fija el inicio del ciclo de 20&nbsp;s.</h3>
   <p class="lede">Cada Go sigue un ciclo de 20&nbsp;s. Su inicio, que aquí llamamos c, es un segundo par: el doble de la última cifra decimal de su número de serie, o <span class="mono">c = 2 &times; (serial mod 10)</span>. skyblip.eu asigna ese número durante la <%= link_to "activación", briefing_activation_path %>. En el ejemplo <span class="mono">skyBlip Go 00012A</span>, el número de serie hexadecimal equivale a 298 en decimal. Su última cifra es 8, así que el ciclo empieza en el segundo 16.</p>
 
   <div class="table-scroll">
@@ -84,7 +84,7 @@ updated_on: "2026-11-20"
 
   <%= render "shared/cycle" %>
 
-  <p class="lede">En tierra, <span class="mono">skyBlip Go 00012A</span> programa posiciones en :05, :16, :25, :36, :45 y :56 de cada minuto. Programa mensajes Status en :07, :18, :27, :38, :47 y :58 y el indicativo al inicio de :01, :11, :21, :31, :41 y :51. En vuelo, programa una posición cada segundo. Los horarios de Status e indicativo no cambian al despegar ni al aterrizar.</p>
+  <p class="lede">En tierra, <span class="mono">skyBlip Go 00012A</span> programa posiciones en :05, :16, :25, :36, :45 y :56 de cada minuto. Programa mensajes Status en :07, :18, :27, :38, :47 y :58. El indicativo está previsto al inicio de :01, :11, :21, :31, :41 y :51. En vuelo, programa una posición cada segundo. Los segundos previstos para los mensajes Status y el indicativo no cambian al despegar ni al aterrizar.</p>
   <p class="lede">Una búsqueda exhaustiva eligió estos intervalos para cumplir cuatro reglas:</p>
   <ul class="points">
     <li>Las posiciones en tierra distan 9 y luego 11&nbsp;s. Un intervalo de 10&nbsp;s pondría las posiciones consecutivas en el mismo canal. La media sigue siendo una cada 10&nbsp;s, según la interpretación de skyBlip del ritmo de ADS-L en tierra</li>
@@ -96,7 +96,7 @@ updated_on: "2026-11-20"
   <p class="lede">El programa usa la dirección propia de la unidad incluso cuando sus mensajes llevan la dirección OACI de una aeronave. Configurar o borrar esa dirección en vuelo no cambia el instante ni el canal de una ráfaga.</p>
 
   <h3 id="instant">El milisegundo se sortea de nuevo cada segundo.</h3>
-  <p class="lede">En su ventana, el instante de inicio de una posición sale de un hash: un cálculo que combina la dirección del equipo con el segundo UTC y reparte el resultado entre los milisegundos disponibles. Los mensajes Status e indicativo usan más rondas del mismo cálculo para que cada uno tenga su propio sorteo. Dos equipos con el mismo segundo programado no tienen por qué empezar a la vez. Si sus ráfagas se solapan, al segundo siguiente se vuelve a sortear.</p>
+  <p class="lede">Dentro de su ventana, el Go calcula el instante de inicio de su posición a partir de su dirección y del segundo UTC. Este cálculo, llamado hash, reparte los inicios entre los milisegundos disponibles. Los mensajes Status e indicativo pasan por rondas adicionales del mismo cálculo, cada uno con su propio resultado. Dos equipos con el mismo segundo programado no tienen por qué transmitir a la vez. Si sus ráfagas se solapan, los resultados cambian al segundo siguiente.</p>
   <p class="lede">Para una ráfaga de 5&nbsp;ms repartida en un intervalo directo de 550&nbsp;ms, dos inicios separados por menos de 5&nbsp;ms dan una probabilidad aproximada de colisión del 1,8&nbsp;% por vecino al alcance. Repetir el sorteo reduce el riesgo de que coincida siempre el mismo par. Con un instante fijo por unidad, dos aeronaves con mala suerte podrían solaparse cada segundo durante todo el vuelo.</p>
 
   <figure class="shot">
@@ -104,10 +104,10 @@ updated_on: "2026-11-20"
     <figcaption>El registro de radio enumera cada ráfaga con su hora al milisegundo</figcaption>
   </figure>
 
-  <h3 id="listen">Escucha antes de transmitir.</h3>
-  <p class="lede">ADS-L exige escuchar antes de transmitir según las reglas de acceso al espectro de ETSI EN 300 220-1. Antes del instante previsto, el Go mide el canal de la ráfaga durante 200&nbsp;&micro;s. Promedia nueve lecturas en forma de potencia y termina la medición como máximo 2&nbsp;ms antes de transmitir. Por debajo del umbral, transmite. En el umbral o por encima, espera entre 15 y 250&nbsp;ms al azar, en pasos de 5&nbsp;ms, la duración prevista de una ráfaga. Luego vuelve a escuchar. Es el intervalo de aplazamiento de ADS-L 4 SRD-860, sección C.2, limitado a las esperas que terminan como muy tarde en el último inicio permitido de la ráfaga en su ventana. Si no cabe ninguna espera de al menos 15&nbsp;ms, la ráfaga no sale. La espera cuenta desde el instante previsto de la ráfaga, y la dirección y ese instante determinan el sorteo.</p>
+  <h3 id="listen">El Go escucha el canal antes de transmitir.</h3>
+  <p class="lede">ADS-L exige escuchar antes de transmitir. Esta obligación sigue las reglas de acceso al espectro de ETSI EN 300 220-1. Antes del instante previsto, el Go mide la potencia recibida en el canal durante 200&nbsp;&micro;s. Calcula la media de nueve mediciones. Esta escucha termina como máximo 2&nbsp;ms antes de transmitir. Si la potencia está por debajo del umbral, transmite. En el umbral o por encima, espera y vuelve a escuchar. La espera se elige al azar entre 15 y 250&nbsp;ms, en pasos de 5&nbsp;ms. Ese paso corresponde a la duración contabilizada de una ráfaga. El intervalo de 15 a 250&nbsp;ms procede de ADS-L 4 SRD-860, sección C.2. El Go solo admite esperas que aún permitan iniciar la transmisión dentro del plazo autorizado de la ventana. Si no cabe ninguna espera de al menos 15&nbsp;ms, la ráfaga no sale. La espera se cuenta desde el instante previsto de transmisión. El sorteo depende de ese instante y de la dirección del Go.</p>
   <p class="lede">El umbral procede de la norma para un canal de 200&nbsp;kHz, ajustado por la ganancia de antena. En el chip de radio, el canal cuenta como ocupado a partir de &minus;78&nbsp;dBm. La ganancia de antena y la pérdida de la línea de alimentación usadas en el cálculo proceden de la ficha técnica y de un margen, no de mediciones de una unidad.</p>
-  <p class="lede">Una ráfaga aplazada permanece en su ventana y su canal. Si es una posición, se codifica de nuevo para el nuevo instante con la posición más reciente. Si el canal sigue ocupado al cerrarse la ventana, la ráfaga no sale. En tierra, una vez que pasan 3&nbsp;s desde la primera detección de canal ocupado, el Go puede forzar la transmisión sin escuchar, como permite ADS-L. Guarda silencio durante 2&nbsp;s desde el fin de la ráfaga. Nunca fuerza una transmisión en vuelo, donde ese silencio costaría dos posiciones.</p>
+  <p class="lede">Una ráfaga aplazada permanece en su ventana y su canal. Si es una posición, el Go vuelve a preparar el mensaje para el nuevo instante de inicio, con la posición GPS más reciente. Si el canal sigue ocupado al cerrarse la ventana, la ráfaga no sale. En tierra, una vez que pasan 3&nbsp;s desde la primera detección de canal ocupado, el Go puede forzar la transmisión sin escuchar, como permite ADS-L. Guarda silencio durante 2&nbsp;s desde el fin de la ráfaga. Nunca fuerza una transmisión en vuelo, donde ese silencio costaría dos posiciones.</p>
 
   <div class="table-scroll">
     <table class="modules">
@@ -128,19 +128,19 @@ updated_on: "2026-11-20"
 
   <p class="lede">La escucha no puede evitar todas las colisiones. Solo detecta una ráfaga que ya está transmitiendo y mide el canal en la antena del Go, no en el receptor de destino. Otra aeronave podría recibir dos ráfagas solapadas aunque ninguno de los emisores oiga al otro. La comprobación también favorece las señales cercanas y fuertes frente a las lejanas. El diseño se apoya en un nuevo sorteo cada segundo y en el límite del 1&nbsp;% de ocupación, no solo en la escucha.</p>
 
-  <h3 id="retry">Si una ráfaga no sale, se reintenta 2&nbsp;s después.</h3>
-  <p class="lede">Una ráfaga puede perder su segundo programado si la posición es demasiado antigua, si el canal sigue ocupado o si se ha agotado el tiempo de transmisión de la hora. Tiene otra oportunidad 2&nbsp;s después, en un segundo de la misma paridad y por tanto en el mismo canal. Si la ventana de ese canal ya lleva otra ráfaga de la unidad, el reintento espera al siguiente segundo libre de la misma paridad. Tiene oportunidades cada 2&nbsp;s hasta que se transmite o toca el siguiente mensaje del mismo tipo. En ese momento, el Go descarta el anterior y contabiliza la pérdida. En tierra, una posición perdida en c puede reintentarse en c + 2, c + 4, c + 6 y c + 8. En vuelo no se reintentan las posiciones. La nueva posición, 2&nbsp;s después, ya usa el mismo canal.</p>
+  <h3 id="retry">El Go puede reintentar una ráfaga perdida 2&nbsp;s después.</h3>
+  <p class="lede">Una ráfaga puede no salir porque la posición GPS es demasiado antigua, el canal sigue ocupado o se ha agotado el tiempo de transmisión autorizado durante la hora. Puede reintentarse 2&nbsp;s después. El segundo vuelve a ser par o vuelve a ser impar, por lo que se conserva el mismo canal. Si la ventana de ese canal ya lleva otra ráfaga de la unidad, el reintento espera al siguiente segundo libre de la misma paridad. Tiene oportunidades cada 2&nbsp;s hasta que se transmite o toca el siguiente mensaje del mismo tipo. En ese momento, el Go descarta el anterior y contabiliza la pérdida. En tierra, una posición perdida en c puede reintentarse en c + 2, c + 4, c + 6 y c + 8. En vuelo no se reintentan las posiciones. La nueva posición, 2&nbsp;s después, ya usa el mismo canal.</p>
 
-  <h3 id="callsign">El indicativo sale al final de la ventana.</h3>
+  <h3 id="callsign">El indicativo sale al final de la ventana 2.</h3>
   <p class="lede">ADS-L Issue 2 no tiene un campo de indicativo. El Go envía el indicativo en el formato de registro de OGN-Tracker, con un inicio entre 1000 y 1190&nbsp;ms en 868,4&nbsp;MHz. Es el final de la ventana 2, fuera del intervalo directo reservado a mensajes ADS-L, donde ADS-L no transmite nada hoy. <%= link_to_page "ads-l/callsign", label: "La explicación sobre el indicativo" %> aclara esa decisión y qué cambia cuando Issue 3 defina un campo.</p>
-  <p class="lede">OGN-Tracker descarta un indicativo si no tiene un objetivo con esa dirección. Por tanto, antes debe llegar la posición. Con el programa normal en vuelo, esa posición tiene un segundo de antigüedad como máximo. En tierra, el indicativo va 4 o 5&nbsp;s después de una posición, dentro del tiempo que un receptor conserva un objetivo en tierra entre mensajes.</p>
+  <p class="lede">OGN-Tracker descarta un indicativo si no conoce ningún objetivo con esa dirección. Por eso la posición debe llegar antes que el indicativo. Con el programa normal en vuelo, esa posición tiene un segundo de antigüedad como máximo. En tierra, el indicativo va 4 o 5&nbsp;s después de una posición, dentro del tiempo que un receptor conserva un objetivo en tierra entre mensajes.</p>
 
-  <h3 id="budget">El límite es el 1&nbsp;% de cualquier hora.</h3>
+  <h3 id="budget">El Go limita sus transmisiones al 1&nbsp;% de cualquier hora.</h3>
   <p class="lede">El Go declara un límite de emisión del 1&nbsp;% de cualquier hora para su uso de la banda de 868&nbsp;MHz. Mantiene sesenta contadores de un minuto y comprueba el tiempo disponible antes de cada ráfaga. Una posición por segundo más un Status y un indicativo cada 10&nbsp;s usan 6&nbsp;ms por segundo: el 0,6&nbsp;% del tiempo en vuelo o el 0,15&nbsp;% en tierra. El programa normal no puede agotar el tiempo asignado. Si un fallo lo agota, el Go bloquea la transmisión en vez de seguir ocupando la banda.</p>
 
   <h3 id="clock">El GPS fija la hora y la hora habilita la radio.</h3>
-  <p class="lede">El pulso por segundo del receptor GPS, PPS, sirve de referencia para las ventanas de radio. El Go solo transmite con una dirección activada, una radio que responde y escucha antes de transmitir, un receptor GPS que calcula una posición en cada segundo y medio segundo y envía sus datos a 115200 baudios, una <%= link_to_page "gps", label: "posición estabilizada", anchor: "settle" %>, una hora UTC válida y un pulso para el segundo en curso. El Go usa este ritmo de dos posiciones por segundo para mantener cada posición transmitida por debajo del límite de antigüedad de 500&nbsp;ms de ADS-L. Si falla un requisito, la transmisión se detiene. Un pulso ausente la detiene 1,2&nbsp;s después del último pulso. Las ventanas de radio siguen funcionando a partir del último pulso durante 60&nbsp;s, solo para recibir. Si un requisito no se cumple durante 10&nbsp;s, cada página muestra <span class="mono">NO TX</span> y el motivo (<%= link_to_page "radar", label: "Cuando el Go no transmite", anchor: "no-tx" %>).</p>
-  <p class="lede">El receptor GPS comunica el segundo UTC en una trama de datos que llega cientos de milisegundos después del pulso. Hasta entonces, el dato sigue indicando el segundo anterior. Fechar con él una ráfaga recibida podría colocarla en el segundo equivocado. Dos unidades Go mostraron el problema en el banco de pruebas: el emisor fechó una ráfaga a las 42:52.954 y el receptor a las 42:53.956. Ahora las ráfagas recibidas se fechan con el segundo UTC que abre el último pulso.</p>
+  <p class="lede">El receptor GPS envía un pulso por segundo, llamado PPS. Sirve de referencia para las ventanas de radio. Para transmitir, el Go debe tener una dirección activada y una radio que responda y escuche antes de transmitir. El receptor GPS debe calcular una posición en cada segundo y medio segundo y enviar sus datos a 115200 baudios. El Go también necesita una <%= link_to_page "gps", label: "posición estabilizada", anchor: "settle" %>, una hora UTC válida y el pulso del segundo en curso. Estas dos posiciones GPS por segundo permiten respetar el límite de antigüedad de 500&nbsp;ms de ADS-L en cada posición transmitida. Si falla un requisito, el Go deja de transmitir. Si falta el pulso, deja de transmitir 1,2&nbsp;s después del último pulso. Las ventanas de radio siguen funcionando durante 60&nbsp;s a partir de ese último pulso, solo para recibir. Si un requisito no se cumple durante 10&nbsp;s, cada página muestra <span class="mono">NO TX</span> y el motivo (<%= link_to_page "radar", label: "Cuando el Go no transmite", anchor: "no-tx" %>).</p>
+  <p class="lede">El receptor GPS comunica el segundo UTC en un mensaje que llega cientos de milisegundos después del pulso. Mientras espera ese mensaje, el Go aún dispone de la indicación del segundo anterior. Si la usara para fechar una ráfaga recibida, podría asignarle el segundo equivocado. Dos unidades Go mostraron el problema en el banco de pruebas: el emisor fechó una ráfaga a las 42:52.954 y el receptor a las 42:53.956. Ahora las ráfagas recibidas se fechan con el segundo UTC que abre el último pulso.</p>
   <p class="lede">El bucle de servicio del firmware se ejecuta cada 10&nbsp;ms, demasiado despacio para abrir a tiempo cada ventana de radio por sí solo. Las primeras capturas en banco mostraron que la ventana 2 se abría entre 3 y 6&nbsp;ms tarde en la mediana y hasta 120&nbsp;ms tarde en el peor caso. Ahora el firmware programa la siguiente ventana de radio tan pronto como empieza la actual, con un plazo absoluto calculado a partir del pulso. Así, la radio puede cambiar de ventana sin esperar otra vuelta del bucle.</p>
 
   <ul class="points">

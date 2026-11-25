@@ -2,16 +2,16 @@
 title: "Warum ADS-L, wenn es ADS-B und UAT schon gibt?"
 nav_title: Warum ADS-L
 slug: blog/warum-ads-l
-description: "ADS-B braucht einen zugelassenen Transponder, UAT ist in Europa nicht freigegeben, ADS-L läuft mit Akku. Warum skyBlip ADS-L wählt und wo ADS-B passt."
+description: "ADS-B senden braucht einen zugelassenen Transponder. UAT ist in Europa nicht erlaubt. ADS-L läuft mit Akku. Warum skyBlip ADS-L wählt und wo ADS-B passt."
 published_on: "2026-10-26"
 parent: blog
-updated_on: "2026-10-26"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 26. Oktober 2026</p>
-  <h1>Warum ADS-L, wenn es ADS-B und UAT schon gibt?</h1>
-  <p class="lede">Piloten fragen uns das oft: Warum auf ADS-L setzen statt auf ADS-B, einen weltweiten Standard mit zugelassener Ausrüstung, oder auf UAT, das die USA für Leichtflugzeuge nutzen? Die Antwort lautet: Strom, Papierkram und Preis. ADS-B behält seinen Platz, und beide treffen sich im Cockpit.</p>
+  <h1>Warum ADS-L statt ADS-B oder UAT?</h1>
+  <p class="lede">Piloten fragen uns das oft: Warum auf ADS-L setzen statt auf ADS-B, einen weltweiten Standard mit zugelassener Ausrüstung, oder auf UAT, das die USA für Leichtflugzeuge nutzen? Die Antwort lautet: Strom, Papierkram und Preis. ADS-B behält seinen Platz. Der Verkehr beider Systeme kann auf demselben Display im Cockpit erscheinen.</p>
 </section>
 
 <section>
@@ -40,14 +40,14 @@ updated_on: "2026-10-26"
 <section>
   <h2 class="kicker">Wo jedes System passt</h2>
   <h3>ADS-B für alle, die mit Verkehrsflugzeugen fliegen, ADS-L für alle, die tief fliegen.</h3>
-  <p>So sehen wir die Landschaft sich ordnen:</p>
+  <p>Wir erwarten, dass sich die Einsatzbereiche so aufteilen:</p>
   <ul>
     <li><strong>ADS-B</strong> für die gewerbliche und schwerere Luftfahrt und für jedes Luftfahrzeug, das im kontrollierten Luftraum fliegt, wo Flugsicherung und TCAS es lesen.</li>
     <li><strong>ADS-L</strong> für die Allgemeine Luftfahrt, den Luftsport und Drohnen, im unkontrollierten Luftraum in geringer Höhe und im U-Space, wo SERA.6005(c) es bereits als Mittel zur elektronischen Sichtbarkeit nennt.</li>
     <li><strong>Beides</strong> für Piloten, die in beiden Welten fliegen und bereit sind, ADS-B Out und In einzubauen.</li>
   </ul>
-  <p>Die beiden sprechen nicht per Funk miteinander. Ein Garmin GTX&nbsp;345 hört keinen Go, und ein Go hört keinen GTX&nbsp;345. Sie treffen sich im Empfänger. skyBlip Bravo hört auf 1090&nbsp;MHz und zeigt, mit einem Go gekoppelt, ADS-B-, ADS-L- und FLARM-Verkehr auf einem Radar. Dieses Paar ist <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Damit erscheinen ADS-B-Luftfahrzeuge in Dutzenden nautischen Meilen Entfernung, manchmal fast hundert, weil ihre Sender so stark sind.</p>
-  <p>Bodenstationen können den Rest der Lücke schließen. ADS-L sieht einen Uplink vom Boden vor, der ADS-B-Verkehr und Wetter an ADS-L-Empfänger weiterleiten kann. Bisher senden ihn nur wenige Stationen, und Frankreich hat fast keine. Unsere <%= link_to_page "roadmap", label: "skyPost-Stationen" %> sollen welche hinzufügen.</p>
+  <p>Die beiden Systeme sind per Funk nicht direkt kompatibel. Ein Garmin GTX&nbsp;345 empfängt das Signal eines Go nicht, und ein Go allein empfängt das Signal eines GTX&nbsp;345 nicht. Der Empfänger führt den Verkehr beider Systeme zusammen. skyBlip Bravo hört auf 1090&nbsp;MHz und zeigt, mit einem Go gekoppelt, ADS-B-, ADS-L- und FLARM-Verkehr auf einem Radar. Dieses Paar ist <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Damit erscheinen ADS-B-Luftfahrzeuge in Dutzenden nautischen Meilen Entfernung, manchmal fast hundert, weil ihre Sender so stark sind.</p>
+  <p>Bodenstationen können den Rest der Lücke schließen. ADS-L sieht einen Uplink vom Boden vor, der ADS-B-Verkehr und Wetter an ADS-L-Empfänger weiterleiten kann. Bisher senden ihn nur wenige Stationen, und Frankreich hat fast keine. Unsere <%= link_to_page "roadmap", label: "skyPost-Stationen" %> sollen diese Abdeckung erweitern.</p>
 </section>
 
 <section>

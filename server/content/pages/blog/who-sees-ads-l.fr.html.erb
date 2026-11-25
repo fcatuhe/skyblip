@@ -1,16 +1,16 @@
 ---
-title: "Qui voit votre signal ADS-L, et ce que vous voyez"
+title: "ADS-L : qui vous voit et quel trafic voyez-vous ?"
 nav_title: Qui voit l'ADS-L
 slug: blog/qui-voit-l-ads-l
-description: "Contrôle, FLARM, GTX 345, stations OGN : qui reçoit l'ADS-L émis par un Go, et quels trafics un Go et un Bravo reçoivent, bande par bande."
+description: "Contrôle, FLARM, GTX 345, stations OGN : qui reçoit l'ADS-L émis par un Go, et quel trafic un Go et un Bravo reçoivent, bande par bande."
 published_on: "2026-11-02"
 parent: blog
-updated_on: "2026-11-02"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 2 novembre 2026</p>
-  <h1>Qui voit votre signal ADS-L, et ce que vous voyez.</h1>
+  <h1>ADS-L&nbsp;: qui vous voit et quel trafic voyez-vous&nbsp;?</h1>
   <p class="lede">Trois questions reviennent chaque fois que nous montrons skyBlip à des pilotes. Le contrôle aérien voit-il les signaux ADS-L sur ses écrans radar ? Mon GTX&nbsp;345 verra-t-il un Go ? Quelles bandes skyBlip reçoit-il ? Voici les réponses, bande par bande et récepteur par récepteur.</p>
 </section>
 
@@ -35,7 +35,7 @@ updated_on: "2026-11-02"
 
 <section>
   <h2 class="kicker">Qui voit un Go</h2>
-  <h3>Tout ce qui écoute l&rsquo;ADS-L. Ni un radar, ni un transpondeur.</h3>
+  <h3>Les récepteurs ADS-L vous voient. Pas le contrôle aérien ni les transpondeurs.</h3>
   <div class="table-scroll">
     <table class="prose">
       <thead>
@@ -52,7 +52,7 @@ updated_on: "2026-11-02"
       </tbody>
     </table>
   </div>
-  <p>L&rsquo;ADS-L ne sert donc pas à vous montrer au contrôleur. Il sert à vous montrer aux pilotes proches qui emportent un récepteur adapté, et au U-space. C&rsquo;est aussi pourquoi nous espérons que les utilisateurs de FLARM activent l&rsquo;ADS-L : FLARM vend l&rsquo;émission ADS-L sous forme de licence pour ses PowerFLARM, et l&rsquo;inclut dans le nouveau PowerFLARM Flex.</p>
+  <p>L&rsquo;ADS-L ne vous rend donc pas visible du contrôleur. Il permet aux pilotes proches équipés d&rsquo;un récepteur adapté et aux prestataires de services U-space de recevoir votre position. C&rsquo;est aussi pourquoi nous espérons que les utilisateurs de FLARM activent l&rsquo;ADS-L : FLARM vend l&rsquo;émission ADS-L sous forme de licence pour ses PowerFLARM, et l&rsquo;inclut dans le nouveau PowerFLARM Flex.</p>
 </section>
 
 <section>
@@ -61,11 +61,11 @@ updated_on: "2026-11-02"
   <ul>
     <li><strong>L&rsquo;ADS-L</strong> de tous les appareils qui l&rsquo;émettent.</li>
     <li><strong>Le FLARM</strong>, pour que les planeurs et les remorqueurs apparaissent sur le radar. Go lit le FLARM mais ne l&rsquo;émet jamais, car émettre en FLARM exige une licence de FLARM.</li>
-    <li><strong>L&rsquo;ADS-B</strong> via un <%= link_to_page "skyblip-bravo", label: "Bravo" %> associé. Les liners, les jets d&rsquo;affaires, les hélicoptères et les avions légers équipés d&rsquo;un transpondeur ADS-B apparaissent à plusieurs dizaines de milles nautiques.</li>
+    <li><strong>L&rsquo;ADS-B</strong> via un <%= link_to_page "skyblip-bravo", label: "Bravo" %> associé. Les avions de ligne, les jets d&rsquo;affaires, les hélicoptères et les avions légers équipés d&rsquo;un transpondeur ADS-B apparaissent à plusieurs dizaines de milles nautiques.</li>
     <li><strong>Le Mode S sans ADS-B</strong> : Bravo détecte ces transpondeurs, mais ils n&rsquo;envoient pas de position. Nous mesurons le lien entre la puissance reçue et la distance, pour les signaler sur le Go et dans les applications de navigation.</li>
     <li><strong>Le trafic relayé depuis le sol</strong>, là où une station émet la liaison montante ADS-L.</li>
   </ul>
-  <p>Aucun appareil ne vous montrera l&rsquo;aéronef qui n&rsquo;émet rien. C&rsquo;est la plus grande lacune de tous les systèmes, et la raison pour laquelle nous gardons le prix de l&rsquo;émission aussi bas que possible.</p>
+  <p>Ces systèmes de réception ne montrent pas un aéronef qui n&rsquo;émet rien. C&rsquo;est la plus grande lacune de tous les systèmes, et la raison pour laquelle nous gardons le prix de l&rsquo;émission aussi bas que possible.</p>
 </section>
 
 <section>

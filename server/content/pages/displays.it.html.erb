@@ -2,19 +2,19 @@
 title: "Schermate del Go e modalità radar"
 nav_title: Schermate
 slug: schermate
-description: "Vedi ogni schermata di skyBlip Go, dal traffico alla diagnostica. Confronta PLOT ALL e PLOT TO SCALE con le stesse scene di traffico."
+description: "Vedi le schermate di skyBlip Go, dal radar alla diagnostica. Confronta PLOT ALL e PLOT TO SCALE nelle stesse situazioni di traffico."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Ogni schermata, come la disegna il dispositivo.</h1>
+  <h1>Le schermate, come le disegna il dispositivo.</h1>
   <p class="lede">
-    Ogni immagine mostra i 200&times;200 pixel disegnati dal
+    Ogni immagine riproduce pixel per pixel i 200&times;200 pixel del
     <%= link_to_page "skyblip-go", label: "simulatore", anchor: "simulator" %>,
-    impostato in quello stato e catturato pixel per pixel. Quando una schermata cambia
+    impostato nella situazione mostrata. Quando una schermata cambia
     sul dispositivo, ne facciamo una nuova cattura.
   </p>
 </section>
@@ -22,12 +22,13 @@ updated_on: "2026-11-20"
 <section>
   <h2 class="kicker" id="both-ways">Il radar, in due modi</h2>
   <p class="lede">
-    <span class="mono">PLOT</span> nel menu delle impostazioni disegna il radar in uno di
-    due modi. <span class="mono">ALL</span>, la prima scelta e quella con cui viene
-    fornito il dispositivo, restringe il cerchio e posiziona ogni aeromobile al di fuori sulla
-    fascia esterna, al suo rilevamento. <span class="mono">TO SCALE</span> posiziona
-    ogni simbolo secondo la scala del cerchio e omette quello che non
-    entra. Tre cieli, ciascuno catturato in entrambi i modi con lo stesso firmware.
+    L&rsquo;impostazione <span class="mono">PLOT</span>, nel menu delle impostazioni, offre due modalità
+    di visualizzazione del radar. <span class="mono">ALL</span> è la prima scelta
+    e l&rsquo;impostazione predefinita su un dispositivo nuovo. In questa modalità il cerchio si restringe.
+    Ogni aeromobile oltre il cerchio appare sulla fascia esterna, nella sua direzione.
+    <span class="mono">TO SCALE</span> mostra gli aeromobili
+    secondo la scala del cerchio. Quelli oltre i bordi dello schermo non vengono mostrati.
+    Qui trovi tre situazioni, ciascuna catturata nelle due modalità con lo stesso firmware.
   </p>
 
   <div class="plot" data-controller="plot" data-plot-view-value="both">
@@ -38,7 +39,7 @@ updated_on: "2026-11-20"
     </p>
 
     <div class="plot-situation">
-      <h3 id="quiet-sky">Un cielo che entra nel cerchio.</h3>
+      <h3 id="quiet-sky">Tutto il traffico è nel cerchio.</h3>
       <p>
         Tre aeromobili entro quattro miglia. Con <span class="mono">ALL</span>
         si trovano nel cerchio più piccolo e non cambia nient&rsquo;altro. In scala,
@@ -58,11 +59,12 @@ updated_on: "2026-11-20"
     <div class="plot-situation">
       <h3 id="past-the-ring">Traffico oltre il cerchio.</h3>
       <p>
-        Un aeromobile in avvicinamento cinque miglia davanti, un gruppo di tre otto
-        miglia davanti a destra, uno undici miglia a sinistra. Con
-        <span class="mono">ALL</span>, ciascuno appare sulla fascia. Il gruppo condivide
-        un simbolo contrassegnato da 3. Una linea che mostra la posizione tra un minuto dell&rsquo;aeromobile in avvicinamento entra già
-        nel cerchio. In scala, solo l&rsquo;aeromobile davanti appare sullo schermo.
+        Un aeromobile si avvicina cinque miglia davanti a te. Un gruppo di tre è otto
+        miglia davanti a destra e un altro aeromobile è undici miglia a sinistra. Con
+        <span class="mono">ALL</span>, appaiono sulla fascia. Il gruppo condivide
+        un simbolo contrassegnato da 3. La linea dell&rsquo;aeromobile in avvicinamento entra già
+        nel cerchio e termina nella sua posizione prevista tra un minuto.
+        In scala, fra questi aeromobili, solo quello davanti appare sullo schermo.
       </p>
       <div class="shots">
         <figure class="shot plot-all">
@@ -96,7 +98,7 @@ updated_on: "2026-11-20"
     </div>
   </div>
 
-  <p><%= link_to_page "radar", label: "Come leggere la fascia", anchor: "every-aircraft", class: "cta cta--next" %></p>
+  <p><%= link_to_page "radar", label: "Leggere i simboli sulla fascia", anchor: "every-aircraft", class: "cta cta--next" %></p>
 </section>
 
 <section>
@@ -143,11 +145,11 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-blank.png", alt: "Il campo del nominativo con uno spazio come primo carattere, la barra sotto e il tasto del pulsante che ora mostra ERASE" %>
-      <figcaption>Il primo carattere cancellato</figcaption>
+      <figcaption>Uno spazio come primo carattere</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Il menu aeromobile dopo la pressione, con la riga CALLSIGN selezionata che mostra NONE" %>
-      <figcaption>Una pressione dopo</figcaption>
+      <figcaption>Nessun nominativo, una pressione dopo</figcaption>
     </figure>
   </div>
   <p>
@@ -185,11 +187,11 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="on-the-ground">A terra e da spento</h2>
+  <h2 class="kicker" id="on-the-ground">Senza posizione, con batteria quasi scarica o da spento</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "La pagina radar senza posizione: il cerchio vuoto mostra NO FIX e, sotto, lo stato di avanzamento del ricevitore verso il fix" %>
-      <figcaption>In attesa del cielo</figcaption>
+      <figcaption>In attesa della posizione</figcaption>
     </figure>
     <figure class="shot">
       <%= screen_image_tag "low-battery.png", alt: "La pagina radar in volo con batteria quasi scarica: BAT e la percentuale nel cerchio al posto della parola di stato" %>
@@ -214,7 +216,7 @@ updated_on: "2026-11-20"
 </section>
 
 <section>
-  <h2 class="kicker" id="asked">Chiede il permesso sullo schermo.</h2>
+  <h2 class="kicker" id="asked">Conferma e ripristino</h2>
   <div class="shots">
     <figure class="shot">
       <%= screen_image_tag "confirm.png", alt: "La richiesta di autorizzazione per le impostazioni inviate dal telefono: SETTINGS sotto il grande simbolo, la modifica richiesta, CANCELS IN con i secondi rimanenti, il tasto ACCEPT del pulsante e il tasto CANCEL del pad" %>
@@ -222,7 +224,7 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "recovery.png", alt: "La pagina di ripristino: RECOVERY sotto il grande simbolo, il nome dell'unità USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET e il tasto START del pulsante" %>
-      <figcaption>Passaggio al bootloader USB</figcaption>
+      <figcaption>Ripristino via USB</figcaption>
     </figure>
   </div>
   <p>
@@ -233,7 +235,7 @@ updated_on: "2026-11-20"
 <section>
   <h2 class="kicker">Note tecniche</h2>
 
-  <h3 id="screen">Perché lo schermo si comporta così.</h3>
+  <h3 id="screen">Come funziona lo schermo.</h3>
   <p class="lede">
     Lo schermo è un pannello e-paper da 1,54&Prime;, 200&times;200 pixel. Mantiene la sua ultima
     immagine da spento e non consuma energia per conservarla. Per questo
@@ -241,12 +243,13 @@ updated_on: "2026-11-20"
     lo riponi.
   </p>
   <p class="lede">
-    In volo, ogni immagine usa un aggiornamento parziale. Un aggiornamento completo, che
-    fa lampeggiare lo schermo in bianco e nero per un secondo e mezzo, avviene due volte per
-    sessione: all&rsquo;accensione e allo spegnimento. Un cambio di pagina usa invece
-    una sola cancellazione al nero. Il lampeggio dell&rsquo;allarme una volta al secondo è il
-    limite del pannello, non una frequenza che abbiamo scelto. Sono possibili aggiornamenti più rapidi,
-    ma alternare ripetutamente una grande area nera a quella velocità segna lo schermo in modo permanente.
+    In volo, ogni immagine usa un aggiornamento parziale. L&rsquo;aggiornamento completo
+    fa lampeggiare lo schermo in bianco e nero per un secondo e mezzo.
+    Avviene due volte per sessione: all&rsquo;accensione e allo spegnimento.
+    Quando cambi pagina, lo schermo passa una sola volta al nero.
+    L&rsquo;allarme lampeggia una volta al secondo per rispettare il limite del pannello, non per una frequenza scelta da noi.
+    Sono possibili aggiornamenti più rapidi, ma far lampeggiare una grande area nera
+    a quella velocità lascia un segno permanente sullo schermo.
   </p>
 
   <ul class="points">

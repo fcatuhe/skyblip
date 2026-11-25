@@ -5,14 +5,14 @@ nav_title: "Mandos"
 description: "Usa el panel táctil y el botón de skyBlip Go. Introduce tu indicativo, cambia los ajustes del radar y abre las pantallas de diagnóstico sin móvil."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Dos mandos, una función para cada uno.</h1>
+  <h1>Usa el panel táctil y el botón del Go</h1>
   <p class="lede">
-    Un panel táctil y un botón para los menús. También hay pantallas de diagnóstico para el banco de pruebas.
+    Recorre las pantallas con el panel táctil. Abre los menús con el botón. Consulta las pantallas de diagnóstico en el banco de pruebas.
   </p>
 </section>
 
@@ -21,10 +21,10 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="two-contacts">El panel táctil te mueve <span class="highlight">y el botón ejecuta</span>.</h3>
       <p>
-        Dos mandos, cada uno con una función. El panel táctil capacitivo del borde superior recorre las cuatro pantallas sin cambiar ajustes. El botón lateral abre el menú de la pantalla actual. Cada pulsación posterior cambia el valor de la fila seleccionada.
+        El panel táctil capacitivo del borde superior recorre las cuatro pantallas sin cambiar ajustes. El botón lateral abre el menú de la pantalla actual. Cada pulsación posterior cambia el valor de la fila seleccionada.
       </p>
       <p>
-        Dos pantallas tienen menú. Todos los ajustes que puedes cambiar con los mandos están en el menú del radar, la primera pantalla que usas para configurar el dispositivo. No hay que confirmar los cambios. Cada pulsación aplica el cambio al momento.
+        Dos pantallas tienen menú. El radar es la primera pantalla que usas para configurar el dispositivo. Su menú reúne todos los ajustes que puedes cambiar con el panel táctil y el botón. Cada pulsación aplica el cambio al momento, salvo al borrar la dirección ADS-B, que requiere confirmación en otra pantalla.
       </p>
     </div>
     <figure class="shot">
@@ -35,10 +35,10 @@ updated_on: "2026-11-20"
 
   <ul class="points">
     <li>Toca el panel táctil para pasar a la pantalla siguiente</li>
-    <li>Toca el panel táctil un segundo para volver al radar</li>
+    <li>Mantén el dedo un segundo en el panel táctil para silenciar una alerta activa o volver al radar si no hay ninguna</li>
     <li>Pulsa el botón para abrir el menú si la pantalla tiene uno</li>
     <li>Pulsa otra vez para cambiar el valor de la fila seleccionada</li>
-    <li>Pasa de la última fila para volver a la pantalla</li>
+    <li>En el menú, toca el panel táctil después de la última fila para volver a la pantalla</li>
     <li>No toques los mandos durante un minuto para volver a la pantalla de forma automática</li>
   </ul>
 
@@ -51,7 +51,7 @@ updated_on: "2026-11-20"
         <span class="mono">9</span> y vuelve al espacio. Si te pasas de una letra, sigue tocando hasta volver a ella.
       </p>
       <p>
-        Pulsa el botón en el último carácter para guardar el indicativo. Los espacios al final se eliminan. Para borrar un indicativo, cambia el primer carácter por un espacio y pulsa el botón. La tecla del botón muestra <span class="mono">ERASE</span> cuando hay un espacio sobre la barra. Si sales antes de terminar o dejas el campo sin tocar un minuto, no se guarda nada.
+        Pulsa el botón en el último carácter para guardar el indicativo. Los espacios al final se eliminan. Para borrar un indicativo, cambia el primer carácter por un espacio y pulsa el botón. El texto del botón cambia a <span class="mono">ERASE</span> cuando el primer carácter es un espacio. Si sales del campo antes de terminar o no lo tocas durante un minuto, no se guarda nada.
       </p>
     </div>
     <figure class="shot">
@@ -67,19 +67,19 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Menú de aeronave tras la pulsación, con la fila CALLSIGN seleccionada y el valor NONE" %>
-      <figcaption>Una pulsación después</figcaption>
+      <figcaption>Indicativo borrado</figcaption>
     </figure>
   </div>
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="diagnostics">Cuatro pantallas en secuencia <span class="highlight">y las demás por nombre</span>.</h3>
+      <h3 id="diagnostics">Cuatro pantallas en secuencia <span class="highlight">y los diagnósticos por nombre</span>.</h3>
       <p>
-        Al tocar el panel pasas por el radar, la lista, los instrumentos y el medidor de carga. No hay más pantallas en la secuencia. Un piloto que cambia de pantalla en vuelo no debería acabar en las barras de los satélites. Si la placa no tiene sensor inercial, no hay medidor de carga que mostrar. El panel se salta esa pantalla en vez de mostrar
+        Toca el panel táctil para pasar del radar a la lista, los instrumentos y el medidor de carga. Las demás pantallas quedan fuera de esta secuencia. Así evitas acabar en las barras de los satélites al cambiar de pantalla en vuelo. En un dispositivo sin sensor inercial, el panel se salta la pantalla del medidor de carga en vez de mostrar
         <span class="mono">NO SENSOR</span> cada cuatro toques.
       </p>
       <p>
-        Abre las otras pantallas por nombre desde el menú de la lista. Al cerrarlas vuelves a la pantalla anterior. Las siguientes pantallas sirven para el banco de pruebas, la plataforma y los informes de errores. No aparecen al recorrer las pantallas con el panel táctil. El registro de Bravo muestra el firmware de un skyBlip Bravo emparejado, su batería y lo que recibe. Para registrar un vuelo para un informe de errores o una prueba de descarga, inicia la captura desde la página del dispositivo en Briefing. La pantalla te dice qué se borrará. Pulsa el botón para iniciar la captura.
+        Abre las pantallas de diagnóstico por nombre desde el menú de la lista. Al cerrarlas vuelves a la pantalla anterior. Las siguientes pantallas sirven para las comprobaciones en el banco de pruebas, en la plataforma y para los informes de errores. No aparecen al recorrer las pantallas con el panel táctil. El registro de Bravo muestra el firmware de un skyBlip Bravo emparejado, el estado de su batería y lo que recibe su receptor. Para registrar un vuelo destinado a un informe de errores o una prueba de descarga, abre la página del dispositivo en Briefing e inicia la captura. La pantalla te dice qué se borrará. Pulsa el botón para confirmar e iniciar la captura.
       </p>
     </div>
     <figure class="shot">

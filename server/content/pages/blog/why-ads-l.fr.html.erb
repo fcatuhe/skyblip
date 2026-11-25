@@ -2,16 +2,16 @@
 title: "Pourquoi l'ADS-L plutôt que l'ADS-B ou l'UAT ?"
 nav_title: Pourquoi l'ADS-L
 slug: blog/pourquoi-l-ads-l
-description: "L'ADS-B exige un transpondeur certifié, l'UAT reste fermé en Europe, l'ADS-L tient sur batterie. Pourquoi skyBlip a choisi l'ADS-L, et la place de l'ADS-B."
+description: "Émettre en ADS-B exige un transpondeur certifié. L'UAT reste fermé en Europe. L'ADS-L tient sur batterie. Le choix de skyBlip et la place de l'ADS-B."
 published_on: "2026-10-26"
 parent: blog
-updated_on: "2026-10-26"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 26 octobre 2026</p>
-  <h1>Pourquoi l&rsquo;ADS-L, quand l&rsquo;ADS-B et l&rsquo;UAT existent déjà ?</h1>
-  <p class="lede">Les pilotes nous le demandent souvent : pourquoi l&rsquo;ADS-L plutôt que l&rsquo;ADS-B, standard mondial aux équipements certifiés, ou l&rsquo;UAT, que les États-Unis utilisent pour l&rsquo;aviation légère ? La réponse tient en trois mots : énergie, démarches et prix. L&rsquo;ADS-B garde sa place, et les deux se rejoignent dans le cockpit.</p>
+  <h1>Pourquoi l&rsquo;ADS-L plutôt que l&rsquo;ADS-B ou l&rsquo;UAT&nbsp;?</h1>
+  <p class="lede">Les pilotes nous le demandent souvent : pourquoi l&rsquo;ADS-L plutôt que l&rsquo;ADS-B, standard mondial aux équipements certifiés, ou l&rsquo;UAT, que les États-Unis utilisent pour l&rsquo;aviation légère ? La réponse tient en trois mots : énergie, démarches et prix. L&rsquo;ADS-B garde sa place. Les deux trafics peuvent se retrouver sur le même écran du cockpit.</p>
 </section>
 
 <section>
@@ -34,20 +34,20 @@ updated_on: "2026-10-26"
   <h2 class="kicker">Prix</h2>
   <h3>Un système de visibilité ne vaut que par le nombre de ceux qui l&rsquo;utilisent.</h3>
   <p>Un système qui montre les autres ne fonctionne que si les autres émettent. Le vol à voile y est arrivé avec FLARM, parce que presque tous les planeurs en ont un. L&rsquo;aviation légère et l&rsquo;ULM n&rsquo;y sont jamais arrivés, quel que soit le système, parce que les boîtiers coûtaient des centaines ou des milliers d&rsquo;euros, ou demandaient un après-midi de réglages.</p>
-  <p>L&rsquo;ADS-L tourne sur du matériel conçu pour le réseau amateur Meshtastic, vendu par dizaines de milliers. C&rsquo;est pourquoi un Go coûte à partir de 68 &euro;. Aucun émetteur ADS-B n&rsquo;approchera ce prix.</p>
+  <p>L&rsquo;ADS-L fonctionne sur du matériel conçu pour le réseau amateur Meshtastic, vendu par dizaines de milliers. C&rsquo;est pourquoi un Go coûte à partir de 68&nbsp;&euro;. Aucun émetteur ADS-B n&rsquo;approchera ce prix.</p>
 </section>
 
 <section>
   <h2 class="kicker">La place de chacun</h2>
-  <h3>L&rsquo;ADS-B pour ceux qui volent avec les liners, l&rsquo;ADS-L pour ceux qui volent bas.</h3>
-  <p>Voici comment nous voyons le paysage se dessiner :</p>
+  <h3>L&rsquo;ADS-B pour ceux qui volent avec les avions de ligne, l&rsquo;ADS-L pour ceux qui volent bas.</h3>
+  <p>Nous pensons que les usages vont se répartir ainsi&nbsp;:</p>
   <ul>
     <li><strong>ADS-B</strong> pour l&rsquo;aviation commerciale et lourde, et pour tout aéronef qui vole en espace contrôlé, où le contrôle et le TCAS le lisent.</li>
     <li><strong>ADS-L</strong> pour l&rsquo;aviation légère, les sports aériens et les drones, en espace non contrôlé à basse altitude et en U-space, où SERA.6005(c) le cite déjà comme moyen d&rsquo;être visible électroniquement.</li>
     <li><strong>Les deux</strong> pour les pilotes qui évoluent dans ces deux mondes et sont prêts à installer l&rsquo;ADS-B Out et In.</li>
   </ul>
-  <p>Les deux ne se parlent pas par radio. Un Garmin GTX&nbsp;345 n&rsquo;entend pas un Go, et un Go n&rsquo;entend pas un GTX&nbsp;345. Ils se rejoignent dans le récepteur. skyBlip Bravo écoute le 1090&nbsp;MHz et, associé à un Go, il affiche les trafics ADS-B, ADS-L et FLARM sur un même radar. Cette paire, c&rsquo;est <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Les aéronefs ADS-B y apparaissent à plusieurs dizaines de milles nautiques, voire près de la centaine, car leurs émetteurs sont très puissants.</p>
-  <p>Les stations sol peuvent combler le reste. L&rsquo;ADS-L prévoit une liaison montante depuis le sol, qui peut relayer le trafic ADS-B, et la météo, vers les récepteurs ADS-L. Peu de stations l&rsquo;émettent encore, et la France n&rsquo;en compte presque aucune. Nos <%= link_to_page "roadmap", label: "stations skyPost" %> doivent en ajouter.</p>
+  <p>Les deux systèmes ne sont pas directement compatibles par radio. Un Garmin GTX&nbsp;345 ne reçoit pas le signal d&rsquo;un Go, et un Go seul ne reçoit pas celui d&rsquo;un GTX&nbsp;345. C&rsquo;est le récepteur qui réunit les deux trafics. skyBlip Bravo écoute le 1090&nbsp;MHz et, associé à un Go, il affiche les trafics ADS-B, ADS-L et FLARM sur un même radar. Cette paire, c&rsquo;est <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Les aéronefs ADS-B y apparaissent à plusieurs dizaines de milles nautiques, voire près de la centaine, car leurs émetteurs sont très puissants.</p>
+  <p>Les stations sol peuvent combler le reste. L&rsquo;ADS-L prévoit une liaison montante depuis le sol, qui peut relayer le trafic ADS-B, et la météo, vers les récepteurs ADS-L. Peu de stations l&rsquo;émettent encore, et la France n&rsquo;en compte presque aucune. Nos <%= link_to_page "roadmap", label: "stations skyPost" %> doivent étendre cette couverture.</p>
 </section>
 
 <section>

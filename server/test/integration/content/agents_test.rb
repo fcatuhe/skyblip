@@ -103,7 +103,7 @@ class Content::AgentsTest < ActionDispatch::IntegrationTest
     get "/llms-full.txt"
 
     assert_response :success
-    assert_includes response.body, "Source: https://skyblip.eu/radar\n\n[Guides](https://skyblip.eu/guides.md)\n\n# Where to look"
+    assert_includes response.body, "Source: https://skyblip.eu/radar\n\n[Guides](https://skyblip.eu/guides.md)\n\n# Read the radar, alarm and Nearby list."
     assert_includes response.body, "Source: https://skyblip.eu/ads-l/nmea\n"
     assert_not_includes response.body, "Source: https://skyblip.eu/legal-notice"
     assert_not_includes response.body, "Source: https://skyblip.eu/fr"

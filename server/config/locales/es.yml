@@ -3,6 +3,8 @@ es:
   nav:
     label: "Sitio web"
     devices: "Dispositivos"
+    open: "Abrir el menú"
+    close: "Cerrar el menú"
   cta:
     prompt: "¿Quieres probarlo ahora o comprar uno?"
     try: "Pruébalo en línea"

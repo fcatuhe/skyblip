@@ -2,39 +2,39 @@
 title: "skyBlip, SoftRF et Stratux : pourquoi repartir de zéro ?"
 nav_title: SoftRF et Stratux
 slug: blog/skyblip-softrf-stratux
-description: "skyBlip n'est pas un fork de SoftRF et fait moins qu'un Stratux. Ses objectifs : prêt depuis un navigateur, un jour sur batterie, la conformité ADS-L."
+description: "Non dérivé de SoftRF, skyBlip fait moins qu'un Stratux. Ses buts : installation par navigateur, un jour sur batterie et conformité ADS-L."
 published_on: "2026-11-08"
 parent: blog
-updated_on: "2026-11-08"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 8 novembre 2026</p>
   <h1>skyBlip, SoftRF et Stratux : pourquoi repartir de zéro ?</h1>
-  <p class="lede">Les pilotes qui connaissent les projets open source nous posent d&rsquo;abord deux questions. Est-ce un fork de SoftRF ? Et que fait-il de plus qu&rsquo;un Stratux avec un T-Beam ? Ce sont de bonnes questions : les deux projets sont plus anciens, et tous deux font beaucoup. Voici ce que nous leur devons, et ce que nous avons voulu faire autrement.</p>
+  <p class="lede">Les pilotes qui connaissent les projets open source nous posent d&rsquo;abord deux questions. Est-ce une version dérivée de SoftRF&nbsp;? Et que fait-il qu&rsquo;un Stratux avec un T-Beam ne fait pas&nbsp;? Ces deux projets sont plus anciens et proposent de nombreuses fonctions. Voici ce que nous leur devons, et ce que nous avons voulu faire autrement.</p>
 </section>
 
 <section>
   <h2 class="kicker">Ce que nous devons</h2>
   <h3>Dix ans de travail open source, puis un nouveau départ.</h3>
-  <p>skyBlip n&rsquo;est pas un fork. Nous avons beaucoup appris de SoftRF, de l&rsquo;OGN Tracker et de bibliothèques radio open source, et ceux qui les ont construits ont exploré ce terrain bien avant nous. Nous avons ensuite écrit le firmware à partir de zéro, plus près du matériel, pour gagner en rapidité et en autonomie.</p>
+  <p>skyBlip n&rsquo;est pas une version dérivée d&rsquo;un autre projet. Nous avons beaucoup appris de SoftRF, de l&rsquo;OGN Tracker et de bibliothèques radio open source. Leurs auteurs travaillaient sur ces sujets bien avant nous. Nous avons ensuite écrit le logiciel du boîtier à partir de zéro, plus près du matériel, pour gagner en rapidité et en autonomie.</p>
 </section>
 
 <section>
   <h2 class="kicker">Ce que nous visions</h2>
-  <h3>Trois objectifs que les autres ne s&rsquo;étaient pas fixés.</h3>
+  <h3>Trois objectifs que les autres projets ne s&rsquo;étaient pas fixés.</h3>
   <ul>
-    <li><strong>Prêt sans atelier.</strong> Tous les pilotes n&rsquo;ont pas le temps ou le savoir-faire pour assembler un Stratux, et ses composants coûtent plus cher. Un Go est un boîtier fini vendu par LilyGO et sur Amazon, et <%= link_to_page "install", label: "Briefing installe skyBlip depuis un navigateur" %>, sans soudure, sans ligne de commande et sans compte.</li>
-    <li><strong>Un jour sur batterie.</strong> Pas de câble, pas de prise, rien à penser avant le vol. Au banc, un Go au parking a tenu 18&nbsp;heures, un Go+ 49&nbsp;heures. C&rsquo;est pourquoi nous avons choisi un processeur basse consommation et un écran e-paper qui reste lisible en plein soleil.</li>
-    <li><strong>Une conformité vérifiable.</strong> skyBlip dispose de sa propre plage d&rsquo;adresses constructeur dans le registre ADS-L depuis octobre 2026. Chaque clause de la spécification que le firmware applique a son test de conformité, chaque version les passe, et la documentation est générée à partir de ces tests. Nous préparons la <%= link_to_page "ads-l/conformity", label: "déclaration de conformité" %>.</li>
+    <li><strong>Prêt sans atelier.</strong> Tous les pilotes n&rsquo;ont pas le temps ou le savoir-faire pour assembler un Stratux, et ses composants coûtent plus cher. Le boîtier pour un Go s&rsquo;achète assemblé chez LilyGO ou sur Amazon, et <%= link_to_page "install", label: "Briefing installe skyBlip depuis un navigateur" %>, sans soudure, sans ligne de commande et sans compte.</li>
+    <li><strong>Un jour sur batterie.</strong> Pas de câble ni de prise à prévoir à bord. Au banc, un Go au parking a tenu 18&nbsp;heures, un Go+ 49&nbsp;heures. C&rsquo;est pourquoi nous avons choisi un processeur basse consommation et un écran e-paper qui reste lisible en plein soleil.</li>
+    <li><strong>Une conformité vérifiable.</strong> skyBlip dispose de sa propre plage d&rsquo;adresses constructeur dans le registre ADS-L depuis octobre 2026. Chaque clause de la spécification appliquée par le logiciel a son test de conformité. Chaque version passe ces tests. La documentation est générée à partir des mêmes tests. Nous préparons la <%= link_to_page "ads-l/conformity", label: "déclaration de conformité" %>.</li>
   </ul>
 </section>
 
 <section>
   <h2 class="kicker">Ce qu&rsquo;il ne fait pas</h2>
-  <h3>Un Stratux fait plus. Un Go fait moins, dans votre poche.</h3>
+  <h3>Un Stratux reçoit plus de systèmes. Un Go en reçoit moins, mais tient dans la poche.</h3>
   <p>Un Stratux reçoit l&rsquo;ADS-B, l&rsquo;UAT, l&rsquo;OGN et d&rsquo;autres encore, et envoie le tout à votre tablette en Wi-Fi, en GDL&nbsp;90. Si vous en avez un et qu&rsquo;il vous convient, gardez-le.</p>
-  <p>La carte que nous avons choisie n&rsquo;a pas de Wi-Fi, seulement du Bluetooth, car le Wi-Fi consomme beaucoup plus. Le GDL&nbsp;90 passe par le Wi-Fi, donc un Go ne peut pas l&rsquo;envoyer. Il envoie à la place du NMEA en Bluetooth, le format que lisent SDVFR Next, SkyDemon et ForeFlight, à trois appareils à la fois.</p>
+  <p>Nous avons choisi une carte sans Wi-Fi, avec seulement du Bluetooth, car le Wi-Fi consomme beaucoup plus. Le GDL&nbsp;90 passe par le Wi-Fi, donc le Go ne peut pas l&rsquo;envoyer. Il envoie à la place des données NMEA par Bluetooth, à trois appareils à la fois. SDVFR Next, SkyDemon et ForeFlight lisent ce format.</p>
   <p>Un Go reçoit l&rsquo;ADS-L et FLARM. Pour l&rsquo;ADS-B, il s&rsquo;associe à un second boîtier de poche, <%= link_to_page "skyblip-bravo", label: "Bravo" %>, plutôt que de devenir un boîtier plus gros.</p>
 </section>
 

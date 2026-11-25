@@ -5,14 +5,14 @@ slug: bedienung
 description: "Bedienen Sie skyBlip Go mit Touchfeld und Taste. Geben Sie Ihr Rufzeichen ein, ändern Sie Radareinstellungen und öffnen Sie die Diagnose ohne Smartphone."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Zwei Bedienelemente mit klarer Aufgabe.</h1>
+  <h1>Touchfeld und Taste des Go bedienen</h1>
   <p class="lede">
-    Ein Touchfeld und eine Taste bedienen die Menüs. Die Diagnoseansichten sind für die Werkbank gedacht.
+    Wechseln Sie mit dem Touchfeld zwischen den Ansichten. Öffnen Sie die Menüs mit der Taste. Nutzen Sie die Diagnoseansichten für Prüfungen auf der Werkbank.
   </p>
 </section>
 
@@ -21,10 +21,10 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="two-contacts">Das Touchfeld wechselt, <span class="highlight">die Taste ändert</span>.</h3>
       <p>
-        Merken Sie sich je eine Aufgabe. Mit dem kapazitiven Touchfeld an der Oberkante wechseln Sie durch die vier Ansichten, ohne Einstellungen zu ändern. Die Taste an der Seite öffnet das Menü der laufenden Ansicht. Jeder weitere Druck ändert den Wert der gewählten Zeile.
+        Mit dem kapazitiven Touchfeld an der Oberkante wechseln Sie durch die vier Ansichten, ohne Einstellungen zu ändern. Die Taste an der Seite öffnet das Menü der laufenden Ansicht. Jeder weitere Druck ändert den Wert der gewählten Zeile.
       </p>
       <p>
-        Zwei Ansichten haben ein Menü. Alle am Gerät änderbaren Einstellungen stehen im Radarmenü, der ersten Ansicht beim Einrichten. Sie müssen nichts bestätigen. Jeder Tastendruck setzt die Änderung sofort um.
+        Zwei Ansichten haben ein Menü. Beim Einrichten beginnen Sie mit dem Radar. Sein Menü enthält alle Einstellungen, die Sie mit Touchfeld und Taste ändern können. Jeder Tastendruck setzt die Änderung sofort um. Nur das Löschen der ADS-B-Adresse müssen Sie auf einer zweiten Ansicht bestätigen.
       </p>
     </div>
     <figure class="shot">
@@ -35,10 +35,10 @@ updated_on: "2026-11-20"
 
   <ul class="points">
     <li>Tippen Sie auf das Touchfeld für die nächste Ansicht</li>
-    <li>Berühren Sie das Touchfeld eine Sekunde lang, um zum Radar zurückzukehren</li>
+    <li>Berühren Sie das Touchfeld eine Sekunde lang, um eine aktive Warnung stummzuschalten. Ohne aktive Warnung kehren Sie zum Radar zurück</li>
     <li>Drücken Sie die Taste, um das Menü zu öffnen, sofern die Ansicht eines hat</li>
     <li>Drücken Sie erneut, um den Wert der gewählten Zeile zu ändern</li>
-    <li>Gehen Sie über die letzte Zeile hinaus, um zur Ansicht zurückzukehren</li>
+    <li>Tippen Sie im Menü nach der letzten Zeile auf das Touchfeld, um zur Ansicht zurückzukehren</li>
     <li>Berühren Sie die Bedienelemente eine Minute lang nicht. Das Gerät kehrt dann selbst zur Ansicht zurück</li>
   </ul>
 
@@ -51,7 +51,7 @@ updated_on: "2026-11-20"
         <span class="mono">9</span> und zurück zum Leerzeichen. Haben Sie einen Buchstaben übersprungen, tippen Sie weiter, bis er wieder erscheint.
       </p>
       <p>
-        Drücken Sie beim letzten Zeichen die Taste, um das Rufzeichen zu speichern. Leerzeichen am Ende werden entfernt. Zum Löschen stellen Sie das erste Zeichen auf ein Leerzeichen und drücken die Taste. Unter der Taste steht <span class="mono">ERASE</span>, sobald das Leerzeichen über dem Balken steht. Verlassen Sie das Feld vorher oder berühren Sie eine Minute lang nichts, speichert das Gerät nichts.
+        Drücken Sie beim letzten Zeichen die Taste, um das Rufzeichen zu speichern. Leerzeichen am Ende werden entfernt. Zum Löschen stellen Sie das erste Zeichen auf ein Leerzeichen und drücken die Taste. Die Beschriftung der Taste wechselt zu <span class="mono">ERASE</span>, sobald das erste Zeichen ein Leerzeichen ist. Verlassen Sie das Feld vorher oder berühren Sie eine Minute lang nichts, speichert das Gerät nichts.
       </p>
     </div>
     <figure class="shot">
@@ -67,19 +67,19 @@ updated_on: "2026-11-20"
     </figure>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign-none.png", alt: "Menü AIRCRAFT nach dem Tastendruck. Die Zeile CALLSIGN ist gewählt und zeigt NONE." %>
-      <figcaption>Nach einem Tastendruck</figcaption>
+      <figcaption>Das Rufzeichen ist gelöscht</figcaption>
     </figure>
   </div>
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="diagnostics">Vier Ansichten der Reihe nach, <span class="highlight">die übrigen über das Menü</span>.</h3>
+      <h3 id="diagnostics">Vier Ansichten der Reihe nach, <span class="highlight">Diagnoseansichten über ihren Namen öffnen</span>.</h3>
       <p>
         Beim Antippen folgen Radar, Liste, Instrumente und g-Messer. Andere Ansichten sind nicht Teil der Folge. Wer im Flug umschaltet, soll nicht beim Satellitendiagramm landen. Ohne Inertialsensor gibt es keinen g-Messer. Das Gerät überspringt die Ansicht, statt bei jedem vierten Tippen
         <span class="mono">NO SENSOR</span> anzuzeigen.
       </p>
       <p>
-        Die übrigen Ansichten öffnen Sie über ihren Namen im Menü der Liste. Beim Schließen kehren Sie zur vorherigen Ansicht zurück. Die folgenden Ansichten sind für Werkbank, Vorfeld und Fehlermeldungen gedacht. Mit dem Touchfeld allein erreichen Sie sie nicht. Das Bravo-Protokoll zeigt die Firmware eines gekoppelten Bravo, seinen Akkustand und den Empfang. Um einen Flug für eine Fehlermeldung aufzuzeichnen oder einen Entladetest zu starten, beginnen Sie die Aufzeichnung auf der Geräteseite in Briefing. Das Display zeigt, was gelöscht wird. Ein Tastendruck startet die Aufzeichnung.
+        Die Diagnoseansichten öffnen Sie über ihren Namen im Menü der Liste. Beim Schließen kehren Sie zur vorherigen Ansicht zurück. Die folgenden Ansichten dienen Prüfungen auf der Werkbank, auf dem Vorfeld und der Meldung von Problemen. Mit dem Touchfeld allein erreichen Sie sie nicht. Das Bravo-Protokoll zeigt die Firmware eines gekoppelten Bravo, seinen Akkustand und die von seinem Empfänger empfangenen Meldungen. Für eine Flugaufzeichnung zur Fehlersuche oder einen Entladetest öffnen Sie die Geräteseite in Briefing und starten dort die Aufzeichnung. Das Display zeigt, was gelöscht wird. Drücken Sie die Taste, um dies zu bestätigen und die Aufzeichnung zu starten.
       </p>
     </div>
     <figure class="shot">

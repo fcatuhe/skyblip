@@ -5,14 +5,14 @@ nav_title: "Radar"
 description: "Lee los símbolos y la lista NEARBY de skyBlip Go. Entiende las alertas dentro de 3 km y 300 m y cómo PLOT ALL muestra el tráfico lejano."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Dónde mirar y qué tráfico hay.</h1>
+  <h1>Lee el radar, la alerta y la lista NEARBY.</h1>
   <p class="lede">
-    La pantalla que dejas abierta en skyBlip Go: dónde mirar, qué tráfico hay y qué significa la alerta cuando se activa.
+    El radar es la pantalla que dejas abierta en skyBlip Go. Aquí puedes ver cómo interpretar sus símbolos, la lista NEARBY y la alerta.
   </p>
 </section>
 
@@ -21,12 +21,12 @@ updated_on: "2026-11-20"
 
   <div class="feature">
     <div>
-      <h3 id="heading-up">El tráfico tal como <span class="highlight">lo ves desde la cabina</span>.</h3>
+      <h3 id="heading-up">Estás en el centro, <span class="highlight">con la trayectoria hacia arriba</span>.</h3>
       <p>
-        Estás en el centro, con tu trayectoria hacia arriba. La imagen conserva esa orientación mientras el cielo gira a tu alrededor. Si aparece tráfico arriba a la derecha, búscalo a la derecha del morro, sin tener que hacer conversiones. La parte superior de la pantalla queda despejada porque es la mitad hacia la que vuelas. La única excepción es <span class="mono">NO TX</span> y su motivo en la esquina superior izquierda.
+        Estás en el centro, con tu trayectoria hacia arriba. La imagen gira para mantener esa orientación. Si una aeronave aparece arriba a la derecha, búscala por delante, a la derecha del morro, sin tener que hacer conversiones. La parte superior de la pantalla queda despejada para mostrar el tráfico que tienes delante. Solo pueden aparecer allí <span class="mono">NO TX</span> y el motivo por el que se ha detenido la transmisión, en la esquina superior izquierda.
       </p>
       <p>
-        Cada aeronave tiene un símbolo que te indica dónde mirar. Una punta hacia arriba indica que está por encima de ti. Hacia abajo, que está por debajo. Un rombo indica que está a tu altura. Una pequeña marca inclinada indica si asciende o desciende. La línea que sale del símbolo termina donde estará la aeronave dentro de un minuto.
+        La forma del símbolo indica la altitud de la aeronave respecto a ti. Una punta hacia arriba indica que está por encima de ti. Hacia abajo, que está por debajo. Un rombo indica que está a tu altura. Una pequeña marca inclinada indica si asciende o desciende. La línea que sale del símbolo indica su posición prevista dentro de un minuto.
       </p>
     </div>
     <figure class="shot">
@@ -46,16 +46,16 @@ updated_on: "2026-11-20"
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="every-aircraft">Todas las aeronaves <span class="highlight">a cualquier distancia</span>.</h3>
+      <h3 id="every-aircraft">Todas las aeronaves recibidas <span class="highlight">a cualquier distancia</span>.</h3>
       <p>
-        A escala, la imagen termina en el borde de la pantalla. Con el círculo de 4&nbsp;NM, una aeronave desaparece a partir de unas seis millas. Con
-        <span class="mono">PLOT</span> en <span class="mono">ALL</span>, la primera opción del menú de ajustes y la predeterminada en un dispositivo nuevo, aparecen todas las aeronaves recibidas con posición. El círculo se reduce para dejar una banda alrededor. Una aeronave fuera del círculo aparece en esa banda, en su dirección, con el mismo símbolo que tendría dentro.
+        En el modo a escala, las aeronaves que quedan más allá del borde de la pantalla dejan de verse. Con el círculo de 4&nbsp;NM, una aeronave desaparece a partir de unas seis millas. El ajuste
+        <span class="mono">PLOT</span> en <span class="mono">ALL</span> muestra todas las aeronaves recibidas con posición. Es la primera opción del menú de ajustes y la predeterminada en un dispositivo nuevo. El círculo se reduce para dejar una banda alrededor. Una aeronave fuera del círculo aparece en esa banda, en su dirección, con el mismo símbolo que tendría dentro.
       </p>
       <p>
-        La distancia no se muestra a escala, pero sí su minuto de trayectoria. Se calcula desde la posición real y solo se dibuja la parte que entra en el círculo. Una aeronave que se acerca deprisa desde seis millas aparece como una marca en la banda y una línea que ya entra en el círculo y termina donde estará dentro de un minuto.
+        El símbolo de la banda indica la dirección de la aeronave, no su distancia. La línea de trayectoria sí se dibuja a escala. Se calcula desde la posición real de la aeronave, pero solo se muestra la parte que queda dentro del círculo. Una aeronave que se acerca deprisa desde seis millas aparece en la banda con una línea que ya entra en el círculo. Esa línea termina en su posición prevista dentro de un minuto.
       </p>
       <p>
-        Las aeronaves juntas en la banda comparten un símbolo con un número al lado. Una aeronave que activa una alerta tiene prioridad. Si no hay alerta, el símbolo representa a la más próxima a tu altitud. El número nunca tapa otra aeronave. Una marca por detrás de ti se desplaza a un lado en vez de desaparecer bajo la etiqueta de alcance.
+        Las aeronaves cercanas entre sí en la banda comparten un símbolo con un número al lado. Se muestra primero el símbolo de una aeronave que activa una alerta. Si ninguna la activa, se muestra el de la aeronave más próxima a tu altitud. El número nunca tapa otra aeronave. Un símbolo por detrás de ti se desplaza para que no lo tape la etiqueta de alcance.
       </p>
     </div>
     <figure class="shot">
@@ -69,26 +69,26 @@ updated_on: "2026-11-20"
     <li>TO SCALE: imagen dibujada a la escala del círculo</li>
     <li>En la banda: dirección, forma y alerta</li>
     <li>Un minuto de trayectoria donde entra en el círculo</li>
-    <li>Las aeronaves cercanas entre sí en la banda comparten símbolo y número</li>
+    <li>Un símbolo común y un número para las aeronaves agrupadas en la banda</li>
     <li>La esquina muestra el total de aeronaves recibidas</li>
   </ul>
 
   <p class="lede">
-    <%= link_to_page "displays", label: "La guía de pantallas", anchor: "both-ways" %>
-    muestra el mismo tráfico en ambos modos, a una pulsación de distancia.
+    <%= link_to_page "displays", label: "La comparación de los dos modos", anchor: "both-ways" %>
+    muestra el mismo tráfico en ambos modos. Pulsa el botón una vez para pasar de uno a otro.
   </p>
 
   <div class="feature">
     <div>
       <h3 id="alarm">Una sola alerta <span class="highlight">que te indica dónde mirar</span>.</h3>
       <p>
-        Si una aeronave está dentro de 3&nbsp;km en horizontal y 300&nbsp;m en vertical, su símbolo se rellena. Un cuarto de la pantalla centrado en esa dirección se pone negro una vez por segundo. No tienes que leer nada: ves el destello de reojo. Te indica que gires la cabeza hacia allí. El radar se abre estés en la pantalla que estés.
+        Cuando una aeronave está a menos de 3&nbsp;km en horizontal y 300&nbsp;m en vertical, su símbolo se rellena de negro. Un cuarto de la pantalla centrado en su dirección se pone negro una vez por segundo. No tienes que leer nada: ves el destello de reojo y sabes hacia dónde girar la cabeza. Estés en la pantalla que estés, el Go vuelve al radar.
       </p>
       <p>
-        El sector negro llama la atención. El símbolo te da el ángulo. El tráfico a 38° del morro no se redondea a «delante y a la derecha». El sector se centra en 38°, así que puedes mirar allí en vez de explorar un cuarto del cielo.
+        El sector negro llama la atención. El símbolo indica la dirección precisa. Si una aeronave está a 38° del morro, el sector se centra en 38°. Buscas en esa dirección, no solo «delante y a la derecha».
       </p>
       <p>
-        No hay un nivel superior de alerta ni lo habrá. Ascender o descender exige coordinarse con la otra aeronave. Este dispositivo no tiene un enlace para eso. Lo más que puede decirte es que mires.
+        No hay un nivel superior de alerta ni lo habrá. Ascender o descender exige coordinarse con la otra aeronave. Este dispositivo no tiene un enlace para eso. Te indica dónde mirar, sin darte instrucciones de maniobra.
       </p>
     </div>
     <figure class="shot">
@@ -106,15 +106,15 @@ updated_on: "2026-11-20"
     <li>Un aviso, nunca una instrucción</li>
   </ul>
 
-  <h3 id="shapes">Seis formas que <span class="highlight">se entienden de un vistazo</span>.</h3>
+  <h3 id="shapes">Seis formas para la altitud relativa <span class="highlight">que se entienden de un vistazo</span>.</h3>
   <p class="lede">
     Una punta hacia arriba indica tráfico por encima de ti. Una hacia abajo indica tráfico por debajo. Un rombo indica tráfico a menos de 60&nbsp;m de tu altitud. Un símbolo de tamaño normal indica una aeronave dentro de los 300&nbsp;m de diferencia de altitud de la alerta. Un símbolo más pequeño indica que está más lejos en vertical. Sigue en la pantalla, pero no activa la alerta. La marca inclinada aparece a partir de 2,5&nbsp;m/s de ascenso o descenso y apunta en el sentido en que se mueve el tráfico.
   </p>
   <p class="lede">
-    El círculo indica que la aeronave no envía su altitud. No apunta hacia arriba ni hacia abajo porque no se sabe si está por encima o por debajo de ti. Dentro de 3&nbsp;km se rellena como cualquier alerta, porque podría estar a tu altura.
+    El círculo indica que la aeronave no envía su altitud. No apunta hacia arriba ni hacia abajo porque se desconoce su altitud respecto a ti. Dentro de 3&nbsp;km se rellena como cualquier alerta, porque podría estar a tu altura.
   </p>
   <p class="lede">
-    Un símbolo relleno de negro indica una alerta. Si no hay ningún símbolo relleno, nada es urgente. La pantalla reserva ese contraste para las alertas.
+    El relleno negro de los símbolos se reserva para las alertas. Si no hay ningún símbolo relleno, la pantalla no está señalando ninguna urgencia.
   </p>
 
   <%= render "shared/blips",
@@ -139,18 +139,18 @@ updated_on: "2026-11-20"
 
   <div class="feature">
     <div>
-      <h3 id="nearby">Qué tráfico hay <span class="highlight">con el de tu altura primero</span>.</h3>
+      <h3 id="nearby">La lista NEARBY <span class="highlight">con el tráfico de tu altura primero</span>.</h3>
       <p>
-        El radar te indica dónde mirar. Esta pantalla te dice qué tráfico hay. Hay una fila por aeronave con posición conocida: su indicativo si lo transmite o, si no, su dirección de radio, la distancia horizontal y cuánto está por encima o por debajo de ti. Si no envía altitud, aparecen dos guiones. La dirección de radio se muestra en letra pequeña para distinguirla del indicativo.
+        El radar te indica dónde mirar. La lista NEARBY identifica las aeronaves con posición conocida. Cada fila muestra el indicativo de la aeronave o su dirección de radio si no transmite un indicativo. También muestra la distancia horizontal y la diferencia de altitud respecto a ti. Dos guiones sustituyen esa diferencia si la aeronave no envía su altitud. La dirección de radio aparece en letra pequeña para distinguirla del indicativo.
       </p>
       <p>
-        Sobre la lista hay una fila para el Go y otra para un Bravo emparejado: la batería, los satélites que usa para su posición y las aeronaves que recibe por radio. Si un dispositivo no tiene posición o no funciona, un mensaje sustituye los dos últimos datos: <span class="mono">GPS OFF</span>,
+        Sobre la lista, una fila indica el estado del Go y otra el de un Bravo emparejado. Cada una muestra la batería, el número de satélites usados para calcular la posición y el número de aeronaves recibidas por radio. Si un dispositivo no tiene posición o no funciona, un mensaje sustituye los datos de satélites y tráfico: <span class="mono">GPS OFF</span>,
         <span class="mono">MOVE OUT</span>, <span class="mono">FINDS FIX</span>,
         <span class="mono">TX OFF</span>, <span class="mono">NO LINK</span> o
         <span class="mono">RX DOWN</span>.
       </p>
       <p>
-        Las aeronaves en alerta aparecen primero. Luego las que están a menos de 300&nbsp;m (unos 1.000&nbsp;ft) de tu altitud y después el resto, de la más cercana a la más lejana en cada grupo. Un avión de línea sobre ti queda cerca en horizontal, pero aparece debajo de un planeador a tu altura.
+        Las aeronaves que activan una alerta aparecen primero. Después vienen las que están a menos de 300&nbsp;m (unos 1.000&nbsp;ft) de tu altitud y, por último, las demás. Dentro de cada grupo se ordenan por distancia horizontal, de la más cercana a la más lejana. Un avión de línea sobre ti está cerca en horizontal, pero aparece después de un planeador a tu altura.
       </p>
       <p>
         La letra al principio de la fila indica de dónde viene la información.
@@ -169,10 +169,10 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="no-tx">Cuando el Go deja de transmitir, <span class="highlight">sigue avisándole</span>.</h3>
       <p>
-        El Go sigue recibiendo tráfico, avisándole, enviando datos a su aplicación de navegación y registrando su vuelo cuando deja de transmitir su posición. Si un requisito de transmisión no se cumple durante 10&nbsp;s, cada página muestra <span class="mono">NO TX</span> sobre una palabra que indica el motivo, en blanco sobre negro en la esquina superior izquierda. <span class="mono">RADIO</span> indica que la radio no responde o no escucha antes de transmitir. <span class="mono">GNSS</span> indica que el receptor GPS no calcula dos posiciones por segundo, en el segundo y en el medio segundo. <span class="mono">FIX</span> significa que falta una posición válida. <span class="mono">UTC</span> indica que no hay una hora UTC válida para sincronizar la radio. <span class="mono">PPS</span> significa que falta el pulso del receptor GPS para el segundo en curso. Si no se cumplen varios requisitos, el Go muestra el primero en ese orden.
+        Cuando el Go deja de transmitir tu posición, sigue recibiendo tráfico y avisándote. También sigue enviando datos a tu aplicación de navegación y registrando tu vuelo. Si un requisito de transmisión no se cumple durante 10&nbsp;s, cada página muestra <span class="mono">NO TX</span> sobre una palabra que indica el motivo, en blanco sobre negro en la esquina superior izquierda. <span class="mono">RADIO</span> indica que la radio no responde o no escucha antes de transmitir. <span class="mono">GNSS</span> indica que el receptor GPS no calcula dos posiciones por segundo, en el segundo y en el medio segundo. <span class="mono">FIX</span> significa que falta una posición válida. <span class="mono">UTC</span> indica que no hay una hora UTC válida para sincronizar la radio. <span class="mono">PPS</span> significa que falta el pulso del receptor GPS para el segundo en curso. Si no se cumplen varios requisitos, el Go muestra el primero en ese orden.
       </p>
       <p>
-        La transmisión se detiene en cuanto falla un requisito y se reanuda por sí sola cuando vuelven a cumplirse todos. La marca permanece hasta que todos se hayan cumplido durante 10&nbsp;s, por lo que puede seguir visible brevemente después de reanudarse la transmisión. No aparece sobre menús ni solicitudes de confirmación. En vuelo, el Go vibra una vez cuando aparece la marca, o al despegar si ya está visible. Antes de la primera posición, el radar muestra en su lugar el avance del receptor. La radio se comprueba desde el arranque. La página de comprobación de funcionamiento marca con <span class="mono">NO TX</span> el componente que impide transmitir. La fila de tráfico de la página de estado muestra <span class="mono">TX OFF</span> y el motivo sin esperar 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> muestra el mismo motivo que la marca de la esquina mientras está conectado.
+        La transmisión se detiene en cuanto falla un requisito y se reanuda por sí sola cuando vuelven a cumplirse todos. La indicación permanece hasta que todos los requisitos vuelvan a cumplirse durante 10&nbsp;s. Por eso puede seguir visible brevemente después de reanudarse la transmisión. No aparece sobre menús ni solicitudes de confirmación. En vuelo, el Go vibra una vez cuando aparece la marca, o al despegar si ya está visible. Antes de que el Go obtenga su primera posición GPS, el radar muestra en su lugar el avance del receptor. La radio se comprueba desde el arranque. La página de comprobación de funcionamiento marca con <span class="mono">NO TX</span> el componente que impide transmitir. La fila de tráfico de la página de estado muestra <span class="mono">TX OFF</span> y el motivo sin esperar 10&nbsp;s. <%= link_to "Briefing", briefing_root_path %> muestra el mismo motivo que la marca de la esquina mientras está conectado.
       </p>
     </div>
     <figure class="shot">
