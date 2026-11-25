@@ -116,6 +116,7 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
     plan.tx_last_key_us = last_key_us(dwell, payload);
     if (context_.roles.rf.arm(plan) != Status::Ok) return false;
     dwell.carry(payload, tx_at_us);
+    if (payload == Payload::Position) dwell.position_version = outgoing_.protocol_version();
     if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
     if (payload == Payload::Status) context_.state.rf.status_at_us = tx_at_us;
     return true;
@@ -124,13 +125,17 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
 uint64_t RadioService::last_key_us(const Armed& dwell, Payload payload) const {
     const int slot = dwell.frequency_hz == adsl::kMBand1Hz ? 1 : 0;
     return at_us(dwell.origin_us,
-                 timing::Transmitter::last_key(payload, slot, fix_lag_ms(dwell.origin_us)));
+                 timing::Transmitter::last_key(payload, slot, navigation_lag_ms(dwell.origin_us)));
 }
 
 bool RadioService::fix_too_old_at(uint64_t tx_at_us) const {
-    const int32_t fix_age_ms =
-        static_cast<int32_t>(static_cast<uint32_t>(tx_at_us / 1000) - context_.state.own.fix_at_ms);
-    return !timing::Transmitter::fresh(fix_age_ms);
+    return too_old_at(context_.state.own.fix_at_ms, tx_at_us);
+}
+
+bool RadioService::too_old_at(uint32_t measured_ms, uint64_t tx_at_us) {
+    const int32_t age_ms =
+        static_cast<int32_t>(static_cast<uint32_t>(tx_at_us / 1000) - measured_ms);
+    return !timing::Transmitter::fresh(age_ms);
 }
 
 // INFO: fc 14nov26 dated at the burst's planned instant, with the level its assessment read

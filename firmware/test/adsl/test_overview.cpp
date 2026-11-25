@@ -1,28 +1,26 @@
 // ADS-L 4 SRD-860 issue 2 Subpart B, the overview: bit order, transmission sequence and versioning.
 #include <cstdint>
-#include <cstring>
 
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/radio/log.h"
 #include "core/settings/address.h"
-#include "core/timing/transmit_gate.h"
 #include "core/traffic/table.h"
+#include "core/traffic/versions.h"
 #include "doctest/doctest.h"
-#include "hardware/platform/host/identity.h"
 #include "protocols/adsl/packet.h"
-#include "simulator/simulator.h"
+#include "test/support/armings_rig.h"
 #include "test/support/m_band_rig.h"
 #include "test/support/product_rig.h"
-#include "test/support/simulator_run.h"
+#include "test/support/traffic_scene.h"
 
 using namespace skyblip;
 
 namespace {
 
 constexpr uint32_t kNeighbour = 0xC5D804;
-constexpr uint8_t kHeavyRotorcraft = 15;
+constexpr uint32_t kAircraftAddress = 0x3C6586;
 
 model::Ownship flying_own() {
     model::Ownship own{};
@@ -70,16 +68,14 @@ model::AircraftObservation neighbour(const model::Ownship& own, int32_t east_m, 
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour that is neither close nor closing leaves the version") {
     model::Ownship own = flying_own();
     own.track_cdeg = 27000;
-    traffic::TrafficTable table;
-    table.set_own_reference(own);
-    REQUIRE(table.update(neighbour(own, 5000, 0), own.utc_s) >= 0);
-    CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
+    traffic::VersionTable versions;
+    versions.hear_traffic(neighbour(own, 5000, 0), own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
 
     model::AircraftObservation above = neighbour(own, 500, 0);
     above.altitude_m = 1900;
-    traffic::TrafficTable stacked;
-    stacked.set_own_reference(own);
-    REQUIRE(stacked.update(above, own.utc_s) >= 0);
+    traffic::VersionTable stacked;
+    stacked.hear_traffic(above, own.utc_s);
     CHECK(stacked.readable_version(own, own.fix_at_ms) == adsl::Packet::kMaxProtocolVersion);
 }
 
@@ -89,23 +85,21 @@ TEST_CASE("ADS-L.4.SRD860.B.5: with no height of its own, a Go counts a client o
     own.altitude_hae_valid = false;
     model::AircraftObservation above = neighbour(own, 500, 0);
     above.altitude_m = 1900;
-    traffic::TrafficTable table;
-    table.set_own_reference(own);
-    REQUIRE(table.update(above, own.utc_s) >= 0);
-    CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+    traffic::VersionTable versions;
+    versions.hear_traffic(above, own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
 }
 
 // 4 km ahead, closing at 150 m/s head-on: 27 s to CPA, inside B.5's 30.
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour less than 30 s from CPA counts as close") {
     model::Ownship own = flying_own();
     own.speed_mm_s = 75000;
-    traffic::TrafficTable table;
-    table.set_own_reference(own);
+    traffic::VersionTable versions;
     model::AircraftObservation head_on = neighbour(own, 4000, 0);
     head_on.speed_q = 300;
     head_on.track_c9 = 384;
-    REQUIRE(table.update(head_on, own.utc_s) >= 0);
-    CHECK(table.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
+    versions.hear_traffic(head_on, own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == adsl::Packet::kProtocolVersionIssue1);
 }
 
 // Own speed unknown, the closure is too: 30 s at G.1.8's fastest 236 m/s is 7080 m, plus its own.
@@ -114,12 +108,11 @@ TEST_CASE("ADS-L.4.SRD860.B.5: with no own speed, a client 30 s away at 236 m/s 
     own.speed_mm_s = 0;
     own.speed_valid = false;
     const auto readable = [&](const model::Ownship& from, int32_t east_m) {
-        traffic::TrafficTable table;
-        table.set_own_reference(from);
+        traffic::VersionTable versions;
         model::AircraftObservation hovering = neighbour(from, east_m, 0);
         hovering.speed_q = 0;
-        REQUIRE(table.update(hovering, from.utc_s) >= 0);
-        return table.readable_version(from, from.fix_at_ms);
+        versions.hear_traffic(hovering, from.utc_s);
+        return versions.readable_version(from, from.fix_at_ms);
     };
     CHECK(readable(own, 2500) == adsl::Packet::kProtocolVersionIssue1);
     CHECK(readable(own, 7000) == adsl::Packet::kProtocolVersionIssue1);
@@ -135,16 +128,14 @@ TEST_CASE("ADS-L.4.SRD860.B.5: with no own speed, a client 30 s away at 236 m/s 
 // B.5 reads a Traffic packet's version only for a client whose Status has not been heard.
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour's Status outranks the version its Traffic came in") {
     const model::Ownship own = flying_own();
-    traffic::TrafficTable table;
-    table.set_own_reference(own);
-    REQUIRE(table.update(neighbour(own, 500, 0), own.utc_s) >= 0);
-    REQUIRE(table.readable_version(own, own.fix_at_ms) == 0);
+    traffic::VersionTable versions;
+    versions.hear_traffic(neighbour(own, 500, 0), own.utc_s);
+    REQUIRE(versions.readable_version(own, own.fix_at_ms) == 0);
 
-    CHECK(table.declare_max_version(adsl::kAddressTableFlarm, kNeighbour, 1));
-    CHECK(table.readable_version(own, own.fix_at_ms) == 1);
-    REQUIRE(table.update(neighbour(own, 450, 0), own.utc_s + 1) >= 0);
-    CHECK(table.readable_version(own, own.fix_at_ms) == 1);
-    CHECK_FALSE(table.declare_max_version(adsl::kAddressTableFlarm, 0x111111, 0));
+    versions.hear_status(adsl::kAddressTableFlarm, kNeighbour, 1, own.utc_s);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == 1);
+    versions.hear_traffic(neighbour(own, 450, 0), own.utc_s + 1);
+    CHECK(versions.readable_version(own, own.fix_at_ms) == 1);
 }
 
 TEST_CASE("ADS-L.4.SRD860.B.5: a Status heard from a tracked aircraft is filed against it") {
@@ -160,9 +151,10 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a Status heard from a tracked aircraft is filed a
     traffic.set_protocol_version(0);
     hear_adsl(rig, traffic);
     settle(rig, now_ms);
-    const int index = rig.state().traffic.find(adsl::kAddressTableFlarm, kNeighbour);
+    const traffic::VersionTable& versions = rig.product.versions();
+    const int index = versions.find(adsl::kAddressTableFlarm, kNeighbour);
     REQUIRE(index >= 0);
-    CHECK(int(rig.state().traffic.at(index)->version.max) == 0);
+    CHECK(int(versions.at(index)->max_version()) == 0);
 
     adsl::Packet status{};
     adsl::encode_status(status, kNeighbour, adsl::kAddressTableFlarm, adsl::StatusReport{});
@@ -171,11 +163,11 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a Status heard from a tracked aircraft is filed a
 
     CHECK(heard_verdict(rig) == radio::Verdict::Declared);
     CHECK(rig.state().air.rx_status == 1);
-    CHECK(rig.state().traffic.at(index)->version.declared);
-    CHECK(int(rig.state().traffic.at(index)->version.max) == adsl::Packet::kMaxProtocolVersion);
+    CHECK(versions.at(index)->declared);
+    CHECK(int(versions.at(index)->max_version()) == adsl::Packet::kMaxProtocolVersion);
 }
 
-TEST_CASE("ADS-L.4.SRD860.B.5: a Status from an aircraft not in the table changes nothing") {
+TEST_CASE("ADS-L.4.SRD860.B.5: a Status from an aircraft not on the display is kept for it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -186,121 +178,93 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a Status from an aircraft not in the table change
     hear_adsl(rig, status);
     settle(rig, now_ms);
 
+    CHECK(heard_verdict(rig) == radio::Verdict::Declared);
+    CHECK(rig.state().air.rx_status == 1);
+    CHECK(rig.state().traffic.count() == 0);
+    const traffic::VersionTable& versions = rig.product.versions();
+    const int index = versions.find(adsl::kAddressTableFlarm, kNeighbour);
+    REQUIRE(index >= 0);
+    CHECK(versions.at(index)->declared);
+    CHECK_FALSE(versions.at(index)->placed);
+    CHECK(int(versions.at(index)->max_version()) == adsl::Packet::kMaxProtocolVersion);
+}
+
+// B.5 is kept for the clients heard direct, and F.2's relay flag says another station sent this.
+TEST_CASE("ADS-L.4.SRD860.B.5: a relayed Status is not filed") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
+
+    adsl::Packet status{};
+    adsl::encode_status(status, kNeighbour, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    status.set_relay();
+    hear_adsl(rig, status);
+    settle(rig, now_ms);
+
     CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
     CHECK(rig.state().air.rx_status == 0);
-    CHECK(rig.state().traffic.count() == 0);
+    CHECK(rig.product.versions().count() == 0);
 }
 
-namespace {
+// The display refuses the addresses we transmit under, and an echo of our own Traffic is no client.
+TEST_CASE("ADS-L.4.SRD860.B.5: our own Traffic and Status heard back set no version") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
+    const settings::AirAddress serial_address = rig.state().activation.address();
+    REQUIRE(serial_address);
+    model::Ownship echo = rig.state().own;
+    echo.latitude_1e7 += 1000;
 
-struct Flown {
-    int sent{0};
-    uint32_t held{0};
-    uint32_t given_up{0};
-    uint8_t version{0};
-    uint8_t category{0};
-    timing::NoTx unmet{timing::NoTx::None};
-};
+    adsl::Packet traffic{};
+    REQUIRE(protocol::from_own(traffic, echo, serial_address, settings::kSkyblipAddressMappingTable,
+                               4));
+    traffic.set_protocol_version(0);
+    hear_adsl(rig, traffic);
+    settle(rig, now_ms);
+    adsl::Packet status{};
+    REQUIRE(protocol::from_own_status(status, serial_address, settings::kSkyblipAddressMappingTable,
+                                      adsl::StatusReport{}));
+    hear_adsl(rig, status);
+    settle(rig, now_ms);
+    CHECK(rig.state().air.rx_status == 0);
 
-// Every simulated aircraft sends version 0, so to a Go it is an Issue 1 client until a Status says
-// more. A VDOP of 0 is a 2D fix, whose altitude goes out as unknown.
-Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int speed_kt = 60,
-            uint32_t for_ms = 15000, bool speed_reported = true) {
-    simulator::Simulator simulator;
-    REQUIRE(simulator.setup() == Status::Ok);
-    simulator.product().settings().aircraft_type = category;
-    simulator.world().set_fix(true);
-    simulator.world().set_speed_kt(speed_kt);
-    simulator.world().gnss().vdop_e2 = vdop_e2;
-    if (beside_issue1) simulator.world().add_aircraft(0, 400, 0, speed_kt == 0 ? 1 : 30, 90);
-    uint32_t settled_ms = past_settling(simulator);
-    if (!speed_reported) {
-        simulator.world().gnss().emit_speed = false;
-        run_on(simulator, settled_ms, 1000);
-        simulator.world().air().clear();
-        settled_ms += 1000 + simulator::Simulator::kStepMs;
-    }
-    const uint32_t held_before = simulator.product().state().air.tx_held_for_b5;
-    const uint32_t given_up_before = simulator.product().state().air.tx_given_up;
-    run_on(simulator, settled_ms, for_ms);
-
-    Flown out;
-    for (const simulator::AirRecord& record :
-         records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
-        adsl::Packet packet{};
-        REQUIRE(packet_of(record, packet));
-        if (packet.address() != settings::address_of(platform::host::Identity::kSerial)) continue;
-        if (out.sent > 0) {
-            CHECK(packet.protocol_version() == out.version);
-            CHECK(packet.aircraft_category == out.category);
-        }
-        out.version = packet.protocol_version();
-        out.category = packet.aircraft_category;
-        out.sent++;
-    }
-    out.held = simulator.product().state().air.tx_held_for_b5 - held_before;
-    out.given_up = simulator.product().state().air.tx_given_up - given_up_before;
-    out.unmet = simulator.product().state().transmit.unmet();
-    return out;
+    rig.settings().aircraft_address = kAircraftAddress;
+    settle(rig, now_ms);
+    adsl::Packet under_icao{};
+    REQUIRE(protocol::from_own(under_icao, echo, settings::AirAddress{kAircraftAddress},
+                               adsl::kAddressTableIcao, 4));
+    under_icao.set_protocol_version(0);
+    hear_adsl(rig, under_icao);
+    settle(rig, now_ms);
+    CHECK(rig.product.versions().count() == 0);
 }
 
-}  // namespace
+// The executor reads the channel from 2.2 ms before the instant and owns the burst from then.
+TEST_CASE("ADS-L.4.SRD860.B.5: a client heard once our burst's channel check has begun waits") {
+    Armings armings;
+    armings.ready_to_transmit(1000);
+    model::Ownship& own = armings.state.own;
+    own.latitude_1e7 = 481000000;
+    own.longitude_1e7 = 81000000;
+    own.altitude_hae_mm = 1000000;
+    own.hdop_e2 = 90;
+    own.vdop_e2 = 120;
+    own.climb_valid = true;
+    own.aircraft_category = 15;
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.tick_in(0, 420);
+    REQUIRE(armings.rf.with_tx == 1);
 
-// Through RadioService: category 15 goes as Issue 1's rotorcraft beside an Issue 1 client, alone as
-// itself.
-TEST_CASE("ADS-L.4.SRD860.B.5: the version transmitted is one every close neighbour can read" *
-          doctest::test_suite("main")) {
-    const Flown beside = flown(kHeavyRotorcraft, true);
-    CHECK(beside.sent > 10);
-    CHECK(beside.held == 0);
-    CHECK(beside.version == adsl::Packet::kProtocolVersionIssue1);
-    CHECK(int(beside.category) == 3);
-
-    const Flown alone = flown(kHeavyRotorcraft, false);
-    CHECK(alone.sent > 10);
-    CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
-    CHECK(int(alone.category) == kHeavyRotorcraft);
-}
-
-// Issue 1 has no code for an unknown altitude, and we never claim one we lack.
-TEST_CASE("ADS-L.4.SRD860.B.5: a 2D fix beside an Issue 1 client puts no position on air") {
-    const Flown beside = flown(4, true, /*vdop_e2=*/0);
-    CHECK(beside.sent == 0);
-    CHECK(beside.held > 10);
-    CHECK(beside.unmet == timing::NoTx::Held);
-
-    const Flown alone = flown(4, false, /*vdop_e2=*/0);
-    CHECK(alone.sent > 10);
-    CHECK(alone.held == 0);
-    CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
-    CHECK(alone.unmet == timing::NoTx::None);
-}
-
-// Issue 1 has no code for an unknown speed either, and the Go sent 0 m/s in its place.
-TEST_CASE(
-    "ADS-L.4.SRD860.B.5: a fix with no ground speed beside an Issue 1 client puts none on air") {
-    const Flown beside = flown(4, true, 150, 60, 15000, /*speed_reported=*/false);
-    CHECK(beside.sent == 0);
-    CHECK(beside.held > 10);
-
-    const Flown alone = flown(4, false, 150, 60, 15000, /*speed_reported=*/false);
-    CHECK(alone.sent > 10);
-    CHECK(alone.held == 0);
-    CHECK(alone.version == adsl::Packet::kProtocolVersionIssue2);
-}
-
-TEST_CASE("ADS-L.4.SRD860.B.5: beside an Issue 1 client a glider still goes out every second") {
-    const Flown glider = flown(4, true);
-    CHECK(glider.sent > 10);
-    CHECK(glider.held == 0);
-    CHECK(glider.version == adsl::Packet::kProtocolVersionIssue1);
-    CHECK(int(glider.category) == 4);
-}
-
-// On the ground a held position tries again every 2 s, +2 to +8 and +11 to +19, then gives up.
-TEST_CASE("ADS-L.4.SRD860.B.5: a held ground position is retried 2 s on until its next turn") {
-    const Flown parked = flown(4, true, /*vdop_e2=*/0, /*speed_kt=*/0, /*for_ms=*/40000);
-    CHECK(parked.sent == 0);
-    CHECK(parked.held >= 15);
-    CHECK(parked.given_up >= 3);
+    armings.rf.listening = true;
+    model::AircraftObservation client = target_at(own, 300, 0, 0, 30, 90, own.fix_at_ms);
+    client.adsl_version = adsl::Packet::kProtocolVersionIssue1;
+    client.source = model::Source::AdslDirect;
+    client.received.at_s = 1000;
+    armings.versions.hear_traffic(client, 1000);
+    armings.tick_in(0, 430);
+    CHECK(armings.rf.withdrawn == 0);
+    CHECK(armings.rf.with_tx == 1);
 }
