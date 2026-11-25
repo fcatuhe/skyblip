@@ -1,39 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
+import { FEET_PER_METRE, FPM_PER_METRE_SECOND } from "#skyblip/geo"
+import { EQUIPMENT, addAircraft, airliner, callsign, nearbyAircraft } from "#skyblip/simulated_traffic"
 
 const MAX_CATCHUP_MS = 250
 const ACTIVATION_KEYS = [" ", "Enter"]
 
-const TRAFFIC_MIN_RANGE_M = 800
-const TRAFFIC_MAX_RANGE_M = 4800
-const TRAFFIC_VERT_SPREAD_M = 600
-const ADSB_MIN_RANGE_M = 8000
-const ADSB_MAX_RANGE_M = 30_000
-const ADSB_MAX_ABOVE_M = 8500
-const ADSB_MIN_CRUISE_KT = 105
-const ADSB_MAX_CRUISE_KT = 460
-const KT_TO_MPS = 0.514444
-const TRAFFIC_MIN_CRUISE_KT = 90
-const TRAFFIC_MAX_CRUISE_KT = 180
-const TRAFFIC_MIN_SLOW_KT = 35
-const TRAFFIC_CRUISE_TURN_DPS_E1 = 20
-const TRAFFIC_THERMAL_MIN_TURN_DPS_E1 = 80
-const TRAFFIC_THERMAL_MAX_TURN_DPS_E1 = 150
-const TRAFFIC_CRUISE_CLIMB_MM_S = 4000
-const TRAFFIC_STRONG_MIN_CLIMB_MM_S = 4000
-const TRAFFIC_STRONG_MAX_CLIMB_MM_S = 8000
-const TRAFFIC_EXCEPTIONAL_SHARE = 0.2
-const TRAFFIC_ADDRESS_MAX = 0xffffff
-const TRAFFIC_NAMED_SHARE = 0.6
-const CALLSIGN_PREFIXES = ["F-G", "F-H", "F-J", "F-C", "D-E", "D-K", "G-", "HB-", "OO-", "EC-", "I-"]
-const REGISTRATION_LENGTH = 6
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const ADSL = 0
-const FLARM = 1
-const ADSB = 2
-const FLARM_SHARE = 0.25
-
-const FEET_PER_METRE = 3.28084
-const FPM_PER_MPS = 196.85
 const MM_PER_METRE = 1000
 const signed = value => (Number(value) > 0 ? `+${value}` : `${value}`)
 const clamp = (value, limit) => Math.min(Math.max(value, -limit), limit)
@@ -116,7 +87,7 @@ const AXES = {
     )
   },
   climb: {
-    flown: (sim, fpm) => sim.setClimb(Math.round((fpm * MM_PER_METRE) / FPM_PER_MPS)),
+    flown: (sim, fpm) => sim.setClimb(Math.round((fpm * MM_PER_METRE) / FPM_PER_METRE_SECOND)),
     read: fpm => `${signed(fpm)} fpm`,
     paint: (gauge, fpm) => turned(gauge, ".gauge-needle", vsiAngle(fpm))
   }
@@ -143,6 +114,8 @@ const TRAFFIC_TICK_MAX_MS = 30_000
 const TRAFFIC_ARRIVAL_SHARE = 0.5
 const TRAFFIC_STAY_MIN_MS = 60_000
 const TRAFFIC_STAY_MAX_MS = 180_000
+const TRAFFIC_NAMED_SHARE = 0.6
+const FLARM_SHARE = 0.25
 
 export default class extends Controller {
   static targets = ["canvas", "status", "pad", "lamp", "charge", "bravo", "bravoControl",
@@ -271,63 +244,12 @@ export default class extends Controller {
   #addAircraft(group) {
     const departures = this.departures[group]
     if (departures.size >= TRAFFIC_MAX_PER_GROUP) return
-    const adsb = group === "adsb"
-    const bearing = Math.random() * 2 * Math.PI
-    const range = adsb ? this.#between(ADSB_MIN_RANGE_M, ADSB_MAX_RANGE_M)
-                       : this.#between(TRAFFIC_MIN_RANGE_M, TRAFFIC_MAX_RANGE_M)
-    const index = this.sim.addAircraft(
-      Math.round(Math.cos(bearing) * range),
-      Math.round(Math.sin(bearing) * range),
-      Math.round(this.#between(-TRAFFIC_VERT_SPREAD_M, adsb ? ADSB_MAX_ABOVE_M : TRAFFIC_VERT_SPREAD_M)),
-      adsb ? Math.round(this.#between(ADSB_MIN_CRUISE_KT, ADSB_MAX_CRUISE_KT) * KT_TO_MPS) : this.#speedMps(),
-      Math.round(Math.random() * 359),
-      adsb ? 0 : this.#turnDpsE1(),
-      adsb ? 0 : this.#climbMmS(),
-      adsb ? ADSB : (Math.random() < FLARM_SHARE ? FLARM : ADSL),
-      this.#address()
-    )
+    const index = group === "adsb"
+      ? addAircraft(this.sim, airliner(), EQUIPMENT.adsb)
+      : addAircraft(this.sim, nearbyAircraft(), Math.random() < FLARM_SHARE ? EQUIPMENT.alptas : EQUIPMENT.adsl)
     if (index < 0) return
     departures.set(index, this.sim.elapsedMs() + this.#between(TRAFFIC_STAY_MIN_MS, TRAFFIC_STAY_MAX_MS))
-    if (Math.random() < TRAFFIC_NAMED_SHARE) this.sim.nameAircraft(index, this.#callsign())
-  }
-
-  #callsign() {
-    const prefix = CALLSIGN_PREFIXES[Math.floor(Math.random() * CALLSIGN_PREFIXES.length)]
-    let callsign = prefix
-    while (callsign.length < REGISTRATION_LENGTH) callsign += LETTERS[Math.floor(Math.random() * LETTERS.length)]
-    return callsign
-  }
-
-  #address() {
-    return 1 + Math.floor(Math.random() * TRAFFIC_ADDRESS_MAX)
-  }
-
-  #speedMps() {
-    const kt = this.#exceptional()
-      ? this.#between(TRAFFIC_MIN_SLOW_KT, TRAFFIC_MIN_CRUISE_KT)
-      : this.#between(TRAFFIC_MIN_CRUISE_KT, TRAFFIC_MAX_CRUISE_KT)
-    return Math.round(kt * KT_TO_MPS)
-  }
-
-  #turnDpsE1() {
-    if (!this.#exceptional())
-      return Math.round(this.#between(-TRAFFIC_CRUISE_TURN_DPS_E1, TRAFFIC_CRUISE_TURN_DPS_E1))
-    return this.#eitherHand(TRAFFIC_THERMAL_MIN_TURN_DPS_E1, TRAFFIC_THERMAL_MAX_TURN_DPS_E1)
-  }
-
-  #climbMmS() {
-    if (!this.#exceptional())
-      return Math.round(this.#between(-TRAFFIC_CRUISE_CLIMB_MM_S, TRAFFIC_CRUISE_CLIMB_MM_S))
-    return this.#eitherHand(TRAFFIC_STRONG_MIN_CLIMB_MM_S, TRAFFIC_STRONG_MAX_CLIMB_MM_S)
-  }
-
-  #exceptional() {
-    return Math.random() < TRAFFIC_EXCEPTIONAL_SHARE
-  }
-
-  #eitherHand(low, high) {
-    const size = this.#between(low, high)
-    return Math.round(Math.random() < 0.5 ? -size : size)
+    if (Math.random() < TRAFFIC_NAMED_SHARE) this.sim.nameAircraft(index, callsign())
   }
 
   #between(low, high) {

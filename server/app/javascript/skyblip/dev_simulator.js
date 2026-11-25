@@ -1,3 +1,8 @@
+import { FEET_PER_METRE, FPM_PER_METRE_SECOND } from '#skyblip/geo';
+import { EQUIPMENT, addAircraft, aircraftAddress, metresPerSecond, nearbyAircraft } from '#skyblip/simulated_traffic';
+
+const MM_PER_METRE = 1000;
+
 export async function mountSimulator(element, src, manifest, signal) {
   const { load, PAGES, ALARM, DWELL, SHUTDOWN, REFRESH, PRODUCT, BRAVO_STATE } = await import(src);
 
@@ -22,8 +27,6 @@ export async function mountSimulator(element, src, manifest, signal) {
   SIM.toggleFix = () => { fix = !fix; f.setFix(fix ? 1 : 0);
                           $('fixbtn').textContent = 'Fix: ' + (fix ? 'ON' : 'OFF'); };
   SIM.sats  = v => { f.setSatellites(+v);  $('sats_o').textContent = v + ' sats'; };
-  const FEET_PER_METRE = 3.28084;
-  const FPM_PER_MM_S = 0.19685;
   SIM.alt   = v => { f.setAltitude(Math.round(v / FEET_PER_METRE));
                      $('alt_o').textContent = v + ' ft'; };
   SIM.speed = v => { f.setSpeed(+v); $('spd_o').textContent = v + ' kt'; };
@@ -32,7 +35,7 @@ export async function mountSimulator(element, src, manifest, signal) {
                      $('trn_o').textContent = (v >= 0 ? '+' : '') + (v/10).toFixed(1) + ' °/s'; };
   SIM.slip  = v => { f.setSlip(+v);
                      $('slp_o').textContent = (v > 0 ? '+' : '') + v + ' mg'; };
-  SIM.climb = v => { f.setClimb(Math.round(v / FPM_PER_MM_S));
+  SIM.climb = v => { f.setClimb(Math.round(v * MM_PER_METRE / FPM_PER_METRE_SECOND));
                      $('clb_o').textContent = (v > 0 ? '+' : '') + v + ' fpm'; };
   const HPA_E1_TO_PA = 10;
   SIM.airmass = v => { f.setAirmass(v * HPA_E1_TO_PA); $('air_o').textContent = (v/10).toFixed(1) + ' hPa'; };
@@ -41,36 +44,8 @@ export async function mountSimulator(element, src, manifest, signal) {
   SIM.battery = v => { f.setBatteryMv(+v); $('bat_o').textContent = (v/1000).toFixed(2) + ' V'; };
   SIM.toggleExternalPower = () => { ext = !ext; f.setExternalPower(ext ? 1 : 0);
                                     $('extbtn').textContent = 'USB power: ' + (ext ? 'ON' : 'OFF'); };
-  const EQUIPMENT = { adsl: 0, alptas: 1, adsb: 2 };
   const equipment = () => EQUIPMENT[$('tfc_system').value];
-  const KT_TO_MPS = 0.514444;
-  const TRAFFIC_CRUISE_KT = [90, 180];
-  const TRAFFIC_SLOW_KT = [35, 90];
-  const TRAFFIC_VERT_SPREAD_M = 600;
-  const TRAFFIC_ADDRESS_MAX = 0xffffff;
-  const TRAFFIC_CRUISE_TURN_DPS_E1 = 20;
-  const TRAFFIC_THERMAL_TURN_DPS_E1 = [80, 150];
-  const TRAFFIC_CRUISE_CLIMB_MM_S = 4000;
-  const TRAFFIC_STRONG_CLIMB_MM_S = [4000, 8000];
-  const TRAFFIC_EXCEPTIONAL_SHARE = 0.2;
-  const spread = limit => Math.round((Math.random() * 2 - 1) * limit);
-  const within = ([low, high]) => low + Math.random() * (high - low);
-  const exceptional = () => Math.random() < TRAFFIC_EXCEPTIONAL_SHARE;
-  const eitherHand = range => Math.round(within(range)) * (Math.random() < 0.5 ? -1 : 1);
-  const trafficSpeedMps = () =>
-    Math.round(within(exceptional() ? TRAFFIC_SLOW_KT : TRAFFIC_CRUISE_KT) * KT_TO_MPS);
-  const trafficTurnDpsE1 = () =>
-    exceptional() ? eitherHand(TRAFFIC_THERMAL_TURN_DPS_E1) : spread(TRAFFIC_CRUISE_TURN_DPS_E1);
-  const trafficClimbMmS = () =>
-    exceptional() ? eitherHand(TRAFFIC_STRONG_CLIMB_MM_S) : spread(TRAFFIC_CRUISE_CLIMB_MM_S);
-  const trafficAddress = () => 1 + Math.floor(Math.random() * TRAFFIC_ADDRESS_MAX);
-  SIM.addRandom = () => {
-    const brg = Math.random() * 2 * Math.PI, d = 800 + Math.random() * 4000;
-    f.addAircraft(Math.round(Math.cos(brg)*d), Math.round(Math.sin(brg)*d),
-                  spread(TRAFFIC_VERT_SPREAD_M),
-                  trafficSpeedMps(), Math.round(Math.random()*359),
-                  trafficTurnDpsE1(), trafficClimbMmS(), equipment(), trafficAddress());
-  };
+  SIM.addRandom = () => addAircraft(f, nearbyAircraft(), equipment());
   SIM.addThreat = () => f.addThreat(equipment());
   SIM.addAt = phase => {
     const brg = Math.random() * 2 * Math.PI, d = 800 + Math.random() * 3000;
@@ -154,7 +129,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     const rad = track * Math.PI / 180, ahead = -130, right = 60;
     f.addAircraft(Math.round(ahead * Math.cos(rad) - right * Math.sin(rad)),
                   Math.round(ahead * Math.sin(rad) + right * Math.cos(rad)), 0,
-                  Math.round(kt * KT_TO_MPS), track, 0, 0, 0, trafficAddress());
+                  metresPerSecond(kt), track, 0, 0, EQUIPMENT.adsl, aircraftAddress());
   };
 
   const STICK = { ArrowUp:    ['clb', +1, SIM.climb],
