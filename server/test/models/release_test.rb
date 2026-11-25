@@ -12,12 +12,11 @@ class ReleaseTest < ActiveSupport::TestCase
   end
 
   # GitHub releases are immutable, so v0.8.0 keeps the names it was built with (#483).
-  test "a release from before the rename serves the simulator under its old names" do
+  test "a release from before the rename holds no simulator" do
     old = release("v0.8.0", assets: %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json])
 
-    assert old.simulator?
-    assert_equal [ "embed.js", "scenarios.json" ], [ old.simulator_files.embed, old.simulator_files.scenarios ]
-    assert_match Release::FILE, "skyblip_simulator.wasm"
+    assert_not old.simulator?
+    assert_no_match Release::FILE, "skyblip_simulator.wasm"
     assert_match Release::FILE, "skyblip-simulator-scenarios.json"
   end
 
@@ -142,9 +141,9 @@ class ReleaseTest < ActiveSupport::TestCase
     end
   end
 
-  test "without a local build, the prompt glass takes the newest main build that holds the simulator" do
+  test "without a local build, the prompt glass takes the newest stable release that holds the simulator" do
     with_config(simulator_build: nil, local_simulator_only: false) do
-      assert_equal [ "dev-1765", "embed.js" ], VCR.use_cassette("github/releases") { Release.prompt_glass_embed }
+      assert_equal [ "v0.8.1", "skyblip-simulator-embed.js" ], VCR.use_cassette("github/simulator") { Release.prompt_glass_embed }
     end
   end
 

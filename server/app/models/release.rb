@@ -9,7 +9,7 @@ class Release
   FIRMWARE = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   INSTALLER = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+\.uf2\z/
-  FILE = /#{FIRMWARE}|#{INSTALLER}|\A#{Regexp.union(SimulatorFiles::NAMINGS.flat_map(&:names))}\z/
+  FILE = /#{FIRMWARE}|#{INSTALLER}|\A#{Regexp.union(SimulatorFiles::CURRENT.names)}\z/
   LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
