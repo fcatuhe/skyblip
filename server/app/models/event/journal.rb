@@ -5,6 +5,8 @@ class Event::Journal
   PATH = %r{\A(?:[a-z][a-z0-9+.-]*://[^/?#]*)?(/[^?#\s]*)}i
   ASSET_DIGEST = /-\h{8,}(?=\.js\z)/
   ENTRIES = 100
+  # INFO: fc 20nov26 a JSON number has no size, and every counter the firmware or the browser sends fits in a JavaScript number
+  NUMBERS = -(2**53 - 1)..(2**53 - 1)
   OLDEST = 30.days
 
   WORDS = %w[navigation control kind error controller filter phase product running track image imu settings trust flight power_level
@@ -74,7 +76,7 @@ class Event::Journal
     def kept(key, value)
       case key
       when *WORDS then value.to_s.first(100) if value.is_a?(String)
-      when *COUNTS then Integer(value, exception: false)
+      when *COUNTS then Integer(value, exception: false).then { it if number?(it) }
       when *FLAGS then value if value == true || value == false
       when *TEXTS.keys then value.to_s.truncate(TEXTS[key]) if value.is_a?(String)
       when *PATHS then path_of(value)
@@ -97,11 +99,14 @@ class Event::Journal
 
     def dump_value(field)
       case field
-      when Integer, true, false then field
+      when Integer then field if number?(field)
+      when true, false then field
       when String then field.first(40)
-      when Array then field.grep(Integer).first(16)
+      when Array then field.select { number?(it) }.first(16)
       end
     end
+
+    def number?(value) = value.is_a?(Integer) && NUMBERS.cover?(value)
 
     def path_of(url) = (url[PATH, 1]&.first(300) if url.is_a?(String))
 

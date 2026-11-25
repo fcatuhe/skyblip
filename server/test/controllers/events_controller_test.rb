@@ -53,4 +53,17 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
                    "adsb" => { "rssi_dbm" => [ 0, 120, 900 ] }, "power" => {} }, event.payload["dump"])
     assert_equal "bravo-3f2a", event.device
   end
+
+  # A browser's keepalive fetch carries 64 KB at most, so a larger post comes from no browser and could fill the log.
+  test "a post larger than a browser can send is refused, and nothing of it is kept" do
+    dump = 10.times.to_h { |group| [ "group_#{group}", 40.times.to_h { |key| [ "key_#{key}", "x" * 40 ] } ] }
+    entries = 5.times.map do
+      { id: SecureRandom.uuid, name: "device.diagnosed", at: Time.current.iso8601, seq: 1, page: SecureRandom.uuid, properties: { dump: } }
+    end
+
+    post events_path, params: { browser: "01AZ018Z", entries: }, headers: { "User-Agent" => CHROME }, as: :json
+
+    assert_response :content_too_large
+    assert_not Event.exists?(name: "device.diagnosed")
+  end
 end
