@@ -5,7 +5,7 @@ slug: blog/flota-del-club
 description: "¿Quince aeronaves y ninguna equipada? Cómo compartir unos pocos skyBlip Go en un club, qué ajustar antes de cada vuelo y qué instalar de forma fija."
 published_on: "2026-11-21"
 parent: blog
-updated_on: "2026-11-21"
+updated_on: "2026-11-25"
 ---
 
 <section>
@@ -37,7 +37,7 @@ updated_on: "2026-11-21"
   <h2 class="kicker">Aeronaves con transpondedor</h2>
   <h3>Dales a esas aeronaves su propio Go.</h3>
   <p>Una aeronave que transmite en Mode S o ADS-B debe transmitir en ADS-L con la misma dirección OACI, para que los receptores sepan que las dos señales vienen de la misma aeronave. Lo pide la especificación ADS-L. Esa dirección pertenece a la aeronave, no al piloto. Un Go compartido entre aeronaves necesitaría una dirección nueva antes de cada vuelo.</p>
-  <p>La regla más sencilla: un Go por cada aeronave con transpondedor, con su dirección configurada una sola vez en <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, y Go compartidos para las aeronaves sin transpondedor. Un Bravo emparejado con el Go puede leer la dirección del transpondedor en tierra, así que nadie tiene que escribirla.</p>
+  <p>La regla más sencilla: un Go por cada aeronave con transpondedor, con su dirección configurada una sola vez en <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, y Go compartidos para las aeronaves sin transpondedor. Un Bravo emparejado con el Go puede leer la dirección del transpondedor en tierra, así que nadie tiene que escribirla. Si llevas un Tango a otra aeronave, propone la nueva dirección y una pulsación la guarda: <%= link_to_page "blog/own-aircraft", label: "así se ve en el Go" %>.</p>
 </section>
 
 <section>

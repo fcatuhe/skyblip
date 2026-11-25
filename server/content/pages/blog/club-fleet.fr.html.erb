@@ -5,7 +5,7 @@ slug: blog/flotte-de-club
 description: "Quinze machines et aucune équipée ? Partager quelques skyBlip Go entre les avions du club, quoi régler avant chaque vol, et quoi installer à demeure."
 published_on: "2026-11-21"
 parent: blog
-updated_on: "2026-11-21"
+updated_on: "2026-11-25"
 ---
 
 <section>
@@ -37,7 +37,7 @@ updated_on: "2026-11-21"
   <h2 class="kicker">Les avions équipés d&rsquo;un transpondeur</h2>
   <h3>Donnez à ces avions leur propre Go.</h3>
   <p>Un avion qui émet en Mode S ou en ADS-B doit émettre l&rsquo;ADS-L sous la même adresse OACI, pour que les récepteurs sachent que les deux signaux viennent du même avion. La spécification ADS-L le demande. Cette adresse appartient à l&rsquo;avion, pas au pilote. Un Go partagé entre plusieurs avions demanderait donc une nouvelle adresse avant chaque vol.</p>
-  <p>La règle la plus simple : un Go par avion équipé d&rsquo;un transpondeur, son adresse réglée une fois pour toutes dans <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, et des Go partagés pour les avions sans transpondeur. Un Bravo associé au Go peut lire l&rsquo;adresse du transpondeur au sol, et personne n&rsquo;a à la saisir.</p>
+  <p>La règle la plus simple : un Go par avion équipé d&rsquo;un transpondeur, son adresse réglée une fois pour toutes dans <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, et des Go partagés pour les avions sans transpondeur. Un Bravo associé au Go peut lire l&rsquo;adresse du transpondeur au sol, et personne n&rsquo;a à la saisir. Emporté dans un autre avion, un Tango propose la nouvelle adresse, et un appui l&rsquo;enregistre : <%= link_to_page "blog/own-aircraft", label: "ce que montre le Go" %>.</p>
 </section>
 
 <section>
