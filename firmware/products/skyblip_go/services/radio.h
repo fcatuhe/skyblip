@@ -15,6 +15,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "core/timing/transmit_gate.h"
+#include "core/traffic/versions.h"
 #include "products/skyblip_go/settings.h"
 #include "protocols/adsl/media_access.h"
 #include "runtime/service.h"
@@ -32,12 +33,14 @@ class RadioService : public runtime::Service {
     // INFO: fc 19nov26 one refused dwell is a transient, a second inside the age a fault
     static constexpr uint32_t kRadioRefusalSamples = 2;
 
-    RadioService(runtime::Context& context, const Settings& settings)
-        : runtime::Service(context), settings_(settings) {}
+    RadioService(runtime::Context& context, const Settings& settings,
+                 const traffic::VersionTable& versions)
+        : runtime::Service(context), settings_(settings), versions_(versions) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
     // INFO: fc 19nov26 the executor flies the queued dwell, so the next pass is due when it starts
+    // | 22nov26 and at once after a client was filed while a position is carried
     uint32_t due_in_ms(uint32_t now_ms) const override;
 
     ports::RfMode armed_mode() const { return current_dwell_.mode; }
@@ -73,6 +76,7 @@ class RadioService : public runtime::Service {
         uint8_t chip_buffer{0};
         bool carried[kPayloads]{};
         uint64_t at_us[kPayloads]{};
+        uint8_t position_version{0};
 
         bool carries(Payload payload) const { return carried[static_cast<int>(payload)]; }
         uint64_t at(Payload payload) const { return at_us[static_cast<int>(payload)]; }
@@ -107,6 +111,8 @@ class RadioService : public runtime::Service {
         bool open{false};
         uint32_t turn_s{0};
         uint64_t first_us{0};
+        uint32_t second_s{0};
+        std::optional<uint64_t> not_before_us{};
     };
 
     bool identified();
@@ -132,6 +138,8 @@ class RadioService : public runtime::Service {
     void count_given_up(uint32_t now_ms);
     void count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
     void hold_for_fix(uint32_t utc_s);
+    void hold_position();
+    bool positions_flow() const;
     void carry_position(const timing::Transmitter::Attempt& position, uint32_t utc_s);
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
     static void listen_for(timing::Band band, ports::RfPlan& plan);
@@ -172,6 +180,9 @@ class RadioService : public runtime::Service {
                     const bus::RfState::Busy& busy, uint32_t now_ms);
     bool rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced);
     uint64_t last_key_us(const Armed& dwell, Payload payload) const;
+    uint8_t readable_version_at(uint64_t tx_at_us) const;
+    void keep_readable();
+    bool carries_position() const;
     bool fix_too_old_at(uint64_t tx_at_us) const;
     void await_fix(uint32_t utc_s);
     bool silenced(uint64_t tx_at_us) const;
@@ -189,6 +200,9 @@ class RadioService : public runtime::Service {
     bool held_for_b5_{false};
     uint32_t held_for_fix_s_{0};
     bool held_for_fix_{false};
+    // INFO: fc 22nov26 the first and the latest position held since one last went on air
+    std::optional<uint32_t> positions_held_since_ms_{};
+    uint32_t position_held_ms_{0};
     // INFO: fc 19nov26 a position waiting for its fix, lost unless armed before its second ends
     uint32_t fix_wanted_s_{0};
     bool fix_wanted_{false};
@@ -217,7 +231,9 @@ class RadioService : public runtime::Service {
     std::optional<uint64_t> forced_us_{};
     bool over_budget_{false};
     bool held_logged_{false};
+    uint32_t reread_revision_{0};
     const Settings& settings_;
+    const traffic::VersionTable& versions_;
 };
 
 }  // namespace skyblip::go

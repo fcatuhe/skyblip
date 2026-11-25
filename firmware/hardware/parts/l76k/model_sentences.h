@@ -47,9 +47,9 @@ inline void L76k::emit_rmc() {
     line[written++] = ',';
     written += format_nmea_longitude(line + written, longitude_1e7);
     line[written++] = ',';
-    written += format_unsigned(line + written, knots_e2(), 1, 2);
+    if (emit_speed) written += format_unsigned(line + written, knots_e2(), 1, 2);
     line[written++] = ',';
-    written += format_unsigned(line + written, heading_e2(), 1, 2);
+    if (emit_course) written += format_unsigned(line + written, heading_e2(), 1, 2);
     line[written++] = ',';
     written += format_string(line + written, date);
     written += format_string(line + written, ",,,A");
@@ -78,7 +78,7 @@ inline void L76k::emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t in_v
     const uint8_t used = budget < in_view ? budget : in_view;
     char line[128];
     int written = format_string(line, "$GNGSA,A,");
-    written += format_unsigned(line + written, solving() ? 3u : 1u, 1);
+    written += format_unsigned(line + written, solving() ? (solves_height ? 3u : 2u) : 1u, 1);
     for (int slot = 0; slot < kGsaSlots; slot++) {
         line[written++] = ',';
         if (slot < used)

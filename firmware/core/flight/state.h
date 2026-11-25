@@ -16,6 +16,7 @@ struct FlightSample {
     // INFO: fc 20nov26 0 means the receiver did not report a dilution of precision
     uint16_t hdop_e2{0};
     bool fix_valid{false};
+    bool speed_valid{false};
 };
 
 constexpr int32_t kFlightSpeedMmS = 12000;
@@ -23,6 +24,8 @@ constexpr int32_t kLandingSpeedMmS = 8000;
 constexpr int32_t kRollingSpeedMmS = 1500;
 constexpr int32_t kGroundSpeedMmS = 1000;
 constexpr uint32_t kLandingHoldMs = 10000;
+// INFO: fc 22nov26 G.1.2: a state no speed has backed for a landing hold is no reasonable decision
+constexpr uint32_t kSpeedMaxAgeMs = kLandingHoldMs;
 constexpr uint16_t kDopUnityE2 = 100;
 
 // INFO: fc 18sep26 moshe-braner's jerk gate: a speed jumping 4x between solutions is noise
@@ -62,6 +65,7 @@ class FlightMonitor {
 
     FlightState state_{FlightState::Unknown};
     int32_t last_speed_mm_s_{0};
+    uint32_t speed_at_ms_{0};
     uint32_t taxiing_since_ms_{0};
     bool taxiing_{false};
     bool previous_speed_valid_{false};

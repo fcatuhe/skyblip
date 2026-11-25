@@ -63,6 +63,7 @@ class OwnshipService : public runtime::Service {
     bool opens_second(const gnss::GnssSolution& solution);
     void publish_solution_phase(uint32_t now_ms);
     void anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms);
+    bool relabels(int32_t off_ms, bool fixed);
     static uint32_t latency_ceiling_ms(const gnss::GnssSolution& solution);
     static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
     void apply_barometer(const events::BarometerSample& sample, uint32_t now_ms);
@@ -93,6 +94,12 @@ class OwnshipService : public runtime::Service {
     gnss::Acquisition acquisition_{};
     model::Ownship second_{};
     uint32_t opened_s_{0};
+    // INFO: fc 22nov26 how far the last timely fixed whole second named its edge off, 0 when on it
+    int32_t label_step_ms_{0};
+    // INFO: fc 22nov26 the part's stamps stepped back since a whole second last named its own edge
+    bool relabeled_{false};
+    // INFO: fc 23nov26 a timely fix named its edge off before any step back, as a late part does
+    bool off_unmarked_{false};
     bool second_opened_{false};
     int32_t gnss_reference_altitude_mm_{0};
     uint32_t gnss_reference_ms_{0};

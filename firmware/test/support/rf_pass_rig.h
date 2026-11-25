@@ -49,13 +49,16 @@ struct Pass {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::RadioService radio_service{context, settings};
-    go::TrafficService traffic_service{context, bus.rf, settings.aircraft_address};
+    traffic::VersionTable versions{};
+    go::RadioService radio_service{context, settings, versions};
+    go::TrafficService traffic_service{context, bus.rf, settings.aircraft_address, versions};
 
     Status begin() {
         const Status status = rf.begin();
         if (status != Status::Ok) return status;
         state.own.fix_valid = true;
+        state.own.speed_valid = true;
+        state.own.track_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
         state.own.fix_dated = true;

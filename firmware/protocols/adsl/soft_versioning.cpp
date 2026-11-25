@@ -41,7 +41,7 @@ bool close_client(int32_t horizontal_m, int32_t vertical_m, int32_t closing_mm_s
 // INFO: fc 13nov26 0xFFFFFE is one step from a real 0xFFFFFF, well inside any accuracy claimed
 bool issue1_form(Packet& packet, std::optional<uint32_t> vfom_cm) {
     if (!packet.is_position()) return false;
-    if (!packet.has_altitude() || !packet.has_speed() || !packet.has_climb()) return false;
+    if (packet.has_issue2_motion_marker()) return false;
     packet.aircraft_category = issue1_category(packet.aircraft_category);
     for (const wire::BitField field : {Packet::kLatitudeField, Packet::kLongitudeField})
         if (packet.field(field) == Packet::kIssue1PositionInvalidCode)

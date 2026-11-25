@@ -87,6 +87,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRollingSpeedMmS` | 1500 (1.5 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kGroundSpeedMmS` | 1000 (1 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/core/flight/README.md) argues it |
+| `kSpeedMaxAgeMs` | `kLandingHoldMs` = 10000 (10 s) | milliseconds | MaxAge | G.1.2: a state no speed has backed for a landing hold is no reasonable decision |
 | `kTurnWindowMs` | 1000 (1 s) | milliseconds | Window | [README](../firmware/core/flight/README.md) argues it |
 
 ## [`firmware/core/gnss`](../firmware/core/gnss/README.md)
@@ -98,8 +99,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSettleResidualM` | `flight::kFlightSpeedMmS / 1000` = 12 | metres | Settle | the takeoff speed over the second a residual spans, so no smaller error invents a flight |
 | `kConvergedFixes` | 3 | fixes | Fixes | [README](../firmware/core/gnss/README.md) argues it |
 | `kTornStampMs` | -2 | milliseconds | - | - |
-| `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea |
-| `kAltitudeCeilingM` | 100000 | metres | Ceiling | - |
+| `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | COCOM's 1000 kn, far past G.1.8's 236 m/s, so a faster speed is held there |
+| `kAltitudeCeilingM` | 100000 | metres | Ceiling | no aircraft flies past the Karman line, or 1 km under the sea |
 | `kAltitudeFloorM` | -1000 | metres | Floor | - |
 | `kSolutionLatencyCeilingMs` | 250 | milliseconds | Ceiling | the stated assumption: the L76K delivers a solution within a quarter |
 | `kStampToleranceMs` | 10 | milliseconds | - | G.1.1's 10 ms: a stamp that close to a quarter is that quarter |
@@ -211,6 +212,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
 | `kNoTxHoldMs` | 10000 (10 s) | milliseconds | Hold | a failure shown only once it lasts, so a short gap never flickers |
 | `kVerdictSettleMs` | 10000 (10 s) | milliseconds | Settle | the sky's requirements are judged this long after the first fix |
+| `kPositionsHeldCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | [README](../firmware/core/timing/README.md) argues it |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -233,13 +235,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kClosingFixes` | 2 | fixes | Fixes | [README](../firmware/core/traffic/README.md) argues it |
 | `kLiftoffWindowMs` | `kTogetherHoldMs` = 6000 (6 s) | milliseconds | Window | [README](../firmware/core/traffic/README.md) argues it |
 | `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
+| `kReceptionAheadCeilingS` | 2 | seconds | Ceiling | our second lags our clock by one, a paired Bravo's runs one ahead: no further |
 | `kAirborneTargetForgetS` | `kTargetForgetReports * adsl::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kGroundTargetForgetS` | `kTargetForgetReports * adsl::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | [README](../firmware/core/traffic/README.md) argues it |
 | `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | [README](../firmware/core/traffic/README.md) argues it |
 | `kAdsbRangeCeilingM` | 1115000 | metres | Ceiling | 1090 MHz line of sight between two aircraft at FL600, worked out in README.md |
-| `kReceptionAheadCeilingS` | 2 | seconds | Ceiling | our second lags our clock by one, a paired Bravo's runs one ahead: no further |
 | `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
+| `kStatusForgetS` | `3 * adsl::kStatusPeriodS` = 60 | seconds | Forget | B.5: three of G.2.11's 20 s Status periods, so two Statuses missed keep it |
 
 ## [`firmware/products/common`](../firmware/products/common/README.md)
 
@@ -427,4 +430,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-282 constants over 26 folders.
+285 constants over 26 folders.

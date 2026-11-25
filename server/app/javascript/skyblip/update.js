@@ -141,6 +141,10 @@ function startedAtOf(session, uptime, now) {
   return now - Math.round(((uptime - session + BOOT_SECONDS_WRAP) % BOOT_SECONDS_WRAP) * 1000);
 }
 
+function percentOf({ sent, total }) {
+  return Math.floor(100 * sent / total);
+}
+
 function settlingOf({ phase, image }) {
   return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
 }
@@ -625,15 +629,20 @@ export class Updater {
   async #sendImage(total) {
     for (;;) {
       try {
-        return await upload(this.#smp, this.#image, this.#sha, this.#uploadPacketBytes(), sent => {
-          this.#set({ progress: { sent, total } });
-        });
+        return await upload(this.#smp, this.#image, this.#sha, this.#uploadPacketBytes(), sent => this.#progressed(sent, total));
       } catch (error) {
         const smaller = SMALLER_WRITES.find(size => size < this.#writeBytes);
         if (!(error instanceof SmpWriteRejected) || !this.#device || !smaller) throw error;
         this.#writeBytes = smaller;
       }
     }
+  }
+
+  // INFO: fc 25nov26 every state change redraws each page open on the fleet, so the upload reports once per percent, not once per chunk
+  #progressed(sent, total) {
+    const shown = this.#state.progress;
+    if (shown && percentOf(shown) === percentOf({ sent, total })) return;
+    this.#set({ progress: { sent, total } });
   }
 
   #uploadPacketBytes() {

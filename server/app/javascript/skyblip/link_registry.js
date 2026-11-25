@@ -3880,6 +3880,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "pps",
           "code": 6,
           "mirrors": "Pps"
+        },
+        {
+          "name": "held",
+          "code": 7,
+          "mirrors": "Held"
         }
       ]
     },
