@@ -2,6 +2,7 @@
 // independently here in floating point: the shipping code is an integer table,
 // so agreeing with the closed form is a real check, not a restatement.
 #include <cmath>
+#include <initializer_list>
 
 #include "core/flight/atmosphere.h"
 #include "core/units/units.h"
@@ -111,4 +112,31 @@ TEST_CASE("atmosphere: a pascal is centimetres of altitude, so the curve is walk
     // 8.31 cm a pascal at sea level, and the interpolation rounds to the millimetre.
     CHECK(flight::pressure_to_altitude_mm((flight::kIsaSeaLevelPa - 1) * 1000) - sea == 84);
     CHECK(sea - flight::pressure_to_altitude_mm(flight::kIsaSeaLevelPa * 1000 + 1000) == 83);
+}
+
+// Four heights a second: no climb until a height a window back, then one from every height.
+TEST_CASE("atmosphere: a climb window waits for a height a window back, then slides with each") {
+    flight::ClimbWindow window{1000};
+    int32_t climb_mm_s = 0;
+    for (uint32_t at_ms = 0; at_ms < 1000; at_ms += 250)
+        CHECK_FALSE(window.observe(static_cast<int32_t>(at_ms) * 3, at_ms, climb_mm_s));
+    for (uint32_t at_ms = 1000; at_ms <= 3000; at_ms += 250) {
+        CAPTURE(at_ms);
+        REQUIRE(window.observe(static_cast<int32_t>(at_ms) * 3, at_ms, climb_mm_s));
+        CHECK(climb_mm_s == 3000);
+    }
+}
+
+// A pass early or late moves a quarter's instant, and the height nearest a window back is used.
+TEST_CASE("atmosphere: a climb window takes the height nearest a window back, then forgets") {
+    flight::ClimbWindow window{1000};
+    int32_t climb_mm_s = 0;
+    for (const uint32_t at_ms : {0u, 245u, 510u, 755u, 990u}) window.observe(0, at_ms, climb_mm_s);
+    constexpr int32_t kClimbedMm = 1250;
+    constexpr int32_t kBackMs = 1250 - 245;
+    REQUIRE(window.observe(kClimbedMm, 1250, climb_mm_s));
+    CHECK(climb_mm_s == (kClimbedMm * 1000 + kBackMs / 2) / kBackMs);
+
+    window.reset();
+    CHECK_FALSE(window.observe(5000, 1500, climb_mm_s));
 }

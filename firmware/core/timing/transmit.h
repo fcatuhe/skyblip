@@ -37,26 +37,28 @@ class Transmitter {
         uint32_t frequency_hz{0};
         Payload payload{Payload::Position};
         bool over_budget{false};
-        // INFO: fc 18nov26 a position owed here whose solution would be too old on air, at at_ms
+        // INFO: fc 22nov26 a position owed here whose fix or climb would be too old on air, at
+        // at_ms
         bool stale{false};
-        // INFO: fc 19nov26 drawn again because its fix came after the instant first drawn
+        // INFO: fc 22nov26 drawn again because its fix or climb came after the instant first drawn
         bool redrawn{false};
     };
 
-    // INFO: fc 19nov26 a fix in hand before every instant, for a caller that names no arrival
-    static constexpr int32_t kFixInHandEarlyMs = -1000000;
+    // INFO: fc 22nov26 navigation in hand before every instant, for a caller that names no arrival
+    static constexpr int32_t kNavigationInHandEarlyMs = -1000000;
     // INFO: fc 19nov26 a redrawn instant leaves the channel check its listen before it
     static constexpr int kRedrawLeadMs = static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000);
 
     void configure(uint32_t address) { address_ = address; }
 
-    // INFO: fc 20nov26 fix_lag_ms is the fix's lag behind the top of utc_s, negative inside it
+    // INFO: fc 22nov26 navigation_lag_ms is the older of fix and climb behind utc_s, negative
+    // inside it
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
-                    int32_t fix_lag_ms, Payload payload,
-                    int32_t fix_in_hand_ms = kFixInHandEarlyMs) const;
+                    int32_t navigation_lag_ms, Payload payload,
+                    int32_t navigation_in_hand_ms = kNavigationInHandEarlyMs) const;
     // INFO: fc 13nov26 the first burst the dwell owes, in Payload order
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
-                    int32_t fix_lag_ms) const;
+                    int32_t navigation_lag_ms) const;
 
     void sent(uint32_t utc_s, uint32_t now_ms, Payload payload = Payload::Position);
 
@@ -100,8 +102,8 @@ class Transmitter {
     // INFO: fc 20nov26 hashed on address and second, so two aircraft never collide every second
     int instant_in(Payload payload, int slot, uint32_t utc_s) const;
     // INFO: fc 19nov26 drawn like instant_in over what of the window the late fix leaves
-    std::optional<int> redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,
-                                  int32_t fix_in_hand_ms) const;
+    std::optional<int> redrawn_in(int slot, uint32_t utc_s, int32_t navigation_lag_ms,
+                                  int32_t navigation_in_hand_ms) const;
 
     AirTime air_time_{};
     uint32_t address_{0};

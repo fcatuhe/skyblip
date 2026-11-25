@@ -10,13 +10,15 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
         settings::on_air(context_.state.activation.address(), settings_.aircraft_address);
     bool built = false;
     switch (attempt.payload) {
-        case Payload::Position:
-            built = protocol::from_own(outgoing_, context_.state.own, sender.address,
-                                       sender.address_mapping_table,
-                                       context_.state.own.aircraft_category);
+        case Payload::Position: {
+            // INFO: fc 22nov26 G.1.16 ages the climb by its newest height, as it ages the position
+            model::Ownship own = context_.state.own;
+            own.climb_valid = own.climb_valid && !too_old_at(own.climb_at_ms, tx_at_us);
+            built = protocol::from_own(outgoing_, own, sender.address, sender.address_mapping_table,
+                                       own.aircraft_category);
             if (!built && sender.address) hold_for_fix(utc_s);
             if (built && outgoing_.protocol_version() > readable_version_at(tx_at_us) &&
-                !protocol::issue1_form(outgoing_, context_.state.own)) {
+                !protocol::issue1_form(outgoing_, own)) {
                 built = false;
                 hold_position();
                 if (!held_for_b5_ || held_for_b5_s_ != utc_s) context_.state.air.tx_held_for_b5++;
@@ -24,6 +26,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
                 held_for_b5_s_ = utc_s;
             }
             break;
+        }
         case Payload::Status:
             built = protocol::from_own_status(outgoing_, sender.address,
                                               sender.address_mapping_table, status_report());

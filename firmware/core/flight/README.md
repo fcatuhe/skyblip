@@ -39,9 +39,9 @@ The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpol
 
 A whole pascal would add 17 ft/min of invented rate over a one-second window. The rate is measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`).
 
-`kClimbWindowFloorMs` and `kClimbWindowCeilingMs` bound the interval a rate may be taken over: too short and the sensor noise is the answer, too long and it is history. In `products/common/services/ownship`, `kBarometerClimbWindowMs` is the floor, one second, and `kGnssClimbWindowMs` four times that, because a GNSS height jitters by metres. A barometer, once it has spoken, owns the rate, and the GNSS rate keeps running underneath so losing the part falls back without a step.
+`kClimbWindowFloorMs` and `kClimbWindowCeilingMs` bound the interval a rate may be taken over: too short and the sensor noise is the answer, too long and it is history. In `products/common/services/ownship`, `kBarometerClimbWindowMs` is one second, the window the BME280's noise was measured over, and `kGnssClimbWindowMs` two, because a GNSS height jitters by metres. A barometer, once it has spoken, owns the rate, and the GNSS rate keeps running underneath. A barometer that falls silent hands the rate back after `kBarometerMaxAgeMs`, 3 s. In between, the rate goes on air as unknown once it would be over 490 ms old (`../timing/README.md`, The age of a position), and the glass withdraws it about 0.2 s before the GNSS rate takes over, which restarts the damping.
 
-The barometer converts four times a second on the PPS quarters and publishes the conversion triggered on the edge (`boards/lilygo/t_echo_plus/board.h`), so a rate covers the second the fix stream is dated in. Its delays are the same every second, so the difference is still the true rate (`hardware/parts/bme280/README.md`).
+The barometer converts and publishes four times a second on the PPS quarters (`boards/lilygo/t_echo_plus/board.h`). `ClimbWindow` takes a climb from every height, over the height nearest a window behind it, so the window slides a quarter at a time. The climb is dated by its newest height, `own.climb_at_ms`, the conversion for the barometer and the solution for the GNSS, because ADS-L G.1.16 ages it as it ages a position (`../timing/README.md`, The age of a position). The conversions' delays are the same every second, so the difference is still the true rate (`hardware/parts/bme280/README.md`).
 
 ## force
 
@@ -76,7 +76,7 @@ The rate is zero whenever `FlightMonitor::rolling()` is false, and restarts from
 
 `IndicatedRate` is the needle's damping, a first-order lag, as a vertical speed indicator's capsule and leak are. A BME280 differenced over one second jitters by about 12 ft/min at rest (6.2 and 6.6 cm/s RMS measured by build 895 on two units), so an undamped page would change on every frame.
 
-`kIndicatedRateDampingMs` is its time constant, 2 s, for both rates, because they arrive at the same cadence on the same page. Each reading moves the needle `dt / (dt + damping)` of the way, a third at one reading a second, so a step shows 70% after three seconds and 94% after seven, and the barometer's 12 ft/min of noise reads as 3. The damping is in milliseconds, so the GNSS climb, taken over two seconds, settles in the same time. The ball's filter is in samples instead, because the hub hands it one every 80 ms without fail.
+`kIndicatedRateDampingMs` is its time constant, 2 s, for both rates, because they sit on the same page. Each reading moves the needle `dt / (dt + damping)` of the way, a ninth at the barometer's four readings a second, so a step shows 76% after three seconds and 96% after seven. The damping is in milliseconds, so the turn rate at one reading a second and the GNSS climb at two settle in the same time. The ball's filter is in samples instead, because the hub hands it one every 80 ms without fail.
 
 A climb that stops being valid resets the damping, so the next one is shown as measured.
 

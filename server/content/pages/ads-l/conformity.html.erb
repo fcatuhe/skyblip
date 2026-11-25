@@ -4,7 +4,7 @@ nav_title: ADS-L conformity
 description: "skyBlip's ADS-L 4 SRD-860 declaration of conformity for the Go, with the CE, installation and user documents the standard asks for."
 published_on: "2026-11-12"
 parent: ads-l
-updated_on: "2026-11-19"
+updated_on: "2026-11-22"
 ---
 
 <section>
@@ -192,7 +192,7 @@ updated_on: "2026-11-19"
         <tr>
           <th>Design processes and production controls</th>
           <td>yes</td>
-          <td>LilyGO manufactures the T-Echo under its own production controls, and the model passed BACL Shenzhen&rsquo;s CE tests. skyBlip designs the firmware, and CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Nineteen cases are skipped: nine prose, two paperwork and eight optional. None is skipped as not implemented. The cases for F.2.3, the last clause marked as not implemented, now pass. Go refuses <code>FFFFFF</code>, an address no aircraft holds, and, on the ground while a paired live Bravo names the aircraft&rsquo;s transponder, an entered address that differs from it. A clear is never refused. Each unit is checked again where it is used: at every start-up the firmware refuses to run without its radio and barometer, and skyblip.eu activates each unit on its own, signing its serial against its chip id. These software checks do not replace measurements on a unit.</td>
+          <td>LilyGO manufactures the T-Echo under its own production controls, and the model passed BACL Shenzhen&rsquo;s CE tests. skyBlip designs the firmware, and CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Twenty cases are skipped: eight prose, two paperwork, eight optional and two unmeasured. None is skipped as not implemented. The table below gives each skipped case and its reason. The cases for F.2.3, the last clause marked as not implemented, now pass. Go refuses <code>FFFFFF</code>, an address no aircraft holds, and, on the ground while a paired live Bravo names the aircraft&rsquo;s transponder, an entered address that differs from it. A clear is never refused. Each unit is checked again where it is used: at every start-up the firmware refuses to run without its radio and barometer, and skyblip.eu activates each unit on its own, signing its serial against its chip id. These software checks do not replace measurements on a unit.</td>
         </tr>
         <tr>
           <th>Hardware has passed CE</th>
@@ -207,8 +207,40 @@ updated_on: "2026-11-19"
         <tr>
           <th>Traffic and Status payloads, Subpart G</th>
           <td>yes</td>
-          <td>Traffic is scheduled at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on average on the ground, with ground positions 9 then 11&nbsp;s apart. This is skyBlip&rsquo;s reading of G.1.16 with C.2.5&rsquo;s channel alternation. Each position is a solution the receiver measured on .000 or .500 of the second, named to the quarter second under G.1.1, and leaves within 500&nbsp;ms of that measurement under G.1.16. The receiver solves twice a second for this, and a position on 868.2&nbsp;MHz that would carry an older fix waits for the half-second solution. The reading is one of our <%= link_to_page "ads-l/questions", label: "open questions to EASA", anchor: "sb-q2" %>. Status, payload type 3, is scheduled twice per 20&nbsp;s cycle, 9 then 11&nbsp;s apart. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum. Under B.5, Traffic uses Issue 1 encoding beside a close neighbour that reads only Issue 1. A position with unknown altitude, ground speed or vertical rate is held rather than sent with a false Issue 1 value.</td>
+          <td>Traffic is scheduled at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on average on the ground, with ground positions 9 then 11&nbsp;s apart. This is skyBlip&rsquo;s reading of G.1.16 with C.2.5&rsquo;s channel alternation. Each position is a solution the receiver measured on .000 or .500 of the second, named to the quarter second under G.1.1, and leaves within 500&nbsp;ms of that measurement under G.1.16, assuming the L76K delivers each solution within 250&nbsp;ms, which no bench has measured yet (see the skipped cases below). The receiver solves twice a second for this, and a position on 868.2&nbsp;MHz that would carry an older fix waits for the half-second solution. The reading is one of our <%= link_to_page "ads-l/questions", label: "open questions to EASA", anchor: "sb-q2" %>. Status, payload type 3, is scheduled twice per 20&nbsp;s cycle, 9 then 11&nbsp;s apart. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum. Under B.5, Traffic uses Issue 1 encoding beside a close neighbour that reads only Issue 1. A position with unknown altitude, ground speed or vertical rate is held rather than sent with a false Issue 1 value.</td>
         </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The twenty skipped cases, and why each is skipped</h3>
+  <p>A skipped case makes no claim. Prose has nothing a device executes. Paperwork is a duty of the manufacturer, which no host test can check. Optional is a feature the wording leaves to the device, with &ldquo;may&rdquo; or &ldquo;optionally&rdquo;, and Go does not take it. Where the Status has a field for it, Go declares the capability absent. Unmeasured is a figure the hardware must meet that no bench has measured yet.</p>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Clause</th><th>Case</th><th>Kind</th><th>Reason</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>A.1</th><td>the document specifies ADS-L for U-space conspicuity</td><td>prose</td><td>an introduction, with nothing a device executes</td></tr>
+        <tr><th>A.2</th><td>ADS-L answers SERA.6005(c) and AMC1 SERA.6005(c)</td><td>prose</td><td>the regulatory background, with nothing a device executes</td></tr>
+        <tr><th>A.3</th><td>the specification covers the protocol and not the product around it</td><td>prose</td><td>a scope statement, with nothing a device executes</td></tr>
+        <tr><th>A.4</th><td>the manufacturer declares conformity and CE marks the product</td><td>paperwork</td><td>the declaration is drafted on this page and not signed yet</td></tr>
+        <tr><th>A.5</th><td>the product ships with an installation and a user manual</td><td>paperwork</td><td>the manuals are the guides on skyblip.eu, which no host test can read</td></tr>
+        <tr><th>B.1</th><td>an implementation is GNSS, a host processor and an RF front end</td><td>prose</td><td>a block diagram, with nothing a device executes</td></tr>
+        <tr><th>B.2</th><td>ADS-L is a stateless broadcast protocol over five OSI layers</td><td>prose</td><td>an architecture table, with nothing a device executes</td></tr>
+        <tr><th>C.1</th><td>ADS-L runs on an M band of two channels and an O band</td><td>prose</td><td>an introduction to the bands, whose parameters are in C.2, C.3 and C.4</td></tr>
+        <tr><th>C.3</th><td>the O-band LDR channel is 38.4&nbsp;kbps behind sync word 0xB4 0x2B</td><td>optional</td><td>Go does not use O-band LDR, so nothing tunes 869.525&nbsp;MHz at 38.4&nbsp;kbps. G.2.3 lets the Status declare O-band LDR receive as None, and Go declares it as 0, None</td></tr>
+        <tr><th>C.3.1</th><td>the O-band LDR sync word is 0xB4 0x2B</td><td>optional</td><td>Go does not use O-band LDR, so no sync word is set for that channel</td></tr>
+        <tr><th>C.3.2</th><td>the O-band LDR preamble is 10, forty times</td><td>optional</td><td>Go does not use O-band LDR, so it emits no preamble on that channel</td></tr>
+        <tr><th>D.1</th><td>the data link mediates the channel, adds parity, may sign</td><td>prose</td><td>the layer&rsquo;s remit, which D.1.1, D.1.2, D.3 and E.3 specify</td></tr>
+        <tr><th>D.1.2</th><td>the O-band LDR packet is a 6-byte header, 24 bytes of data and a CRC8</td><td>optional</td><td>Go does not use O-band LDR, so it builds no LDR header or CRC8 and has no 38.4&nbsp;kbps dwell</td></tr>
+        <tr><th>E.4.1</th><td>a signature carries the UTC second it was made in</td><td>optional</td><td>E.4 says clients &ldquo;may optionally digitally sign&rdquo;. Go signs nothing, so there is no timestamp to fill, and every packet sets E.1.2&rsquo;s Secure Signature flag to 0</td></tr>
+        <tr><th>E.4.2</th><td>the signature is Ed25519 over the header, the data and the time</td><td>optional</td><td>Go holds no Ed25519 key and signs no packet</td></tr>
+        <tr><th>F.2.4</th><td>privacy mode selects table 0, the random one</td><td>optional</td><td>F.2.4 says a device &ldquo;may be operated in privacy mode&rdquo;. Go has no privacy mode, so it always sends under AMT entry 58, or entry 5 while an ICAO address is set</td></tr>
+        <tr><th>G.1.1</th><td>the L76K solves on the quarter its stamp names, within 10&nbsp;ms</td><td>unmeasured</td><td>G.1.1 asks the timestamp to be accurate to &plusmn;&nbsp;10&nbsp;ms. Go sends only solutions the receiver names on .000 or .500 of the second, but no bench has yet timed the L76K&rsquo;s 2&nbsp;Hz solutions against its PPS edge</td></tr>
+        <tr><th>G.1.16, transmit rate and timing</th><td>an L76K that delivers every solution a second late is refused</td><td>unmeasured</td><td>G.1.16 forbids navigation data older than 500&nbsp;ms on air. Go holds every position whose solution would be older, counted from the solution&rsquo;s own time. It dates that time assuming the L76K delivers each solution within 250&nbsp;ms. No bench has yet measured that delivery time against an independent reference</td></tr>
+        <tr><th>G.4</th><td>a FIS-B Uplink payload carries a DO-358B ground uplink message</td><td>optional</td><td>G.2.10 lets a sender declare that it does not process FIS-B. Go declares FIS-B client 0 and drops payload type 5 with every other unknown type</td></tr>
+        <tr><th>G.5</th><td>a Remote Identification payload carries an EN 4709-002 block</td><td>prose</td><td>a provision for drones, whose encapsulation a later issue will specify</td></tr>
       </tbody>
     </table>
   </div>
@@ -238,7 +270,7 @@ updated_on: "2026-11-19"
       <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/protocols/adsl/test/conformance"><code>firmware/protocols/adsl/test/conformance/</code></a>
       and
       <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/test/adsl"><code>firmware/test/adsl/</code></a>.
-      <span class="support">The first half checks the ADS-L component on its own. The second checks what needs the device around it. Together they read all 80 clause headings of Issue 2. A skipped case records its reason as not implemented, prose, paperwork or optional.</span>
+      <span class="support">The first half checks the ADS-L component on its own. The second checks what needs the device around it. Together they read all 80 clause headings of Issue 2. A skipped case records its reason as not implemented, prose, paperwork, optional or unmeasured.</span>
     </li>
     <li>
       <strong>skyBlip firmware</strong> &mdash;
