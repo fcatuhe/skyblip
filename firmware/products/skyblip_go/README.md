@@ -4,7 +4,7 @@
 
 `settings.h` lists what a pilot can change, the defaults and what it refuses. A setting with no reader leaves the struct, the link registry and the schema together. `kBlobVersion` moves whenever the struct's bytes move, and `from_blob` reads that version alone, so an older layout reads as defaults, since only dev units stored one. The settings live in the product, not on core's `bus::State`, and the product hands a reference to the services that read them.
 
-`settings_store.h` is the Go's `common::SettingsStore` (`../common/README.md`), the only coupling between the companion link and the struct. It reports `address` once `state.activation` has a serial and `address_mapping_table` always, and nothing can set either. It refuses a `set` of `aircraft_address` against `state.own_transponder` (Aircraft address).
+`settings_store.h` is the Go's `common::SettingsStore` (`../common/README.md`), the only coupling between the companion link and the struct. It reports `serial` once `state.activation` has one and `address_mapping_table` always, and nothing can set either. It refuses a `set` of `aircraft_address` against `state.own_transponder` (Aircraft address).
 
 A layout cannot be read backwards, yet the image the bootloader reverts to meets a blob its successor wrote. `ConfigLinkService::load()` tells a newer layout from a torn sector by the CRC over the stored length (`settings::sealed`) and leaves the newer one untouched, using `settings.prior` instead, which `install()` fills on the way into a swap. So a revert comes up on the pilot's settings, and a reinstall finds its blob. A fallback is said as `"settings":"prior"` or `"defaults"` on the `update` frame, and as `DEFAULTS` on the self test's `STORAGE` row.
 

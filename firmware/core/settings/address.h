@@ -16,11 +16,11 @@ constexpr uint8_t kSkyblipManufacturerPrefix = 0x00;
 
 using AirAddress = std::optional<uint32_t>;
 
-constexpr uint32_t kSerialMask = 0x0000FFFFu;
-
 constexpr uint32_t address_of(uint16_t serial) {
-    return (static_cast<uint32_t>(kSkyblipManufacturerPrefix) << 16) | serial;
+    return adsl::manufacturer_address(kSkyblipManufacturerPrefix, serial);
 }
+
+constexpr uint16_t serial_of(uint32_t address) { return adsl::manufacturer_base(address); }
 
 // INFO: fc 14nov26 ICAO Annex 10 Vol III, Appendix to Chapter 9, 5.2 f): never 24 zeros or 24 ones
 constexpr bool icao_assignable(uint32_t address) { return address != 0 && address < kAddressMask; }

@@ -248,10 +248,10 @@ void ScreenService::render(uint32_t now_ms) {
             break;
         }
         case Page::SelfTest: {
-            // INFO: fc 18oct26 the parts are boot's, the address now's: an unlock needs no reboot
+            // INFO: fc 18oct26 the parts are boot's, the serial now's: an unlock needs no reboot
             SelfTestSnapshot now = self_test_;
             now.parts = self_test_now();
-            now.address = context_.state.activation.address();
+            now.serial = context_.state.activation.serial;
             now.aircraft_address_warning =
                 bravo_.aircraft_address_warning().stands(settings.aircraft_address);
             now.bravo = context_.state.bravo;

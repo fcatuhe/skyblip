@@ -8,6 +8,7 @@
 #include "core/flight/state.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
+#include "core/settings/address.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
@@ -317,7 +318,7 @@ TEST_CASE(
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         CAPTURE(serial);
         timing::Transmitter tx;
-        tx.configure(serial);
+        tx.configure(settings::address_of(static_cast<uint16_t>(serial)));
         std::vector<uint32_t> sent;
         for (uint32_t utc_s = 2000; utc_s < 2200; utc_s++)
             if (tx.turn(timing::Transmitter::Payload::Position, utc_s, /*airborne=*/false))

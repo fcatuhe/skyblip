@@ -144,12 +144,12 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
                    go::kActivationTagScale));
 }
 
-// The server's update page reads 'address' in the reply as activated.
-TEST_CASE("activation: get leaves address out until there is one, keeps address_mapping_table") {
+// The server's update page reads 'serial' in the reply as activated.
+TEST_CASE("activation: get leaves serial out until there is one, keeps address_mapping_table") {
     Bench bench;
     bench.boot();
     const std::string reply = bench.say("{\"command\":\"get\"}");
-    CHECK(reply.find("\"address\"") == std::string::npos);
+    CHECK(reply.find("\"serial\"") == std::string::npos);
     CHECK(reply.find("\"address_mapping_table\":58") != std::string::npos);
 }
 
@@ -181,7 +181,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(bench.unlock_with_vectors() ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     CHECK(bench.activation().serial == 298);
-    CHECK(bench.activation().address() == settings::AirAddress{0x00012Au});
+    CHECK(bench.activation().address() == settings::AirAddress{0x012A00u});
     CHECK(bench.rig.platform.identity().writes == 1);
     REQUIRE(bench.rig.platform.identity().stored_unlock_code);
     CHECK(bench.rig.platform.identity().stored_unlock_code->serial == 298);
@@ -199,7 +199,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
     bench.pass(3000);
 
     CHECK(bench.rig.platform.link().advertised == "skyBlip Go+ 00012A");
-    CHECK(bench.say("{\"command\":\"get\"}").find("\"address\":298") != std::string::npos);
+    CHECK(bench.say("{\"command\":\"get\"}").find("\"serial\":298") != std::string::npos);
     CHECK(bench.rig.product.radio().arm_count() > 0);
     CHECK_FALSE(reads_in(bench.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0,
                          go::kGlassWidth, go::kGlassHeight, go::kFrameScale));
@@ -456,7 +456,7 @@ TEST_CASE(
     CHECK(bench.rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
 }
 
-TEST_CASE("activation: the self-test page shows the address an unlock gave, without a reboot") {
+TEST_CASE("activation: the self-test page shows the serial an unlock gave, without a reboot") {
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();

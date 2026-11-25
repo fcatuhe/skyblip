@@ -1,4 +1,4 @@
-import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
+import { GATT_WRITE_BYTES, connect, hasWebBluetooth, serialOf } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
 import { FirmwareAttestation } from '#skyblip/attestation';
 import { installReportOf, landingOf } from '#skyblip/install_report';
@@ -99,7 +99,7 @@ export function productOf({ identity } = {}) {
 }
 
 function activationOf(reply) {
-  return { address: addressOf(reply) };
+  return { serial: serialOf(reply) };
 }
 
 function adviceOf({ image, file }) {
@@ -184,7 +184,7 @@ export class Updater {
     settings: null,
     goAlarm: null,
     sounds: null,
-    address: null,
+    serial: null,
     pairedTag: null,
     defaults: null,
     refusedOnDevice: false,
@@ -449,7 +449,7 @@ export class Updater {
     }
     this.#set({ running: this.#running && versionText(this.#running) });
     await this.listBrowsers();
-    if (this.#state.address) this.#attest();
+    if (this.#state.serial) this.#attest();
   }
 
   // INFO: fc 14nov26 the server's answer can take as long as the network, so the page does not wait for it
@@ -664,13 +664,13 @@ export class Updater {
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
+      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, serial: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false,
+      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, serial: null, pairedTag: null, defaults: null, refusedOnDevice: false,
       progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
       notice, left: leaving,
     });

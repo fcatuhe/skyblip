@@ -384,7 +384,7 @@ inline constexpr Key kGetKeys[] = {
 inline constexpr Key kConfigKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
     {"version", 1, Type::Unsigned, nullptr, 0, false},
-    {"address", 2, Type::Unsigned, nullptr, 0, false},
+    {"serial", 2, Type::Unsigned, nullptr, 0, false},
     {"address_mapping_table", 3, Type::Unsigned, nullptr, 0, false},
     {"aircraft_type", 4, Type::Unsigned, nullptr, 0, false},
     {"units", 7, Type::Enum, &kUnits, 0, false},

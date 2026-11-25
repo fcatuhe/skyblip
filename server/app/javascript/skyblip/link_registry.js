@@ -69,7 +69,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "address",
+          "name": "serial",
           "number": 2,
           "type": "unsigned"
         },
@@ -150,7 +150,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "address",
+          "name": "serial",
           "number": 2,
           "type": "unsigned"
         },
@@ -232,7 +232,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "address",
+          "name": "serial",
           "number": 2,
           "type": "unsigned"
         },

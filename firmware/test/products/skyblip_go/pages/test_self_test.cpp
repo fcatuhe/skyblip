@@ -29,7 +29,7 @@ bool row_reads(const Glass& canvas, int row, const char* verdict) {
 
 SelfTestSnapshot page(const SelfTestPart* parts, int count, bool flyable) {
     SelfTestSnapshot snapshot;
-    snapshot.address = skyblip::settings::address_of(0x5B7E);
+    snapshot.serial = 0x5B7E;
     snapshot.reset_reason = "WATCHDOG";
     snapshot.parts = parts;
     snapshot.part_count = count;

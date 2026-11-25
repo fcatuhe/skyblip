@@ -106,7 +106,7 @@ export class FakeSkyblip {
     key = PRODUCTION_KEY,
     downgrade = false,
     bootloaderKeys = null,
-    address = 0x00012a,
+    serial = 0x00012a,
     product = 'go',
     variant = 'standard',
     deviceId = '8f3a1c2e9b7d4f60',
@@ -123,7 +123,7 @@ export class FakeSkyblip {
     keepsNotifySessions = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, key, downgrade, bootloaderKeys, address, product, variant, deviceId, bluetoothTag, release, identity });
+    Object.assign(this, { stored: { ...stored }, key, downgrade, bootloaderKeys, serial, product, variant, deviceId, bluetoothTag, release, identity });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, evictsFlights, pairedTag, pairVerdict });
     this.keepsNotifySessions = keepsNotifySessions;
     this.hasSmp = smp;
@@ -291,7 +291,7 @@ export class FakeSkyblip {
     if (command === 'identity' && this.identity) return this.sendIdentity();
     if (command === 'update') return this.sendUpdate();
     if (command === 'status') return this.sendStatus();
-    if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored, ...(this.pairedTag === null ? {} : { paired_tag: this.pairedTag }) });
+    if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.serialFields(), ...this.stored, ...(this.pairedTag === null ? {} : { paired_tag: this.pairedTag }) });
     if (command === 'pair') return this.askToPair(fields);
     if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
     if (command === 'capture') return this.stageCapture(fields);
@@ -395,8 +395,8 @@ export class FakeSkyblip {
     for (const frame of frames) this.reply(frame);
   }
 
-  addressFields() {
-    return { ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 };
+  serialFields() {
+    return { ...(this.serial === null ? {} : { serial: this.serial }), address_mapping_table: 58 };
   }
 
   takeOff() {

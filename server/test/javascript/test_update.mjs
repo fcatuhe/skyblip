@@ -21,13 +21,13 @@ test('connecting reads the running version, the image state and the status', asy
   });
 });
 
-test('the settings carry the address, and a unit not yet activated has none', async () => {
+test('the settings carry the serial, and a unit not yet activated has none', async () => {
   const { updater, until } = await connected();
   const activated = await until(state => state.settings);
-  assert.equal(activated.address, '00012A');
-  const fresh = await connected({ address: null });
+  assert.equal(activated.serial, '00012A');
+  const fresh = await connected({ serial: null });
   const unactivated = await fresh.until(state => state.settings);
-  assert.equal(unactivated.address, null);
+  assert.equal(unactivated.serial, null);
 });
 
 test('an install asks once on the glass, naming the version, and installs once the image lands', async () => {

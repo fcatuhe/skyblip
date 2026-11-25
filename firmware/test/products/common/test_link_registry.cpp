@@ -392,7 +392,7 @@ const Answer* answer_to(const names::Frame& frame) {
 std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
     return {
         {"set.version", "1"},
-        {"set.address", "298"},
+        {"set.serial", "298"},
         {"set.address_mapping_table", "58"},
         {"set.aircraft_type", "1"},
         {"set.alarm", "\"soft\""},

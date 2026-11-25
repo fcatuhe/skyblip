@@ -88,7 +88,7 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     canvas.horizontal_line(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
     written = format_string(text, "ID ");
-    written += format_air_address(text + written, snapshot.address);
+    written += format_id(text + written, snapshot.serial);
     text[written] = 0;
     canvas.draw_text(kLeft, kSelfTestHeaderY, text, true, 1);
     right_aligned(canvas, kRight, kSelfTestHeaderY, snapshot.reset_reason);

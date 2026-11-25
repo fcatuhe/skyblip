@@ -9,7 +9,7 @@ module UnitsHelper
     end
   end
 
-  def unit_label(unit) = unit.address || unit.slug || unit.device_id
+  def unit_label(unit) = unit.hex_serial || unit.slug || unit.device_id
 
   def unit_product(unit) = BriefingHelper::DEVICE_NAMES[unit.product]
 

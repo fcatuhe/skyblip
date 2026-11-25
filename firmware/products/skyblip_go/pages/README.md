@@ -215,7 +215,7 @@ The card reads `TRK`, GNSS course over ground from true north, not `HDG`: there 
 
 `status` is the bench's page, so every reading is the raw measurement, never the damped, median or rounded figure the other pages show, and a figure that moves was moved by the sensor. Each prints once to the resolution it is held in, in the SI column: the track in hundredths of a degree, pressure altitude in centimetres, GNSS altitude in tenths of a metre, speed in hundredths of a km/h, climb in millimetres a second, the cell in millivolts. The aeronautical column converts the same reading to whole feet, knots and feet a minute. The cell's percentage is the one derived figure, and on the cable the row reads `-- V --% CHG`, since the divider reads the USB rail there.
 
-The identity line pairs the address at double height with the callsign, small, at its right, because the pair is what another aircraft sees on its `nearby`.
+The identity line pairs the address at double height with the callsign, small, at its right, because the pair is what another aircraft sees on its `nearby`. The address is the one on air: the aircraft address once one is set, else the unit's own, `ID 012A00` for serial `00012A`. So it differs from the self-test page's `ID`, which is the serial, and skyblip.eu finds a unit by the serial.
 
 The receiver row reads `GNSS 3D 9 SAT` with a fix, `2D` or `3D` from GSA field 2, or from the four satellites altitude needs when GSA gives none. Without a fix it reads the stage and its age, `GNSS MOVE OUT 0:48` (`core/gnss/README.md`), stopping at `9:59`, the room the row has. The count is satellites used, so it goes with the fix.
 
@@ -241,7 +241,7 @@ The traffic row ends with `TX ON` or `TX OFF`, from `timing::TransmitGate::trans
 
 `self_test` names the part that did not answer, so a device that refuses to fly says why instead of going dark. It is drawn from what the board probed at bring-up and stays on the glass while a required part is missing. A device that flies reaches it only from `SELF TEST`, the last row of the `DIAGNOSTICS` menu.
 
-The header shows `ID 00012A`, the 24-bit address of the unit's serial, or `ID ------` before activation, and on the right the reset reason (`core/power/reset_reason.h`), read once at boot so the companion app reports the same word. `WATCHDOG`, `CPU LOCKUP`, `BROWNOUT`, `SOFT RESET`, `RESET PIN` and `DEBUGGER` are worth a bug report. The `ID` stays the serial even under an aircraft address, because the bench and skyblip.eu know a unit by it.
+The header shows `ID 00012A`, the unit's serial in six hex digits, or `ID ------` before activation, and on the right the reset reason (`core/power/reset_reason.h`), read once at boot so the companion app reports the same word. `WATCHDOG`, `CPU LOCKUP`, `BROWNOUT`, `SOFT RESET`, `RESET PIN` and `DEBUGGER` are worth a bug report. The `ID` is the serial, not the address on air that `status` shows, because the bench and skyblip.eu know a unit by it.
 
 One row per part reads what it is, which part answered and how:
 
@@ -300,7 +300,7 @@ Words are at double height, sixteen to a line, and the value a pilot checks is l
 
 ## activation
 
-A unit skyblip.eu has not activated neither transmits nor receives, and its glass shows this page in place of every page, a prompt and an incoming image aside: `NOT ACTIVATED` under the large mark, `GO TO SKYBLIP.EU` over `/ACTIVATE` and `THEN SELECT:`, and the four hex digits of the Bluetooth tag at four times the type size. The chooser lists `activate 3F2A skyBlip`. The tag is the low 16 bits of the advertised address, so a pilot with three units picks the right row. The page goes once the unlock lands, through a wipe (`core/identity/README.md`). It takes no gesture, because no page or menu lies behind it, and the power-off hold still works. `SELF TEST` shows the address as it is now, so an unlock shows there without a reboot.
+A unit skyblip.eu has not activated neither transmits nor receives, and its glass shows this page in place of every page, a prompt and an incoming image aside: `NOT ACTIVATED` under the large mark, `GO TO SKYBLIP.EU` over `/ACTIVATE` and `THEN SELECT:`, and the four hex digits of the Bluetooth tag at four times the type size. The chooser lists `activate 3F2A skyBlip`. The tag is the low 16 bits of the advertised address, so a pilot with three units picks the right row. The page goes once the unlock lands, through a wipe (`core/identity/README.md`). It takes no gesture, because no page or menu lies behind it, and the power-off hold still works. `SELF TEST` shows the serial as it is now, so an unlock shows there without a reboot.
 
 The server's register asks on the confirm page, titled `ACTIVATE`: `SEND THE KEY OF THIS UNIT TO SKYBLIP.EU`, with no apostrophe, because the glass font has none.
 

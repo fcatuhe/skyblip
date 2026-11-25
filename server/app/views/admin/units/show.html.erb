@@ -9,6 +9,10 @@
   <dd><%= @unit.variant || "not stated yet" %></dd>
   <dt>Serial</dt>
   <dd><%= @unit.serial || "none, the unit transmits on no address" %></dd>
+  <% if @unit.address %>
+    <dt>ADS-L address</dt>
+    <dd><span class="mono"><%= @unit.address %></span>, AMT entry 58</dd>
+  <% end %>
   <dt>Device ID</dt>
   <dd class="mono"><%= @unit.device_id %></dd>
   <% if @unit.slug %>

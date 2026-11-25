@@ -133,7 +133,7 @@ export class DeviceWitness {
 }
 
 function readOf(state) {
-  const { image, identity, running, trust, address, status } = state;
+  const { image, identity, running, trust, serial, status } = state;
   const product = productOf(state);
   return {
     product, variant: identity?.variant, version: identity?.version, release: identity?.release, device_id: identity?.deviceId,
@@ -142,7 +142,7 @@ function readOf(state) {
     bootloader_keys: image.bootloaderKeys?.join(' ') ?? null,
     imu: IMU_STATES.has(image.imu) ? image.imu : image.imu ? 'held' : null,
     settings: image.settings, swap_powered: image.swapPowered, trust,
-    activated: product === 'go' ? address !== null : null,
+    activated: product === 'go' ? serial !== null : null,
     flight: status?.flight, battery_percent: status?.batteryPercent, charging: status?.charging, power_level: status?.powerLevel,
   };
 }

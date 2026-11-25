@@ -22,11 +22,11 @@ inline Status apply_patch(go::Settings& settings, const char* patch,
                               own_transponder);
 }
 
-inline std::string config_fields(const go::Settings& settings, settings::AirAddress address) {
+inline std::string config_fields(const go::Settings& settings, std::optional<uint16_t> serial) {
     uint8_t frame[256];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Config);
-    go::write_config_fields(writer, settings, address);
+    go::write_config_fields(writer, settings, serial);
     const int bytes = writer.finish();
     return link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes)));
 }

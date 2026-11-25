@@ -56,7 +56,7 @@
         variant: 'standard',
         deviceId: null,
         bluetoothTag: 0x3f2a,
-        address: 0x00012a,
+        serial: 0x00012a,
         running: '0.1.0+1000',
         key: '212602F2',
         downgrade: true,
@@ -203,13 +203,13 @@
     }
 
     config() {
-      const address = this.address === null ? {} : { address: this.address };
+      const serial = this.serial === null ? {} : { serial: this.serial };
       const paired = this.goAlarm !== null;
       const pairedTag = this.pairedTag === null ? {} : { paired_tag: this.pairedTag };
       const stored = this.product === 'bravo'
         ? { aircraft_address: this.stored.aircraft_address, alarm: paired ? this.goAlarm : this.stored.alarm, alarm_from_go: paired }
         : { ...this.stored, annunciator_fitted: this.sounds };
-      return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored, ...pairedTag });
+      return this.reply({ command: 'config', version: 1, ...serial, address_mapping_table: 58, ...stored, ...pairedTag });
     }
 
     ask(task, reason) {
@@ -437,7 +437,7 @@
       const serial = new Uint8Array([fields.serial >> 8, fields.serial & 0xff]);
       const message = join(label('unlock'), bytes(this.vectors.device_id, this.vectors.unit_public_key), serial, bytes(this.nonce));
       if (!(await this.verifies(fields.signature, message))) return this.acknowledge(false, 'bad_signature');
-      this.address = fields.serial;
+      this.serial = fields.serial;
       this.name = `skyBlip Go ${fields.serial.toString(16).toUpperCase().padStart(6, '0')}`;
       return this.acknowledge(true, 'unlock');
     }

@@ -57,11 +57,11 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     const std::string body = link_text(link.last().bytes);
     CHECK(body.find("\"command\":\"status\"") != std::string::npos);
     CHECK(body.find("\"flight\":\"ground\"") != std::string::npos);
-    // State, and only state. The callsign and the device address are what the
+    // State, and only state. The callsign and the device serial are what the
     // "config" reply answers, and the reset reason never changes inside a session:
     // carrying any of them here is what used to crowd the one unsolicited frame.
     CHECK(body.find("D-KXYZ") == std::string::npos);
-    CHECK(body.find("\"address\"") == std::string::npos);
+    CHECK(body.find("\"serial\"") == std::string::npos);
     CHECK(body.find("\"reset\"") == std::string::npos);
     config.on_rx(config_frame("{\"command\":\"get\"}"));
     CHECK(link_text(link.last().bytes).find("D-KXYZ") != std::string::npos);

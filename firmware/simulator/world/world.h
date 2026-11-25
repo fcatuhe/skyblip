@@ -11,6 +11,7 @@
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/callsign.h"
+#include "core/settings/address.h"
 #include "core/timing/slot.h"
 #include "hardware/parts/gnss_truth.h"
 #include "hardware/platform/host/meshtracker_x1.h"
@@ -123,7 +124,7 @@ class Sky {
     // INFO: fc 03aug26 a skyPost is a mast 12 km away at 500 mW e.r.p. (C.4): background, but heard
     static constexpr double kGroundStationRangeM = 12000;
     // INFO: fc 13nov26 the simulated skyPost sends as a skyBlip, under serial 0xFFFE nobody holds
-    static constexpr uint32_t kGroundStationAddress = 0x00FFFE;
+    static constexpr uint32_t kGroundStationAddress = settings::address_of(0xFFFE);
 
     const models::GnssTruth& own_;
     Air air_{};

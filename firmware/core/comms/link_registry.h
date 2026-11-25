@@ -130,7 +130,7 @@ enum : uint32_t {
 namespace config_key {
 enum : uint32_t {
     kVersion = 1,
-    kAddress = 2,
+    kSerial = 2,
     kAddressMappingTable = 3,
     kAircraftType = 4,
     kUnits = 7,
