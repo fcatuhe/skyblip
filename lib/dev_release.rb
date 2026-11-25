@@ -1,12 +1,11 @@
-require "open3"
 require "tmpdir"
+require_relative "firmware_changes"
+require_relative "gh"
 require_relative "radio_protocols"
 require_relative "release_files"
 
 class DevRelease
   KEEP_MAIN = 3
-  FIRMWARE_PATHS = %w[firmware/ scripts/build_image.sh scripts/mkuf2.py].freeze
-  CHANGES_HEADING = "## What's Changed".freeze
 
   def self.publish_all(images:, simulator:, source:, ref:, sha:, repository:)
     release = new(files: ReleaseFiles.new(images), ref:)
@@ -71,24 +70,11 @@ class DevRelease
 
     # INFO: fc 15nov26 gh appends --generate-notes below --notes, so the notes are generated apart to put the changes above the products
     def changes_since(previous, sha:, repository:)
-      generated = gh("api", "repos/#{repository}/releases/generate-notes", "-f", "tag_name=#{tag}", "-f", "target_commitish=#{sha}",
-                     "-f", "previous_tag_name=#{previous}", "--jq", ".body")
-      firmware = pull_request_lines(generated).select { |line| touches_firmware?(line[%r{/pull/(\d+)\z}, 1], repository:) }
+      firmware = FirmwareChanges.new(repository:, tag:, previous:, sha:).pull_requests
       [
-        ([ CHANGES_HEADING, *firmware ].join("\n") if firmware.any?),
+        ([ FirmwareChanges::HEADING, *firmware ].join("\n") if firmware.any?),
         "**Full Changelog**: https://github.com/#{repository}/compare/#{previous}...#{tag}"
       ].compact.join("\n\n")
-    end
-
-    def pull_request_lines(generated)
-      generated.lines(chomp: true).drop_while { |line| line != CHANGES_HEADING }.drop(1)
-        .take_while { |line| line.empty? || line.start_with?("* ") }
-        .grep(%r{\A\* .+ in https://github\.com/\S+/pull/\d+\z})
-    end
-
-    def touches_firmware?(number, repository:)
-      files = gh("api", "--paginate", "repos/#{repository}/pulls/#{number}/files", "--jq", ".[].filename").lines(chomp: true)
-      files.any? { |file| file.start_with?(*FIRMWARE_PATHS) }
     end
 
     def previous_main_tag(tags) = own_tags(tags).grep(/\Adev-\d+\z/).max_by { |main| main.delete_prefix("dev-").to_i }
@@ -128,10 +114,5 @@ class DevRelease
       gh("pr", "list", "--state", "open", "-L", "1000", "--json", "headRefName", "--jq", ".[].headRefName").lines(chomp: true).map { |branch| self.class.branch_label(branch) }
     end
 
-    def gh(*arguments)
-      output, status = Open3.capture2("gh", *arguments)
-      raise "gh #{arguments.first(2).join(" ")} failed: #{status}" unless status.success?
-
-      output
-    end
+    def gh(*arguments) = Gh.run(*arguments)
 end
