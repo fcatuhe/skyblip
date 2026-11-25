@@ -264,23 +264,24 @@ class Rf : public ports::Rf {
     // INFO: fc 14nov26 EN 300 220-1 5.21.1 before each burst not forced, kept to the dead time
     bool listen_and_key(const ports::RfBurst& burst, uint8_t index, bool& fault) {
         if (!mailbox_.claim(burst, index)) return false;
+        tx_at_us_ = burst.at_us;
+        staged_at_us_ = 0;
+        if (burst.key_expired(clock_.microseconds())) return miss_unkeyed(index, fault);
         Assessment assessment{};
         if (!burst.forced) {
             assessment = assess(
                 radio_.mode() == parts::RadioMode::Rx, [this] { return read_level(); }, clock_);
+            if (burst.key_expired(assessment.ended_us)) return miss_unkeyed(index, fault);
             if (!assessment.clear) return refuse(burst, index, assessment);
         }
-
-        tx_at_us_ = burst.at_us;
-        staged_at_us_ = 0;
         if (radio_.stage_tx(burst.chips, burst.bytes) != Status::Ok ||
             radio_.wait_ready() != Status::Ok)
             return miss_unkeyed(index, fault);
-
         staged_at_us_ = clock_.microseconds();
         while (clock_.microseconds() < burst.at_us) k_busy_wait(1);
-        if (!burst.forced &&
-            !within_dead_time(assessment, clock_.microseconds() + kTxStartupAllowanceUs)) {
+        const uint64_t now_us = clock_.microseconds();
+        if (burst.key_expired(now_us)) return miss_unkeyed(index, fault);
+        if (!burst.forced && !within_dead_time(assessment, now_us + kTxStartupAllowanceUs)) {
             fault = radio_.start_receive() != Status::Ok;
             if (fault) return miss_unkeyed(index, fault);
             return refuse(burst, index, Assessment{});
@@ -298,7 +299,8 @@ class Rf : public ports::Rf {
     }
 
     bool miss_unkeyed(uint8_t index, bool& fault) {
-        if (!fault) fault = radio_.start_receive() != Status::Ok;
+        if (!fault && radio_.mode() != parts::RadioMode::Rx)
+            fault = radio_.start_receive() != Status::Ok;
         mailbox_.release(index);
         keyed_at_us_ = 0;
         emit(events::RfEventType::Missed, clock_.microseconds());

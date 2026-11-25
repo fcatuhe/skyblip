@@ -189,13 +189,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSwitchMarginMs` | 2 | milliseconds | - | every switch is a margin on the old channel, a retune, a lead on the new one |
 | `kSwitchRetuneMs` | 5 | milliseconds | - | no band change measured, until a unit's timing command reads its worst one |
 | `kSwitchLeadMs` | 3 | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
-| `kCompletionAllowanceMs` | 5 | milliseconds | - | bench worst 5.5 ms from SetTx to TxDone, against 5 ms booked |
+| `kCompletionAllowanceMs` | 5 | milliseconds | - | bench worst 5.5 ms from the planned instant to TxDone, against 5 ms booked |
+| `kKeyToDoneMs` | `static_cast<int>(adsl::kAirTimeMs) + 1` | milliseconds | - | the frame and 1 ms, over build 863's worst 5.53 ms from instant to TxDone |
 | `kGroundEmitStartMs` | `kUplinkWindowMs.start_ms` | milliseconds | - | - |
 | `kGroundEmitEndMs` | `kUplinkWindowMs.end_ms - kCompletionAllowanceMs` | milliseconds | - | a completion deadline, not a start deadline |
 | `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
 | `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kPpsLockTailMs` | 3000 (3 s) | milliseconds | - | a pulse reads locked this long past its last edge, so one missed edge keeps it |
-| `kPpsEdgeMaxAgeMs` | `static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms)` | milliseconds | MaxAge | C.5: the latest instant a burst planned from an edge keys at, window B's close |
+| `kPpsEdgeMaxAgeMs` | `static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms)` | milliseconds | MaxAge | C.5: an edge times the bursts planned from it until window B's dwell closes |
 | `kRetuneUs` | 30 | microseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kSwitchMarginUs` | `kSwitchMarginMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kSwitchRetuneUs` | `kSwitchRetuneMs * 1000` = 5000 (5 ms) | microseconds | - | - |
@@ -344,7 +345,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRadioAnswerMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | three dwells and readings a second, so nine missed is a radio not answering |
 | `kRadioRefusalSamples` | 2 | samples | Samples | one refused dwell is a transient, a second inside the age a fault |
-| `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
+| `kKeyToDoneUs` | `uint64_t{timing::kKeyToDoneMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
 | `kLockedRedrawWindowStartMs` | 600 | milliseconds | Window | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
@@ -426,4 +427,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-281 constants over 26 folders.
+282 constants over 26 folders.

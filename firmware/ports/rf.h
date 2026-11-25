@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_PORTS_RF_H
 #define SKYBLIP_PORTS_RF_H
 
+#include <algorithm>
 #include <cstdint>
 
 #include "core/util/result.h"
@@ -9,7 +10,7 @@ namespace skyblip::ports {
 
 enum class RfMode : uint8_t { Idle, RxMBand, RxOBand };
 
-// INFO: fc 20nov26 refused if it cannot end by end_us: SRD-860 §C.5 ends a burst in its slot
+// INFO: fc 22nov26 the receive dwell can outlast the slot that bounds its burst
 struct RfPlan {
     uint64_t start_us{0};
     uint64_t end_us{0};
@@ -32,17 +33,31 @@ struct RfPlan {
     int16_t frequency_correction_e1_ppm{0};
     const uint8_t* tx{nullptr};
     uint8_t tx_bytes{0};
-    // INFO: fc 14nov26 the burst keys here on a channel assessed clear, else it is reported Busy
+    // INFO: fc 22nov26 keys from here to its last key instant if clear, else Busy or Missed
     uint64_t tx_at_us{0};
     // INFO: fc 14nov26 ADS-L §D.3's forced transmission: keyed irrespective of carrier detect
     bool tx_forced{false};
+    uint64_t tx_last_key_us{UINT64_MAX};
 };
 
 struct RfBurst {
+    // INFO: fc 22nov26 the simulator keys up to one 5 ms step late, the bench at most 0.33 ms
+    static constexpr uint64_t kKeyLatenessCeilingUs = 5000;
+
     const uint8_t* chips{nullptr};
     uint8_t bytes{0};
     uint64_t at_us{0};
     bool forced{false};
+    uint64_t last_key_us{UINT64_MAX};
+
+    static RfBurst of(const RfPlan& plan) {
+        return {plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced,
+                std::min(plan.tx_last_key_us, plan.end_us - 1)};
+    }
+
+    bool key_expired(uint64_t now_us) const {
+        return now_us > last_key_us || (now_us > at_us && now_us - at_us >= kKeyLatenessCeilingUs);
+    }
 };
 
 struct RfBursts {
@@ -85,8 +100,7 @@ struct RfBursts {
 
     static RfBursts of(const RfPlan& plan) {
         RfBursts bursts{};
-        if (plan.tx != nullptr)
-            bursts.add(RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced});
+        if (plan.tx != nullptr) bursts.add(RfBurst::of(plan));
         return bursts;
     }
 };

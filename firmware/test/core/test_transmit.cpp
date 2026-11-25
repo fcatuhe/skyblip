@@ -94,6 +94,28 @@ TEST_CASE("transmit: each burst type's first and last instants are its window's"
     CHECK(Transmitter::last_instant(Payload::Callsign, 1) == 1190);
 }
 
+// C.5 ends Traffic at 1000 ms, the name before the 1200 ms uplink slot, G.1.16 at fix + 500 ms.
+TEST_CASE("transmit: a burst keys late only while its frame still ends inside its bounds") {
+    using Payload = Transmitter::Payload;
+    // Build 863's worst from a burst's instant to TxDone was 5.53 ms.
+    constexpr int kInstantToDoneUs = 5530;
+    for (const Payload payload : {Payload::Position, Payload::Status}) {
+        for (const int slot : {0, 1}) {
+            const int last_key_ms = Transmitter::last_key(payload, slot, -1000);
+            CHECK(last_key_ms > Transmitter::last_instant(payload, slot));
+            CHECK(last_key_ms * 1000 + kInstantToDoneUs <= 1000000);
+            CHECK(last_key_ms * 1000 + kInstantToDoneUs <=
+                  Transmitter::window_of(payload, slot).end_ms * 1000);
+        }
+    }
+    const int name_last_key_ms = Transmitter::last_key(Payload::Callsign, 1, 0);
+    CHECK(name_last_key_ms > Transmitter::last_instant(Payload::Callsign, 1));
+    CHECK(name_last_key_ms * 1000 + kInstantToDoneUs <= 1200000);
+    const int fix_last_key_ms = Transmitter::last_key(Payload::Position, 0, 0);
+    CHECK(fix_last_key_ms > Transmitter::kFixMaxAgeMs - Transmitter::kFixAgeAllowanceMs);
+    CHECK(fix_last_key_ms * 1000 + kInstantToDoneUs <= 500000);
+}
+
 // The 2.2 ms channel check before a burst at a window's start falls in the switch's 3 ms lead.
 TEST_CASE("transmit: the channel check before a window's first instant listens on its channel") {
     CHECK(PoliteAccess::kCcaLeadUs == 2200);
