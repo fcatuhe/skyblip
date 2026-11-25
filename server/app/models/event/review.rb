@@ -4,7 +4,7 @@ class Event::Review
   # INFO: fc 14nov26 the daily cap stops a flood of made-up units, so it should stay two to three times the busiest real day
   CAP_HEADROOM = 2
   CAP_TARGET = 3
-  RESULTS = %w[saved capture_armed capture_stopped activated needs_full].freeze
+  RESULTS = %w[saved capture_armed capture_stopped pair_armed paired activated needs_full].freeze
   BUSY = %w[asking confirming uploading].freeze
   JOURNEY = %w[
     device.connected device.read device.task_ended device.installed device.noticed
@@ -68,7 +68,7 @@ class Event::Review
 
     started.keys.union(ended.keys).index_with do |task|
       outcomes = Array(ended[task]).map { it["payload.outcome"] }
-      { started: started[task].to_i, granted: outcomes.count("granted"), refused: top(outcomes - [ "granted" ]) }
+      { started: started[task].to_i, granted: outcomes.count { granted?(it) }, refused: top(outcomes.reject { granted?(it) }) }
     end
   end
 
@@ -161,12 +161,15 @@ class Event::Review
     def failure?(event)
       case event.name
       when "device.noticed" then !event.payload["key"].in?(RESULTS)
-      when "device.task_ended" then event.payload["outcome"] != "granted"
+      when "device.task_ended" then !granted?(event.payload["outcome"])
       when "activation.noticed" then event.payload["key"] != "activated"
       when "bluetooth.chooser_closed", "bluetooth.chooser_failed" then true
       else false
       end
     end
+
+    # INFO: fc 25nov26 a task ends on the notice it leaves, so one that ends on its result, such as saved, was granted
+    def granted?(outcome) = outcome == "granted" || outcome.in?(RESULTS)
 
     def reason_of(event)
       [ event.name, event.payload["key"] || event.payload["outcome"] || event.payload["filter"] ].compact.join(" ")
