@@ -11,38 +11,38 @@ updated_on: "2026-11-25"
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 novembre 2026</p>
   <h1>Quando il Go sente il proprio aereo</h1>
-  <p class="lede">Su Pilot und Flugzeug, Frank ha chiesto se un Go può ignorare un FLARM installato sull&rsquo;aereo, magari con un profilo, così che lo stesso Go voli su diversi aerei del club. Un apparato nella tua cabina è l&rsquo;aeromobile più vicino che ci sia: a distanza zero, alla tua quota. Senza un filtro resterebbe sul tuo radar e farebbe scattare l&rsquo;avviso per tutto il volo. Per il transponder dell&rsquo;aereo, un Tango lo fa già. Ecco come, schermata per schermata, cosa significa oggi per un FLARM o un apparato ADS-L e perché non è la stessa cosa del volo in formazione.</p>
+  <p class="lede">Un Tango può riconoscere a terra il transponder del tuo aereo e nasconderlo con una pressione del pulsante. Se cambi aereo, ti propone quello nuovo, senza profili da scegliere. Su Pilot und Flugzeug, Frank ha chiesto se si potesse fare lo stesso con un FLARM installato a bordo, anche passando da un aereo del club all&rsquo;altro. Se il FLARM trasmette l&rsquo;indirizzo ICAO dell&rsquo;aereo, il filtro funziona già. Se usa il proprio ID FLARM, non ancora. Ecco cosa puoi fare oggi e perché il volo in formazione è un caso diverso.</p>
 </section>
 
 <section>
   <h2 class="kicker">Perché conta</h2>
-  <h3>Il tuo transponder è il traffico più vicino del cielo.</h3>
-  <p>Il Go avvisa di ogni aeromobile entro 3&nbsp;km e 300&nbsp;m di quota. In un Tango, Bravo ascolta i 1090&nbsp;MHz nella stessa cabina del tuo transponder, quindi lo sente più forte di qualunque altra cosa. Anche una stazione a terra OGN o skyPost può rimandarti la tua stessa posizione. Finché il Go non sa qual è il tuo indirizzo, disegna quell&rsquo;aeromobile sopra il proprio simbolo e può far scattare l&rsquo;avviso in volo.</p>
+  <h3>Il tuo transponder può comparire come traffico.</h3>
+  <p>Il Go è il dispositivo tascabile con schermo che trasmette ADS-L e riceve ADS-L e FLARM. Abbinato a Bravo, il ricevitore ADS-B a 1090&nbsp;MHz senza schermo, forma un Tango. Il Go avvisa del traffico entro 3&nbsp;km in orizzontale e 300&nbsp;m di differenza di quota. Bravo sente il transponder nella tua cabina più forte degli altri. Anche una stazione a terra OGN o skyPost può ritrasmetterti la tua posizione. Se il Go non conosce l&rsquo;indirizzo del tuo aereo, può mostrarlo sul radar e dare un avviso in volo.</p>
 </section>
 
 <section>
   <h2 class="kicker">A terra</h2>
   <div class="feature">
     <div>
-      <h3>Bravo indica il transponder che sente più forte.</h3>
-      <p>Metti il transponder su ALT prima di rullare. In STBY non trasmette nulla. Quando un transponder resta nettamente più forte di tutti gli altri per 10&nbsp;secondi, Bravo lo indica al Go: il suo indirizzo e, dalla sua identificazione ADS-B, la marca e il tipo di aeromobile. Un transponder modo&nbsp;S senza ADS-B Out dà solo l&rsquo;indirizzo.</p>
-      <p>Apri il menu delle impostazioni sul radar, poi <span class="mono">AIRCRAFT</span>. Il blocco in alto mostra cosa sente Bravo. Le righe sotto mostrano cosa ha salvato il Go. La marca è a tripla altezza, così la confronti con la fusoliera. Una pressione del pulsante salva insieme tipo, nominativo e indirizzo.</p>
+      <h3>Bravo riconosce il transponder che riceve più forte.</h3>
+      <p>Metti il transponder su <span class="mono">ALT</span> prima di rullare. In <span class="mono">STBY</span> non trasmette nulla. Quando il segnale di un transponder resta a lungo nettamente più forte degli altri, Bravo ne propone l&rsquo;indirizzo al Go. Dall&rsquo;identificazione ADS-B ricava anche l&rsquo;immatricolazione e il tipo di aeromobile. Con un transponder Mode&nbsp;S senza ADS-B Out, propone solo l&rsquo;indirizzo.</p>
+      <p>Dal radar, premi il pulsante per aprire le impostazioni, poi scegli <span class="mono">AIRCRAFT</span>. Il riquadro in alto mostra ciò che riceve Bravo. Le righe sotto mostrano i dati salvati nel Go. L&rsquo;immatricolazione è alta il triplo del resto del testo, così puoi confrontarla con quella sulla fusoliera. Premi il pulsante su <span class="mono">SET</span> per salvare insieme tipo, nominativo e indirizzo.</p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "aircraft-proposal.png", alt: "Il menu AIRCRAFT: un blocco nero con LIGHT, D-EFLY a tripla altezza e ADS-B 3C4A21, sopra le righe TYPE LIGHT, CALLSIGN D-EABC e ADS-B 3C6586, con i tasti SET e NEXT" %>
-      <figcaption>Cosa sente Bravo, sopra ciò che ha salvato il Go</figcaption>
+      <figcaption>In alto ciò che riceve Bravo, sotto i dati salvati nel Go</figcaption>
     </figure>
   </div>
 </section>
 
 <section>
-  <h2 class="kicker">Cosa cambia una pressione</h2>
-  <h3>Il tuo transponder non è più traffico.</h3>
+  <h2 class="kicker">Cosa cambia con una pressione</h2>
+  <h3>Finché conserva quell&rsquo;indirizzo, il Go non lo considera traffico.</h3>
   <ul>
-    <li><strong>Il Go nasconde quell&rsquo;indirizzo</strong> sul radar, nell&rsquo;avviso e nella lista NEARBY. Vale per ogni sua copia: quella di Bravo, quella di una stazione a terra che lo ritrasmette, o quella di un FLARM o apparato ADS-L che trasmette lo stesso indirizzo.</li>
-    <li><strong>Il Go trasmette il suo ADS-L con lo stesso indirizzo ICAO,</strong> come chiede ADS-L F.2.3 a un aeromobile con transponder. Un ricevitore che sente il tuo ADS-B e il tuo ADS-L mostra un aeromobile, non due.</li>
-    <li><strong>Anche Bravo tiene l&rsquo;indirizzo,</strong> e continua a nascondere il tuo transponder se il collegamento con il Go cade.</li>
-    <li><strong>Il Go rifiuta un indirizzo che contraddice Bravo.</strong> Finché Bravo indica il tuo transponder, ogni altro indirizzo scritto nella riga <span class="mono">ADS-B</span> viene rifiutato, perché F.2.3 chiede di impedire impostazioni incoerenti. Cancellare l&rsquo;indirizzo richiede una seconda pressione, su una schermata che avvisa che il tuo transponder apparirà come traffico.</li>
+    <li><strong>Il tuo aereo scompare dal radar, dagli avvisi e dall&rsquo;elenco degli aeromobili vicini.</strong> Il filtro esclude quell&rsquo;indirizzo da ogni fonte: Bravo, una stazione a terra o un apparato FLARM o ADS-L che trasmette lo stesso indirizzo.</li>
+    <li><strong>Il Go trasmette ADS-L con lo stesso indirizzo ICAO,</strong> come richiede il punto F.2.3 della specifica ADS-L per un aeromobile con transponder. Un ricevitore che riceve sia il tuo ADS-B sia il tuo ADS-L mostra un solo aeromobile.</li>
+    <li><strong>Anche Bravo conserva l&rsquo;indirizzo.</strong> Continua quindi a filtrare il tuo transponder se perde il collegamento con il Go.</li>
+    <li><strong>Il Go impedisce impostazioni incoerenti.</strong> Finché Bravo riconosce il tuo transponder, il Go rifiuta un indirizzo diverso inserito nella riga <span class="mono">ADS-B</span>, come richiede F.2.3. Per cancellare l&rsquo;indirizzo serve una seconda pressione, sulla schermata <span class="mono">YOUR TRANSPONDER SHOWS AS TRAFFIC</span>.</li>
   </ul>
 </section>
 
@@ -50,14 +50,14 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Portare il Go su un altro aereo</h2>
   <div class="feature feature--reverse">
     <div>
-      <h3>Con un transponder, è l&rsquo;aereo a presentarsi al Go.</h3>
-      <p>Frank chiedeva dei profili. Per un aereo con transponder, un Tango non ne ha bisogno. Quando Bravo sente un transponder che il Go non ha salvato, il Go lo segnala una volta per accensione, sopra la pagina mostrata. Qui un Go che ha volato l&rsquo;ultima volta su D-EABC si trova ora su D-EFLY.</p>
-      <p>Il pulsante salva il nuovo aereo. Il pad, il conto alla rovescia di 30&nbsp;secondi e un decollo chiudono l&rsquo;avviso senza salvare nulla.</p>
-      <p>Senza Bravo, scrivi l&rsquo;indirizzo nella riga <span class="mono">ADS-B</span> dello stesso menu. Ogni aereo con transponder modo&nbsp;S ne ha uno: sei cifre esadecimali assegnate dal suo Stato di immatricolazione.</p>
+      <h3>Il Tango ti propone il nuovo aereo senza un profilo.</h3>
+      <p>Quando Bravo riconosce un transponder diverso da quello salvato, il Go mostra un avviso sopra la pagina aperta. Lo fa una volta per accensione. Qui il Go ha volato l&rsquo;ultima volta su D-EABC, ma ora è a bordo di D-EFLY.</p>
+      <p>Premi il pulsante su <span class="mono">SET</span> per salvare i nuovi dati. Il pad chiude l&rsquo;avviso senza salvare nulla. Succede lo stesso allo scadere dei 30&nbsp;secondi o quando Bravo smette di riconoscere il transponder, anche al decollo.</p>
+      <p>Senza Bravo, inserisci l&rsquo;indirizzo nella riga <span class="mono">ADS-B</span> dello stesso menu. È l&rsquo;indirizzo ICAO a 24&nbsp;bit dell&rsquo;aeromobile: sei cifre esadecimali assegnate dallo Stato di immatricolazione.</p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "aircraft-notice.png", alt: "L'avviso BRAVO HEARS: LIGHT, D-EFLY a tripla altezza e ADS-B 3C4A21, un conto alla rovescia CANCELS IN 24 S e i tasti SET e CLOSE" %>
-      <figcaption>Una volta per accensione, sopra qualsiasi pagina</figcaption>
+      <figcaption>L&rsquo;avviso compare una volta per accensione, sopra qualsiasi pagina</figcaption>
     </figure>
   </div>
 </section>
@@ -66,13 +66,13 @@ updated_on: "2026-11-25"
   <h2 class="kicker">In volo</h2>
   <div class="feature">
     <div>
-      <h3>In aria, il Go non propone nulla.</h3>
-      <p>Bravo propone un indirizzo solo a terra. In aria, un gregario a 10&nbsp;m è forte quanto il tuo transponder, e salvarne l&rsquo;indirizzo lo toglierebbe dal tuo radar. Per questo in volo il blocco dice dove farlo e non offre <span class="mono">SET</span>.</p>
-      <p>Imposta l&rsquo;indirizzo prima del primo volo su un aereo, al più tardi al punto attesa.</p>
+      <h3>Bravo propone l&rsquo;indirizzo solo a terra.</h3>
+      <p>In volo, il segnale di un gregario a 10&nbsp;m può essere forte quanto quello del tuo transponder. Salvarne l&rsquo;indirizzo lo nasconderebbe dal radar. Per questo il riquadro mostra <span class="mono">IN FLIGHT</span> e <span class="mono">BRAVO FINDS IT ON THE GROUND</span>, senza il comando <span class="mono">SET</span>.</p>
+      <p>Imposta l&rsquo;indirizzo a terra, prima del primo decollo con quell&rsquo;aereo.</p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "aircraft-in-flight.png", alt: "Il menu AIRCRAFT in volo: il blocco dice IN FLIGHT, BRAVO FINDS IT ON THE GROUND, sopra le righe TYPE, CALLSIGN e ADS-B, con il solo tasto NEXT" %>
-      <figcaption>Lo stesso menu in volo</figcaption>
+      <figcaption>In volo il menu non propone indirizzi da salvare</figcaption>
     </figure>
   </div>
 </section>
@@ -81,35 +81,35 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Volo in formazione</h2>
   <div class="feature feature--reverse">
     <div>
-      <h3>La formazione si rileva in volo, e silenzia soltanto.</h3>
-      <p>Il Go tace anche per gli aeromobili che volano con te: una pattuglia, un traino e il suo aliante, due alianti nella stessa termica. Non può conoscere le tue intenzioni, quindi legge la geometria. Un aeromobile entro 1.000&nbsp;m e 100&nbsp;m di quota che tiene lo stesso posto rispetto a te, entro 60&nbsp;m, per 6&nbsp;secondi vola con te. Un aeromobile che decolla con te si unisce senza avviso.</p>
-      <p>Il radar disegna allora un quadrato attorno al tuo simbolo, con il numero di membri in ogni quarto, al posto dei loro simboli. Il contatore <span class="mono">TRAFFIC</span> non li conta, e la lista NEARBY li mostra ancora.</p>
+      <h3>Gli aeromobili che volano con te restano visibili, senza avvisi.</h3>
+      <p>Il Go riconosce una formazione solo in volo, dalla posizione relativa degli aeromobili. Un aeromobile entro 1.000&nbsp;m in orizzontale e 100&nbsp;m di differenza di quota entra nella formazione se mantiene la stessa posizione rispetto a te per 6&nbsp;secondi, con variazioni entro 60&nbsp;m in orizzontale e 30&nbsp;m in verticale. Se decollate insieme, viene incluso senza un avviso iniziale.</p>
+      <p>Al posto dei singoli simboli, il radar disegna un quadrato attorno al tuo, con il numero di aeromobili in ciascun quadrante. Il contatore <span class="mono">TRAFFIC</span> li esclude, ma l&rsquo;elenco degli aeromobili vicini continua a mostrarli.</p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "formation.png", alt: "Il radar con tre aeromobili attorno al cerchio e, al centro, un quadrato attorno al proprio simbolo con la cifra 1 nel quarto in basso a destra. TRAFFIC indica 3" %>
-      <figcaption>Un gregario a 60&nbsp;m sulla destra</figcaption>
+      <figcaption>Un gregario a 60&nbsp;m dall&rsquo;ala destra</figcaption>
     </figure>
   </div>
-  <p>La formazione e il tuo aereo sono due filtri diversi:</p>
+  <p>Il filtro della formazione è diverso da quello del tuo aereo:</p>
   <ul>
-    <li><strong>La formazione è un giudizio che il Go rifà a ogni volo,</strong> in base a dove si trova l&rsquo;altro aeromobile. L&rsquo;indirizzo del tuo aereo è un&rsquo;identità che confermi una volta, a terra.</li>
-    <li><strong>Un membro resta sul radar</strong> come quadrato, e nella lista NEARBY. Il tuo transponder non compare affatto.</li>
-    <li><strong>Un membro che si avvicina</strong> a 3&nbsp;m/s o più, per due ricezioni di fila, torna a essere traffico. Il tuo transponder, mai.</li>
-    <li><strong>La formazione ha bisogno della quota dell&rsquo;altro aeromobile,</strong> e finisce quando atterri.</li>
+    <li><strong>Il Go riconosce la formazione a ogni volo,</strong> dalla posizione degli altri aeromobili. L&rsquo;indirizzo del tuo aereo, invece, lo confermi a terra e resta salvato.</li>
+    <li><strong>Gli aeromobili della formazione restano rappresentati nel quadrato</strong> e nell&rsquo;elenco degli aeromobili vicini. Il tuo transponder non compare in nessuno dei due.</li>
+    <li><strong>Un aeromobile della formazione che si avvicina a 3&nbsp;m/s o più,</strong> per due ricezioni consecutive, viene di nuovo valutato come traffico. Il tuo transponder resta escluso finché il Go ne conserva l&rsquo;indirizzo.</li>
+    <li><strong>Per riconoscere una formazione serve la quota dell&rsquo;altro aeromobile.</strong> La formazione termina quando atterri.</li>
   </ul>
 </section>
 
 <section>
   <h2 class="kicker">FLARM e ADS-L a bordo, oggi</h2>
-  <h3>Con l&rsquo;indirizzo ICAO dell&rsquo;aereo, sono già nascosti.</h3>
-  <p>Il filtro lavora sull&rsquo;indirizzo, non sulla radio. Un FLARM impostato per trasmettere l&rsquo;indirizzo ICAO dell&rsquo;aereo invece del proprio ID FLARM è nascosto appena il Go salva quell&rsquo;indirizzo. Lo stesso vale per un apparato ADS-L che trasmette l&rsquo;indirizzo ICAO, come chiede F.2.3 a un aeromobile con transponder. Su un aereo del club con transponder e un FLARM sul suo indirizzo ICAO, un Tango nasconde entrambi. Anche un Go da solo, appena scrivi l&rsquo;indirizzo.</p>
-  <p>Un FLARM che trasmette il proprio ID FLARM non ha ancora un filtro. A terra il Go non valuta alcun traffico, quindi resta in silenzio. Quando decollate insieme, il FLARM si unisce come membro della formazione: in silenzio e disegnato nel quadrato. Un Go acceso già in aria lo sente per la prima volta in volo, e può avvisare finché il FLARM non ha tenuto il suo posto per 6&nbsp;secondi.</p>
+  <h3>Il filtro esclude anche FLARM e ADS-L con lo stesso indirizzo ICAO.</h3>
+  <p>Conta l&rsquo;indirizzo trasmesso, non la radio. Se il FLARM di bordo trasmette l&rsquo;indirizzo ICAO dell&rsquo;aereo anziché il proprio ID FLARM, il Go lo nasconde appena salvi quell&rsquo;indirizzo. Lo stesso vale per un apparato ADS-L che usa l&rsquo;indirizzo ICAO, come richiede F.2.3 su un aeromobile con transponder. Un Tango può quindi nascondere sia il transponder sia il FLARM di un aereo del club. Anche un Go senza Bravo può farlo, inserendo l&rsquo;indirizzo a mano.</p>
+  <p>Per un FLARM che trasmette il proprio ID FLARM non esiste ancora un filtro per indirizzo. A terra il Go non dà avvisi di traffico. Se decollate insieme, il FLARM entra nella formazione, senza avvisi e rappresentato nel quadrato. Se invece accendi il Go in volo, può dare un avviso finché il FLARM non mantiene la stessa posizione relativa per 6&nbsp;secondi.</p>
 </section>
 
 <section>
-  <h2 class="kicker">Cosa viene dopo</h2>
-  <h3>La stessa proposta per FLARM e ADS-L.</h3>
-  <p>La domanda di Frank indica il passo successivo, e non l&rsquo;abbiamo ancora costruito. Il modo in cui Bravo indica il transponder potrebbe valere per la radio del Go: a terra, l&rsquo;apparato FLARM o ADS-L che sente molto più forte di ogni altro, proposto nella stessa pagina <span class="mono">AIRCRAFT</span> e salvato con una pressione. Grazie, Frank, per il suggerimento.</p>
+  <h2 class="kicker">Il prossimo passo</h2>
+  <h3>Proporre anche il FLARM o l&rsquo;apparato ADS-L di bordo.</h3>
+  <p>Il suggerimento di Frank è utile: proporre il FLARM o l&rsquo;apparato ADS-L a bordo come Bravo propone oggi il transponder. Questa funzione non esiste ancora e non abbiamo una data da annunciare. Grazie, Frank, per averla proposta.</p>
 </section>
 
 <section>
@@ -119,11 +119,6 @@ updated_on: "2026-11-25"
       <strong>EASA</strong> &middot;
       <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2, F.2.3.
       <span class="support">L&rsquo;indirizzo ICAO che trasmette un aeromobile con transponder, e le impostazioni incoerenti che un apparato deve rifiutare.</span>
-    </li>
-    <li>
-      <strong>skyBlip</strong> &middot;
-      <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/traffic/README.md">Come il Go legge il traffico</a>, su GitHub, in inglese.
-      <span class="support">Il filtro sull&rsquo;indirizzo dell&rsquo;aereo, e le regole della formazione con i loro numeri.</span>
     </li>
     <li>
       <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, novembre 2026.
