@@ -49,7 +49,10 @@ updated_on: "2026-11-25"
 <section>
   <h2 class="kicker">Avant d&rsquo;acheter</h2>
   <p>Le Go est une aide à la veille visuelle, non certifiée. Il ne remplace pas un transpondeur là où il est obligatoire, et il n&rsquo;émet pas en FLARM. Notre <%= link_to_page "compare", label: "comparatif" %> le compare aux boîtiers installés, et le <%= link_to_page "buy", label: "guide d'achat" %> indique des vendeurs dans cinq pays.</p>
-  <p><%= link_to_page "blog/network-or-radio", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/pocket-or-installed", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
 </section>
 
 <section class="band">

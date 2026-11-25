@@ -39,6 +39,10 @@ updated_on: "2026-11-25"
 </section>
 
 <section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
   <h2 class="kicker">Sources</h2>
   <ul class="sources">
     <li>
@@ -46,7 +50,6 @@ updated_on: "2026-11-25"
       <span class="support">Le firmware, ses tests de conformité et les mesures d&rsquo;autonomie au banc.</span>
     </li>
   </ul>
-  <p><%= link_to_page "blog/who-sees-ads-l", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/network-or-radio", class: "cta cta--next" %></p>
 </section>
 
 <section class="band">

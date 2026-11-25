@@ -62,6 +62,28 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "every page in a section links the pages before and after it in its reading order" do
+    Content::Page.all.select(&:parent).each do |page|
+      get page.url_path
+
+      assert_equal 1, css_select("nav.pager").size, page.url_path
+      assert_equal [ page.previous_page&.url_path ].compact, css_select("nav.pager a[rel=prev]").map { it["href"] }, page.url_path
+      assert_equal [ page.next_page&.url_path ].compact, css_select("nav.pager a[rel=next]").map { it["href"] }, page.url_path
+    end
+  end
+
+  test "a blog post offers the next post on the right, before its sources" do
+    get "/fr/blog/flotte-de-club"
+
+    assert_select ".pager-place", text: "Blog · 5 sur 7"
+    assert_select ".pager-link--previous[href='/fr/blog/reseau-ou-radio']", text: /Précédent/
+    assert_select ".pager-link--next[href='/fr/blog/poche-ou-installe']", text: /Suivant/
+
+    get "/blog/who-sees-ads-l"
+
+    assert_equal %w[nav ul], css_select("nav.pager, ul.sources").map(&:name)
+  end
+
   test "application routes never resolve to the content controller" do
     %w[/briefing /briefing/login /fr/briefing /fr/briefing/console].each do |path|
       route = begin

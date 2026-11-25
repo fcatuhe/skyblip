@@ -80,7 +80,37 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
     frontmatter[:parent]&.then { self.class.find_by(base_slug: it, locale:) }
   end
 
+  def reading_order
+    @reading_order ||= sort_for_reading(self.class.all.select { it.locale == locale && it.frontmatter[:parent] == frontmatter[:parent] })
+  end
+
+  def reading_position = reading_order.index(self) + 1
+
+  def previous_page
+    if reading_position > 1
+      reading_order[reading_position - 2]
+    end
+  end
+
+  def next_page = reading_order[reading_position]
+
   def share_image = frontmatter[:share_image]
 
   def product = frontmatter[:product]
+
+  private
+    def sort_for_reading(siblings)
+      if order = listed_order
+        siblings.sort_by { order.index(it.base_slug) || raise(KeyError, "#{it.base_slug} is missing from the reading order of #{frontmatter[:parent]}") }
+      else
+        siblings.sort_by { [ it.published_on, it.base_slug ] }
+      end
+    end
+
+    def listed_order
+      case frontmatter[:parent]
+      when "guides" then %w[mount go-first-steps bravo-first-steps radar instruments displays controls power phone radio timing gps traffic]
+      when "ads-l" then %w[ads-l/registry ads-l/callsign ads-l/conformity ads-l/nmea ads-l/questions]
+      end
+    end
 end
