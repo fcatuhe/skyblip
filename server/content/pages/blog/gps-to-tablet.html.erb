@@ -1,0 +1,76 @@
+---
+title: "The Go's GPS position on your tablet"
+nav_title: GPS on your tablet
+description: "The Go sends its GPS position and traffic over Bluetooth once a second, even to a tablet without GPS. The next firmware sends the position sooner."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 November 2026</p>
+  <h1>The Go&rsquo;s GPS position on your tablet</h1>
+  <p class="lede">The skyBlip Go sends its GPS position over Bluetooth once a second, along with traffic. That gives an iPad without GPS a position to navigate on. The next firmware sends that position sooner: about a tenth of a second after the receiver measured it, before any delay on the Bluetooth link.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Position and traffic over Bluetooth</h2>
+  <h3>The app gets both from the Go.</h3>
+  <p>Markus flies with SkyDemon on an iPad without GPS. On Pilot und Flugzeug, he asked whether the Go could supply his position as well as traffic. He had ordered a LilyGO T-Echo Plus to try in his powered aircraft next season. A Wi-Fi-only iPad has no GPS receiver. A cellular iPad has one, but the app takes position and traffic from a single source. When you fly with the Go as that source, the app draws your aircraft at the Go&rsquo;s position even if the iPad has GPS of its own.</p>
+  <p>The Go sends a set of messages in a format called FLARM NMEA. Each update starts with alerts and status. Then come the GPS position, pressure altitude on 1013.25&nbsp;hPa, climb or descent rate, battery level and up to ten traffic reports. The Go sends a position only when the receiver has a valid fix and a valid time. As soon as the receiver reports losing the fix, new updates leave the position out.</p>
+  <p>The receiver measures two positions a second for ADS-L, which the Go uses to broadcast its position to other aircraft. The tablet and the flight log get the fix measured at the start of each second. The Go sends it as measured, with its original time. Bravo, our ADS-B receiver, also gives an app connected directly to it one position a second from its own GPS receiver.</p>
+</section>
+
+<section>
+  <h2 class="kicker">How old is the position?</h2>
+  <h3>The next firmware sends without waiting for a separate timer.</h3>
+  <p>In firmware 0.8.0 and earlier, the Go started a one-second send cycle when the app connected. The receiver normally delivered its whole-second fix about 0.1&nbsp;s after measuring it. If the fix had just missed a send, it could wait nearly another second. A radio transmission could delay the send further. We estimate that the position was about 0.6&nbsp;s old on average when the Go started sending, and up to about 1.2&nbsp;s old in the worst case.</p>
+  <p>With firmware [version], the Go starts sending as soon as the whole-second fix comes in, normally about 0.1&nbsp;s after it was measured. The radio still takes priority. Only the callsign, which the Go broadcasts once every ten seconds, can still be pending when the fix arrives. If it is, the Bluetooth send can wait up to another 0.1&nbsp;s. These estimates come from the code and the receiver&rsquo;s timing. We have not measured the delay in flight or on a bench with a tablet. Bluetooth adds a delay of its own.</p>
+  <p>At a ground speed of 100&nbsp;kt, you travel about 30&nbsp;m in 0.6&nbsp;s and about 5 to 10&nbsp;m in 0.1 to 0.2&nbsp;s. That is how far you travel before the Go starts sending. We have not measured the difference on the map.</p>
+  <p>The Go still sends one update a second in normal operation. Sending more often would repeat traffic reports. The update does not add Bluetooth messages, move the screen redraw window or change when the Go writes to storage.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Choosing a GPS source</h2>
+  <h3>You should be able to keep the tablet&rsquo;s GPS.</h3>
+  <p>The FLARM traffic message, <code>$PFLAA</code>, reports how far north, east and above or below the Go another aircraft is. The app needs the Go&rsquo;s position to put that aircraft in the right place on the map.</p>
+  <p>On 13 November 2026, we submitted our <%= link_to_page "ads-l/nmea", label: "ADS-L NMEA proposal" %> to EASA and the ADS-L governing body. Under the proposal, each traffic report carries the other aircraft&rsquo;s latitude, longitude and altitude. An app could then show that traffic while using the tablet&rsquo;s GPS for your aircraft. The Go would still send its own position for tablets without GPS.</p>
+  <p>Firmware [version] sends the Go&rsquo;s position sooner. It does not give you a choice of GPS source. The governing body would need to adopt the format. SkyDemon and other apps would need to read it and let pilots choose their GPS source separately. We track that work in <a href="https://github.com/fcatuhe/skyblip/issues/529">issue #529</a>.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Before you fly</h2>
+  <h3>Give the Go a clear view of the sky.</h3>
+  <p>The iPad can sit where you can read it, even if its panel mount leaves it with a poor view of the sky. Put the Go where its antenna can see the sky. The <%= link_to_page "gps", label: "GPS guide" %> explains <span class="mono">NO FIX</span>, <span class="mono">MOVE OUT</span> and <span class="mono">FINDS FIX</span>.</p>
+  <p>We have not yet flown with a Go and SkyDemon on an iPad without GPS. If you try it, check on the ground that the app shows your position. Let us know how it works for you. Thank you, Markus, for asking.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, November 2026.
+      <span class="support">Markus&rsquo;s question about using an iPad without GPS.</span>
+    </li>
+    <li>
+      <strong>SkyDemon forum</strong> &middot; Tim Dawson, <a href="http://forums.skydemon.aero/FindPost37247.aspx">1 July 2024</a> and <a href="http://forums.skydemon.aero/Topic37837.aspx">20 February 2025</a>.
+      <span class="support">The app&rsquo;s rule for choosing a source of position and traffic.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot; <%= link_to_page "features", label: "Go" %>, <%= link_to_page "phone", label: "Bluetooth guide" %>, <%= link_to_page "gps", label: "GPS guide" %> and <%= link_to_page "timing", label: "radio timing guide" %>.
+      <span class="support">What Go sends, when the GPS fix arrives and when the radio transmits.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/528">Send the GPS position as soon as it arrives</a>.
+      <span class="support">The timing change for firmware [version] and how the delay was estimated.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
