@@ -35,6 +35,9 @@ constexpr int kBannerScale = 2;
 constexpr int kOwnshipTail = kNear - ui::kSkyshipRowsToNose + ui::kSkyshipRows;
 constexpr int kNoteScale = 1;
 constexpr int kNoteGap = 5;
+constexpr int kNoteBelowBanner = kCharacterHeight * kBannerScale + kLabelPad + kNoteGap;
+// INFO: fc 26nov26 the banner stands where it centres with a small line, so the line never moves it
+constexpr int kRingWordsHeight = kNoteBelowBanner + kCharacterHeight * kNoteScale;
 constexpr int kLiveMarkPad = 3;
 
 struct Layout {
@@ -45,18 +48,16 @@ struct Layout {
 };
 
 constexpr Layout layout_with(int outer_radius, int range_y, int banner_y) {
-    return {outer_radius, range_y, banner_y,
-            banner_y + kCharacterHeight * kBannerScale + kLabelPad + kNoteGap};
+    return {outer_radius, range_y, banner_y, banner_y + kNoteBelowBanner};
 }
 
 constexpr Layout kRangeOnTheRing =
     layout_with(kToScaleRadius, kFooterBottom - kCharacterHeight * kRangeScale,
-                (kOwnshipTail + kFooterTop - kCharacterHeight * kBannerScale) / 2);
+                (kOwnshipTail + kFooterTop - kRingWordsHeight) / 2);
 constexpr int kRangeOnRimY =
     kFar + kAllRadius - kRingWidth / 2 - kCharacterHeight * kRangeScale / 2;
-constexpr Layout kRangeOnTheRim =
-    layout_with(kAllRadius, kRangeOnRimY,
-                (kOwnshipTail + kRangeOnRimY - kRangePad - kCharacterHeight * kBannerScale) / 2);
+constexpr Layout kRangeOnTheRim = layout_with(
+    kAllRadius, kRangeOnRimY, (kOwnshipTail + kRangeOnRimY - kRangePad - kRingWordsHeight) / 2);
 
 constexpr const Layout& layout_of(const RadarSnapshot& snapshot) {
     return snapshot.plot == RadarPlot::All ? kRangeOnTheRim : kRangeOnTheRing;
@@ -265,13 +266,6 @@ void reverse(ui::Canvas& canvas, const Box& box) {
             canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
 }
 
-// INFO: fc 26nov26 a split banner is centred as the parked frame centres its body, by its height
-int split_lift(const RingWords& ring) {
-    if (!ring.split) return 0;
-    const BodyLine split[] = {{ring.banner, kBannerScale}, {ring.note, kBannerScale}};
-    return (body_height(split, 2) - kCharacterHeight * kBannerScale) / 2;
-}
-
 Box word_box(const char* word, int y, int scale) {
     const int width = text_width(word, scale);
     return padded(kCentreX - width / 2, y, width, kCharacterHeight * scale);
@@ -466,9 +460,7 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     int reading_count = 2;
     char cell_buffer[12];
     const RingWords ring = ring_words(snapshot, cell_buffer);
-    const int lift = split_lift(ring);
-    const int banner_y =
-        ring.banner ? banner_y_inside(ring.banner, layout) - lift : layout.banner_y;
+    const int banner_y = ring.banner ? banner_y_inside(ring.banner, layout) : layout.banner_y;
     const int note_y = ring.split ? banner_y + line_pitch(kBannerScale)
                                   : layout.note_y - layout.banner_y + banner_y;
     const int note_scale = ring.split ? kBannerScale : kNoteScale;
