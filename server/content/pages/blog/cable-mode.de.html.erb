@@ -2,7 +2,7 @@
 title: "skyBlip Go mit dem Hauptschalter einschalten"
 nav_title: Kabelmodus
 slug: blog/kabelmodus
-description: "Einmal am Go einstellen, dann übernimmt der Hauptschalter. Firmware 0.8.1 bringt den Kabelmodus für Go und Go+."
+description: "Firmware 0.8.1 mit Kabelmodus ist verfügbar. Stellen Sie den Go oder Go+ einmal ein. Danach übernimmt der Hauptschalter."
 published_on: "2026-11-25"
 parent: blog
 updated_on: "2026-11-25"
@@ -11,7 +11,7 @@ updated_on: "2026-11-25"
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25. November 2026</p>
   <h1>Hauptschalter ein, Go läuft.</h1>
-  <p class="lede">Der skyBlip Go bleibt im Flugzeug. Der Akku bleibt im Gerät, das USB-Kabel bleibt in einer Buchse, die der Hauptschalter schaltet. Im Kabelmodus fährt der Go mit dem Bordstrom hoch. Stellen Sie nach dem Flug den Hauptschalter aus, schaltet sich der Go fünf Minuten später selbst ab. Das richten Sie einmal ein. Wer danach fliegt, muss am Go nichts bedienen. Der Kabelmodus kommt mit der nächsten Firmware, Version 0.8.1. In 0.8.0 gibt es ihn noch nicht.</p>
+  <p class="lede">Der skyBlip Go bleibt im Flugzeug. Der Akku bleibt im Gerät, das USB-Kabel bleibt in einer Buchse, die der Hauptschalter schaltet. Im Kabelmodus fährt der Go mit dem Bordstrom hoch. Stellen Sie nach dem Flug den Hauptschalter aus, schaltet sich der Go fünf Minuten später selbst ab. Das richten Sie einmal ein. Wer danach fliegt, muss am Go nichts bedienen. Der Kabelmodus ist ab Firmware 0.8.1 verfügbar. Das Update gibt es in Briefing.</p>
 </section>
 
 <section>
@@ -25,7 +25,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Einmal im Flugzeug einrichten</h2>
   <h3>Prüfen Sie, ob die USB-Buchse am Hauptschalter hängt.</h3>
   <ol>
-    <li><strong>Aktualisieren Sie den Go auf 0.8.1, sobald die Version verfügbar ist.</strong> Verbinden Sie ihn in Chrome oder Edge per Bluetooth mit <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> und bestätigen Sie das Update am Go. Bei einem neuen Gerät hilft die <%= link_to_page "install", label: "Installationsanleitung" %>. Beim Update von 0.8.0 bleiben die Einstellungen erhalten. Der Go startet mit <span class="mono">BUTTON</span>.</li>
+    <li><strong>Aktualisieren Sie den Go auf 0.8.1.</strong> Verbinden Sie ihn in Chrome oder Edge per Bluetooth mit <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> und bestätigen Sie das Update am Go. Bei einem neuen Gerät hilft die <%= link_to_page "install", label: "Installationsanleitung" %>. Beim Update von 0.8.0 bleiben die Einstellungen erhalten. Der Go startet mit <span class="mono">BUTTON</span>.</li>
     <li><strong>Stellen Sie Luftfahrzeugtyp und Rufzeichen ein.</strong> Das geht in Briefing oder <%= link_to_page "go-first-steps", label: "im Menü am Go", anchor: "type" %>. Sendet das Flugzeug Mode S oder ADS-B, hinterlegen Sie die ICAO-Adresse seines Transponders einmal in Briefing. ADS-L soll dieselbe Adresse verwenden, damit Empfänger beide Signale demselben Flugzeug zuordnen. Geben Sie jedem solchen Flugzeug einen eigenen Go.</li>
     <li><strong>Bringen Sie den Go mit der Antenne nach oben an.</strong> Wählen Sie einen Platz mit freier Sicht zum Himmel. Beispiele finden Sie in der <%= link_to_page "mount", label: "Anleitung zur Halterung" %>. Lassen Sie den Akku im Gerät und stecken Sie das USB-C-Kabel ein. Hat die Buchse auch bei ausgeschaltetem Hauptschalter Strom, bleibt der Go an.</li>
     <li><strong>Stellen Sie am Go <span class="mono">POWER</span> auf <span class="mono">CABLE</span>.</strong> Drücken Sie in der Radaransicht die seitliche Taste, um <span class="mono">SETTINGS</span> zu öffnen. Tippen Sie auf das Touchfeld oben, bis Sie in der letzten Zeile bei <span class="mono">POWER</span> sind. Drücken Sie dort einmal die Taste, um von <span class="mono">BUTTON</span> auf <span class="mono">CABLE</span> zu wechseln. Der Go speichert die Einstellung. In Briefing lässt sie sich nicht ändern.</li>

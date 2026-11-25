@@ -2,7 +2,7 @@
 title: "Allumer le skyBlip Go avec l'interrupteur général"
 nav_title: Mode câble
 slug: blog/mode-cable
-description: "Réglez le Go une fois. Avec la version 0.8.1, il démarre quand l'avion alimente sa prise USB et s'éteint cinq minutes après la coupure au sol."
+description: "Le mode câble est disponible dans la version 0.8.1. Le Go démarre avec le courant USB de bord et s'éteint cinq minutes après la coupure au sol."
 published_on: "2026-11-25"
 parent: blog
 updated_on: "2026-11-25"
@@ -11,7 +11,7 @@ updated_on: "2026-11-25"
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 novembre 2026</p>
   <h1>Le Go s&rsquo;allume avec l&rsquo;interrupteur général.</h1>
-  <p class="lede">Laissez un skyBlip Go dans l&rsquo;avion, batterie en place, branché sur une prise USB commandée par l&rsquo;interrupteur général. En mode câble, le Go s&rsquo;allume avec l&rsquo;avion. Au sol, il s&rsquo;éteint cinq minutes après la coupure. Faites le réglage une fois. Le pilote suivant n&rsquo;aura rien à faire sur le Go. Le mode câble arrive avec la prochaine version du logiciel embarqué, la 0.8.1. Il n&rsquo;est pas dans la 0.8.0.</p>
+  <p class="lede">Laissez un skyBlip Go dans l&rsquo;avion, batterie en place, branché sur une prise USB commandée par l&rsquo;interrupteur général. En mode câble, le Go s&rsquo;allume avec l&rsquo;avion. Au sol, il s&rsquo;éteint cinq minutes après la coupure. Faites le réglage une fois. Le pilote suivant n&rsquo;aura rien à faire sur le Go. Le mode câble est disponible dans la version 0.8.1 du logiciel embarqué. La mise à jour se fait dans Briefing.</p>
 </section>
 
 <section>
@@ -25,7 +25,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">À régler une seule fois</h2>
   <h3>Vérifiez que l&rsquo;interrupteur général coupe bien la prise USB.</h3>
   <ol>
-    <li><strong>Passez à la version 0.8.1 dès qu&rsquo;elle est disponible.</strong> Connectez le Go en Bluetooth dans <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> depuis Chrome ou Edge. Confirmez la mise à jour sur le Go. Pour un appareil neuf, suivez le <%= link_to_page "install", label: "guide d'installation" %>. La mise à jour depuis la 0.8.0 conserve vos réglages et le Go démarre sur <span class="mono">BUTTON</span>.</li>
+    <li><strong>Passez à la version 0.8.1.</strong> Connectez le Go en Bluetooth dans <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> depuis Chrome ou Edge. Confirmez la mise à jour sur le Go. Pour un appareil neuf, suivez le <%= link_to_page "install", label: "guide d'installation" %>. La mise à jour depuis la 0.8.0 conserve vos réglages et le Go démarre sur <span class="mono">BUTTON</span>.</li>
     <li><strong>Choisissez le type d&rsquo;aéronef et l&rsquo;indicatif.</strong> Faites-le dans Briefing ou <%= link_to_page "go-first-steps", label: "dans le menu du Go", anchor: "type" %>. Si l&rsquo;avion émet en Mode S ou en ADS-B, saisissez une fois dans Briefing l&rsquo;adresse OACI de son transpondeur. Le Go doit utiliser la même adresse en ADS-L pour que les récepteurs reconnaissent le même avion. Réservez un Go à chaque avion ainsi équipé.</li>
     <li><strong>Placez le Go antenne vers le haut.</strong> Donnez-lui une vue dégagée sur le ciel. Le <%= link_to_page "mount", label: "guide de fixation" %> montre où le placer. Laissez la batterie en place et branchez le câble USB-C. Si la prise reste alimentée quand vous coupez l&rsquo;interrupteur général, le Go reste allumé.</li>
     <li><strong>Réglez <span class="mono">POWER</span> sur <span class="mono">CABLE</span> sur le Go.</strong> Depuis le radar, appuyez sur le bouton latéral pour ouvrir <span class="mono">SETTINGS</span>. Touchez le pavé du dessus jusqu&rsquo;à la dernière ligne, <span class="mono">POWER</span>. Appuyez une fois sur le bouton pour passer de <span class="mono">BUTTON</span> à <span class="mono">CABLE</span>. Le Go mémorise ce réglage. Il ne se change pas dans Briefing.</li>
