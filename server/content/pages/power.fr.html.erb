@@ -2,17 +2,17 @@
 title: "Batterie du Go, charge USB-C et arrêt"
 nav_title: Alimentation
 slug: alimentation
-description: "Rechargez skyBlip Go en USB-C. Comprenez les alertes de batterie, le message BATTERY EMPTY, l'arrêt et l'écran e-paper qui garde son image."
+description: "Rechargez skyBlip Go en USB-C. Comprenez les alertes de batterie, le message BATTERY EMPTY, l'arrêt et l'écran à papier électronique qui garde son image."
 parent: guides
 share_image: radar
-updated_on: "2026-11-19"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Il dit ce qu&rsquo;il fait, même éteint.</h1>
+  <h1>Allumer, recharger et éteindre le Go</h1>
   <p class="lede">
-    Ce que dit l&rsquo;appareil avant d&rsquo;avoir une position, quand il est éteint, et quand sa batterie se vide.
+    Repérez les messages du GPS et de la batterie. Sachez quand l&rsquo;appareil est éteint.
   </p>
 </section>
 
@@ -21,24 +21,24 @@ updated_on: "2026-11-19"
 
   <div class="feature">
     <div>
-      <h3 id="waiting">Il dit <span class="highlight">ce qu&rsquo;il attend</span>.</h3>
+      <h3 id="waiting">Attendre <span class="highlight">la première position GPS</span>.</h3>
       <p>
-        Une pression l&rsquo;allume et affiche le trafic. Tant qu&rsquo;il
-        n&rsquo;a pas de position, le cercle le signale. Le mot en dessous
-        indique où en est le récepteur&nbsp;: <span class="mono">GPS OFF</span>
+        Une pression sur le bouton allume l&rsquo;appareil et ouvre le radar. Tant qu&rsquo;il
+        n&rsquo;a pas de position, le cercle le signale. Le message sous le cercle
+        indique l&rsquo;état du récepteur GPS&nbsp;: <span class="mono">GPS OFF</span>
         s&rsquo;il est silencieux, <span class="mono">MOVE OUT</span> s&rsquo;il
         envoie des positions encore sans date, et <span class="mono">FINDS FIX</span>
         dès qu&rsquo;il lit une date sur un satellite.
       </p>
       <p>
         Vous savez ainsi s&rsquo;il faut attendre ou sortir l&rsquo;appareil
-        à découvert. Il annonce sa première position, puis l&rsquo;écran
-        affiche le ciel autour de vous.
+        à découvert. L&rsquo;appareil annonce sa première position. Le radar affiche alors
+        le trafic autour de vous.
       </p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "no-fix.png", alt: "La page radar sans position : le cercle vide affiche NO FIX et, dessous, l'état du récepteur" %>
-      <figcaption>En attente du ciel</figcaption>
+      <figcaption>En attente de la première position GPS</figcaption>
     </figure>
   </div>
 
@@ -69,27 +69,24 @@ updated_on: "2026-11-19"
     <div>
       <h3 id="flat-battery">Quand la batterie est vide, <span class="highlight">l&rsquo;écran le dit</span>.</h3>
       <p>
-        À 3,2&nbsp;V l&rsquo;appareil s&rsquo;éteint seul. Son dernier message
-        vous dit pourquoi. Vous n&rsquo;avez appuyé sur rien, donc seul
-        l&rsquo;écran peut expliquer cet arrêt. Sans ce message, on pourrait
-        croire à un plantage ou à une panne. Le bouton cesse de répondre au même
-        moment, car un appui ne ferait que ramener la batterie à la même tension
-        de coupure.
+        À 3,2&nbsp;V, l&rsquo;appareil s&rsquo;éteint seul. Son dernier message
+        indique que la batterie est vide. Vous n&rsquo;avez appuyé sur rien&nbsp;:
+        sans ce message, on pourrait croire à un plantage ou à une panne.
+        Le bouton cesse de répondre au même moment, car un appui ramènerait
+        la batterie à la même tension de coupure.
       </p>
       <p>
-        Branchez le câble pour remettre l&rsquo;appareil en service. Ce seul geste
-        réveille l&rsquo;électronique sans démarrer l&rsquo;appareil et remet
-        le logo. L&rsquo;appareil est de nouveau éteint et en charge. Le prochain
-        appui le démarre. Si la batterie s&rsquo;est vidée sur une étagère,
+        Branchez le câble pour pouvoir réutiliser l&rsquo;appareil. Le câble
+        seul ne change rien à l&rsquo;écran&nbsp;: le voyant rouge du chargeur
+        indique que la batterie se remplit. Un appui câble branché démarre
+        l&rsquo;appareil, quelle que soit la charge, et efface le message. Si la batterie s&rsquo;est vidée sur une étagère,
         l&rsquo;appareil n&rsquo;a laissé aucun message. Dans ce cas, un appui
         sur le bouton affiche le même message de batterie vide.
       </p>
       <p>
-        L&rsquo;appareil s&rsquo;en souvient au démarrage suivant. Son autotest affiche
-        <span class="mono">WAS EMPTY</span> à côté de la tension. Un téléphone
-        qui se connecte pendant ce démarrage reçoit la même information.
-        Un appareil qui s&rsquo;est éteint ne revient donc pas comme si
-        de rien n&rsquo;était.
+        Au démarrage suivant, l&rsquo;autotest signale la coupure pour batterie vide
+        avec le message <span class="mono">WAS EMPTY</span> à côté de la tension.
+        Un téléphone qui se connecte pendant ce démarrage reçoit la même information.
       </p>
     </div>
     <figure class="shot">
@@ -105,11 +102,11 @@ updated_on: "2026-11-19"
       </thead>
       <tbody>
         <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">BATTERY EMPTY</span></td></tr>
-        <tr><th>Pression après une coupure batterie vide</th><td>rien, à dessein&nbsp;: l&rsquo;écran le dit déjà, et le câble est le chemin du retour</td></tr>
-        <tr><th>Branchement du chargeur</th><td>charge et reste éteint&nbsp;: un câble dans une sacoche n&rsquo;est pas une demande d&rsquo;émettre</td></tr>
-        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Pression après une coupure batterie vide</th><td>ne répond pas&nbsp;: l&rsquo;écran indique déjà que la batterie est vide. Branchez le câble pour recharger l&rsquo;appareil</td></tr>
+        <tr><th>Branchement du chargeur</th><td>charge et reste éteint. Un câble branché dans une sacoche ne le fait pas émettre</td></tr>
+        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge et reste éteint. <span class="mono">BATTERY EMPTY</span> reste affiché jusqu&rsquo;au prochain appui</td></tr>
         <tr><th>Bouton maintenu, chargeur branché</th><td>démarre et charge</td></tr>
-        <tr><th>Pression sur <span class="mono">RESET</span></th><td>redémarre, et deux fois en moins d&rsquo;une demi-seconde, le bootloader USB</td></tr>
+        <tr><th>Pression sur <span class="mono">RESET</span></th><td>redémarre. Deux pressions en moins d&rsquo;une demi-seconde lancent le programme d&rsquo;installation par USB, appelé bootloader</td></tr>
       </tbody>
     </table>
   </div>
@@ -120,12 +117,11 @@ updated_on: "2026-11-19"
 
   <h3 id="cell">Pourquoi la batterie tient la journée.</h3>
   <p class="lede">
-    L&rsquo;arrêt suit plusieurs étapes, pas une coupure brutale. Leur ordre
-    compte. La mémoire flash externe reçoit l&rsquo;ordre de se mettre en veille
-    tant qu&rsquo;elle est encore alimentée et peut le recevoir. Après la coupure,
-    cet ordre ne fait rien. La mémoire consommerait alors tout son courant de
-    veille pendant la nuit, alors que l&rsquo;appareil semble éteint
-    dans sa sacoche.
+    L&rsquo;arrêt suit plusieurs étapes, dans un ordre précis.
+    Avant de couper l&rsquo;alimentation, l&rsquo;appareil met sa mémoire flash externe
+    en veille. Après la coupure, elle ne pourrait plus recevoir cet ordre.
+    Elle consommerait alors tout son courant de veille pendant la nuit,
+    alors que l&rsquo;appareil semble éteint dans sa sacoche.
   </p>
   <p class="lede">
     Le reste de la consommation vient de la radio et des capteurs. En vol, l&rsquo;appareil
@@ -143,11 +139,11 @@ updated_on: "2026-11-19"
     <li>Le voyant clignote et ne reste jamais allumé en continu</li>
   </ul>
 
-  <h3 id="gauge">Ce que la jauge ne fera pas.</h3>
+  <h3 id="gauge">Lire la jauge de batterie.</h3>
   <p class="lede">
-    Elle utilise deux courbes de tension, pas une. Pendant la charge, la tension aux bornes
-    dépasse celle de la batterie seule. La même mesure correspond alors à une batterie
-    bien plus vide, et le pourcentage indique quelle courbe a été utilisée.
+    Câble branché, l&rsquo;appareil mesure la tension USB, pas celle de la batterie.
+    Il n&rsquo;affiche donc pas de pourcentage. Le pourcentage n&rsquo;est
+    calculé que sur batterie.
   </p>
   <p class="lede">
     Elle ne recule jamais, et la baisse de tension due à une émission à

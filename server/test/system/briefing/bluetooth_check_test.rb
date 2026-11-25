@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class Briefing::BluetoothCheckTest < ApplicationSystemTestCase
-  test "Chrome on Linux lists the flag to turn on, and offers no connection until it is on" do
+  test "Chrome on Linux lists the flag to turn on, offers no connection until it is on, and still sets a device up over USB" do
     in_chrome_on "Linux"
     visit "/briefing"
     within ".bluetooth-check" do
@@ -14,7 +14,7 @@ class Briefing::BluetoothCheckTest < ApplicationSystemTestCase
     end
     assert_no_selector ".fleet-unsupported"
     assert_no_button "Connect a device"
-    assert_no_link "Set up a device"
+    assert_link "Set up a device"
     screen "20-bluetooth-flag"
   end
 

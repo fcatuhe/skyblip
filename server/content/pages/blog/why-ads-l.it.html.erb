@@ -2,16 +2,16 @@
 title: "Perché ADS-L, se esistono già ADS-B e UAT?"
 nav_title: Perché ADS-L
 slug: blog/perche-ads-l
-description: "ADS-B richiede un transponder certificato, UAT non è consentito in Europa, ADS-L funziona a batteria. Perché skyBlip ha scelto ADS-L e dove resta ADS-B."
+description: "ADS-B richiede un transponder certificato per trasmettere. UAT non è consentito in Europa. ADS-L va a batteria. La scelta di skyBlip e il ruolo di ADS-B."
 published_on: "2026-10-26"
 parent: blog
-updated_on: "2026-10-26"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 26 ottobre 2026</p>
-  <h1>Perché ADS-L, se esistono già ADS-B e UAT?</h1>
-  <p class="lede">I piloti ce lo chiedono spesso: perché basarsi su ADS-L e non su ADS-B, uno standard mondiale con apparati certificati, o su UAT, che gli Stati Uniti usano per l&rsquo;aviazione leggera? La risposta sta in tre parole: energia, burocrazia e prezzo. ADS-B mantiene il suo ruolo, e i due si incontrano in cabina.</p>
+  <h1>Perché ADS-L invece di ADS-B o UAT?</h1>
+  <p class="lede">I piloti ce lo chiedono spesso: perché basarsi su ADS-L e non su ADS-B, uno standard mondiale con apparati certificati, o su UAT, che gli Stati Uniti usano per l&rsquo;aviazione leggera? La risposta sta in tre parole: energia, burocrazia e prezzo. ADS-B mantiene il suo ruolo. Il traffico dei due sistemi può comparire sullo stesso schermo in cabina.</p>
 </section>
 
 <section>
@@ -40,14 +40,14 @@ updated_on: "2026-10-26"
 <section>
   <h2 class="kicker">Il posto di ciascuno</h2>
   <h3>ADS-B per chi vola con gli aerei di linea, ADS-L per chi vola basso.</h3>
-  <p>Ecco come vediamo assestarsi il panorama:</p>
+  <p>Pensiamo che i diversi impieghi si distribuiranno così:</p>
   <ul>
     <li><strong>ADS-B</strong> per l&rsquo;aviazione commerciale e più pesante, e per ogni aeromobile che vola in spazio aereo controllato, dove lo leggono il controllo del traffico aereo e il TCAS.</li>
     <li><strong>ADS-L</strong> per l&rsquo;aviazione leggera, gli sport aerei e i droni, in spazio aereo non controllato a bassa quota e nello U-space, dove il SERA.6005(c) lo indica già come mezzo per essere elettronicamente visibili.</li>
     <li><strong>Entrambi</strong> per i piloti che volano in tutti e due i mondi e sono pronti a installare ADS-B Out e In.</li>
   </ul>
-  <p>I due non si parlano via radio. Un Garmin GTX&nbsp;345 non riceve un Go, e un Go non riceve un GTX&nbsp;345. Si incontrano nel ricevitore. skyBlip Bravo ascolta su 1090&nbsp;MHz e, abbinato a un Go, mostra il traffico ADS-B, ADS-L e FLARM su un unico radar. Questa coppia è <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Con essa gli aeromobili ADS-B compaiono a decine di miglia nautiche, a volte quasi a cento, perché i loro trasmettitori sono molto potenti.</p>
-  <p>Le stazioni a terra possono colmare il resto. ADS-L prevede un collegamento da terra verso gli aeromobili, che può ritrasmettere ai ricevitori ADS-L il traffico ADS-B e il meteo. Poche stazioni lo trasmettono ancora, e la Francia non ne ha quasi nessuna. Le nostre <%= link_to_page "roadmap", label: "stazioni skyPost" %> servono ad aggiungerne.</p>
+  <p>I due sistemi non sono direttamente compatibili via radio. Un Garmin GTX&nbsp;345 non riceve il segnale di un Go, e un Go da solo non riceve quello di un GTX&nbsp;345. È il ricevitore a riunire i due traffici. skyBlip Bravo ascolta su 1090&nbsp;MHz e, abbinato a un Go, mostra il traffico ADS-B, ADS-L e FLARM su un unico radar. Questa coppia è <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>. Con essa gli aeromobili ADS-B compaiono a decine di miglia nautiche, a volte quasi a cento, perché i loro trasmettitori sono molto potenti.</p>
+  <p>Le stazioni a terra possono colmare il resto. ADS-L prevede un collegamento da terra verso gli aeromobili, che può ritrasmettere ai ricevitori ADS-L il traffico ADS-B e il meteo. Poche stazioni lo trasmettono ancora, e la Francia non ne ha quasi nessuna. Le nostre <%= link_to_page "roadmap", label: "stazioni skyPost" %> sono previste per estendere questa copertura.</p>
 </section>
 
 <section>

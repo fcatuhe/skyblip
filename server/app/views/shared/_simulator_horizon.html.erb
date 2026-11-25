@@ -1,7 +1,6 @@
 <div class="simulator-cell simulator-cell--horizon">
   <div class="simulator-dial">
-    <svg class="simulator-gauge" viewBox="-50 -50 100 100" aria-hidden="true"
-         data-simulator-target="horizonGauge">
+    <svg class="simulator-gauge" viewBox="-50 -50 100 100" aria-hidden="true">
       <defs>
         <clipPath id="sim-face">
           <circle r="<%= SimulatorHelper::GAUGE_RADIUS - 3 %>" />
@@ -15,18 +14,18 @@
       <circle class="gauge-bezel" r="<%= SimulatorHelper::GAUGE_RADIUS %>" />
 
       <g clip-path="url(#sim-face)">
-        <g class="gauge-attitude">
+        <%= tag.g class: "gauge-attitude", data: { simulator_target: "attitude", **gauge_attitude_limits } do %>
           <rect class="gauge-sky" x="-90" y="-90" width="180" height="90" />
           <rect class="gauge-ground" x="-90" y="0" width="180" height="90" />
           <line class="gauge-horizon" x1="-90" y1="0" x2="90" y2="0" />
           <% [ [ 10, 13 ], [ 20, 8 ] ].each do |degrees, half| %>
-            <% offset = degrees * (SimulatorHelper::GAUGE_RADIUS / 20.0) %>
+            <% offset = gauge_pitch_offset(degrees) %>
             <line class="gauge-ladder" x1="-<%= half %>" y1="-<%= offset.round(1) %>"
                   x2="<%= half %>" y2="-<%= offset.round(1) %>" />
             <line class="gauge-ladder" x1="-<%= half %>" y1="<%= offset.round(1) %>"
                   x2="<%= half %>" y2="<%= offset.round(1) %>" />
           <% end %>
-        </g>
+        <% end %>
       </g>
 
       <g class="gauge-marks">

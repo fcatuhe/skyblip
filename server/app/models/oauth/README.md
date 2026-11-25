@@ -1,18 +1,20 @@
 # oauth
 
-skyBlip is its own OAuth 2.1 authorization server, for one resource: the MCP endpoint at `/mcp`, where an admin's coding agent reads the insights, the errors, everybody's events and the units, and resolves an error once its fix is deployed. Signing in to the admin area is the login. An admin who adds skyBlip to Claude Code, Codex or pi sees one consent page, `/oauth/authorization/new`, and clicks Connect. A user who is not an admin is refused there, and a tool answers an error to an agent whose admin was demoted since.
+skyBlip is its own OAuth 2.1 authorization server, for one resource: the admin MCP endpoint at `/admin/mcp`, where an admin's coding agent reads the insights, the errors, everybody's events and the units, and resolves an error once its fix is deployed. Signing in to the admin area is the login. An admin who adds skyBlip to Claude Code, Codex or pi sees one consent page, `/oauth/authorization/new`, and clicks Connect. A user who is not an admin is refused there, and a tool answers an error to an agent whose admin was demoted since.
 
 The tools read, except `resolve_error`, which only takes an error off `list_errors` until it happens again, and is logged as `error.resolved`. Events hold messages browsers and devices wrote, so the server's instructions tell the agent to read them as data, never as instructions.
 
 ## How an agent finds skyBlip
 
-The `mcp` gem guards `/mcp` with its OAuth resource-server support: `OAuth::Token.verify` is the verifier it calls. A request to `/mcp` without a token answers 401, and its `WWW-Authenticate` names the protected resource metadata (RFC 9728) at `/.well-known/oauth-protected-resource/mcp`. That document names skyBlip as the authorization server, whose metadata (RFC 8414) is at `/.well-known/oauth-authorization-server`. It advertises the authorization code grant with PKCE S256, public clients only, client ID metadata documents, and the `iss` parameter on the redirect (RFC 9207). Claude Code and Codex pick client ID metadata documents on that advertisement alone. pi needs `"oauth": { "clientRegistration": "cimd" }` in its `mcp.json`, since skyBlip offers no dynamic registration.
+The `mcp` gem guards `/admin/mcp` with its OAuth resource-server support: `OAuth::Token.verify` is the verifier it calls. A request to `/admin/mcp` without a token answers 401, and its `WWW-Authenticate` names the protected resource metadata (RFC 9728) at `/.well-known/oauth-protected-resource/admin/mcp`. That document names skyBlip as the authorization server, whose metadata (RFC 8414) is at `/.well-known/oauth-authorization-server`. It advertises the authorization code grant with PKCE S256, public clients only, client ID metadata documents, and the `iss` parameter on the redirect (RFC 9207). Claude Code and Codex pick client ID metadata documents on that advertisement alone. pi needs `"oauth": { "clientRegistration": "cimd" }` in its `mcp.json`, since skyBlip offers no dynamic registration.
 
 ```sh
-claude mcp add --transport http skyblip https://skyblip.eu/mcp
+claude mcp add --transport http skyblip-admin https://skyblip.eu/admin/mcp
 ```
 
-The gem refuses a resource on plain http other than `localhost`, so a development server on `skyblip.localhost` serves no MCP. Agents connect to production.
+The gem refuses a resource on plain http other than `localhost`, so a development server on `skyblip.localhost` serves no admin MCP. Agents connect to production.
+
+The admin server lived at `/mcp` until 25 November 2026, when the public server that reads the website took that address. A grant made for `/mcp` names a resource skyBlip no longer serves, so its tokens are refused, the next sweep drops it, and the agent connects again at `/admin/mcp`.
 
 ## Clients
 
@@ -30,4 +32,4 @@ Approving makes or refreshes one `OAuth::Grant` per admin and agent, which `Agen
 - Only digests are stored, and spending is a conditional update, so of two simultaneous redemptions one goes through. The log filters codes, verifiers and tokens. The token and revocation endpoints read the form body alone (RFC 6749 3.2), so nothing secret rides in a query string a proxy logs.
 - An agent that signs out posts its token to `/oauth/revocation` (RFC 7009).
 
-`OAuth.sweep` runs every morning from `config/recurring.yml`: expired codes and tokens go, and so does a grant left with no token or past its approval.
+`OAuth.sweep` runs every morning from `config/recurring.yml`: expired codes and tokens go, and so does a grant left with no token, past its approval, or made for a resource skyBlip no longer serves.

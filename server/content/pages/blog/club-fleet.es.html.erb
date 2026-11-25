@@ -1,23 +1,23 @@
 ---
-title: "ADS-L para todo el club al precio de un equipo"
+title: "ADS-L en el club al precio de un equipo instalado"
 nav_title: Flota del club
 slug: blog/flota-del-club
-description: "¿Quince aeronaves y ninguna equipada? Cómo compartir unos pocos skyBlip Go en un club, qué ajustar antes de cada vuelo y qué instalar de forma fija."
+description: "¿Quince aeronaves sin equipar? Cómo compartir unos pocos skyBlip Go, configurarlos antes de cada vuelo y equipar algunas aeronaves de forma fija."
 published_on: "2026-11-21"
 parent: blog
-updated_on: "2026-11-21"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 21 de noviembre de 2026</p>
-  <h1>Equipa la flota del club por el precio de un equipo.</h1>
+  <h1>Equipa la flota del club por el precio de un equipo instalado.</h1>
   <p class="lede">«En mi club (15 aeronaves) ninguna está equipada». Un piloto de ultraligero lo escribió bajo nuestro primer mensaje, y es la respuesta que más leemos. Instalar un equipo de tráfico en cada aeronave le cuesta demasiado a un club. Hay otra forma: unos pocos equipos de bolsillo que van allí donde vuele el piloto.</p>
 </section>
 
 <section>
   <h2 class="kicker">Las cuentas</h2>
   <h3>Un equipo instalado o una estantería de Go.</h3>
-  <p>Un equipo de tráfico instalado cuesta desde varios cientos hasta más de 1500&nbsp;€, antes de que un técnico lo instale y lo certifique. Multiplícalo por quince. Un Go cuesta desde 68&nbsp;€. Con el precio de un solo equipo instalado compras un Go para cada aeronave que vuela a la vez un sábado con mucho tráfico, y te sobran algunos de repuesto.</p>
+  <p>Un equipo de tráfico instalado cuesta desde varios cientos hasta más de 1500&nbsp;€, antes de que un técnico lo instale y lo certifique. Multiplícalo por quince. El hardware para un Go cuesta desde 68&nbsp;€. Con el precio de un solo equipo instalado compras un Go para cada aeronave que vuela a la vez un sábado de mucha actividad, y te sobran algunos de repuesto.</p>
   <p>La autonomía hace posible compartirlos. En el banco, un Go en reposo aguantó 18&nbsp;horas y un Go+ 49&nbsp;horas con una carga. Un club puede cargarlos una vez por semana, no después de cada vuelo.</p>
 </section>
 
@@ -27,7 +27,7 @@ updated_on: "2026-11-21"
   <ol>
     <li><strong>Guárdalos con las llaves</strong>, en una estantería con un cargador USB. Numera cada uno.</li>
     <li><strong>Enciéndelo</strong> antes de rodar y espera a que la luz parpadee en verde: ya tiene posición.</li>
-    <li><strong>Comprueba el tipo de aeronave</strong> en el menú del Go, avión ligero o ultraligero, y pon como indicativo la matrícula de la aeronave que vuelas. Así los demás pilotos ven quién eres.</li>
+    <li><strong>Comprueba el tipo de aeronave</strong> en el menú del Go: avión ligero o ultraligero. Introduce como indicativo la matrícula de la aeronave que vuelas. Así los demás pilotos ven quién eres.</li>
     <li><strong>Colócalo con la antena hacia arriba</strong>, sobre la visera del panel o en cualquier sitio desde el que vea el cielo. La <%= link_to_page "mount", label: "guía de montaje" %> indica un soporte de pinza que sirve en la mayoría de las cabinas.</li>
     <li><strong>Devuélvelo y conéctalo.</strong> Se queda apagado en su cargador.</li>
   </ol>
@@ -37,19 +37,19 @@ updated_on: "2026-11-21"
   <h2 class="kicker">Aeronaves con transpondedor</h2>
   <h3>Dales a esas aeronaves su propio Go.</h3>
   <p>Una aeronave que transmite en Mode S o ADS-B debe transmitir en ADS-L con la misma dirección OACI, para que los receptores sepan que las dos señales vienen de la misma aeronave. Lo pide la especificación ADS-L. Esa dirección pertenece a la aeronave, no al piloto. Un Go compartido entre aeronaves necesitaría una dirección nueva antes de cada vuelo.</p>
-  <p>La regla más sencilla: un Go por cada aeronave con transpondedor, con su dirección configurada una sola vez en <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, y Go compartidos para las aeronaves sin transpondedor. Un Bravo emparejado con el Go puede leer la dirección del transpondedor en tierra, así que nadie tiene que escribirla.</p>
+  <p>La regla más sencilla: un Go por cada aeronave con transpondedor, con su dirección configurada una sola vez en <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, y Go compartidos para las aeronaves sin transpondedor. Un Bravo emparejado con el Go puede leer la dirección del transpondedor en tierra, así que nadie tiene que escribirla. Si llevas un Tango a otra aeronave, propone la nueva dirección y una pulsación la guarda: <%= link_to_page "blog/own-aircraft", label: "así se ve en el Go" %>.</p>
 </section>
 
 <section>
   <h2 class="kicker">Para las aeronaves que más vuela el club</h2>
   <h3>Añade el tráfico ADS-B donde importa.</h3>
-  <p>Cerca de un aeródromo concurrido o bajo una aproximación, las aeronaves con transpondedor ADS-B son las que un Go solo no muestra. Un Bravo junto al Go forma un <%= link_to_page "skyblip-tango", label: "Tango" %> y las muestra en el mismo radar. Un club puede tener uno o dos Tango para los vuelos de travesía y la instrucción cerca del espacio aéreo controlado.</p>
+  <p>Cerca de un aeródromo concurrido o bajo una trayectoria de aproximación, un Go solo no muestra las aeronaves que transmiten únicamente en ADS-B. Un Bravo junto al Go forma un <%= link_to_page "skyblip-tango", label: "Tango" %> y las muestra en el mismo radar. Un club puede tener uno o dos Tango para los vuelos de travesía y la instrucción cerca del espacio aéreo controlado.</p>
 </section>
 
 <section>
   <h2 class="kicker">Antes de comprar</h2>
   <p>El Go es una ayuda no certificada para la vigilancia visual. No sustituye a un transpondedor donde es obligatorio y no transmite en FLARM. Nuestra <%= link_to_page "compare", label: "comparativa" %> lo compara con los equipos instalados, y la <%= link_to_page "buy", label: "guía de compra" %> indica vendedores en cinco países.</p>
-  <p><%= link_to_page "blog/network-or-radio", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/always-on-board", class: "cta cta--next" %></p>
+  <p><%= link_to_page "blog/network-or-radio", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/pocket-or-installed", class: "cta cta--next" %></p>
 </section>
 
 <section class="band">

@@ -27,6 +27,15 @@ class CaptureTest < ActiveSupport::TestCase
     assert_not Capture.new(device: "activate-3f2a", profile: "full", body: capture_body(profile: "full")).valid?
   end
 
+  # The firmware is shown to admins and their agents, so only the version numbers the boot record holds are kept.
+  test "a boot record whose version is not four unsigned numbers keeps the capture without a firmware" do
+    [ "x" * 1000, -1, 2**32, 1.5, [ 1702 ] ].each do |firmware_build|
+      capture = Capture.create!(device: "go-00012a", profile: "power_run", body: capture_body(firmware_build:))
+
+      assert_nil capture.firmware
+    end
+  end
+
   test "a body past the ceiling is refused" do
     capture = Capture.new(device: "go-00012a", profile: "full", body: capture_body(profile: "full") + "x" * Capture::MAX_BYTES)
     assert_not capture.valid?

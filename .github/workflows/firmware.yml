@@ -122,7 +122,7 @@ jobs:
         run: python3 scripts/check_link_registry.py
       - name: the diagnostics layout holds, its generated files are current and the decoded view matches it
         run: python3 scripts/check_diagnostics_layout.py
-      - name: the browser simulator binds only what it exports
+      - name: the browser simulator binds every export, and only those
         run: python3 scripts/check_simulator_exports.py
       # Dependabot proposes doctest and Zephyr in .github/pins, and the copies in use have to follow.
       - name: the vendored doctest and the Zephyr pin match .github/pins

@@ -1,23 +1,43 @@
 ---
 title: "skyBlip blog: ADS-L, traffic and light aviation"
 nav_title: Blog
-description: "Longer answers to what pilots ask us on forums: ADS-L or ADS-B, network or radio, pocket or installed, and how a club can equip its fleet."
-updated_on: "2026-11-24"
+description: "ADS-L or ADS-B, mobile network or radio, pocket or installed, club fleets: sourced answers to pilots' questions on forums."
+updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
   <h1>Longer answers to pilots&rsquo; questions</h1>
-  <p class="page-hero-subtitle">Pilots ask us the same questions at the airfield and on forums. Some deserve more than a quick reply, so we answer them here, with our sources.</p>
+  <p class="page-hero-subtitle">Pilots often ask us the same questions at the airfield and on forums: ADS-L or ADS-B, mobile network or radio, pocket or installed. We answer those that need more than a quick reply here, with our sources.</p>
 </header>
 
 <section id="forums" class="band band--tint">
   <h2 class="section-title">What pilots ask us</h2>
-  <%= render "shared/post_cards", slugs: %w[blog/always-on-board blog/club-fleet blog/network-or-radio blog/skyblip-softrf-stratux blog/who-sees-ads-l blog/why-ads-l] %>
+  <%= render "shared/post_cards", slugs: %w[blog/pocket-or-installed blog/club-fleet blog/network-or-radio blog/own-aircraft blog/skyblip-softrf-stratux blog/who-sees-ads-l blog/why-ads-l] %>
 </section>
 
-<section id="long-reads" class="band">
-  <h2 class="section-title">Long reads</h2>
-  <%= render "shared/post_cards", slugs: %w[compare see-and-avoid ads-l] %>
+<section id="compare" class="band">
+  <h2 class="section-title">Compare before you choose</h2>
+  <p>skyBlip beside the AERO Tracker, PowerFLARM, the Funke TM350 and SafeSky: what each one transmits, receives and costs.</p>
+  <p class="signature"><%= link_to_page "compare", label: "See the comparison", class: "button button--primary" %></p>
+</section>
+
+<section id="long-reads" class="band band--tint">
+  <h2 class="section-title">See and avoid, and our work on ADS-L</h2>
+  <%= render "shared/post_cards", slugs: %w[see-and-avoid ads-l] %>
+</section>
+
+<section id="project" class="band">
+  <h2 class="section-title">Why we build skyBlip</h2>
+  <div class="resource-cards">
+    <article>
+      <h3><%= link_to_page "about", label: "Keep safety features within reach", anchor: "pledge" %></h3>
+      <p>skyBlip&rsquo;s safety features stay free for recreational pilots. Anyone can read the code that receives traffic and transmits your position.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
+      <p>skyBlip Panel is intended to show traffic on cockpit displays. skyPost stations are intended to relay it around an airfield.</p>
+    </article>
+  </div>
 </section>
 
 <section class="band band--tint">

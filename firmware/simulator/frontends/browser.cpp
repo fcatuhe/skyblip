@@ -122,12 +122,6 @@ KEEPALIVE void simulator_set_battery_mv(int battery_mv) {
 KEEPALIVE void simulator_set_external_power(int on) {
     on_unit([&](auto& unit) { unit.world().set_external_power(on != 0); });
 }
-KEEPALIVE void simulator_set_position(int latitude_1e7, int longitude_1e7) {
-    on_unit([&](auto& unit) {
-        unit.world().gnss().latitude_1e7 = latitude_1e7;
-        unit.world().gnss().longitude_1e7 = longitude_1e7;
-    });
-}
 
 static protocol::System system_of(int equipment) {
     if (g_flying == simulator::Product::Bravo || equipment == kAdsb)
@@ -166,18 +160,6 @@ KEEPALIVE void simulator_add_threat(int equipment) {
 }
 KEEPALIVE int simulator_tx_named() {
     return static_cast<int>(go_unit().product().state().air.tx_named);
-}
-KEEPALIVE int simulator_rx_named() {
-    return static_cast<int>(go_unit().product().state().air.rx_named);
-}
-KEEPALIVE int simulator_tx_held_for_b5() {
-    return static_cast<int>(go_unit().product().state().air.tx_held_for_b5);
-}
-KEEPALIVE int simulator_rx_status() {
-    return static_cast<int>(go_unit().product().state().air.rx_status);
-}
-KEEPALIVE int simulator_uplink_stale() {
-    return static_cast<int>(go_unit().product().state().air.uplink_stale);
 }
 KEEPALIVE int simulator_prompt() {
     return go_unit().product().screen().prompt() != common::Pending::None ? 1 : 0;
@@ -230,9 +212,6 @@ KEEPALIVE int simulator_page() { return static_cast<int>(go_unit().product().scr
 KEEPALIVE int simulator_menu_open() {
     return go_unit().product().screen().mode() == go::Mode::Menu ? 1 : 0;
 }
-KEEPALIVE int simulator_capabilities() {
-    return static_cast<int>(on_unit([](auto& unit) { return unit.product().capabilities(); }));
-}
 KEEPALIVE int simulator_fix_valid() { return flying_state().own.fix_valid ? 1 : 0; }
 KEEPALIVE int simulator_satellites() { return flying_state().own.satellites; }
 KEEPALIVE int simulator_latitude_1e7() { return flying_state().own.latitude_1e7; }
@@ -284,9 +263,6 @@ KEEPALIVE int simulator_tx_lost() {
 KEEPALIVE int simulator_slot_state() {
     return static_cast<int>(go_unit().product().state().rf.plan.state);
 }
-KEEPALIVE int simulator_dwell_frequency_khz() {
-    return static_cast<int>(go_unit().product().state().rf.plan.frequency_hz / 1000);
-}
 
 KEEPALIVE int simulator_air_record_count() { return go_unit().world().air().record_count(); }
 KEEPALIVE int simulator_air_phase_ms(int index) {
@@ -298,17 +274,10 @@ KEEPALIVE int simulator_air_event(int index) {
 KEEPALIVE int simulator_air_frequency_khz(int index) {
     return static_cast<int>(go_unit().world().air().record_at(index).frequency_hz / 1000);
 }
-KEEPALIVE int simulator_air_rssi_dbm(int index) {
-    return go_unit().world().air().record_at(index).rssi_dbm;
-}
 KEEPALIVE const char* simulator_air_line(int index) {
     static char line[160];
     go_unit().world().air().format(index, line, sizeof(line));
     return line;
-}
-KEEPALIVE int simulator_air_deaf() { return static_cast<int>(go_unit().world().air().deaf()); }
-KEEPALIVE int simulator_air_collisions() {
-    return static_cast<int>(go_unit().world().air().collisions());
 }
 // INFO: fc 13nov26 what Bravo sent a phone, oldest first, so a page can show the EFB's stream
 KEEPALIVE int simulator_nmea_count() { return static_cast<int>(bravo_phone().sentences().size()); }

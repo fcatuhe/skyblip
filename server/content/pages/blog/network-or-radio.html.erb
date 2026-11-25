@@ -1,31 +1,31 @@
 ---
 title: "SafeSky and ADS-L: network or radio?"
 nav_title: Network or radio
-description: "SafeSky shares traffic over the mobile network, ADS-L over the air. Where each one works, where it goes blind, and why we fly with both."
+description: "SafeSky uses the mobile network. ADS-L uses direct radio. Where each works, where it loses traffic and why we fly with both."
 published_on: "2026-11-13"
 parent: blog
-updated_on: "2026-11-13"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 13 November 2026</p>
   <h1>SafeSky and ADS-L: network or radio?</h1>
-  <p class="lede">Some pilots turn on SafeSky to see the gliders near their field, and it works. Others find it blind where light aircraft fly most, far from towns. Both are right. The two systems carry traffic by different roads.</p>
+  <p class="lede">Some pilots see gliders near their airfield with SafeSky. Others lose traffic where recreational aircraft often fly, far from towns. Both are right: their experience depends in part on mobile coverage. ADS-L uses a different route, with direct radio between aircraft.</p>
 </section>
 
 <section>
   <h2 class="kicker">Two roads</h2>
   <h3>SafeSky goes through the network. ADS-L goes from aircraft to aircraft.</h3>
-  <p>SafeSky is an app. Your phone sends your position over the mobile network to SafeSky&rsquo;s servers, which merge it with traffic from more than thirty sources, including OGN ground stations, ADS-B receivers and other SafeSky users, and send the picture back to every phone. The app alone is free. Showing its traffic in your navigation app, or taking traffic from a radio device such as a FLARM receiver, takes SafeSky Premium, at &euro;39.99 a year.</p>
-  <p>ADS-L is a radio. A device in your aircraft broadcasts your position every second on 868&nbsp;MHz, and every receiver within a few kilometres hears it directly. No server, no SIM card, no subscription.</p>
+  <p>SafeSky is an app. Your phone sends your position over the mobile network to SafeSky&rsquo;s servers. They combine it with traffic from more than thirty sources, including OGN ground stations, ADS-B receivers and other SafeSky users. They then send the combined traffic back to every phone. The app alone is free. Showing its traffic in your navigation app, or receiving traffic from a radio device such as a FLARM receiver, requires SafeSky Premium, at &euro;39.99 a year.</p>
+  <p>ADS-L shares positions by radio. A device in your aircraft broadcasts your position every second on 868&nbsp;MHz, and every receiver within a few kilometres hears it directly. No server, no SIM card, no subscription.</p>
 </section>
 
 <section>
   <h2 class="kicker">Where each one goes blind</h2>
-  <h3>The network fails where the coverage fails. The radio fails where nobody transmits.</h3>
+  <h3>The network fails without mobile coverage. The radio fails when nobody transmits.</h3>
   <ul>
     <li><strong>Mobile coverage.</strong> In the air, a phone can lose the network, and its position then reaches the server late or not at all. Light aircraft and gliders spend their time over the countryside, where coverage is thinnest. ADS-L does not care.</li>
-    <li><strong>Who takes part.</strong> SafeSky sees every app user and every aircraft a ground station hears, at any distance. ADS-L sees only the aircraft that carry a device on its band, but sees them directly.</li>
+    <li><strong>Who takes part.</strong> When the network allows, SafeSky shows every app user and every aircraft received by a ground station, at any distance. An ADS-L receiver shows only aircraft within range that transmit a compatible signal, but receives them directly.</li>
     <li><strong>Who sees you.</strong> A military jet flying low does not run SafeSky, and does not carry ADS-L either. Neither one makes you visible to an aircraft that only reads transponders.</li>
   </ul>
   <p>Instructors make a point we agree with: every screen in the cockpit pulls the eyes inside. A traffic system is there to tell you where to look, then let you look. That is why Go&rsquo;s alert lights the quarter of the screen facing the traffic, and nothing more.</p>
@@ -34,8 +34,8 @@ updated_on: "2026-11-13"
 <section>
   <h2 class="kicker">In practice</h2>
   <h3>Use both. They cover each other.</h3>
-  <p>A Go in the cockpit makes you visible to every ADS-L receiver around you, whether or not anyone has a signal. OGN stations that hear it can pass you on to the network, so SafeSky users can see you too. Your phone keeps running SafeSky for the traffic only the network knows.</p>
-  <p>If you already use SafeSky&rsquo;s AERO Tracker, you already transmit ADS-L, and Go shows you to others the same way for a fraction of the price. Our <%= link_to_page "compare", label: "comparison" %> sets the two side by side.</p>
+  <p>A Go in the cockpit makes you visible to every ADS-L receiver around you, with or without mobile coverage. OGN stations that receive your signal can relay your position to the network. SafeSky users can then see you. Your phone keeps running SafeSky for the traffic only the network knows.</p>
+  <p>If you use SafeSky&rsquo;s AERO Tracker, you already transmit ADS-L. Go also transmits your position in ADS-L, for a fraction of the price. Our <%= link_to_page "compare", label: "comparison" %> sets the two side by side.</p>
 </section>
 
 <section>

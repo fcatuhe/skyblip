@@ -1,7 +1,6 @@
 <div class="simulator-dial simulator-dial--<%= dial[:axis] %>">
-  <% if dial[:scale] || dial[:marks] %>
-    <svg class="simulator-gauge" viewBox="-50 -50 100 100" aria-hidden="true"
-         data-simulator-target="<%= dial[:axis] %>Gauge">
+  <% if dial[:scale] || dial[:rate] %>
+    <svg class="simulator-gauge" viewBox="-50 -50 100 100" aria-hidden="true">
       <defs>
         <radialGradient id="sim-shine-<%= dial[:axis] %>" cx="32%" cy="26%" r="72%">
           <stop offset="0%" class="gauge-shine-near" />
@@ -12,7 +11,8 @@
       <circle class="gauge-bezel" r="<%= SimulatorHelper::GAUGE_RADIUS %>" />
       <circle class="gauge-face" r="<%= SimulatorHelper::GAUGE_RADIUS - 3 %>" />
 
-      <g class="<%= dial[:card] ? "gauge-card" : "gauge-marks" %>">
+      <%= tag.g class: dial[:card] ? "gauge-card" : "gauge-marks",
+                data: (dial[:card] ? { simulator_target: "part", gauge_axis: dial[:axis], law: gauge_law(dial, :card).to_json } : {}) do %>
         <% gauge_bands(dial).each do |tone, path| %>
           <path class="gauge-band gauge-band--<%= tone %>" d="<%= path %>" />
         <% end %>
@@ -23,28 +23,33 @@
         <% gauge_numerals(dial).each do |text, x, y| %>
           <text class="gauge-numeral" x="<%= x %>" y="<%= y %>"><%= text %></text>
         <% end %>
-      </g>
+      <% end %>
 
       <% if dial[:card] %>
         <path class="gauge-index" d="M-3 -<%= SimulatorHelper::GAUGE_RADIUS - 3 %> L3 -<%= SimulatorHelper::GAUGE_RADIUS - 3 %> L0 -<%= SimulatorHelper::GAUGE_RADIUS - 10 %> Z" />
       <% end %>
 
       <% if dial[:plane] %>
-        <g class="gauge-plane">
+        <%= tag.g class: "gauge-plane",
+                  data: (dial[:rate] ? { simulator_target: "part", gauge_axis: dial[:axis], law: gauge_law(dial, :plane).to_json } : {}) do %>
           <line x1="-30" y1="0" x2="30" y2="0" />
           <line x1="0" y1="0" x2="0" y2="-10" />
           <line x1="-10" y1="-7" x2="10" y2="-7" />
-        </g>
+        <% end %>
       <% else %>
         <% if dial[:hands] == 2 %>
-          <path class="gauge-hand" d="M-3.5 0 L0 -25 L3.5 0 Z" />
+          <path class="gauge-hand" d="M-3.5 0 L0 -25 L3.5 0 Z"
+                data-simulator-target="part" data-gauge-axis="<%= dial[:axis] %>" data-law="<%= gauge_law(dial, :hand).to_json %>" />
         <% end %>
-        <path class="gauge-needle" d="M-2 2 L0 -40 L2 2 Z" />
+        <path class="gauge-needle" d="M-2 2 L0 -40 L2 2 Z"
+              data-simulator-target="part" data-gauge-axis="<%= dial[:axis] %>" data-law="<%= gauge_law(dial, :needle).to_json %>" />
       <% end %>
 
       <% if dial[:ball] %>
-        <rect class="gauge-tube" x="-13" y="23" width="26" height="12" rx="6" />
-        <circle class="gauge-ball" cx="0" cy="29" r="4.5" />
+        <rect class="gauge-tube" x="-<%= SimulatorHelper::BALL_TUBE_HALF_WIDTH %>" y="23"
+              width="<%= 2 * SimulatorHelper::BALL_TUBE_HALF_WIDTH %>" height="12" rx="6" />
+        <circle class="gauge-ball" cx="0" cy="29" r="<%= SimulatorHelper::BALL_RADIUS %>"
+                data-simulator-target="part" data-gauge-axis="<%= dial[:ball][:axis] %>" data-law="<%= gauge_law(dial, :ball).to_json %>" />
         <% [ -5, 5 ].each do |x| %>
           <line class="gauge-cage" x1="<%= x %>" y1="24" x2="<%= x %>" y2="34" />
         <% end %>

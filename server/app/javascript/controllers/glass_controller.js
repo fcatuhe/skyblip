@@ -54,7 +54,7 @@ export default class extends Controller {
     const asking = this.asking
     const simulator = await this.#simulator()
     if (asking !== this.asking) return
-    const words = simulator?.paintPrompt?.(this.glassTarget, { ...this.request, seconds }) || null
+    const words = simulator?.paintPrompt(this.glassTarget, { ...this.request, seconds }) || null
     if (words) this.glassTarget.setAttribute("aria-label", words)
     this.#showGlass(Boolean(words))
   }

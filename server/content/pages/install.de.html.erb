@@ -2,13 +2,13 @@
 title: "skyBlip im Browser installieren"
 nav_title: Installieren
 slug: installieren
-description: "Installieren Sie skyBlip mit Briefing im Browser auf Ihrem Go oder Bravo. Sie brauchen nur einen Computer, Chrome oder Edge und ein USB-C-Kabel."
-updated_on: "2026-11-18"
+description: "Installieren Sie skyBlip. Sie brauchen einen Computer, Chrome oder Edge und ein USB-C-Kabel. Zum Verbinden: Bluetooth am Computer oder Android-Smartphone."
+updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
   <h1>Installieren Sie skyBlip im Browser</h1>
-  <p class="page-hero-subtitle">Ein Computer, Chrome oder Edge und ein USB-C-Kabel. Den Rest übernimmt Briefing.</p>
+  <p class="page-hero-subtitle">Computer, Chrome oder Edge, USB-C-Kabel. Bluetooth am Computer oder Android-Smartphone.</p>
 </header>
 
 <section id="steps" class="band band--tint">
@@ -25,7 +25,7 @@ updated_on: "2026-11-18"
       </li>
       <li>
         <h3>Verbinden</h3>
-        <p>Verbinden Sie das Gerät per Bluetooth, wenn Briefing Sie dazu auffordert.</p>
+        <p>Per Bluetooth, vom Computer oder einem Android-Smartphone mit Chrome aus.</p>
       </li>
       <li>
         <h3>Fliegen</h3>
@@ -39,6 +39,7 @@ updated_on: "2026-11-18"
 <section id="connected" class="band">
   <h2 class="section-title">Gut zu wissen</h2>
   <p>Einen neuen Go aktivieren Sie ohne Konto in Briefing. Bravo braucht keine Aktivierung.</p>
+  <p>Ihr Computer hat kein Bluetooth? Installieren Sie per USB. Scannen Sie dann den Code mit einem Android-Smartphone und öffnen Sie den Link in Chrome, um die Einrichtung abzuschließen. Auf dem Smartphone fordert ein neuer Go Sie auf, zur Aktivierung einmal seine Taste zu drücken.</p>
   <p>Für Tango installieren Sie die Software auf beiden Geräten und koppeln sie dann in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
   <p>Sie nutzen schon skyBlip? <%= link_to "Verbinden Sie das Gerät in Briefing", briefing_root_path(locale: I18n.locale) %>, um es einzustellen oder zu aktualisieren.</p>
 </section>
@@ -48,6 +49,8 @@ updated_on: "2026-11-18"
     <h2>Wenn etwas nicht klappt</h2>
     <h3 id="not-found">Das Gerät wird nicht angezeigt</h3>
     <p>Schalten Sie es ein und verwenden Sie ein USB-C-Kabel, das Daten überträgt. Nutzen Sie Chrome oder Edge auf einem Computer für die geführte USB-Installation. Ist das nicht möglich, kopieren Sie die Software von Hand.</p>
+    <h3 id="no-bluetooth">Ihr Computer hat kein Bluetooth</h3>
+    <p>Installieren Sie zuerst per USB. Scannen Sie dann den Code mit der Kamera eines Android-Smartphones und öffnen Sie den Link in Chrome. Ohne Kamera öffnen Sie skyblip.eu/setup in Chrome auf diesem Smartphone und tippen auf »Gerät verbinden«. Sie können auch einen USB-Bluetooth-Adapter an den Computer anschließen und sich von dort verbinden. Ein iPhone kann sich in Briefing nicht mit dem Gerät verbinden.</p>
     <h3 id="manual">Software von Hand installieren</h3>
     <p>Laden Sie die <code>.uf2</code>-Datei für Ihr Gerät von der <%= link_to "Downloadseite für skyBlip-Versionen", "https://github.com/fcatuhe/skyblip/releases" %> herunter.</p>
     <ul>

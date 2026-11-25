@@ -26,7 +26,7 @@ export function flight(status) {
 export function running(version, track) {
   if (!version) return null
   const name = runningName(version, track)
-  return track ? say("words.running", { version: name, track: say(`words.track.${track}`) }) : name
+  return track === "development" ? say("words.running", { version: name, track: say("words.track.development") }) : name
 }
 
 export function runningName(version, track) {

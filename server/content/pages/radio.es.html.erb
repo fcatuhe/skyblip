@@ -2,34 +2,34 @@
 title: "Radio ADS-L y FLARM en 868 MHz"
 slug: radio
 nav_title: "Radio"
-description: "Cómo transmite skyBlip Go en ADS-L y recibe ADS-L y FLARM en 868 MHz. Canales, sincronización GPS y futuros enlaces desde tierra."
+description: "Cómo transmite skyBlip Go en ADS-L y recibe ADS-L y FLARM en 868 MHz. El GPS sincroniza la escucha de cada canal y de las futuras estaciones terrestres."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Una radio y un segundo que comparten todos los equipos al alcance.</h1>
+  <h1>Los dispositivos al alcance comparten el mismo segundo.</h1>
   <p class="lede">
-    Una radio y una antena. Cada dispositivo al alcance divide el segundo del mismo modo.
+    El Go tiene una radio y una antena. Por eso divide cada segundo en intervalos, del mismo modo que los demás dispositivos al alcance.
   </p>
 </section>
 
 <section>
-  <h3 id="second">Cómo se reparte el segundo.</h3>
+  <h3 id="second">Cada intervalo tiene su canal.</h3>
   <p class="lede">
-    El dispositivo solo tiene una radio y una antena. Divide cada segundo en intervalos, cada uno en una frecuencia. El GPS marca el inicio de cada segundo con precisión de microsegundos. Cada skyBlip Go, cada skyPost y cada dispositivo de la generación FLARM al alcance divide el mismo segundo de la misma manera.
+    Cada intervalo usa un canal, es decir, una frecuencia. El GPS marca el inicio de cada segundo con precisión de microsegundos. Los skyBlip Go, los skyPost y los dispositivos de la generación FLARM al alcance siguen la misma división.
   </p>
 
   <div class="table-scroll">
     <table class="modules">
       <thead>
-        <tr><th>Tiempo desde el inicio del segundo</th><th>Frecuencia</th><th>Qué hay en el canal</th></tr>
+        <tr><th>Tiempo desde el inicio del segundo</th><th>Canal</th><th>Qué hay en el canal</th></tr>
       </thead>
       <tbody>
         <tr><th>De 0 a 200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>El final del intervalo que empezó a los 830&nbsp;ms del segundo anterior. El tráfico de la generación FLARM sigue transmitiendo aquí, así que el dispositivo sigue a la escucha. También envía aquí su indicativo cada 10&nbsp;s</td></tr>
-        <tr><th>De 210 a 440&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>El enlace ascendente de la estación terrestre skyPost: el tráfico ADS-B que recibe y los datos meteorológicos que tiene, a 200&nbsp;kbit/s. Siempre solo recepción</td></tr>
+        <tr><th>De 210 a 440&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>El enlace ascendente skyPost, es decir, los mensajes que envía la estación terrestre: el tráfico ADS-B que recibe y los datos meteorológicos de los que dispone, a 200&nbsp;kbit/s. En este canal, el Go escucha y nunca transmite</td></tr>
         <tr><th>De 450 a 820&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>Tráfico directo en el canal inferior, ADS-L y de la generación FLARM juntos</td></tr>
         <tr><th>De 830 a 1200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>Lo mismo en el canal superior, hasta los 200&nbsp;ms del segundo siguiente</td></tr>
       </tbody>
@@ -42,20 +42,20 @@ updated_on: "2026-11-18"
     Escuchar en los dos canales de 868 es importante. ADS-L alterna los canales de una transmisión a otra. Un dispositivo de la generación FLARM transmite en el canal inferior durante la primera mitad del segundo y en el superior durante la segunda mitad. Un receptor que se quedara en un canal oiría a la mitad de sus vecinos sin saber a cuál.
   </p>
   <p class="lede">
-    En esos dos canales, el dispositivo recibe dos sistemas en el mismo intervalo. Los formatos ADS-L y de la generación FLARM anteponen a sus tramas una palabra de sincronización de 32 bits, un patrón de señal. Las dos palabras comparten sus primeros dieciocho chips, o elementos de señal. El receptor detecta la secuencia común y el software identifica el sistema a partir de los chips siguientes. Cada cambio de intervalo tarda 10&nbsp;ms: 2&nbsp;ms más en el canal anterior por si llega una ráfaga tardía, 5&nbsp;ms para resintonizar y 3&nbsp;ms de escucha en el canal nuevo antes de que empiece su tráfico. Esos mismos 5&nbsp;ms sirven para cambiar entre las dos bandas, que son dos modulaciones y no dos frecuencias: Manchester FSK a 100&nbsp;kbit/s en la inferior y GMSK a 200&nbsp;kbit/s en la superior.
+    En esos dos canales, el Go recibe ADS-L y el formato de la generación FLARM en el mismo intervalo. Ambos sistemas anteponen a sus tramas un patrón de 32 bits llamado palabra de sincronización. Esos patrones comparten sus primeros dieciocho elementos de señal, llamados chips. La radio detecta esa parte común. El software reconoce después el sistema por los elementos que siguen. Cada cambio de intervalo tarda 10&nbsp;ms: 2&nbsp;ms más en el canal anterior por si llega una ráfaga tardía, 5&nbsp;ms para resintonizar y 3&nbsp;ms de escucha en el canal nuevo antes de que empiece su tráfico. Esos mismos 5&nbsp;ms sirven para cambiar entre las dos bandas, que son dos modulaciones y no dos frecuencias: Manchester FSK a 100&nbsp;kbit/s en la inferior y GMSK a 200&nbsp;kbit/s en la superior.
   </p>
   <p class="lede">
-    La ventana de transmisión es más corta. Las posiciones y los mensajes Status, que indican qué recibe el dispositivo, salen entre 450 y 1000&nbsp;ms desde el inicio del segundo. Las posiciones usan 868,2&nbsp;MHz en segundos UTC pares y 868,4&nbsp;MHz en impares. Se programan cada segundo en vuelo y a intervalos de 9 y luego 11&nbsp;s en tierra. Status sale dos veces por ciclo de 20&nbsp;s, en el canal opuesto al de la posición de ese segundo. El indicativo es la excepción: cada 10&nbsp;s, sale entre los 1000 y 1190&nbsp;ms en 868,4&nbsp;MHz, en el tramo que cae en el segundo siguiente. El dispositivo envía tramas ADS-L. Como ADS-L aún no tiene un campo de indicativo, envía su indicativo aparte en el formato de registro de OGN-Tracker. El formato de la generación FLARM solo se recibe, nunca se transmite. La estación terrestre transmite en 869,525&nbsp;MHz. Este dispositivo solo escucha en esa frecuencia y nunca transmite en ella. El instante previsto de transmisión dentro de cada ventana se calcula a partir de la dirección del dispositivo y el segundo actual. Se vuelve a calcular cada segundo para reducir los solapamientos repetidos. Antes de cada ráfaga, escucha el canal. Si está ocupado, espera y vuelve a escuchar en la misma ventana.
-    <%= link_to_page "timing", label: "La guía de temporización" %> indica en qué segundos y en qué instantes transmite cada unidad.
+    El Go transmite durante un intervalo más corto que el que dedica a escuchar. Sus posiciones y mensajes Status salen entre 450 y 1000&nbsp;ms desde el inicio del segundo. Los mensajes Status indican qué puede recibir el Go. Las posiciones usan 868,2&nbsp;MHz en segundos UTC pares y 868,4&nbsp;MHz en impares. Se programan cada segundo en vuelo y a intervalos de 9 y luego 11&nbsp;s en tierra. Status sale dos veces por ciclo de 20&nbsp;s, en el canal opuesto al de la posición de ese segundo. El indicativo es la excepción: cada 10&nbsp;s, sale entre los 1000 y 1190&nbsp;ms en 868,4&nbsp;MHz, en el tramo que cae en el segundo siguiente. El Go envía mensajes ADS-L. Este formato aún no tiene un campo de indicativo. Por eso el Go lo envía en un mensaje separado, en el formato de registro de OGN-Tracker. Recibe el formato de la generación FLARM, pero nunca lo transmite. La estación terrestre transmite en 869,525&nbsp;MHz. Este dispositivo solo escucha en esa frecuencia y nunca transmite en ella. El instante previsto de transmisión dentro de cada ventana se calcula a partir de la dirección del dispositivo y el segundo actual. Se vuelve a calcular cada segundo para reducir los solapamientos repetidos. Antes de cada ráfaga, escucha el canal. Si está ocupado, espera y vuelve a escuchar en la misma ventana.
+    <%= link_to_page "timing", label: "Cuándo transmite el Go" %> explica cómo elige el segundo y el instante de cada transmisión.
   </p>
 
   <ul class="points">
     <li>El GPS sincroniza cuatro intervalos por segundo con precisión de microsegundos</li>
     <li>El dispositivo usa 868,200 y 868,400&nbsp;MHz durante 375&nbsp;ms cada uno</li>
     <li>Escucha a la estación terrestre en 869,525&nbsp;MHz durante 235&nbsp;ms</li>
-    <li>Decodifica dos sistemas en una misma ventana de sincronización</li>
+    <li>Decodifica ADS-L y el formato de la generación FLARM en un mismo intervalo</li>
     <li>Cada ráfaga dura unos 5&nbsp;ms. Si el canal está ocupado, puede retrasarse</li>
-    <li>Puede transmitir durante el 1&nbsp;% de cualquier hora. Usa en torno al 0,6&nbsp;% en vuelo o el 0,15&nbsp;% en tierra. El firmware aplica el límite</li>
+    <li>El Go puede transmitir durante el 1&nbsp;% de cualquier hora. Usa en torno al 0,6&nbsp;% en vuelo o el 0,15&nbsp;% en tierra. El software aplica ese límite</li>
   </ul>
 </section>
 

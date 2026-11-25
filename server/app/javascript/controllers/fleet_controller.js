@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { bluetoothReadiness, joinFleet } from "#skyblip/fleet"
+import { browserSupport } from "#skyblip/readiness"
 import { tangoGroups } from "#skyblip/tango"
 import { battery, newsOf, seen, shortName } from "controllers/briefing/facts"
 import { stayAwake } from "controllers/briefing/wake"
@@ -78,7 +79,7 @@ export default class extends Controller {
     this.connectNewTarget.hidden = !bluetooth || settingUp
     // INFO: fc 17nov26 a browser that knows no device most likely holds a new one, so setting it up comes first
     this.connectNewTarget.classList.toggle("button-app--quiet", this.variantValue === "home")
-    this.setUpTarget.hidden = !bluetooth || settingUp || this.variantValue !== "home"
+    this.setUpTarget.hidden = !(bluetooth || browserSupport() === "usb") || settingUp || this.variantValue !== "home"
     this.setUpTarget.classList.toggle("button-app--quiet", known)
     if (this.variantValue === "home") {
       this.unsupportedTarget.hidden = bluetooth || readiness.fixable

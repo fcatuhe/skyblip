@@ -43,6 +43,30 @@
   .setup-linux-steps li { display: grid; gap: var(--space-2xs); justify-items: start; }
   .setup-linux-steps li[hidden] { display: none; }
 
+  .setup-ahead {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: var(--space-s) var(--space-inline-m);
+    border-inline-start: 3px solid var(--signal);
+    background: var(--card-bg);
+    text-wrap: pretty;
+  }
+  .setup-ahead[hidden] { display: none; }
+  .setup-ahead h2 { margin: 0; font-size: var(--text-base); }
+  .setup-ahead p { margin: 0; }
+
+  .setup-handoff { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-s) var(--space-inline-l); margin: 0; }
+  .setup-handoff[hidden] { display: none; }
+  .setup-handoff img { inline-size: 11rem; block-size: auto; border: 1px solid var(--card-border); border-radius: var(--space-xs); }
+  .setup-handoff figcaption { display: grid; flex: 1 1 14rem; gap: var(--space-xs); }
+  .setup-handoff p { margin: 0; text-wrap: pretty; }
+
+  .setup-step .when-copied,
+  .setup-step .is-copied .when-idle { display: none; }
+  .setup-step .is-copied .when-copied { display: inline; }
+  .setup-step .app-actions[hidden] { display: none; }
+
   .setup-alternatives { display: grid; gap: var(--space-xs); margin: 0; padding: 0; list-style: none; font-size: var(--text-s); color: var(--ink-muted); }
   .setup-alternatives li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs) var(--space-inline-s); }
 

@@ -5,14 +5,14 @@ slug: radar
 description: "Lisez le radar de skyBlip Go, ses symboles et la liste Nearby. Comprenez l'alerte à moins de 3 km et 300 m et le mode PLOT ALL."
 parent: guides
 share_image: radar
-updated_on: "2026-11-20"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Où regarder, et qui est là.</h1>
+  <h1>Lire le radar, l&rsquo;alarme et la liste Nearby.</h1>
   <p class="lede">
-    La page sur laquelle on laisse un skyBlip Go&nbsp;: où regarder, qui est là, et ce que signifie l&rsquo;alarme quand elle parle.
+    Le radar est la page sur laquelle on laisse un skyBlip Go. Voici comment lire ses symboles, la liste Nearby et l&rsquo;alarme.
   </p>
 </section>
 
@@ -21,19 +21,19 @@ updated_on: "2026-11-20"
 
   <div class="feature">
     <div>
-      <h3 id="heading-up">Le trafic dessiné <span class="highlight">comme vous le voyez</span>.</h3>
+      <h3 id="heading-up">Vous êtes au centre, <span class="highlight">route en haut</span>.</h3>
       <p>
-        Vous êtes au centre, route en haut. L&rsquo;image garde
-        cette orientation&nbsp;: c&rsquo;est le ciel qui tourne autour de vous. Un trafic
-        en haut à droite est un trafic à chercher à droite du nez, sans rien
-        convertir. Le haut de l&rsquo;écran reste dégagé, parce que c&rsquo;est la moitié vers laquelle vous volez. Seuls <span class="mono">NO TX</span> et sa raison peuvent y apparaître, dans le coin supérieur gauche.
+        Vous êtes au centre, route en haut. L&rsquo;image tourne pour garder
+        votre route en haut. Un aéronef affiché en haut à droite se cherche
+        devant vous, à droite du nez, sans conversion mentale. Le haut de l&rsquo;écran reste dégagé
+        pour montrer le trafic devant vous. Seuls <span class="mono">NO TX</span> et la raison de l&rsquo;arrêt de l&rsquo;émission peuvent y apparaître, dans le coin supérieur gauche.
       </p>
       <p>
-        Chaque aéronef est représenté par une forme qui dit où regarder.
-        La pointe en haut indique un trafic au-dessus de vous. La pointe en
-        bas, un trafic en dessous. Le losange, un trafic à votre niveau. Un chevron
-        s&rsquo;ajoute s&rsquo;il monte ou descend. Le trait qui
-        part du symbole se termine là où il sera dans une minute.
+        La forme du symbole indique l&rsquo;altitude de l&rsquo;aéronef par rapport à vous.
+        La pointe en haut indique un aéronef au-dessus de vous. La pointe en
+        bas, un aéronef en dessous. Le losange, un aéronef à votre niveau. Un chevron
+        s&rsquo;ajoute si l&rsquo;aéronef monte ou descend. Le trait qui
+        part du symbole indique sa position prévue dans une minute.
       </p>
     </div>
     <figure class="shot">
@@ -53,32 +53,33 @@ updated_on: "2026-11-20"
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="every-aircraft">Tous les aéronefs, <span class="highlight">aussi loin soient-ils</span>.</h3>
+      <h3 id="every-aircraft">Tous les aéronefs reçus, <span class="highlight">quelle que soit leur distance</span>.</h3>
       <p>
-        À l&rsquo;échelle, l&rsquo;image s&rsquo;arrête au bord de
-        l&rsquo;écran&nbsp;: avec le cercle de 4&nbsp;NM, un aéronef au-delà
-        d&rsquo;environ six milles disparaît. Avec
-        <span class="mono">PLOT</span> sur <span class="mono">ALL</span>, le
-        premier choix du menu des réglages, sélectionné par défaut sur un appareil
-        neuf, tous les aéronefs reçus avec une position sont
-        affichés. Le cercle rétrécit pour laisser une bande
+        Dans le mode à l&rsquo;échelle, les aéronefs au-delà du bord de
+        l&rsquo;écran ne sont plus visibles. Avec le cercle de 4&nbsp;NM, un aéronef au-delà
+        d&rsquo;environ six milles disparaît. Le réglage
+        <span class="mono">PLOT</span> sur <span class="mono">ALL</span> affiche
+        tous les aéronefs reçus avec une position. C&rsquo;est le premier choix
+        du menu des réglages et le réglage par défaut sur un appareil
+        neuf. Le cercle rétrécit pour laisser une bande
         autour de lui. Un aéronef au-delà du cercle apparaît sur cette bande,
-        dans sa direction, avec la forme qu&rsquo;il aurait à
+        dans sa direction, avec la même forme qu&rsquo;à
         l&rsquo;intérieur.
       </p>
       <p>
-        Sa distance n&rsquo;est pas représentée à l&rsquo;échelle, mais sa minute de trajectoire l&rsquo;est&nbsp;:
-        depuis sa position réelle, en ne traçant que la partie
-        située dans le cercle. Un aéronef qui se rapproche vite depuis six milles
-        apparaît comme une marque sur la bande et un trait déjà dans le cercle, qui
-        s&rsquo;arrête là où il sera dans une minute.
+        Le symbole sur la bande indique la direction de l&rsquo;aéronef, pas sa distance.
+        Son trait de trajectoire reste à l&rsquo;échelle. Il est calculé depuis
+        la position réelle de l&rsquo;aéronef, mais seule la partie située dans
+        le cercle est dessinée. Un aéronef qui se rapproche vite depuis six milles
+        apparaît donc sur la bande avec un trait déjà dans le cercle.
+        Ce trait se termine à sa position prévue dans une minute.
       </p>
       <p>
-        Des aéronefs proches sur la bande partagent une seule marque, avec leur
-        nombre à côté. La priorité va au symbole d&rsquo;un aéronef qui déclenche
-        une alarme, puis à celui dont l&rsquo;altitude est la plus proche de la vôtre.
-        Le nombre ne masque jamais un autre aéronef. Une marque derrière
-        vous se décale pour ne pas être masquée par l&rsquo;indication
+        Des aéronefs proches sur la bande partagent un seul symbole, avec leur
+        nombre à côté. Le symbole affiché est en priorité celui d&rsquo;un aéronef qui déclenche
+        une alarme. Sinon, c&rsquo;est celui dont l&rsquo;altitude est la plus proche de la vôtre.
+        Le nombre ne masque jamais un autre aéronef. Un symbole derrière
+        vous se décale pour ne pas être masqué par l&rsquo;indication
         de portée.
       </p>
     </div>
@@ -93,38 +94,37 @@ updated_on: "2026-11-20"
     <li>TO SCALE&nbsp;: l&rsquo;image dessinée à l&rsquo;échelle du cercle</li>
     <li>Sur la bande&nbsp;: la direction, la forme, l&rsquo;alarme</li>
     <li>Une minute de trajectoire, là où elle entre dans le cercle</li>
-    <li>Les aéronefs proches sur la bande partagent une marque et leur nombre</li>
+    <li>Un symbole commun et un nombre pour les aéronefs regroupés sur la bande</li>
     <li>Le coin affiche le nombre de tous les aéronefs reçus</li>
   </ul>
 
   <p class="lede">
-    <%= link_to_page "displays", label: "La page des écrans", anchor: "both-ways" %>
+    <%= link_to_page "displays", label: "La comparaison des deux modes", anchor: "both-ways" %>
     montre le même trafic dans les deux modes. Une pression sur le bouton suffit pour passer
     de l&rsquo;un à l&rsquo;autre.
   </p>
 
   <div class="feature">
     <div>
-      <h3 id="alarm">Une alarme, et elle dit <span class="highlight">où regarder</span>.</h3>
+      <h3 id="alarm">Une seule alarme, qui indique <span class="highlight">où regarder</span>.</h3>
       <p>
-        Pour un aéronef à moins de 3&nbsp;km horizontalement et 300&nbsp;m verticalement, le symbole
-        devient noir. Un quart d&rsquo;écran centré sur lui passe au noir une fois
-        par seconde. Vous n&rsquo;avez rien à lire&nbsp;: le clignotement
-        se voit du coin de l&rsquo;&oelig;il et vous indique
-        de tourner la tête par là. Quelle
-        que soit la page affichée, le radar reprend la main.
+        Quand un aéronef est à moins de 3&nbsp;km horizontalement et 300&nbsp;m verticalement, son symbole
+        devient noir. Un quart d&rsquo;écran centré sur sa direction passe au noir une fois
+        par seconde. Vous n&rsquo;avez rien à lire&nbsp;: ce clignotement
+        se voit du coin de l&rsquo;&oelig;il et indique de quel côté regarder. Quelle
+        que soit la page affichée, le Go revient au radar.
       </p>
       <p>
-        Le secteur noir attire l&rsquo;&oelig;il. Le symbole donne
-        l&rsquo;angle. Un trafic à 38° du nez n&rsquo;est pas arrondi à
-        «&nbsp;devant à droite&nbsp;»&nbsp;: le secteur est centré sur 38°,
-        et vous cherchez là plutôt que dans un quart du ciel.
+        Le secteur noir attire l&rsquo;&oelig;il. Le symbole indique
+        la direction précise. Pour un aéronef à 38° du nez,
+        le secteur est centré sur 38°. Vous cherchez dans cette direction,
+        pas seulement «&nbsp;devant à droite&nbsp;».
       </p>
       <p>
         Il n&rsquo;y a pas de niveau d&rsquo;alerte supérieur, et il n&rsquo;y en aura jamais. Monter
         ou descendre demande une coordination avec l&rsquo;autre aéronef. Cet appareil
-        n&rsquo;a aucune liaison pour le faire. Le plus fort qu&rsquo;il puisse
-        dire, c&rsquo;est regardez.
+        n&rsquo;a aucune liaison pour le faire. Il vous indique
+        où regarder, sans donner de consigne de manœuvre.
       </p>
     </div>
     <figure class="shot">
@@ -142,7 +142,7 @@ updated_on: "2026-11-20"
     <li>Un avertissement, jamais un ordre</li>
   </ul>
 
-  <h3 id="shapes">Six formes, et <span class="highlight">vous les lisez sans les apprendre</span>.</h3>
+  <h3 id="shapes">Six formes pour l&rsquo;altitude relative, <span class="highlight">lisibles sans les apprendre</span>.</h3>
   <p class="lede">
     La pointe en haut indique un trafic au-dessus de vous. La pointe en bas,
     un trafic en dessous. Le losange, un trafic à moins de 60&nbsp;m de votre altitude.
@@ -153,14 +153,13 @@ updated_on: "2026-11-20"
   </p>
   <p class="lede">
     L&rsquo;anneau représente un aéronef qui n&rsquo;émet pas son altitude. Il ne
-    pointe ni vers le haut ni vers le bas, car personne ne sait s&rsquo;il est au-dessus ou en
-    dessous de vous. À moins de 3&nbsp;km, il devient noir comme tout symbole en alarme,
+    pointe ni vers le haut ni vers le bas, car son altitude par rapport à vous
+    n&rsquo;est pas connue. À moins de 3&nbsp;km, il devient noir comme tout symbole en alarme,
     car il peut être à votre niveau.
   </p>
   <p class="lede">
-    Un symbole rempli de noir signale une alarme. Tant qu&rsquo;aucun symbole
-    n&rsquo;est rempli, rien n&rsquo;est urgent&nbsp;: c&rsquo;est le seul
-    contraste que l&rsquo;écran garde en réserve.
+    Le remplissage noir des symboles est réservé à l&rsquo;alarme. Tant qu&rsquo;aucun symbole
+    n&rsquo;est rempli, aucune urgence n&rsquo;est signalée à l&rsquo;écran.
   </p>
 
   <%= render "shared/blips",
@@ -185,29 +184,30 @@ updated_on: "2026-11-20"
 
   <div class="feature">
     <div>
-      <h3 id="nearby">Qui est là, <span class="highlight">à votre hauteur d&rsquo;abord</span>.</h3>
+      <h3 id="nearby">La liste Nearby, <span class="highlight">à votre hauteur d&rsquo;abord</span>.</h3>
       <p>
-        Le radar dit où regarder. Cette page dit qui est là. Une ligne par
-        aéronef dont la position est connue&nbsp;: son indicatif s&rsquo;il
-        en émet un et son adresse radio sinon, la distance horizontale qui vous en sépare,
-        et de combien il est au-dessus ou en dessous de vous, ou deux tirets
-        s&rsquo;il n&rsquo;émet pas son altitude. Une adresse radio est en
-        petits caractères, pour la distinguer d&rsquo;un indicatif.
+        Le radar indique où regarder. La liste Nearby identifie les aéronefs
+        dont la position est connue. Chaque ligne affiche l&rsquo;indicatif de
+        l&rsquo;aéronef, ou son adresse radio s&rsquo;il n&rsquo;émet pas d&rsquo;indicatif.
+        Elle donne aussi sa distance horizontale et son écart d&rsquo;altitude par rapport à vous.
+        Deux tirets remplacent cet écart si l&rsquo;aéronef n&rsquo;émet pas son altitude.
+        L&rsquo;adresse radio apparaît en petits caractères pour la distinguer d&rsquo;un indicatif.
       </p>
       <p>
-        Au-dessus de la liste, une ligne pour le Go et une pour un Bravo
-        appairé&nbsp;: sa batterie, les satellites de sa position et les
-        aéronefs que sa radio reçoit. Quand un appareil n&rsquo;a pas de position
-        ou ne fonctionne pas, un mot remplace les deux derniers&nbsp;:
+        Au-dessus de la liste, une ligne indique l&rsquo;état du Go. Une autre fait de même pour un Bravo
+        appairé. Chaque ligne affiche la batterie, le nombre de satellites utilisés pour calculer
+        la position et le nombre d&rsquo;aéronefs reçus. Quand un appareil n&rsquo;a pas de position
+        ou ne fonctionne pas, un message remplace les indications de satellites et de trafic&nbsp;:
         <span class="mono">GPS OFF</span>, <span class="mono">MOVE OUT</span>,
         <span class="mono">FINDS FIX</span>, <span class="mono">TX OFF</span>,
         <span class="mono">NO LINK</span> ou <span class="mono">RX DOWN</span>.
       </p>
       <p>
-        Un aéronef qui déclenche une alarme vient en premier, puis ceux à moins de
-        300&nbsp;m (environ 1&nbsp;000&nbsp;ft) de votre altitude, puis les autres, du plus
-        proche au plus loin dans chaque groupe. Un avion de ligne à la verticale est
-        proche au sol, mais il passe après un planeur à votre hauteur.
+        Les aéronefs qui déclenchent une alarme viennent en premier. Viennent ensuite ceux à moins de
+        300&nbsp;m (environ 1&nbsp;000&nbsp;ft) de votre altitude, puis les autres. Dans chaque groupe,
+        ils sont classés par distance horizontale, du plus proche au plus éloigné.
+        Un avion de ligne à la verticale a une faible distance horizontale,
+        mais il passe après un planeur à votre hauteur.
       </p>
       <p>
         La lettre en tête de ligne indique d&rsquo;où vient l&rsquo;information.
@@ -227,10 +227,10 @@ updated_on: "2026-11-20"
     <div>
       <h3 id="no-tx">Quand le Go cesse d&rsquo;émettre, <span class="highlight">il continue de vous alerter</span>.</h3>
       <p>
-        Le Go continue de recevoir le trafic, de vous alerter, d&rsquo;alimenter votre application de navigation et d&rsquo;enregistrer votre vol quand il cesse d&rsquo;émettre votre position. Si une condition d&rsquo;émission manque pendant 10&nbsp;s, chaque page affiche <span class="mono">NO TX</span> au-dessus d&rsquo;un mot qui en donne la raison, en blanc sur noir dans le coin supérieur gauche. <span class="mono">RADIO</span> indique que la radio ne répond pas ou n&rsquo;écoute pas avant d&rsquo;émettre. <span class="mono">GNSS</span> indique que le récepteur GPS ne calcule pas deux positions par seconde, à la seconde et à la demi-seconde. <span class="mono">FIX</span> signifie qu&rsquo;il manque une position valide. <span class="mono">UTC</span> indique que l&rsquo;heure UTC nécessaire pour synchroniser la radio n&rsquo;est pas valide. <span class="mono">PPS</span> signifie que le récepteur GPS n&rsquo;a pas fourni d&rsquo;impulsion pour la seconde en cours. Si plusieurs conditions manquent, le Go affiche la première dans cet ordre.
+        Quand le Go cesse d&rsquo;émettre votre position, il continue de recevoir le trafic et de vous alerter. Il continue aussi d&rsquo;alimenter votre application de navigation et d&rsquo;enregistrer votre vol. Si une condition d&rsquo;émission manque pendant 10&nbsp;s, chaque page affiche <span class="mono">NO TX</span> au-dessus d&rsquo;un mot qui en donne la raison, en blanc sur noir dans le coin supérieur gauche. <span class="mono">RADIO</span> indique que la radio ne répond pas ou n&rsquo;écoute pas avant d&rsquo;émettre. <span class="mono">GNSS</span> indique que le récepteur GPS ne calcule pas deux positions par seconde, à la seconde et à la demi-seconde. <span class="mono">FIX</span> signifie qu&rsquo;il manque une position valide. <span class="mono">UTC</span> indique que l&rsquo;heure UTC nécessaire pour synchroniser la radio n&rsquo;est pas valide. <span class="mono">PPS</span> signifie que le récepteur GPS n&rsquo;a pas fourni d&rsquo;impulsion pour la seconde en cours. Si plusieurs conditions manquent, le Go affiche la première dans cet ordre.
       </p>
       <p>
-        L&rsquo;émission cesse dès qu&rsquo;une condition manque et reprend d&rsquo;elle-même dès qu&rsquo;elles sont toutes réunies. La marque reste affichée jusqu&rsquo;à ce qu&rsquo;elles le soient depuis 10&nbsp;s. Elle peut donc rester brièvement après la reprise de l&rsquo;émission. Elle ne se superpose ni aux menus ni aux demandes de confirmation. En vol, le Go vibre une fois quand la marque apparaît, ou au décollage si elle est déjà affichée. Avant la première position, le radar montre plutôt la progression du récepteur. La radio est contrôlée dès le démarrage. La page d&rsquo;autotest marque <span class="mono">NO TX</span> sur la ligne du composant qui empêche l&rsquo;émission. La ligne du trafic de la page d&rsquo;état affiche <span class="mono">TX OFF</span> et la raison sans attendre 10&nbsp;s. Le <%= link_to "Briefing", briefing_root_path %> affiche la même raison que la marque dans le coin tant qu&rsquo;il est connecté.
+        L&rsquo;émission cesse dès qu&rsquo;une condition manque et reprend d&rsquo;elle-même dès qu&rsquo;elles sont toutes réunies. L&rsquo;indication reste affichée jusqu&rsquo;à ce que toutes les conditions soient réunies depuis 10&nbsp;s. Elle peut donc rester brièvement après la reprise de l&rsquo;émission. Elle ne se superpose ni aux menus ni aux demandes de confirmation. En vol, le Go vibre une fois quand la marque apparaît, ou au décollage si elle est déjà affichée. Avant que le Go obtienne sa première position GPS, le radar affiche plutôt la progression du récepteur. La radio est contrôlée dès le démarrage. La page d&rsquo;autotest marque <span class="mono">NO TX</span> sur la ligne du composant qui empêche l&rsquo;émission. La ligne du trafic de la page d&rsquo;état affiche <span class="mono">TX OFF</span> et la raison sans attendre 10&nbsp;s. Le <%= link_to "Briefing", briefing_root_path %> affiche la même raison que la marque dans le coin tant qu&rsquo;il est connecté.
       </p>
     </div>
     <figure class="shot">
