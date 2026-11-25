@@ -11,7 +11,7 @@ The simulator runs a real product on the host platform, inside a world that driv
 
 Each aircraft is placed north and east of where own-ship was when it was added, then flies over the ground on its own, so two manoeuvring aircraft describe one encounter. `Air` logs every burst, heard or not, and decides whether the radio hears one by where it was tuned when the burst started, so a slot-timing bug shows on the tape as `Deaf`. A step is `UnitSimulator::kStepMs`, 5 ms, finer than the guard on the O to M edge.
 
-The Go's L76K is brought up as on a T-Echo: met at 9600, raised to 115200 and set to solve twice a second, on `.000` and `.500` of its UTC, which the host PPS puts on the clock's whole second. The host GNSS port retunes only once `Simulator::setup()` says a world ticks the receiver, because a product rig feeds fixes onto the bus instead. A case can set `models::L76k`'s latency after a solution, 0 unless it asks for the 70 ms SoftRF measured, read what it `solved()`, stall the wire, have it answer, refuse or hang on a sub-second `$PCAS02`, hang until RESET_N is pulsed, or lose UTC.
+The Go's L76K is brought up as on a T-Echo: met at 9600, raised to 115200 and set to solve twice a second, on `.000` and `.500` of its UTC, which the host PPS puts on the clock's whole second. The host GNSS port retunes only once `Simulator::setup()` says a world ticks the receiver, because a product rig feeds fixes onto the bus instead. A case can set `models::L76k`'s latency after a solution, 0 unless it asks for the 70 ms SoftRF measured, read what it `solved()`, stall the wire, have it answer, refuse or hang on a sub-second `$PCAS02`, hang until RESET_N is pulsed, lose UTC, or leave RMC's speed or course empty.
 
 ## A Go paired with a Bravo
 

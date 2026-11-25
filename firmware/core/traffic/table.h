@@ -97,6 +97,7 @@ class TrafficTable {
                            const model::AircraftObservation& existing);
     static void sample_turn(TargetTurn& turn, const model::AircraftObservation& observation);
     static void note_version(PeerVersion& version, const model::AircraftObservation& observation);
+    static int32_t fastest_closing_mm_s(const model::AircraftObservation& target);
     static void release(Target& target);
     static void watch_liftoff(Target& target, const model::AircraftObservation& incoming);
     static bool matters_less(const Weight& weight, const Weight& other);

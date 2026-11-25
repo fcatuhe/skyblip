@@ -1,5 +1,6 @@
 #include "core/gnss/nmea.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include "core/units/units.h"
@@ -54,8 +55,9 @@ int32_t stamp_ms_of_day(const char* stamp) {
     return seconds * 1000 + stamp_fraction_ms(stamp);
 }
 
-// INFO: fc 23sep26 no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea
+// INFO: fc 22nov26 COCOM's 1000 kn, far past G.1.8's 236 m/s, so a faster speed is held there
 constexpr int64_t kSpeedCeilingMmS = 514444;
+// INFO: fc 23sep26 no aircraft flies past the Karman line, or 1 km under the sea
 constexpr int64_t kAltitudeCeilingM = 100000;
 constexpr int64_t kAltitudeFloorM = -1000;
 
@@ -285,19 +287,21 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
             solution_.utc_valid = true;
         }
     }
+    solution_.speed_valid = false;
+    solution_.track_valid = false;
     if (solution_.fix_valid) {
         solution_.latitude_1e7 = latitude_1e7;
         solution_.longitude_1e7 = longitude_1e7;
         int64_t knots_e2 = 0;
-        int64_t speed_mm_s = -1;
-        if (parse_scaled(fields[7], 100, knots_e2))
-            speed_mm_s =
-                wire::divide_rounded<int64_t>(knots_e2 * kMillimetresPerSecondPerKnotE3, 100000);
-        solution_.speed_mm_s = speed_mm_s >= 0 && speed_mm_s <= kSpeedCeilingMmS
-                                   ? static_cast<int32_t>(speed_mm_s)
-                                   : 0;
+        solution_.speed_valid = parse_scaled(fields[7], 100, knots_e2) && knots_e2 >= 0;
+        const int64_t speed_mm_s =
+            solution_.speed_valid
+                ? wire::divide_rounded<int64_t>(knots_e2 * kMillimetresPerSecondPerKnotE3, 100000)
+                : 0;
+        solution_.speed_mm_s = static_cast<int32_t>(std::min(speed_mm_s, kSpeedCeilingMmS));
         int64_t track_cdeg = 0;
-        if (parse_scaled(fields[8], 100, track_cdeg))
+        solution_.track_valid = parse_scaled(fields[8], 100, track_cdeg);
+        if (solution_.track_valid)
             solution_.track_cdeg =
                 static_cast<int32_t>(((track_cdeg % kCentiDegreesPerTurn) + kCentiDegreesPerTurn) %
                                      kCentiDegreesPerTurn);

@@ -52,6 +52,9 @@ struct GnssSolution {
     // INFO: fc 19sep26 what the receiver resolves, not what the wire carries: RMC fields 7 and 8
     int32_t speed_mm_s{0};
     int32_t track_cdeg{0};
+    // INFO: fc 22nov26 the L76K leaves SOG or COG empty when it has none, and empty is not 0
+    bool speed_valid{false};
+    bool track_valid{false};
     uint32_t utc_s{0};
     // INFO: fc 18nov26 the milliseconds of RMC's hhmmss.sss: at 2 Hz they name the quarter solved
     uint16_t utc_ms{0};

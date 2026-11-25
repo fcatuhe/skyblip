@@ -4,6 +4,8 @@ A receiver produces solutions on its own cadence, two a second on the Go, whethe
 
 `GnssSolution::fix_valid` is filled twice with one meaning. The parser sets it from RMC status `A`, the receiver's own claim. `parts::L76k::poll` and `parts::Ag3335::poll` overwrite it with `FixValidity`'s verdict before publishing, so the receiver's claim never reaches the bus. The verdict needs GGA and RMC both heard within `kSentenceMaxAgeMs`, as SoftRF does, a real date, and no jump between consecutive solutions, as moshe-braner's gate does.
 
+RMC's speed and course each carry their own validity, `GnssSolution::speed_valid` and `track_valid`, because the L76K leaves either field empty "in case of an invalid value" (L76K GNSS Protocol Specification V1.1, RMC). An empty field is no speed, not 0 m/s. A speed past COCOM's 1000 kn is held at it and stays valid, since ADS-L G.1.8 saturates far below.
+
 Both receivers share the parser. Bravo's AG3335 sends NMEA 4.10 on the `GN` talker (`../../hardware/parts/ag3335/README.md`). Its GSA names Galileo as system 3, which `system_of_gsa_id` does not know, so a Galileo satellite in use matches any constellation with the same id. Only the satellites page reads that, and Bravo has none. Its GGA without a fix is 37 bytes, under `kGgaLengthFloorBytes`, so its no-fix reason reads `NO GGA`.
 
 ## How far a receiver with no fix has got
