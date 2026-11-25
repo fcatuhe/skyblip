@@ -142,3 +142,9 @@ en:
       radar: "skyBlip Go, ADS-L and FLARM: the radar page, three aircraft around you, each with its one-minute track"
       bravo: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case that receives 1090 MHz ADS-B"
       tango: "skyBlip Tango: a skyBlip Go and a Seeed SenseCAP MeshTracker X1 side by side. Paired, they show ADS-B, ADS-L and FLARM on one radar"
+  llms:
+    intro: "skyBlip is open source, with no subscription and no account. The links below lead to the Markdown version of each page. Every page of skyblip.eu answers in Markdown at its address followed by `.md`, or to a request that accepts `text/markdown`. [llms-full.txt](%{full}) holds every English page in one file, and [feed.atom](%{feed}) lists them by the day they last changed. skyBlip's MCP server, %{mcp}, lists, searches and reads the same pages, with no account."
+    full_intro: "Every English page of skyblip.eu, one after the other, each under the address it lives at."
+    source_code: "Source code"
+    source_code_description: "the firmware and this website, under the MIT license."
+    other_languages: "Other languages"

@@ -22,6 +22,22 @@ class Content::PageTest < ActiveSupport::TestCase
     assert_equal "/ads-l/nmea.md", Content::Page.find("ads-l/nmea", locale: :en).markdown_path
   end
 
+  test "a page is found at its address or at its Markdown's, with or without a trailing slash" do
+    assert_equal "/fr/a-propos", Content::Page.at("/fr/a-propos/").url_path
+    assert_equal "/fr/a-propos", Content::Page.at("/fr/a-propos.md").url_path
+    assert_equal "/", Content::Page.at("").url_path
+    assert_equal "/fr", Content::Page.at("/fr/index.md").url_path
+    assert_nil Content::Page.at("/fr/about")
+  end
+
+  test "a reader in a language gets every page in it, and in English the pages not translated yet" do
+    french = Content::Page.read_in(:fr)
+
+    assert_equal Content::Page.read_in(:en).map(&:base_slug).sort, french.map(&:base_slug).sort
+    assert_equal :fr, french.find { it.base_slug == "about" }.locale
+    assert_equal :en, french.find { it.base_slug == "ads-l/nmea" }.locale
+  end
+
   test "nested pages retain their URL and source path" do
     page = Content::Page.find("ads-l/nmea", locale: :en)
 

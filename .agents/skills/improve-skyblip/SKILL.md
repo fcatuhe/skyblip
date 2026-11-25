@@ -9,7 +9,7 @@ skyBlip records every request, job, error, activation and every step a browser t
 
 ## Read the numbers
 
-From skyBlip's MCP server, `https://skyblip.eu/mcp`, which an admin connects as `server/app/models/oauth/README.md` says. Every tool is for admins only:
+From skyBlip's admin MCP server, `https://skyblip.eu/admin/mcp`, which an admin connects as `server/app/models/oauth/README.md` says. Every tool is for admins only:
 
 - `get_insights` with `days` 7, 30 or 90: this period against the one before, the numbers of the Insights page.
 - `list_errors` with `days`: what breaks, grouped by fingerprint, newest first, without the errors resolved since they last happened.
@@ -21,7 +21,7 @@ From skyBlip's MCP server, `https://skyblip.eu/mcp`, which an admin connects as 
 - `get_visitor` with `visitor_token`: one visitor's visits, oldest first, with the pages it viewed and what it clicked.
 - `list_outbound_clicks` with the same filters: the clicks on links to other sites, the affiliate links among them, one line per link with its section (`go`, `go-plus`, `bravo` on the buy page). Narrow with `href`, and add `each` for every click with its visitor.
 
-When the MCP server is unavailable, from a laptop that deploys skyBlip, in `server/`:
+When the admin MCP server is unavailable, from a laptop that deploys skyBlip, in `server/`:
 
 ```
 mise run kamal app exec "bin/rails events:review DAYS=30"

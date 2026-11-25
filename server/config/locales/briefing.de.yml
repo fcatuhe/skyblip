@@ -40,7 +40,7 @@ de:
       flag: Web Bluetooth einschalten
       flag_how: "Chrome lässt es unter Linux aus. Kopieren Sie diese Adresse in die Adressleiste, stellen Sie Web Bluetooth auf Enabled und klicken Sie auf Relaunch."
       adapter: Bluetooth einschalten
-      adapter_how: "Schalten Sie Bluetooth in den Einstellungen des Computers ein. Ein Computer ohne Bluetooth braucht einen USB-Bluetooth-Adapter."
+      adapter_how: "Schalten Sie Bluetooth in den Einstellungen des Computers ein. Ein Computer ohne Bluetooth braucht einen USB-Bluetooth-Adapter. Oder öffnen Sie Briefing auf einem Android-Smartphone."
       adapter_linux: "Unter Linux starten Sie außerdem den Bluetooth-Dienst:"
       remember: Geräte von selbst wieder verbinden
       remember_how: "Kopieren Sie diese Adresse in die Adressleiste, stellen Sie sie auf Enabled und klicken Sie auf Relaunch. Briefing verbindet die Geräte, die es kennt, dann ohne die Liste wieder."
@@ -159,6 +159,7 @@ de:
         connect: Verbinden
         aircraft: Ihr Luftfahrzeug
       start: "Schließen Sie Go oder Bravo per USB an diesen Computer an. Briefing installiert skyBlip und verbindet sich dann mit dem Gerät."
+      phone_ahead: "Bluetooth ist auf diesem Computer aus oder fehlt. Installieren Sie trotzdem von hier. Der letzte Schritt zeigt einen Code, der die Einrichtung auf Ihrem Smartphone fortsetzt."
       linux:
         title: Unter Linux, bevor Sie beginnen
         bluetooth_first: "Schalten Sie zuerst Web Bluetooth mit den Schritten auf dieser Seite ein. Chrome startet neu, um es zu übernehmen, und der letzte Schritt verbindet per Bluetooth."
@@ -182,14 +183,28 @@ de:
       keep_plugged: Lassen Sie das Gerät angeschlossen. Das dauert einige Sekunden.
       installed: "Installiert. Verbinden Sie zum Schluss %{name} per Bluetooth."
       installed_trusted: "Installiert. Verbinden Sie zum Schluss %{name} per Bluetooth. Das Gerät vertraut diesem Browser. Sie müssen keine Taste drücken."
-      connect_after_flag: "Schalten Sie Web Bluetooth mit den Schritten auf dieser Seite ein. Öffnen Sie nach dem Neustart von Chrome Ihre Geräte und verbinden Sie es dort."
-      connect_after_adapter: "Schalten Sie Bluetooth mit den Schritten auf dieser Seite ein, dann erscheint hier Verbinden."
+      connect_after_flag: "Oder schalten Sie Web Bluetooth mit den Schritten auf dieser Seite ein. Öffnen Sie nach dem Neustart von Chrome Ihre Geräte und verbinden Sie es dort."
+      connect_after_adapter: "Oder schalten Sie Bluetooth mit den Schritten auf dieser Seite ein, dann erscheint hier Verbinden."
+      installed_no_bluetooth: "Installiert. Dieser Computer erreicht %{name} nicht per Bluetooth. Schließen Sie die Einrichtung auf Ihrem Smartphone ab."
+      resumed: "skyBlip ist auf %{name} installiert. Verbinden Sie das Gerät mit diesem Smartphone, um die Einrichtung abzuschließen."
+      resumed_no_bluetooth: "skyBlip ist auf %{name} installiert, aber dieser Browser kann sich nicht per Bluetooth verbinden. Öffnen Sie diese Seite in Chrome auf einem Android-Smartphone oder auf einem Computer mit Bluetooth."
+      another: "Weiteres Gerät installieren"
+      handoff:
+        code: "Code, der diese Einrichtung auf Ihrem Smartphone öffnet"
+        scan: "Scannen Sie diesen Code mit der Kamera eines Android-Smartphones und öffnen Sie den Link in Chrome. Briefing öffnet sich bei diesem Schritt: Wählen Sie %{name} aus der Liste."
+        type: "Keine Kamera? Öffnen Sie skyblip.eu/setup in Chrome auf dem Smartphone."
+      phone:
+        installed: "skyBlip schon auf einem Computer installiert? Schalten Sie das Gerät ein und verbinden Sie es mit diesem Smartphone, um die Einrichtung abzuschließen."
+        connect: "Gerät verbinden"
+        list: "In der Liste heißt ein neuer Go activate, dann vier Zeichen, dann skyBlip. Ein Bravo heißt skyBlip Bravo und vier Zeichen."
+        new_title: "Neues Gerät?"
+        new: "skyBlip wird von einem Computer per USB-Kabel installiert, in Chrome oder Edge. Öffnen Sie skyblip.eu/setup auf dem Computer. Ohne Bluetooth zeigt er einen Code, der Sie zu diesem Smartphone zurückbringt."
       connect: Verbinden
       choose_in_list: "Wählen Sie %{name} aus der Liste."
       activating: "%{name} wird aktiviert."
       confirm_activation: Drücken Sie die Taste am Go, um ihn zu aktivieren.
       the_device: das Gerät
-      unsupported_phone: "Installieren Sie skyBlip zuerst auf einem Computer mit Chrome oder Edge. Danach können Sie Ihre Geräte mit diesem Smartphone per Bluetooth einrichten und aktualisieren."
+      unsupported_phone: "Dieser Browser kann sich nicht per Bluetooth mit Ihren Geräten verbinden. Installieren Sie von einem Computer mit Chrome oder Edge und verbinden Sie dann von diesem Computer oder mit Chrome auf einem Android-Smartphone."
       unsupported_other: Für die USB-Installation brauchen Sie Chrome oder Edge auf einem Computer.
       by_hand_link: Stattdessen von Hand installieren
       guide_go: Neu bei Go? Lesen Sie die ersten Schritte.
@@ -318,7 +333,6 @@ de:
         airborne: Im Flug
         unknown: Noch kein GPS-Fix
       track:
-        release: Veröffentlichung
         development: Entwicklung
       running: "%{version}, %{track}"
       firmware_current: aktuell
