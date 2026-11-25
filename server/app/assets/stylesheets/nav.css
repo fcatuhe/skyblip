@@ -75,17 +75,88 @@
     .site-nav-links { justify-content: center; }
   }
 
-  @media (max-width: 59.99rem) {
-    .site-nav-links {
-      order: 3;
-      inline-size: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scrollbar-width: none;
-      justify-content: space-between;
-      gap: var(--space-inline-s);
-    }
+  .site-nav-open,
+  .site-nav-close {
+    display: grid;
+    place-items: center;
+    padding: var(--space-2xs);
+    border: 0;
+    background: none;
+    color: var(--ink);
+  }
 
-    .site-nav-links a { padding-block: var(--space-xs); }
+  .site-nav-open svg,
+  .site-nav-close svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .site-nav-panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    inline-size: min(18rem, 85vw);
+    max-inline-size: 100%;
+    block-size: 100%;
+    max-block-size: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline-start: 1px solid var(--card-border);
+    background: var(--paper);
+    color: inherit;
+  }
+
+  .site-nav-panel::backdrop { background: color-mix(in oklch, var(--ink) 50%, transparent); }
+
+  .site-nav-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+    block-size: 100%;
+    padding: var(--space-s) var(--gutter);
+    overflow-y: auto;
+  }
+
+  .site-nav-close { align-self: flex-end; }
+
+  .site-nav-panel .site-nav-links {
+    flex-direction: column;
+    gap: var(--space-2xs);
+    font-size: var(--text-m);
+  }
+
+  .site-nav-panel .site-nav-links a {
+    padding: var(--space-xs) var(--space-s);
+    border-block-end: 0;
+    border-inline-start: 2px solid transparent;
+  }
+
+  .site-nav-panel .site-nav-links a[aria-current] { border-inline-start-color: var(--blip); }
+
+  html:has(.site-nav-panel:modal) { overflow: hidden; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .site-nav-panel[open] { animation: site-nav-panel-slide-in 0.3s ease-out; }
+    .site-nav-panel[open]::backdrop { animation: site-nav-panel-fade-in 0.15s linear; }
+  }
+
+  @keyframes site-nav-panel-slide-in {
+    from { translate: 100%; }
+  }
+
+  @keyframes site-nav-panel-fade-in {
+    from { opacity: 0; }
+  }
+
+  @media (min-width: 60rem) {
+    .site-nav-open { display: none; }
+  }
+
+  @media (max-width: 59.99rem) {
+    .site-nav > .site-nav-links { display: none; }
   }
 }

@@ -3,6 +3,8 @@ it:
   nav:
     label: "Sito"
     devices: "Dispositivi"
+    open: "Apri il menu"
+    close: "Chiudi il menu"
   cta:
     prompt: "Vuoi provarlo ora o acquistarne uno?"
     try: "Provalo online"

@@ -6,9 +6,11 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
       "/" => [ %w[/try /go /buy /install /guides /blog], [ "Try it", "Devices", "Buy", "Install", "Guides", "Blog" ] ] }.each do |path, (stages, labels)|
       get path
 
-      links = css_select(".site-nav-links a")
-      assert_equal stages, links.map { |link| link["href"] }
-      assert_equal labels, links.map(&:text)
+      [ ".site-nav > .site-nav-links a", ".site-nav-panel .site-nav-links a" ].each do |selector|
+        links = css_select(selector)
+        assert_equal stages, links.map { |link| link["href"] }
+        assert_equal labels, links.map(&:text)
+      end
       assert_equal stages, css_select(".site-footer-columns a").map { |link| link["href"] }.intersection(stages)
     end
   end
@@ -17,8 +19,8 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
     { "/fr/radar" => "/fr/guides", "/radar" => "/guides", "/fr/blog/poche-ou-installe" => "/fr/blog", "/blog/pocket-or-installed" => "/blog" }.each do |path, index|
       get path
 
-      assert_select ".site-nav-links a[aria-current]", count: 1
-      assert_select ".site-nav-links a[aria-current=true][href=?]", index
+      assert_select ".site-nav > .site-nav-links a[aria-current]", count: 1
+      assert_select ".site-nav > .site-nav-links a[aria-current=true][href=?]", index
     end
   end
 
@@ -32,8 +34,8 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
         assert_select ".device-tabs a[aria-current=page]", count: 1
         assert_select ".device-tabs a[aria-current=page][href=?]", path
         assert_select ".site-header > .site-nav + .device-tabs"
-        assert_select ".site-nav-links a[aria-current]", count: 1
-        assert_select ".site-nav-links a[aria-current][href=?]", paths.first
+        assert_select ".site-nav > .site-nav-links a[aria-current]", count: 1
+        assert_select ".site-nav > .site-nav-links a[aria-current][href=?]", paths.first
       end
     end
   end

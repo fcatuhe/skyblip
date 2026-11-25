@@ -3,6 +3,8 @@ de:
   nav:
     label: "Website"
     devices: "Geräte"
+    open: "Menü öffnen"
+    close: "Menü schließen"
   cta:
     prompt: "Möchten Sie skyBlip ausprobieren oder ein Gerät kaufen?"
     try: "Online ausprobieren"
