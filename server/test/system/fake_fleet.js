@@ -298,7 +298,7 @@
       await this.reply({ command: 'diagnostics', group: 'system', part: 0, more: true, uptime_s: 120, reset: 'power_on' });
       return this.reply({
         command: 'diagnostics', group: 'capture', part: 1, more: false, armed: Boolean(this.capturing),
-        ...(this.capturing ? { profile: this.capture } : {}), session: this.capturing ? 1785628800 : 0, records: this.capturing ? 960 : 0,
+        ...(this.capturing ? { profile: this.capture } : {}), session: this.capturing ? 60 : 0, records: this.capturing ? 960 : 0,
         records_dropped: 0, sectors: 0, keeps_s: this.capturing ? 433500 : 0, takes_sectors: 170, evicts_flights: this.evictsFlights,
         keeps_full_s: 1926, keeps_power_run_s: 433500,
       });

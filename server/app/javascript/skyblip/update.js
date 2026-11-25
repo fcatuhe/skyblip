@@ -115,13 +115,15 @@ function upgradeOf({ file, running }) {
 }
 
 // INFO: fc 15nov26 the dump's capture group, absent on a unit with no capture flash
-export function captureOf(dump) {
+export function captureOf(dump, now = Date.now()) {
   const group = dump?.capture;
   if (!group) return null;
+  const armed = group.armed === true;
   return {
-    armed: group.armed === true,
+    armed,
     profile: group.profile ?? null,
     session: group.session ?? 0,
+    startedAt: armed ? startedAtOf(group.session ?? 0, dump.system?.uptime_s, now) : null,
     records: group.records ?? 0,
     keeps: group.keeps_s ?? 0,
     takesSectors: group.takes_sectors ?? 0,
@@ -129,6 +131,12 @@ export function captureOf(dump) {
     keepsFull: group.keeps_full_s ?? 0,
     keepsPowerRun: group.keeps_power_run_s ?? 0,
   };
+}
+
+// INFO: fc 25nov26 a session is named by the UTC second it opened, or by the second since boot when the unit had no time yet
+function startedAtOf(session, uptime, now) {
+  if (uptime === undefined) return null;
+  return session <= uptime ? now - (uptime - session) * 1000 : session * 1000;
 }
 
 function settlingOf({ phase, image }) {

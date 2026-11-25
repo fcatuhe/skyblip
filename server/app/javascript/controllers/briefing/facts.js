@@ -3,6 +3,7 @@ import { noTxMark } from "#skyblip/settings"
 import { say } from "controllers/briefing/words"
 
 const DATE = { day: "numeric", month: "short", year: "numeric" }
+const CLOCK = { hour: "2-digit", minute: "2-digit" }
 const DATE_LOCALES = { en: "en-GB", fr: "fr-FR", de: "de-DE", it: "it-IT", es: "es-ES" }
 
 export function shortName(unit) {
@@ -51,6 +52,13 @@ export function seen(record) {
   if (!record.seen) return say("words.not_met")
   const lang = document.documentElement.lang
   return say("words.seen", { date: new Date(record.seen).toLocaleDateString(DATE_LOCALES[lang] ?? lang, DATE) })
+}
+
+export function startedText(at, now = Date.now()) {
+  const lang = document.documentElement.lang
+  const sameDay = new Date(at).toDateString() === new Date(now).toDateString()
+  const format = sameDay ? CLOCK : { ...CLOCK, day: "numeric", month: "short" }
+  return new Date(at).toLocaleString(DATE_LOCALES[lang] ?? lang, format)
 }
 
 // INFO: fc 11nov26 offline, the news is the newest image this browser saw offered, against the firmware the device last ran

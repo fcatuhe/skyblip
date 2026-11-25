@@ -92,7 +92,7 @@ fr:
       arm: "Armer"
       stop: "Arrêter la capture"
       idle: "Aucun enregistrement en cours."
-      running: "Capture %{profile} en cours\u00a0: %{records} enregistrements. L\u2019appareil en garde les dernières %{keeps}."
+      running: "Capture %{profile} en cours depuis %{elapsed}, début\u00a0: %{since}. %{records} enregistrements à la dernière lecture. L\u2019appareil en garde les dernières %{keeps}."
       price: "Une capture complète garde %{full}, une capture autonomie ou vol simulé %{run}."
       erases:
         one: "En lancer une efface 1 vol enregistré."

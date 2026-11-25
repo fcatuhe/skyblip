@@ -92,7 +92,7 @@ it:
       arm: Prepara
       stop: Ferma l'acquisizione
       idle: Nessuna registrazione in corso.
-      running: "Acquisizione in corso (%{profile}): %{records} record finora. Il dispositivo ne conserva gli ultimi %{keeps}."
+      running: "Acquisizione in corso (%{profile}) da %{elapsed}, avvio: %{since}. %{records} record all'ultima lettura. Il dispositivo ne conserva gli ultimi %{keeps}."
       price: "Un'acquisizione completa conserva %{full}, un test dei consumi o in volo %{run}."
       erases:
         one: "Avviarne una cancella 1 volo memorizzato."
