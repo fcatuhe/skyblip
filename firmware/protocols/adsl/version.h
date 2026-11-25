@@ -3,7 +3,7 @@
 
 namespace skyblip::adsl {
 
-inline constexpr char kVersion[] = "0.8.0";
+inline constexpr char kVersion[] = "0.8.1";
 inline constexpr char kSpecification[] = "ADS-L 4 SRD-860 Issue 2";
 
 }
