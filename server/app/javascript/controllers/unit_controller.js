@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { bluetoothReadiness, joinFleet, nameOf } from "#skyblip/fleet"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
-import { factsOf, imageName, newsOf, productWord, protocolsLine, running, runningName, trackOf } from "controllers/briefing/facts"
+import { factsOf, imageName, newsOf, productWord, protocolsLine, running, runningName, startedText, trackOf } from "controllers/briefing/facts"
 import { labelOf, shownIn } from "controllers/briefing/fields"
 import { heardRow, heardView, proposedIn } from "controllers/briefing/heard"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
@@ -22,6 +22,7 @@ const LINK_NOTICES = new Set(["link_lost", "not_back", "timeout", "claimed", "sm
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 const WORKING = new Set(["asking", "confirming", "uploading", "installing", "rebooting"])
 const LAST_READ = ["aircraft_type", "callsign", "aircraft_address", "units", "alarm"]
+const CAPTURE_TICK_MS = 30_000
 
 export default class extends Controller {
   static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
@@ -43,6 +44,7 @@ export default class extends Controller {
 
   disconnect() {
     this.element.removeEventListener("turbo:frame-load", this.framed)
+    clearInterval(this.captureTicker)
     this.session.leave()
   }
 
@@ -394,21 +396,28 @@ export default class extends Controller {
     if (this.captureTarget.hidden) return
     const airborne = state.status?.flight === "airborne"
     const idle = state.phase === "ready" && !airborne && !state.refusedOnDevice
+    const armed = state.capture.armed
     this.#captureState(state.capture)
+    this.captureFieldsTarget.hidden = armed
     this.captureFieldsTarget.disabled = !idle
-    this.captureArmTarget.disabled = !idle || state.capture?.armed === true
-    this.captureArmTarget.hidden = state.refusedOnDevice
+    this.captureArmTarget.disabled = !idle
+    this.captureArmTarget.hidden = armed || state.refusedOnDevice
     this.captureArmTarget.textContent = airborne ? say("words.locked") : this.captureArmTarget.dataset.label
-    this.captureStopTarget.disabled = !idle || state.capture?.armed === false
-    this.captureStopTarget.hidden = airborne || state.refusedOnDevice
+    this.captureStopTarget.disabled = !idle
+    this.captureStopTarget.hidden = !armed || airborne || state.refusedOnDevice
     this.#captureSend(state, idle)
   }
 
+  // INFO: fc 25nov26 the records are the dump's, but the time it has run is counted here, so it moves between two reads
   #captureState(capture) {
-    this.captureStateTarget.hidden = !capture
+    if (capture?.armed && !this.captureTicker) this.captureTicker = setInterval(() => this.#captureState(this.unit?.state?.capture), CAPTURE_TICK_MS)
+    if (!capture?.armed) this.captureTicker = clearInterval(this.captureTicker)
     if (!capture) return
     const lines = capture.armed
-      ? [say("capture.running", { profile: say(`capture.profile_names.${capture.profile}`), records: capture.records, keeps: span(capture.keeps) })]
+      ? [say("capture.running", {
+          profile: say(`capture.profile_names.${capture.profile}`), records: capture.records, keeps: span(capture.keeps),
+          elapsed: span(Math.max(60, (Date.now() - capture.startedAt) / 1000)), since: startedText(capture.startedAt),
+        })]
       : [say("capture.idle"), say("capture.price", { full: span(capture.keepsFull), run: span(capture.keepsPowerRun) }),
          capture.evictsFlights > 0 ? sayCount("capture.erases", capture.evictsFlights) : null]
     this.captureStateTarget.textContent = lines.filter(Boolean).join(" ")

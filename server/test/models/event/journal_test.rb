@@ -25,6 +25,14 @@ class Event::JournalTest < ActiveSupport::TestCase
     assert_equal({ "key" => "88A4BEF5", "bootloader_keys" => "212602F2 88A4BEF5", "track" => "release" }, Event.sole.payload)
   end
 
+  test "a capture's start keeps the profile the page asked for" do
+    Event::Journal.new(browser: BROWSER, entries: [
+      entry("device.task_started", properties: { task: "capture", profile: "power_run" })
+    ]).record
+
+    assert_equal({ "task" => "capture", "profile" => "power_run" }, Event.sole.payload)
+  end
+
   # A pilot's phone posts its journal again until it is answered, and a beacon may land twice.
   test "an entry that arrives twice is kept once" do
     journal = Event::Journal.new(browser: BROWSER, entries: [ entry("device.connected") ])

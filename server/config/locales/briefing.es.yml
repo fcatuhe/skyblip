@@ -92,7 +92,7 @@ es:
       arm: "Preparar"
       stop: "Detener la captura"
       idle: "No hay ninguna captura en curso."
-      running: "Captura en curso (%{profile}): %{records} registros hasta ahora. El dispositivo conserva los últimos %{keeps} de la captura."
+      running: "Captura en curso (%{profile}) desde hace %{elapsed}, inicio: %{since}. %{records} registros en la última lectura. El dispositivo conserva los últimos %{keeps} de la captura."
       price: "Una captura completa conserva %{full}. Una prueba de consumo o de vuelo conserva %{run}."
       erases:
         one: "Al iniciar una captura se borra 1 vuelo guardado."
