@@ -1,3 +1,5 @@
+require_relative "recorded_geolite_archive"
+
 VCR.configure do |config|
   config.ignore_localhost = true
   config.allow_http_connections_when_no_cassette = false
@@ -21,6 +23,23 @@ VCR.configure do |config|
       interaction.response.headers["Location"] = [ recorded_asset.(location) ]
     elsif signed.(interaction.request.uri)
       interaction.request.uri = recorded_asset.(interaction.request.uri)
+    end
+  end
+
+  # INFO: fc 25nov26 MaxMind redirects a download to a presigned URL that expires, so the recording keeps only its path
+  presigned = ->(url) { url&.include?("X-Amz-Signature=") }
+  config.before_record do |interaction|
+    location = interaction.response.headers["Location"]&.first
+    interaction.response.headers["Location"] = [ location.split("?").first ] if presigned.(location)
+    interaction.request.uri = interaction.request.uri.split("?").first if presigned.(interaction.request.uri)
+
+    stand_in = case interaction.request.uri
+    when %r{/GeoLite2-City_\d+\.tar\.gz\z} then RecordedGeoliteArchive.tar_gz
+    when %r{/GeoLite2-City_\d+\.tar\.gz\.sha256\z} then RecordedGeoliteArchive.sha256
+    end
+    if stand_in
+      interaction.response.body = stand_in
+      interaction.response.headers["Content-Length"] = [ stand_in.bytesize.to_s ]
     end
   end
 

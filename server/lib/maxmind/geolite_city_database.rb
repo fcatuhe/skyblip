@@ -49,45 +49,23 @@ module Maxmind
         File.mtime(database_path)
       end
 
-      def fetch(url)
+      def fetch(url) = response_to(Net::HTTP::Get, url).body
+
+      def head(url) = response_to(Net::HTTP::Head, url)
+
+      def response_to(method, url, authenticated: true, redirects: 3)
         uri = URI(url)
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-          request = Net::HTTP::Get.new(uri)
-          request.basic_auth(account_id, license_key)
-          http.request(request)
+        request = method.new(uri)
+        # INFO: fc 25nov26 the licence key goes to MaxMind only, never to the storage host it redirects to
+        request.basic_auth(account_id, license_key) if authenticated
+        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { it.request(request) }
+
+        if response.is_a?(Net::HTTPRedirection) && redirects.positive?
+          response_to(method, response["location"], authenticated: false, redirects: redirects - 1)
+        else
+          response.value
+          response
         end
-
-        response = follow_redirects(response)
-        response.value
-        response.body
-      end
-
-      def head(url)
-        uri = URI(url)
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-          request = Net::HTTP::Head.new(uri)
-          request.basic_auth(account_id, license_key)
-          http.request(request)
-        end
-
-        response = follow_redirects(response, method: :head)
-        response.value
-        response
-      end
-
-      def follow_redirects(response, method: :get, limit: 3)
-        request_class = method == :head ? Net::HTTP::Head : Net::HTTP::Get
-
-        limit.times do
-          break unless response.is_a?(Net::HTTPRedirection)
-
-          uri = URI(response["location"])
-          response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-            http.request(request_class.new(uri))
-          end
-        end
-
-        response
       end
 
       def database_path
