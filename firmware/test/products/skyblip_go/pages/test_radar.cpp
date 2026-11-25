@@ -4,6 +4,7 @@
 // every target.
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/radar.h"
 #include "test/support/glass_ink.h"
 #include "test/support/glass_text.h"
@@ -431,6 +432,13 @@ TEST_CASE("radar page: a cable countdown takes the ring as two lines, OFF IN ove
     CHECK(reads_in(going, "OFF IN", 40, 110, 160, 160, 2));
     CHECK(reads_in(going, "4 MIN", 40, 130, 160, 180, 2));
     CHECK_FALSE(reads_in(going, "GROUND", 0, 0, 200, 199, 2));
+
+    // One message over two lines, one line pitch apart, as the parked CHARGE THE over BATTERY.
+    const int height = skyblip::ui::kCharacterHeight * 2;
+    int top = 0;
+    while (top < kGlassHeight - height && !reads_in(going, "OFF IN", 40, top, 160, top + height, 2))
+        top++;
+    CHECK(reads_in(going, "4 MIN", 40, top + line_pitch(2), 160, top + line_pitch(2) + height, 2));
 
     // The countdown outranks a warned cell, since the unit goes off before the cell matters.
     parked.battery_low = true;

@@ -2,6 +2,7 @@
 
 #include "core/units/units.h"
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
 #include "products/skyblip_go/pages/radar_traffic.h"
 #include "protocols/common/geometry.h"
@@ -199,10 +200,11 @@ const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     return out;
 }
 
+// INFO: fc 26nov26 a split banner runs on at its own size, as the parked CHARGE THE BATTERY
 struct RingWords {
     const char* banner{nullptr};
     const char* note{nullptr};
-    int note_scale{kNoteScale};
+    bool split{false};
 };
 
 int format_off_in(char* out, uint8_t minutes) {
@@ -218,7 +220,7 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     const char* stage = snapshot.fix_valid ? nullptr : gnss::stage_name(snapshot.stage);
     if (snapshot.off_in_min) {
         format_off_in(cell_buffer, *snapshot.off_in_min);
-        return {"OFF IN", cell_buffer, kBannerScale};
+        return {"OFF IN", cell_buffer, /*split=*/true};
     }
     if (const char* cell = cell_word(snapshot, cell_buffer)) return {cell, state};
     return {state, stage};
@@ -263,15 +265,15 @@ void reverse(ui::Canvas& canvas, const Box& box) {
             canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
 }
 
-Box note_box(const char* note, int y, int scale) {
-    const int width = text_width(note, scale);
+Box word_box(const char* word, int y, int scale) {
+    const int width = text_width(word, scale);
     return padded(kCentreX - width / 2, y, width, kCharacterHeight * scale);
 }
 
-void state_note(ui::Canvas& canvas, const char* note, int y, int scale) {
-    const Box box = note_box(note, y, scale);
+void state_word(ui::Canvas& canvas, const char* word, int y, int scale) {
+    const Box box = word_box(word, y, scale);
     canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
-    canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, note, true, scale);
+    canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, word, true, scale);
 }
 
 void bravo_live_mark(ui::Canvas& canvas, int right, int bottom) {
@@ -304,20 +306,9 @@ void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     }
 }
 
-// INFO: fc 26nov26 a note at banner size lifts the pair, so both lines stay centred above the range
-int pair_lift(const RingWords& ring) {
-    if (!ring.note || ring.note_scale == kNoteScale) return 0;
-    return (kNoteGap + kCharacterHeight * (ring.note_scale - kNoteScale)) / 2;
-}
-
-Box banner_box(const char* word, int y) {
-    const int width = text_width(word, kBannerScale);
-    return padded(kCentreX - width / 2, y, width, kCharacterHeight * kBannerScale);
-}
-
 // INFO: fc 12nov26 a banner wider than the ring's chord where it stands rises until it clears it
 int banner_y_inside(const char* word, const Layout& layout) {
-    const Box box = banner_box(word, layout.banner_y);
+    const Box box = word_box(word, layout.banner_y, kBannerScale);
     const int half_width = box.width / 2 + 1;
     const int inside = layout.outer_radius - kRingWidth;
     int y = layout.banner_y;
@@ -327,12 +318,6 @@ int banner_y_inside(const char* word, const Layout& layout) {
         y--;
     }
     return y;
-}
-
-void state_banner(ui::Canvas& canvas, const char* word, int y) {
-    const Box box = banner_box(word, y);
-    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
-    canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, word, true, kBannerScale);
 }
 
 Box formation_box() {
@@ -474,16 +459,20 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     int reading_count = 2;
     char cell_buffer[12];
     const RingWords ring = ring_words(snapshot, cell_buffer);
+    // INFO: fc 26nov26 a split banner rises half a line, so the pair centres where one line stands
+    const int lift = ring.split ? line_pitch(kBannerScale) / 2 : 0;
     const int banner_y =
-        ring.banner ? banner_y_inside(ring.banner, layout) - pair_lift(ring) : layout.banner_y;
-    const int note_y = layout.note_y - layout.banner_y + banner_y;
+        ring.banner ? banner_y_inside(ring.banner, layout) - lift : layout.banner_y;
+    const int note_y = ring.split ? banner_y + line_pitch(kBannerScale)
+                                  : layout.note_y - layout.banner_y + banner_y;
+    const int note_scale = ring.split ? kBannerScale : kNoteScale;
     if (ring.banner) {
-        state_banner(canvas, ring.banner, banner_y);
-        readings[reading_count++] = banner_box(ring.banner, banner_y);
+        state_word(canvas, ring.banner, banner_y, kBannerScale);
+        readings[reading_count++] = word_box(ring.banner, banner_y, kBannerScale);
     }
     if (ring.note) {
-        state_note(canvas, ring.note, note_y, ring.note_scale);
-        readings[reading_count++] = note_box(ring.note, note_y, ring.note_scale);
+        state_word(canvas, ring.note, note_y, note_scale);
+        readings[reading_count++] = word_box(ring.note, note_y, note_scale);
     }
 
     const int16_t track_angle16 =
