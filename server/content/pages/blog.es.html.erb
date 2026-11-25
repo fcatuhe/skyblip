@@ -1,0 +1,26 @@
+---
+title: "Blog de skyBlip: ADS-L, tráfico y aviación ligera"
+nav_title: Blog
+slug: blog
+description: "Respuestas detalladas a las preguntas de los pilotos en los foros: ADS-L o ADS-B, red o radio, de bolsillo o instalado, y cómo equipar la flota de un club."
+updated_on: "2026-11-24"
+---
+
+<header class="page-hero">
+  <h1>Respuestas detalladas a las preguntas de los pilotos</h1>
+  <p class="page-hero-subtitle">Los pilotos nos hacen las mismas preguntas en el aeródromo y en los foros. Algunas merecen algo más que una respuesta rápida. Las respondemos aquí, con nuestras fuentes.</p>
+</header>
+
+<section id="forums" class="band band--tint">
+  <h2 class="section-title">Lo que nos preguntan los pilotos</h2>
+  <%= render "shared/post_cards", slugs: %w[blog/always-on-board blog/club-fleet blog/network-or-radio blog/skyblip-softrf-stratux blog/who-sees-ads-l blog/why-ads-l] %>
+</section>
+
+<section id="long-reads" class="band">
+  <h2 class="section-title">Para saber más</h2>
+  <%= render "shared/post_cards", slugs: %w[compare see-and-avoid ads-l] %>
+</section>
+
+<section class="band band--tint">
+  <%= render "shared/cta" %>
+</section>
