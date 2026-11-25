@@ -1,0 +1,83 @@
+---
+title: "Allumer le skyBlip Go avec l'interrupteur général"
+nav_title: Mode câble
+slug: blog/mode-cable
+description: "Réglez le Go une fois. Avec la version 0.8.1, il démarre quand l'avion alimente sa prise USB et s'éteint cinq minutes après la coupure au sol."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 novembre 2026</p>
+  <h1>Le Go s&rsquo;allume avec l&rsquo;interrupteur général.</h1>
+  <p class="lede">Laissez un skyBlip Go dans l&rsquo;avion, batterie en place, branché sur une prise USB commandée par l&rsquo;interrupteur général. En mode câble, le Go s&rsquo;allume avec l&rsquo;avion. Au sol, il s&rsquo;éteint cinq minutes après la coupure. Faites le réglage une fois. Le pilote suivant n&rsquo;aura rien à faire sur le Go. Le mode câble arrive avec la prochaine version du logiciel embarqué, la 0.8.1. Il n&rsquo;est pas dans la 0.8.0.</p>
+</section>
+
+<section>
+  <h2 class="kicker">La demande sur Pilot und Flugzeug</h2>
+  <h3>Un émetteur ADS-L qui reste dans l&rsquo;avion.</h3>
+  <p>Sebastian G. cherchait un petit émetteur ADS-L bon marché qui resterait branché dans chaque avion, quel que soit le pilote. Norbert Rading a demandé si on pouvait retirer la batterie du T-Echo, le matériel sur lequel repose le Go. <a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,25,00,5814566">François a présenté les deux possibilités</a>. Nous avons choisi de laisser la batterie en place.</p>
+  <p><a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,25,09,0254359">Markus S. voulait que l&rsquo;interrupteur général allume le Go</a>, sans ajouter de ligne à la checklist. Il proposait d&rsquo;attendre environ trois minutes avant l&rsquo;arrêt pour laisser le temps de faire plusieurs tentatives de démarrage. Nous en avons retenu cinq.</p>
+</section>
+
+<section>
+  <h2 class="kicker">À régler une seule fois</h2>
+  <h3>Vérifiez que l&rsquo;interrupteur général coupe bien la prise USB.</h3>
+  <ol>
+    <li><strong>Passez à la version 0.8.1 dès qu&rsquo;elle est disponible.</strong> Connectez le Go en Bluetooth dans <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> depuis Chrome ou Edge. Confirmez la mise à jour sur le Go. Pour un appareil neuf, suivez le <%= link_to_page "install", label: "guide d'installation" %>. La mise à jour depuis la 0.8.0 conserve vos réglages et le Go démarre sur <span class="mono">BUTTON</span>.</li>
+    <li><strong>Choisissez le type d&rsquo;aéronef et l&rsquo;indicatif.</strong> Faites-le dans Briefing ou <%= link_to_page "go-first-steps", label: "dans le menu du Go", anchor: "type" %>. Si l&rsquo;avion émet en Mode S ou en ADS-B, saisissez une fois dans Briefing l&rsquo;adresse OACI de son transpondeur. Le Go doit utiliser la même adresse en ADS-L pour que les récepteurs reconnaissent le même avion. Réservez un Go à chaque avion ainsi équipé.</li>
+    <li><strong>Placez le Go antenne vers le haut.</strong> Donnez-lui une vue dégagée sur le ciel. Le <%= link_to_page "mount", label: "guide de fixation" %> montre où le placer. Laissez la batterie en place et branchez le câble USB-C. Si la prise reste alimentée quand vous coupez l&rsquo;interrupteur général, le Go reste allumé.</li>
+    <li><strong>Réglez <span class="mono">POWER</span> sur <span class="mono">CABLE</span> sur le Go.</strong> Depuis le radar, appuyez sur le bouton latéral pour ouvrir <span class="mono">SETTINGS</span>. Touchez le pavé du dessus jusqu&rsquo;à la dernière ligne, <span class="mono">POWER</span>. Appuyez une fois sur le bouton pour passer de <span class="mono">BUTTON</span> à <span class="mono">CABLE</span>. Le Go mémorise ce réglage. Il ne se change pas dans Briefing.</li>
+  </ol>
+  <figure class="shot">
+    <%= screen_image_tag "menu-power.png", alt: "Dans SETTINGS, la dernière ligne est sélectionnée : POWER est sur BUTTON" %>
+    <figcaption>Sur cette ligne, appuyez une fois pour choisir <span class="mono">CABLE</span>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Le jour du vol</h2>
+  <h3>Vous n&rsquo;avez rien à faire sur le Go.</h3>
+  <p>Mettez l&rsquo;interrupteur général sur marche comme d&rsquo;habitude. Le Go démarre avec un éclat vert de 400&nbsp;ms. Le Go+ vibre aussi. <a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,23,13,5147585">Markus S. avait aussi demandé un voyant de fonctionnement</a>. En marche normale, le voyant clignote toutes les trois secondes. Bleu, le Go tourne mais n&rsquo;a pas encore de position. Vert, il tourne et a une position à transmettre.</p>
+  <p>Tant que la prise USB est alimentée, un interrupteur électronique retire la batterie du circuit qui alimente le Go. Le Go tire son courant de la prise et le circuit de charge maintient la batterie chargée. Si la tension USB chute au démarrage du moteur, la batterie prend le relais. Sans elle, le Go redémarrerait. Retirer la batterie peut aussi remettre en cause la conformité CE de l&rsquo;appareil.</p>
+  <p>Les cinq minutes servent quand vous coupez l&rsquo;interrupteur général pour laisser refroidir le démarreur. Rotax prévoit deux minutes de pause après dix secondes de démarreur sur le 912. Lycoming prévoit cinq minutes entre deux tentatives sur l&rsquo;IO-320. Nous avons vérifié sur banc le démarrage par USB d&rsquo;un Go+. Nous n&rsquo;avons pas encore mesuré la chute de tension sur le circuit 5&nbsp;V au démarrage du moteur.</p>
+  <p>Si l&rsquo;alimentation USB disparaît en vol, le Go continue sur sa batterie. Le compte à rebours ne démarre qu&rsquo;une fois l&rsquo;avion au sol. Au parking, coupez l&rsquo;interrupteur général comme d&rsquo;habitude. Le cercle du radar affiche <span class="mono">OFF IN</span> au-dessus de <span class="mono">5 MIN</span>. Si le courant revient avant la fin, le compte à rebours disparaît et le Go continue de fonctionner. Sinon le voyant clignote brièvement trois fois en rouge et le Go s&rsquo;éteint. Vous n&rsquo;avez pas à attendre.</p>
+  <figure class="shot">
+    <%= screen_image_tag "cable-off.png", alt: "Après la coupure de l'alimentation USB au sol, le cercle du radar affiche OFF IN au-dessus de 4 MIN" %>
+    <figcaption>Pendant le compte à rebours, le Go fonctionne sur sa batterie.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Commandes manuelles et limites</h2>
+  <h3>Le Go reste un appareil portable.</h3>
+  <p>Pour démarrer sans courant USB, appuyez sur <span class="mono">RESET</span>, la commande du haut sur le côté gauche. Le bouton principal ne réveille pas le Go en mode câble. Maintenez-le enfoncé deux secondes pour éteindre le Go, même si le câble est branché. Il reste éteint jusqu&rsquo;au retour du courant USB ou jusqu&rsquo;à ce que vous appuyiez sur <span class="mono">RESET</span>.</p>
+  <p>Branché à la prise USB existante de l&rsquo;avion, le Go reste portable. Nous ne fournissons pas les déclarations exigées par la <%= link_to_page "blog/pocket-or-installed", label: "CS-SC057a" %>. Le Go ne peut donc pas être installé à demeure au titre de cette modification standard CS-STAN.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, novembre 2026.
+      <span class="support">Les demandes d&rsquo;alimentation par l&rsquo;avion, de démarrage automatique et de voyant de fonctionnement.</span>
+    </li>
+    <li>
+      <strong>Logiciel skyBlip</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/522">Mode câble</a> et <a href="https://github.com/fcatuhe/skyblip/issues/488">Alimentation USB et batterie</a>.
+      <span class="support">Le choix des cinq minutes, les essais sur banc et le passage de l&rsquo;USB à la batterie.</span>
+    </li>
+    <li>
+      <strong>Guides skyBlip</strong> &middot; <%= link_to_page "power", label: "Alimentation et charge", anchor: "cable-mode" %> et <%= link_to_page "go-first-steps", label: "Les indications du voyant", anchor: "light" %>.
+      <span class="support">Les commandes et les indications du Go au démarrage, en marche et à l&rsquo;arrêt.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

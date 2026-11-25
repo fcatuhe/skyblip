@@ -1,0 +1,82 @@
+---
+title: "Switch on your skyBlip Go with the aircraft master"
+nav_title: Cable mode
+description: "Set up cable mode once. With firmware 0.8.1, Go starts on master-switched USB power and shuts off five minutes after power is cut on the ground."
+published_on: "2026-11-25"
+parent: blog
+updated_on: "2026-11-25"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 November 2026</p>
+  <h1>Master on, Go on.</h1>
+  <p class="lede">Leave a skyBlip Go in the aircraft, with its battery in and its cable plugged into a USB socket powered by the master switch. In cable mode, the Go starts with the master and switches itself off five minutes after you turn the master off on the ground. Set it up once. Whoever flies next has no extra switch to touch. Cable mode comes in firmware 0.8.1, the next release. It is not in 0.8.0.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The request from Pilot und Flugzeug</h2>
+  <h3>Leave the ADS-L transmitter with the aircraft.</h3>
+  <p>Sebastian G. wanted a small, inexpensive ADS-L transmitter that could stay plugged into each aircraft, whoever flew it. Norbert Rading asked whether he could remove the battery from the T-Echo, the hardware used by the Go. <a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,25,00,5814566">François outlined both options</a>. We chose to keep the battery in.</p>
+  <p><a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,25,09,0254359">Markus S. asked for the master switch to do the work</a>, with no extra checklist item. He suggested about three minutes before shutdown to allow for several attempts at starting the engine. We chose five.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Set it up once</h2>
+  <h3>Use a USB socket that goes off with the master.</h3>
+  <ol>
+    <li><strong>Update to 0.8.1 when it is available.</strong> Connect the Go over Bluetooth in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> using Chrome or Edge. Confirm the update on the Go. If you are starting with a new unit, follow the <%= link_to_page "install", label: "installation guide" %>. An update from 0.8.0 keeps your settings and starts in <span class="mono">BUTTON</span>.</li>
+    <li><strong>Set the aircraft type and callsign.</strong> Use Briefing or the <%= link_to_page "go-first-steps", label: "menu on the Go", anchor: "type" %>. If the aircraft transmits Mode S or ADS-B, set its transponder&rsquo;s ICAO address once in Briefing. ADS-L should use the same address so receivers know both signals come from one aircraft. Give each such aircraft its own Go.</li>
+    <li><strong>Mount the Go with the antenna up.</strong> Give it a clear view of the sky. The <%= link_to_page "mount", label: "mounting guide" %> shows where it can go. Leave the battery in and plug in the USB-C cable. If the socket stays live when the master is off, the Go stays on.</li>
+    <li><strong>Set <span class="mono">POWER</span> to <span class="mono">CABLE</span> on the Go.</strong> From the radar, press the side button to open <span class="mono">SETTINGS</span>. Tap the top pad until you reach <span class="mono">POWER</span>, the last row. Press the button once to change <span class="mono">BUTTON</span> to <span class="mono">CABLE</span>. The Go saves this setting. You cannot change it in Briefing.</li>
+  </ol>
+  <figure class="shot">
+    <%= screen_image_tag "menu-power.png", alt: "SETTINGS with the last row selected: POWER reads BUTTON" %>
+    <figcaption>Press once on this row to select <span class="mono">CABLE</span>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">On a flight day</h2>
+  <h3>The pilot leaves the Go alone.</h3>
+  <p>Turn on the master as usual. The Go starts with one green pulse lasting 400&nbsp;ms. On a Go+, you feel it too. <a href="https://www.pilotundflugzeug.de/forum/avionik/2026,11,23,13,5147585">Markus S. also asked for an operating light</a>. In normal operation, the lamp winks every three seconds. Blue means the Go is running but has no position yet. Green means it is running and has a position to transmit.</p>
+  <p>With USB power on, an electronic switch takes the battery out of the circuit that powers the Go. The Go runs on USB while the charging chip keeps the battery charged. The battery takes over if USB power dips during cranking. Without it, a dip would reboot the Go. Removing the battery can also void the device&rsquo;s CE conformity.</p>
+  <p>The five-minute delay is for longer interruptions, such as turning the master off to let the starter cool. Rotax calls for two minutes of cooling after ten seconds of cranking on the 912. Lycoming calls for five minutes between attempts on the IO-320. We checked cable startup on a Go+ on the bench. We have not yet measured the dip on the 5&nbsp;V rail during cranking.</p>
+  <p>If USB power is lost in flight, the Go keeps running on its battery. Cable mode does not start the shutdown countdown until the aircraft is on the ground. After parking, turn off the master as usual. The radar ring shows <span class="mono">OFF IN</span> over <span class="mono">5 MIN</span> and counts down. If power returns first, the countdown clears and the Go keeps running. Otherwise, it gives three short red pulses and switches off. You do not need to wait.</p>
+  <figure class="shot">
+    <%= screen_image_tag "cable-off.png", alt: "The radar ring reads OFF IN above 4 MIN after USB power was lost on the ground" %>
+    <figcaption>The Go runs on its battery during the countdown.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Manual control and limits</h2>
+  <h3>The Go stays portable.</h3>
+  <p>To start it without USB power, press <span class="mono">RESET</span>, the upper control on the left. The main button does not wake it in cable mode. Hold that button for two seconds to switch the Go off, even with the cable connected. It stays off until USB power next comes on or you press <span class="mono">RESET</span>.</p>
+  <p>A Go plugged into the aircraft&rsquo;s existing USB socket remains a portable device. We do not supply the declarations required by <%= link_to_page "blog/pocket-or-installed", label: "CS-SC057a" %>, so a Go cannot be fitted under that CS-STAN standard change today.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>Pilot und Flugzeug</strong> &middot; <a href="https://www.pilotundflugzeug.de/forum/2026,11,21,22,3910338">ADS-L auf Hardware ab 68 &euro;</a>, November 2026.
+      <span class="support">The requests for USB power, automatic startup and an operating light.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot; <a href="https://github.com/fcatuhe/skyblip/pull/522">Cable mode</a> and <a href="https://github.com/fcatuhe/skyblip/issues/488">USB power and the battery</a>.
+      <span class="support">The reason for the five-minute delay, the bench checks and how USB and battery power are switched.</span>
+    </li>
+    <li>
+      <strong>skyBlip guides</strong> &middot; <%= link_to_page "power", label: "Power and charging", anchor: "cable-mode" %> and <%= link_to_page "go-first-steps", label: "What the lamp means", anchor: "light" %>.
+      <span class="support">The power controls and what the Go shows at startup, in use and at shutdown.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
