@@ -215,6 +215,68 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
+  test "Chrome on Linux says what to set up once per computer, and where the drive is" do
+    in_chrome_on "Linux"
+    in_range
+    plugged_in a_meshtastic_go
+    with_installers do
+      visit "/briefing/setup"
+      within ".setup-linux" do
+        assert_selector "h2", text: "On Linux, before you start"
+        assert_button text: /sudo usermod -aG dialout \$USER\s+Copy/
+        assert_text "On Arch Linux, the group is uucp."
+        assert_button text: /sudo snap connect chromium:removable-media\s+Copy/
+        assert_no_text "Do the Bluetooth steps on this page first."
+      end
+      screen "54-linux-start"
+
+      click_button "Install"
+      assert_text "Not in the window? Open the drive once in your file manager so Linux mounts it"
+      click_button "Choose the drive"
+      click_button "Connect"
+      assert_text "Name your aircraft."
+    end
+  end
+
+  test "Chrome on Linux without Web Bluetooth is told to turn it on first, and where to connect after the restart" do
+    in_chrome_on "Linux"
+    in_range
+    without_web_bluetooth
+    plugged_in a_meshtastic_go
+    with_installers do
+      visit "/briefing/setup"
+      within(".setup-linux") { assert_text "Turn on Web Bluetooth with the steps on this page first. Chrome restarts to apply it" }
+      assert_selector ".bluetooth-check [data-check=flag]", text: "To do"
+      screen "55-linux-start-without-web-bluetooth"
+
+      click_button "Install"
+      click_button "Choose the drive"
+      assert_text "Installed. Last step: connect Go 3F2A over Bluetooth."
+      assert_text "Turn on Web Bluetooth with the steps on this page. Once Chrome has restarted, open Your devices and connect it from there."
+      assert_no_button "Connect"
+    end
+  end
+
+  test "Chrome on Linux without an adapter installs, then connects as soon as the adapter is back" do
+    in_chrome_on "Linux"
+    in_range adapter: false
+    plugged_in a_meshtastic_go
+    with_installers do
+      visit "/briefing/setup"
+      within(".setup-linux") { assert_no_text "Turn on Web Bluetooth" }
+      click_button "Install"
+      click_button "Choose the drive"
+      assert_text "Turn on Bluetooth with the steps on this page, and Connect appears here."
+      assert_no_button "Connect"
+      screen "56-linux-installed-without-adapter"
+
+      page.execute_script("fakeFleet.plugAdapter(true)")
+      assert_text "Choose activate 3F2A skyBlip in the list."
+      click_button "Connect"
+      assert_text "Name your aircraft."
+    end
+  end
+
   test "a port Linux will not open names the group to join" do
     in_chrome_on "Linux"
     in_range
@@ -237,6 +299,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Install"
       assert_selector ".unit-message", text: "Another program is using the device. Close it, then click Install again."
       assert_no_text "dialout"
+      assert_no_selector ".setup-linux"
     end
   end
 

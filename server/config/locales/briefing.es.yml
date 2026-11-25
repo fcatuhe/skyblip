@@ -44,6 +44,7 @@ es:
       adapter_linux: "En Linux, inicia también el servicio Bluetooth:"
       remember: "Reconecta tus dispositivos solos"
       remember_how: "Copia esta dirección en la barra de direcciones, ponla en Enabled y pulsa Relaunch. Briefing vuelve a conectar entonces los dispositivos que conoce sin mostrar la lista."
+    copy_code:
       copy: "Copiar"
       copied: "Copiado"
     unit:
@@ -158,6 +159,13 @@ es:
         connect: "Conectar"
         aircraft: "Tu aeronave"
       start: "Enchufa tu Go o Bravo a este ordenador con un cable USB. Briefing instala skyBlip y luego se conecta al dispositivo."
+      linux:
+        title: "En Linux, antes de empezar"
+        bluetooth_first: "Activa primero Web Bluetooth con los pasos de esta página. Chrome se reinicia para aplicarlo, y el último paso se conecta por Bluetooth."
+        dialout: "Permite que tu usuario abra el puerto USB del dispositivo y luego cierra la sesión y vuelve a entrar:"
+        dialout_note: "¿Ya lo hiciste en este ordenador? Sáltalo. En Arch Linux el grupo es uucp."
+        snap: "¿Usas Chromium de la Snap Store? Deja que vea las unidades USB:"
+        drive: "¿No aparece en la ventana? Abre la unidad una vez en tu gestor de archivos para que Linux la monte y elígela en el panel lateral."
       install: "Instalar"
       connect_running: "Conectar por Bluetooth"
       drive: "%{name} se ha reiniciado como unidad USB con el nombre %{drive}. Elige esa unidad en la ventana siguiente y permite que Briefing guarde en ella."
@@ -174,6 +182,8 @@ es:
       keep_plugged: "Déjalo enchufado. Tarda unos segundos."
       installed: "Instalación terminada. Último paso: conecta %{name} por Bluetooth."
       installed_trusted: "Instalación terminada. Último paso: conecta %{name} por Bluetooth. Confía en este navegador, así que no te pide que pulses el botón."
+      connect_after_flag: "Activa Web Bluetooth con los pasos de esta página. Cuando Chrome se haya reiniciado, abre Tus dispositivos y conéctalo desde ahí."
+      connect_after_adapter: "Enciende el Bluetooth con los pasos de esta página y aparecerá Conectar aquí."
       connect: "Conectar"
       choose_in_list: "Elige %{name} en la lista."
       activating: "Activando %{name}."

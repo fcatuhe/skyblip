@@ -44,6 +44,7 @@ it:
       adapter_linux: "Su Linux, avvia anche il servizio Bluetooth:"
       remember: Ricollega i tuoi dispositivi da soli
       remember_how: "Copia questo indirizzo nella barra degli indirizzi, impostalo su Enabled, poi fai clic su Relaunch. Briefing ricollega allora i dispositivi che conosce senza mostrare l'elenco."
+    copy_code:
       copy: Copia
       copied: Copiato
     unit:
@@ -158,6 +159,13 @@ it:
         connect: Collega
         aircraft: Il tuo aeromobile
       start: "Collega il tuo Go o Bravo a questo computer con un cavo USB. Briefing ci installa skyBlip, poi si collega al dispositivo."
+      linux:
+        title: Su Linux, prima di iniziare
+        bluetooth_first: "Attiva prima Web Bluetooth con i passaggi di questa pagina. Chrome si riavvia per applicarlo, e l'ultimo passaggio si collega via Bluetooth."
+        dialout: "Consenti al tuo utente di aprire la porta USB del dispositivo, poi esci e rientra nella sessione:"
+        dialout_note: "Già fatto su questo computer? Saltalo. Su Arch Linux il gruppo è uucp."
+        snap: "Usi Chromium dallo Snap Store? Consentigli di vedere le unità USB:"
+        drive: "Non compare nella finestra? Apri l'unità una volta nel gestore di file perché Linux la monti, poi sceglila nel pannello laterale."
       install: Installa
       connect_running: Collegalo via Bluetooth
       drive: "%{name} si è riavviato come unità USB chiamata %{drive}. Scegli quell'unità nella finestra successiva, poi consenti a Briefing di salvarci i file."
@@ -174,6 +182,8 @@ it:
       keep_plugged: Lascialo collegato. Ci vogliono pochi secondi.
       installed: "Installato. Ultimo passo: collega %{name} via Bluetooth."
       installed_trusted: "Installato. Ultimo passo: collega %{name} via Bluetooth. Questo browser è autorizzato, quindi non serve premere il pulsante."
+      connect_after_flag: "Attiva Web Bluetooth con i passaggi di questa pagina. Dopo il riavvio di Chrome, apri I tuoi dispositivi e collegalo da lì."
+      connect_after_adapter: "Accendi il Bluetooth con i passaggi di questa pagina, e qui compare Collega."
       connect: Collega
       choose_in_list: "Scegli %{name} nell'elenco."
       activating: "Attivazione di %{name}."

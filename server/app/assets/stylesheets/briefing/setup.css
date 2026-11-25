@@ -26,6 +26,22 @@
 
   .setup-step { display: grid; gap: var(--space-m); }
   .setup-step .note { margin: 0; font-size: var(--text-s); color: var(--ink-muted); }
+  .setup-step .note[hidden] { display: none; }
+
+  .setup-linux {
+    display: grid;
+    gap: var(--space-xs);
+    padding: var(--space-s) var(--space-inline-m);
+    border: 1px solid var(--card-border);
+    border-radius: var(--space-xs);
+    background: var(--card-bg);
+  }
+  .setup-linux[hidden] { display: none; }
+  .setup-linux h2 { margin: 0; font-size: var(--text-base); }
+  .setup-linux p { margin: 0; text-wrap: pretty; }
+  .setup-linux-steps { display: grid; gap: var(--space-s); margin: 0; padding-inline-start: var(--space-inline-l); }
+  .setup-linux-steps li { display: grid; gap: var(--space-2xs); justify-items: start; }
+  .setup-linux-steps li[hidden] { display: none; }
 
   .setup-alternatives { display: grid; gap: var(--space-xs); margin: 0; padding: 0; list-style: none; font-size: var(--text-s); color: var(--ink-muted); }
   .setup-alternatives li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs) var(--space-inline-s); }

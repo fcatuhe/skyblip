@@ -17,6 +17,11 @@ module BriefingTestHelper
 
     def in_firefox = client_hints(nil)
 
+    # INFO: fc 24nov26 Chrome on Linux before its flag, with the fake fleet still there for the units a USB install puts in range
+    def without_web_bluetooth
+      page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: "delete navigator.bluetooth")
+    end
+
     def client_hints(hints)
       script = "Object.defineProperty(navigator, 'userAgentData', { configurable: true, value: #{hints.to_json} });"
       page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: script)

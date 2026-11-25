@@ -44,6 +44,7 @@ fr:
       adapter_linux: "Sous Linux, démarrez aussi le service Bluetooth\u00a0:"
       remember: "Reconnectez vos appareils tout seuls"
       remember_how: "Copiez cette adresse dans la barre d\u2019adresse, réglez-la sur Enabled, puis cliquez sur Relaunch. Briefing reconnecte alors les appareils qu\u2019il connaît sans afficher la liste."
+    copy_code:
       copy: "Copier"
       copied: "Copié"
     unit:
@@ -158,6 +159,13 @@ fr:
         connect: "Connecter"
         aircraft: "Votre aéronef"
       start: "Branchez votre Go ou votre Bravo sur cet ordinateur avec un câble USB. Le Briefing y installe skyBlip, puis s\u2019y connecte."
+      linux:
+        title: "Sous Linux, avant de commencer"
+        bluetooth_first: "Activez d\u2019abord Web Bluetooth avec les étapes de cette page. Chrome redémarre pour l\u2019appliquer, et la dernière étape se connecte en Bluetooth."
+        dialout: "Autorisez votre utilisateur à ouvrir le port USB de l\u2019appareil, puis fermez et rouvrez votre session\u00a0:"
+        dialout_note: "Déjà fait sur cet ordinateur\u00a0? Passez cette étape. Sous Arch Linux, le groupe s\u2019appelle uucp."
+        snap: "Vous utilisez Chromium du Snap Store\u00a0? Autorisez-le à voir les clés USB\u00a0:"
+        drive: "Absent de la fenêtre\u00a0? Ouvrez une fois le lecteur dans votre gestionnaire de fichiers pour que Linux le monte, puis choisissez-le dans le panneau latéral."
       install: "Installer"
       connect_running: "Le connecter en Bluetooth"
       drive: "%{name} a redémarré en clé USB nommée %{drive}. Choisissez cette clé dans la fenêtre qui s\u2019ouvre, puis autorisez Briefing à y enregistrer."
@@ -174,6 +182,8 @@ fr:
       keep_plugged: "Laissez-le branché. Cela prend quelques secondes."
       installed: "Installé. Dernière étape\u00a0: connectez %{name} en Bluetooth."
       installed_trusted: "Installé. Dernière étape\u00a0: connectez %{name} en Bluetooth. Il fait confiance à ce navigateur et ne demande donc aucun appui."
+      connect_after_flag: "Activez Web Bluetooth avec les étapes de cette page. Une fois Chrome redémarré, ouvrez Vos appareils et connectez-le depuis là."
+      connect_after_adapter: "Allumez le Bluetooth avec les étapes de cette page, et Connecter apparaît ici."
       connect: "Connecter"
       choose_in_list: "Choisissez %{name} dans la liste."
       activating: "Activation de %{name}."

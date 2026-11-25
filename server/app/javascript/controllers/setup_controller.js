@@ -26,7 +26,8 @@ const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: [
 export default class extends Controller {
   static targets = ["title", "steps", "panel", "install", "driveText", "byHand", "chooseDrive", "writingText", "connectText", "connect", "connectHint",
                     "finishText", "pressBravo", "retry", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
-                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers"]
+                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers",
+                    "linux", "bluetoothFirst"]
   static values = { devices: String, activation: String, setup: String, partner: String, challenges: String, registrations: String }
   static outlets = ["glass"]
 
@@ -195,6 +196,7 @@ export default class extends Controller {
   }
 
   #render() {
+    this.#linux()
     if (this.onboarding) return this.#onboarding()
     const support = browserSupport()
     if (support !== "usb" && this.installer.state.phase === "idle") return this.#show("unsupported", { text: say(`setup.unsupported_${support}`) })
@@ -220,8 +222,10 @@ export default class extends Controller {
   #connectPanel(state, name) {
     this.connectTextTarget.textContent = say(state.trusted ? "setup.installed_trusted" : "setup.installed", { name })
     const code = tagText(state.tag) ?? "…"
-    this.connectHintTarget.textContent = say("setup.choose_in_list", { name: state.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}` })
-    this.connectTarget.hidden = !bluetoothReadiness().ready
+    const { ready, checks } = bluetoothReadiness()
+    const listed = state.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}`
+    this.connectHintTarget.textContent = ready ? say("setup.choose_in_list", { name: listed }) : say(checks.flag === "missing" ? "setup.connect_after_flag" : "setup.connect_after_adapter")
+    this.connectTarget.hidden = !ready
   }
 
   #onboarding() {
@@ -321,6 +325,12 @@ export default class extends Controller {
     this.setUpPartnerTarget.textContent = say("tango.set_up", { other: PRODUCT_WORDS[other] })
     for (const item of this.guidesTarget.children) item.hidden = kind !== "tango" && item.dataset.product !== kind
     this.#show("done")
+  }
+
+  #linux() {
+    const linux = onDesktopLinux(navigator)
+    for (const each of this.linuxTargets) each.hidden = !linux
+    this.bluetoothFirstTarget.hidden = bluetoothReadiness().checks.flag !== "missing"
   }
 
   #onThisSystem(notice) {
