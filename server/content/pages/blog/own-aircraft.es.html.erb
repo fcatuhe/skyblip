@@ -113,6 +113,10 @@ updated_on: "2026-11-25"
 </section>
 
 <section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
   <h2 class="kicker">Fuentes</h2>
   <ul class="sources">
     <li>
@@ -125,7 +129,6 @@ updated_on: "2026-11-25"
       <span class="support">La pregunta de Frank a la que responde este artículo.</span>
     </li>
   </ul>
-  <p><%= link_to_page "blog/pocket-or-installed", class: "cta cta--previous" %></p>
 </section>
 
 <section class="band">

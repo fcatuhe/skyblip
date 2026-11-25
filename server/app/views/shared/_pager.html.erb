@@ -1,0 +1,15 @@
+<nav class="pager" aria-label="<%= t "pager.label" %>">
+  <p class="pager-place"><%= link_to_page page.parent.base_slug, label_type: :nav %> &middot; <%= t "pager.place", position: page.reading_position, count: page.reading_order.size %></p>
+  <% if page.previous_page %>
+    <%= link_to page_url_for(page.previous_page, only_path: true), rel: "prev", class: "pager-link pager-link--previous" do %>
+      <span class="pager-direction"><%= t "pager.previous" %></span>
+      <span class="pager-title"><%= page.previous_page.title %></span>
+    <% end %>
+  <% end %>
+  <% if page.next_page %>
+    <%= link_to page_url_for(page.next_page, only_path: true), rel: "next", class: "pager-link pager-link--next" do %>
+      <span class="pager-direction"><%= t "pager.next" %></span>
+      <span class="pager-title"><%= page.next_page.title %></span>
+    <% end %>
+  <% end %>
+</nav>

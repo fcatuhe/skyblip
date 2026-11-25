@@ -40,6 +40,10 @@ updated_on: "2026-11-25"
 </section>
 
 <section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
   <h2 class="kicker">Fuentes</h2>
   <ul class="sources">
     <li>
@@ -51,7 +55,6 @@ updated_on: "2026-11-25"
       <span class="support">El tráfico de más de 30 fuentes y las tarifas de datos móviles del AERO Tracker.</span>
     </li>
   </ul>
-  <p><%= link_to_page "blog/skyblip-softrf-stratux", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/club-fleet", class: "cta cta--next" %></p>
 </section>
 
 <section class="band">

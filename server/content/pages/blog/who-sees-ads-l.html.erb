@@ -68,6 +68,10 @@ updated_on: "2026-11-25"
 </section>
 
 <section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
   <h2 class="kicker">Sources</h2>
   <ul class="sources">
     <li>
@@ -85,7 +89,6 @@ updated_on: "2026-11-25"
       <span class="support">How Go shares one radio between ADS-L, FLARM and the ground uplink.</span>
     </li>
   </ul>
-  <p><%= link_to_page "blog/why-ads-l", class: "cta cta--previous" %> &nbsp;&middot;&nbsp; <%= link_to_page "blog/skyblip-softrf-stratux", class: "cta cta--next" %></p>
 </section>
 
 <section class="band">
