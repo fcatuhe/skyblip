@@ -24,6 +24,7 @@ updated_on: "2026-11-25"
         24-bit address it got when it was <%= link_to "activated", briefing_activation_path %>.
         No pairing or code is needed. The Go sends traffic as a FLARM NMEA data stream. It supports both Bluetooth serial connection types that navigation software looks for, so the app you already fly with can find it.
       </p>
+      <p>The Go also sends its GPS position over the same Bluetooth link once a second. Your navigation app can use it on an iPad without GPS when you fly with the Go as its source. <%= link_to_page "blog/gps-to-tablet", label: "How the Go supplies position and traffic to your tablet" %>.</p>
       <p>
         The tablet on the yoke, the phone in a pocket and the passenger&rsquo;s
         iPad all see the same traffic. Only one app at a time can change
