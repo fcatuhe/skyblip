@@ -1,0 +1,262 @@
+---
+http_interactions:
+- request:
+    method: head
+    uri: https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - download.maxmind.com
+      Authorization:
+      - "<MAXMIND_LICENSE_KEY>"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 25 Nov 2026 20:08:20 GMT
+      Content-Type:
+      - application/gzip
+      Content-Length:
+      - '28215542'
+      Connection:
+      - keep-alive
+      Cf-Ray:
+      - a60348e30eee4f8a-MRS
+      Accept-Ranges:
+      - bytes
+      Content-Disposition:
+      - attachment; filename=GeoLite2-City_20261124.tar.gz
+      Etag:
+      - '"22720fcf96e3d7c5a3c2e2df496327bd"'
+      Last-Modified:
+      - Tue, 24 Nov 2026 18:30:54 GMT
+      Server:
+      - cloudflare
+      Vary:
+      - Origin
+      X-Amz-Expiration:
+      - expiry-date="Thu, 24 Dec 2026 18:30:54 GMT", rule-id="Delete%20objects%20older%20than%2030%20days"
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      X-Content-Type-Options:
+      - nosniff
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: UTF-8
+      string: ''
+  recorded_at: Wed, 25 Nov 2026 20:08:20 GMT
+- request:
+    method: get
+    uri: https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - download.maxmind.com
+      Authorization:
+      - "<MAXMIND_LICENSE_KEY>"
+  response:
+    status:
+      code: 302
+      message: Found
+    headers:
+      Date:
+      - Wed, 25 Nov 2026 20:08:20 GMT
+      Content-Length:
+      - '0'
+      Connection:
+      - keep-alive
+      Location:
+      - https://mm-prod-geoip-databases.a2649acb697e2c09b632799562c076f2.r2.cloudflarestorage.com/builds/GeoLite2-City-1795502753/build/GeoLite2-City_20261124.tar.gz
+      Cache-Control:
+      - private, max-age=0
+      Expires:
+      - Wed, 25 Nov 2026 20:08:20 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - a60348e6389fb0fd-MRS
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: UTF-8
+      string: ''
+  recorded_at: Wed, 25 Nov 2026 20:08:20 GMT
+- request:
+    method: get
+    uri: https://mm-prod-geoip-databases.a2649acb697e2c09b632799562c076f2.r2.cloudflarestorage.com/builds/GeoLite2-City-1795502753/build/GeoLite2-City_20261124.tar.gz
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - mm-prod-geoip-databases.a2649acb697e2c09b632799562c076f2.r2.cloudflarestorage.com
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 25 Nov 2026 20:08:20 GMT
+      Content-Type:
+      - application/gzip
+      Content-Length:
+      - '278'
+      Connection:
+      - keep-alive
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - private, max-age=0
+      Content-Disposition:
+      - attachment; filename=GeoLite2-City_20261124.tar.gz
+      Etag:
+      - '"22720fcf96e3d7c5a3c2e2df496327bd"'
+      Expires:
+      - Wed, 25 Nov 2026 20:08:20 GMT
+      Last-Modified:
+      - Tue, 24 Nov 2026 18:30:54 GMT
+      Vary:
+      - Origin
+      X-Amz-Expiration:
+      - expiry-date="Thu, 24 Dec 2026 18:30:54 GMT", rule-id="Delete%20objects%20older%20than%2030%20days"
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - a60348e8fedf4777-MRS
+    body:
+      encoding: ASCII-8BIT
+      string: !binary |-
+        H4sIAAEAAAAAA+3SPU7DMBQH8IAqzsCYC7SYJEr2MlQ0ZGRisJz40T4af8h2gDBxHy7RSqxMnICRiStgkPhoBrpUAqT8lif7b9nPliegTtBBNDxC1x5Mvo9GQvAy2ALipUnyXr1uJXESBySK0jjL4vRt/jAjURKEZBuHb9JYx4xv5WoOUP+wblPevdw/dffwUrDrAiUfVUo8T6XiQCvVSLfMDVTKcGrxBlb7U9T0EoxFJVd7BWeOlcwCda2GYu0bHddMzho2A7szGIM8K1Ey09JzZQRzVLALZT432u2mKL/SZV42WHMKWlXz+8Xg8TbnYCuD2vn0ye99ahftuEYdOrAu/Ojpt5+01+v1/qRX9EmZjQAIAAA=
+  recorded_at: Wed, 25 Nov 2026 20:08:25 GMT
+- request:
+    method: get
+    uri: https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz.sha256
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - download.maxmind.com
+      Authorization:
+      - "<MAXMIND_LICENSE_KEY>"
+  response:
+    status:
+      code: 302
+      message: Found
+    headers:
+      Date:
+      - Wed, 25 Nov 2026 20:08:25 GMT
+      Content-Length:
+      - '0'
+      Connection:
+      - keep-alive
+      Location:
+      - https://mm-prod-geoip-databases.a2649acb697e2c09b632799562c076f2.r2.cloudflarestorage.com/builds/GeoLite2-City-1795502753/build/GeoLite2-City_20261124.tar.gz.sha256
+      Cache-Control:
+      - private, max-age=0
+      Expires:
+      - Wed, 25 Nov 2026 20:08:25 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - a60349091d71a9cc-MRS
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: UTF-8
+      string: ''
+  recorded_at: Wed, 25 Nov 2026 20:08:25 GMT
+- request:
+    method: get
+    uri: https://mm-prod-geoip-databases.a2649acb697e2c09b632799562c076f2.r2.cloudflarestorage.com/builds/GeoLite2-City-1795502753/build/GeoLite2-City_20261124.tar.gz.sha256
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - mm-prod-geoip-databases.a2649acb697e2c09b632799562c076f2.r2.cloudflarestorage.com
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 25 Nov 2026 20:08:26 GMT
+      Content-Type:
+      - text/plain
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Etag:
+      - W/"36b26cf846118245b27f754f0d645e75"
+      Cache-Control:
+      - private, max-age=0
+      Content-Disposition:
+      - attachment; filename=GeoLite2-City_20261124.tar.gz.sha256
+      X-Amz-Expiration:
+      - expiry-date="Thu, 24 Dec 2026 18:30:51 GMT", rule-id="Delete%20objects%20older%20than%2030%20days"
+      Expires:
+      - Wed, 25 Nov 2026 20:08:25 GMT
+      Last-Modified:
+      - Tue, 24 Nov 2026 18:30:51 GMT
+      Vary:
+      - Origin
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - a603490a5c84146b-MRS
+      Content-Length:
+      - '87'
+    body:
+      encoding: UTF-8
+      string: '9819346ce24c64d23decd57d59416277acd9bb0032a77a095fe571dfe13d57c2  GeoLite2-City.tar.gz
+
+        '
+  recorded_at: Wed, 25 Nov 2026 20:08:26 GMT
+recorded_with: VCR 6.4.1
