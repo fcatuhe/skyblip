@@ -15,4 +15,18 @@ class Maxmind::GeoliteCityDatabaseTest < ActiveSupport::TestCase
     assert_match(/\[MaxMind\] Database is up to date/, output)
     assert_match(/\[Geocoder\] Lookup is up to date/, output)
   end
+
+  test "a database older than the one MaxMind publishes is replaced by the download its checksum vouches for" do
+    FileUtils.touch(@geoip2_database_path, mtime: MAXMIND_PUBLISHED_AT - 1.day)
+    Geocoder::Lookup.get(:geoip2)
+
+    output = capture_log do
+      VCR.use_cassette("maxmind/geolite_city_download") { Maxmind::GeoliteCityDatabase.update_now }
+    end
+
+    assert_equal RecordedGeoliteArchive::BUILD_EPOCH, MaxMindDB.new(@geoip2_database_path.to_s).metadata.fetch("build_epoch")
+    assert_operator File.mtime(@geoip2_database_path), :>, MAXMIND_PUBLISHED_AT - 1.day
+    assert_match(/\[MaxMind\] Database updated/, output)
+    assert_match(/\[Geocoder\] Lookup reloaded/, output)
+  end
 end
