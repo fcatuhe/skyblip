@@ -47,7 +47,7 @@ CXXFLAGS += $(SANITIZE_FLAGS) -fsanitize=fuzzer-no-link
 endif
 
 # Every layer is globbed, so a file that exists is compiled and tested, the silicon platform and main.cpp aside.
-SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard protocols/*/*.cpp core/*/*.cpp ui/*.cpp ui/*/*.cpp \
+SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard protocols/*/*.cpp core/*/*.cpp disciplines/*.cpp disciplines/*/*.cpp ui/*.cpp ui/*/*.cpp \
        hardware/parts/*/*.cpp runtime/*.cpp products/*/*.cpp products/*/pages/*.cpp products/*/services/*.cpp \
        simulator/world/*.cpp))
 SRC := $(filter-out products/%/main.cpp %/test_%.cpp,$(SRC))
@@ -190,7 +190,7 @@ $(BUILD)/%.o: %.c
 
 # Rebuilds on every save, the host tests by default and the WASM with WATCH=browser. Needs watchexec.
 WATCH ?= test
-WATCH_SRC := protocols core ui ports hardware boards runtime products simulator scenarios test vendor
+WATCH_SRC := protocols core disciplines ui ports hardware boards runtime products simulator scenarios test vendor
 
 watch:
 	watchexec $(addprefix -w ,$(WATCH_SRC)) -e cpp,h,c,js,json --debounce 400ms -- $(MAKE) --no-print-directory $(WATCH)

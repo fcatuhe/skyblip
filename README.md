@@ -35,11 +35,13 @@ skyBlip runs on the LilyGO T-Echo: a T-Echo Plus, the reference board for the tr
 
 | Directory | What lives there |
 |---|---|
-| [`firmware/`](firmware) | the C++ tree: `core/`, `ui/`, `ports/`, the Zephyr platform, the host test suite, and the simulator's world |
+| [`firmware/`](firmware) | the C++ tree: `core/`, `disciplines/`, `ui/`, `ports/`, the Zephyr platform, the host test suite, and the simulator's world |
 | [`server/`](server) | [skyblip.eu](https://skyblip.eu), public content and the device tools under `/briefing`, served by Rails on crooz |
 | `docs/`, `schemas/`, `scripts/`, `lib/` | the generated behavior and tuning indexes, the conformance reports, the wire schemas, and the build and release tooling and its Ruby logic |
 
 The firmware and the server share a tree so that a change in behavior and the page documenting it can land in one commit. They do not share a build: each has its own workflow, gated on the paths it owns. Firmware releases include the browser simulator runtime. Rails discovers releases through separate Turbo Frame requests, so publishing firmware does not redeploy the server.
+
+To contribute to the firmware, read [`firmware/EXTENDING.md`](firmware/EXTENDING.md): it lists where a contribution goes and what each place holds it to.
 
 ## Building
 
