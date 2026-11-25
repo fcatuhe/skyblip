@@ -18,6 +18,28 @@ class SimulatorTest < ApplicationSystemTestCase
     assert_equal [ "go", "unpaired", 0, 1 ], first_arrivals(1)
   end
 
+  # Lockdown Mode on iPhone and some hardened browsers have no WebAssembly, and the simulator failed there on every page that shows it.
+  test "a browser with no WebAssembly keeps the device at rest, with no error" do
+    assert Release.local_simulator, "Run make -C firmware browser first"
+    page.driver.browser.page.evaluate_on_new_document "delete window.WebAssembly"
+
+    visit "/try"
+    page.document.synchronize(8) do
+      raise Capybara::ExpectationNotMet, "the simulator has not connected" unless page.evaluate_script(<<~JS)
+        Boolean(document.querySelector(".simulator") && Stimulus.getControllerForElementAndIdentifier(document.querySelector(".simulator"), "simulator"))
+      JS
+    end
+    started = page.evaluate_async_script(<<~JS)
+      const done = arguments[arguments.length - 1]
+      Stimulus.getControllerForElementAndIdentifier(document.querySelector(".simulator"), "simulator").start()
+        .then(() => done("started"), error => done(error.message))
+    JS
+
+    assert_equal "started", started
+    assert_no_selector ".simulator--running"
+    assert_selector ".simulator-placeholder"
+  end
+
   test "the home simulator waits for the frame to scroll into view and can pair with Bravo" do
     assert Release.local_simulator, "Run make -C firmware browser first"
 
