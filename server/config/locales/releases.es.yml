@@ -13,7 +13,7 @@ es:
     controls:
       wake: "Mantén pulsado el botón inferior para volver a encenderlo."
       traffic: "Añade tráfico al cielo"
-      keys: "Selecciona el Go con Tab o con un clic para volar con las flechas. Pulsa la flecha abajo para ascender."
+      keys: "Pasa el ratón sobre el simulador o selecciona el Go con Tab para volar con las flechas. Pulsa la flecha abajo para ascender."
       glass: "Pantalla simulada de tinta electrónica de un skyBlip Go"
       key: "Botón del dispositivo: pulsa para abrir el menú de la pantalla actual. Mantén pulsado dos segundos para apagar y otra vez para encender"
       pad: "Panel táctil capacitivo: toca para cambiar de pantalla. Mantén el dedo un segundo para volver al radar"

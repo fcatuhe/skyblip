@@ -13,7 +13,7 @@ de:
     controls:
       wake: Halten Sie die untere Taste gedrückt, um das Gerät wieder einzuschalten.
       traffic: Verkehr hinzufügen
-      keys: "Wählen Sie Go per Tabulatortaste oder Klick, um mit den Pfeiltasten zu fliegen. Drücken Sie die Pfeiltaste nach unten, um zu steigen."
+      keys: "Zeigen Sie mit der Maus auf den Simulator oder wählen Sie Go per Tabulatortaste, um mit den Pfeiltasten zu fliegen. Drücken Sie die Pfeiltaste nach unten, um zu steigen."
       glass: Das simulierte E-Paper-Display eines skyBlip Go
       key: "Die Gerätetaste: Drücken öffnet das Menü der aktuellen Ansicht. Zwei Sekunden halten schaltet das Gerät aus. Erneut halten schaltet es wieder ein."
       pad: "Das Touchfeld: Tippen wechselt die Ansicht. Eine Sekunde berühren führt zum Radar zurück."

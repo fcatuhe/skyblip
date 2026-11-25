@@ -65,7 +65,7 @@ class SimulatorTest < ApplicationSystemTestCase
     page.current_window.resize_to(*ApplicationSystemTestCase::SCREEN_SIZE)
   end
 
-  test "arrow keys scroll past the home simulator until its device has focus" do
+  test "arrow keys fly the home simulator while the pointer is over it, and scroll the page otherwise" do
     assert Release.local_simulator, "Run make -C firmware browser first"
 
     using_wait_time(8) do
@@ -75,20 +75,44 @@ class SimulatorTest < ApplicationSystemTestCase
       scroll_to device, align: :center
       climb = find("#simulator_build [data-axis=climb]", visible: :all)
       initial_climb = climb.value
-      initial_scroll = page.evaluate_script("window.scrollY")
 
-      page.driver.browser.keyboard.type(:down)
-      page.document.synchronize do
-        unless page.evaluate_script("window.scrollY") > initial_scroll
-          raise Capybara::ExpectationNotMet, "Arrow Down did not scroll the page"
-        end
-      end
+      point_away_from_simulator
+      assert_arrow_down_scrolls
       assert_equal initial_climb, climb.value
+
+      device.hover
+      scroll = page.evaluate_script("window.scrollY")
+      page.driver.browser.keyboard.type(:down)
+      assert_operator climb.value.to_f, :>, initial_climb.to_f
+      assert_equal scroll, page.evaluate_script("window.scrollY")
+
+      point_away_from_simulator
+      flown_climb = climb.value
+      assert_arrow_down_scrolls
+      assert_equal flown_climb, climb.value
+    end
+  end
+
+  test "arrow keys fly the home simulator while its device has focus, wherever the pointer is" do
+    assert Release.local_simulator, "Run make -C firmware browser first"
+
+    using_wait_time(8) do
+      visit "/"
+      scroll_to find("#simulator_build[loading=lazy]"), align: :center
+      device = find("#simulator_build[complete] .simulator--running .sb-case")
+      scroll_to device, align: :center
+      climb = find("#simulator_build [data-axis=climb]", visible: :all)
+      initial_climb = climb.value
 
       device.send_keys(:down)
       assert_selector ".sb-case:focus-visible"
       assert_not_equal "none", page.evaluate_script("getComputedStyle(document.activeElement).outlineStyle")
       assert_operator climb.value.to_f, :>, initial_climb.to_f
+
+      point_away_from_simulator
+      flown_climb = climb.value
+      page.driver.browser.keyboard.type(:down)
+      assert_operator climb.value.to_f, :>, flown_climb.to_f
     end
   end
 
@@ -101,17 +125,50 @@ class SimulatorTest < ApplicationSystemTestCase
     climb = find("[data-axis=climb]", visible: :all)
 
     find(".sb-pad").click
+    point_away_from_simulator
     climb_before = climb.value.to_f
     page.driver.browser.keyboard.type(:down)
     assert_operator climb.value.to_f, :>, climb_before
 
     find(".sb-key--action").click
+    point_away_from_simulator
     climb_before = climb.value.to_f
     page.driver.browser.keyboard.type(:down)
     assert_operator climb.value.to_f, :>, climb_before
   end
 
+  test "a focused dial keeps its own arrow keys while the pointer is over the simulator" do
+    assert Release.local_simulator, "Run make -C firmware browser first"
+
+    visit "/try"
+    using_wait_time(8) { assert_selector ".simulator--running" }
+    speed = find("[data-axis=speed]", visible: :all)
+    turn = find("[data-axis=turn]", visible: :all)
+    initial_speed = speed.value
+    initial_turn = turn.value
+
+    find(".sb-case").hover
+    page.execute_script("document.querySelector('[data-axis=speed]').focus()")
+    page.driver.browser.keyboard.type(:right)
+
+    assert_operator speed.value.to_f, :>, initial_speed.to_f
+    assert_equal initial_turn, turn.value
+  end
+
   private
+    def point_away_from_simulator
+      page.driver.browser.mouse.move(x: 5, y: 5)
+      assert_no_selector ".simulator:hover"
+    end
+
+    def assert_arrow_down_scrolls
+      scroll = page.evaluate_script("window.scrollY")
+      page.driver.browser.keyboard.type(:down)
+      page.document.synchronize do
+        raise Capybara::ExpectationNotMet, "Arrow Down did not scroll the page" unless page.evaluate_script("window.scrollY") > scroll
+      end
+    end
+
     def first_arrivals(expected)
       page.document.synchronize do
         raise Capybara::ExpectationNotMet, "Simulator has not booted" unless page.evaluate_script(<<~JS)

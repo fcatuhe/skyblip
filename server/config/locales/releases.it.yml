@@ -13,7 +13,7 @@ it:
     controls:
       wake: Tieni premuto il pulsante inferiore per riaccenderlo.
       traffic: Aggiungi traffico nel cielo
-      keys: "Seleziona il Go con Tab o un clic per volare con i tasti freccia. Premi la freccia giù per salire."
+      keys: "Passa il mouse sul simulatore o seleziona il Go con Tab per volare con i tasti freccia. Premi la freccia giù per salire."
       glass: Lo schermo e-paper simulato di uno skyBlip Go
       key: "Il pulsante del dispositivo: premi per aprire il menu della pagina corrente, tieni premuto due secondi per spegnere, tieni premuto di nuovo per accendere"
       pad: "Il pad capacitivo: tocca per cambiare pagina, tieni premuto un secondo per tornare al radar"
