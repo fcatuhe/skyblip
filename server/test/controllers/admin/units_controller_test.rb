@@ -16,7 +16,7 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href=?]", admin_unit_path(units(:contested)), text: "000002"
-    assert_select "tr", text: /000001.*0\.3\.0\+1300.*release/m
+    assert_select "tr", text: /000001.*v0\.3\.0.*release/m
     assert_select "dd", text: /890026b1, public key #{vectors["server_public_key"]}/
   end
 
@@ -28,7 +28,7 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "form[action=?]", admin_unit_key_promotion_path(unit_keys(:contested_pending))
     assert_select "form[action=?]", admin_unit_key_revocation_path(unit_keys(:contested_active))
-    assert_select "tr", text: /#{unit_keys(:contested_pending).public_key}.*development/m
+    assert_select "tr", text: /#{unit_keys(:contested_pending).public_key}.*0\.3\.0\+1234.*development/m
   end
 
   test "links a unit to the visitors who activated it" do
@@ -51,7 +51,7 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "dd", text: "plus"
     assert_select "details.admin-help summary", text: "How to read these pages"
     assert_select "tr", text: /0\.4\.0\+1400.*development.*standard.*reported by a browser/m
-    assert_select "tr", text: /0\.3\.0\+1300.*release.*plus.*signed by the unit/m
+    assert_select "tr", text: /v0\.3\.0.*release.*plus.*signed by the unit/m
 
     get admin_unit_path(units(:contested))
     assert_select "p", text: /None yet/
@@ -62,7 +62,7 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
 
     get admin_units_path
     assert_select "a[href=?]", admin_unit_path(units(:bravo)), text: "bravo-3f2a"
-    assert_select "tr", text: /bravo-3f2a.*skyBlip Bravo.*0\.2\.0\+900.*reported by a browser/m
+    assert_select "tr", text: /bravo-3f2a.*skyBlip Bravo.*v0\.2\.0.*reported by a browser/m
 
     get admin_unit_path(units(:bravo))
     assert_select "dd", text: "none, the unit transmits on no address"

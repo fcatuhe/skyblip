@@ -49,7 +49,7 @@
             <th class="mono"><%= key.public_key %></th>
             <td><%= key.status %></td>
             <td><%= unit_links(key.other_units) %></td>
-            <td class="mono"><%= key.version %></td>
+            <td class="mono"><%= unit_version(key) %></td>
             <td><%= unit_build(key) %></td>
             <td class="mono"><%= key.server_key_id %></td>
             <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
@@ -88,7 +88,7 @@
       <tbody>
         <% @unit.firmwares.newest_first.each do |firmware| %>
           <tr>
-            <th class="mono"><%= firmware.version %></th>
+            <th class="mono"><%= unit_version(firmware) %></th>
             <td><%= unit_build(firmware) %></td>
             <td><%= firmware.variant %></td>
             <td><%= firmware_source(firmware) %></td>

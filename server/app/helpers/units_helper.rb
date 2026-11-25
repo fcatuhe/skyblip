@@ -9,6 +9,14 @@ module UnitsHelper
     end
   end
 
+  def unit_version(record)
+    if record&.release && (triple = record.version.to_s[/\A(\d+\.\d+\.\d+)(?:[.+]\d+)?\z/, 1])
+      "v#{triple}"
+    else
+      record&.version
+    end
+  end
+
   def unit_label(unit) = unit.address || unit.slug || unit.device_id
 
   def unit_product(unit) = BriefingHelper::DEVICE_NAMES[unit.product]
