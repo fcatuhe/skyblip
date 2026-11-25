@@ -1,7 +1,7 @@
 import { attestationServer } from '#skyblip/attestation';
 import { hasWebBluetooth, permittedDevices, requestDevice } from '#skyblip/ble';
 import { ActivationWitness, DeviceWitness } from '#skyblip/device_journal';
-import { journalOrNull } from '#skyblip/journal';
+import { journalOrNull, localStorageOrNull } from '#skyblip/journal';
 import { bluetoothReadiness } from '#skyblip/readiness';
 import { LINKED_PHASES, RETURN_EVERY_MS, Updater, productOf } from '#skyblip/update';
 
@@ -328,19 +328,10 @@ export class Fleet {
 
 let shared = null;
 
-function localStorageOrNull() {
-  try {
-    return globalThis.localStorage ?? null;
-  } catch (error) {
-    console.warn('This browser blocks site data, so it will not remember devices:', error.message);
-    return null;
-  }
-}
-
 // INFO: fc 11nov26 Turbo swaps pages without reloading this module, so every link outlives the page that opened it
 export function joinFleet(listener) {
   if (!shared) {
-    shared = new Fleet({ storage: localStorageOrNull(), attestations: attestationServer() });
+    shared = new Fleet({ storage: localStorageOrNull('it will not remember devices'), attestations: attestationServer() });
     bluetoothReadiness().listen(() => shared.changed());
   }
   const leave = shared.listen(listener);
