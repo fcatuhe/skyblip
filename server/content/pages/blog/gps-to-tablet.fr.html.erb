@@ -2,7 +2,7 @@
 title: "La position GPS du Go sur votre tablette"
 nav_title: Le GPS sur votre tablette
 slug: blog/gps-sur-votre-tablette
-description: "Le Go envoie sa position GPS et le trafic en Bluetooth chaque seconde, même à une tablette sans GPS. Le prochain firmware envoie la position plus tôt."
+description: "Le Go envoie sa position GPS et le trafic en Bluetooth chaque seconde, même à une tablette sans GPS. Le firmware 0.8.1 envoie la position plus tôt."
 published_on: "2026-11-25"
 parent: blog
 updated_on: "2026-11-25"
@@ -11,7 +11,7 @@ updated_on: "2026-11-25"
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 novembre 2026</p>
   <h1>La position GPS du Go sur votre tablette</h1>
-  <p class="lede">Le skyBlip Go envoie sa position GPS en Bluetooth chaque seconde, avec le trafic. Vous pouvez donc naviguer avec un iPad sans GPS. Avec le prochain firmware, le Go commence l&rsquo;envoi environ un dixième de seconde après la mesure. Il faut ensuite compter le temps de transmission en Bluetooth.</p>
+  <p class="lede">Le skyBlip Go envoie sa position GPS en Bluetooth chaque seconde, avec le trafic. Vous pouvez donc naviguer avec un iPad sans GPS. Avec le firmware 0.8.1, disponible dans Briefing, le Go commence l&rsquo;envoi environ un dixième de seconde après la mesure. Il faut ensuite compter le temps de transmission en Bluetooth.</p>
 </section>
 
 <section>
@@ -24,7 +24,7 @@ updated_on: "2026-11-25"
 
 <section>
   <h2 class="kicker">De quand date la position ?</h2>
-  <h3>Le prochain firmware envoie le point dès qu&rsquo;il est prêt.</h3>
+  <h3>Le firmware 0.8.1 envoie le point dès qu&rsquo;il est prêt.</h3>
   <p>Jusqu&rsquo;au firmware 0.8.0 inclus, le Go lançait son propre cycle d&rsquo;envoi d&rsquo;une seconde quand l&rsquo;application se connectait. Le récepteur fournissait normalement le point du début de seconde environ 0,1&nbsp;s après la mesure. Si le point arrivait juste après un envoi, il pouvait attendre presque une seconde de plus. Une émission radio pouvait encore retarder l&rsquo;envoi. D&rsquo;après nos estimations, le point datait en moyenne de 0,6&nbsp;s au début de l&rsquo;envoi, et d&rsquo;environ 1,2&nbsp;s dans le pire cas.</p>
   <p>Avec le firmware 0.8.1, le Go commence l&rsquo;envoi dès qu&rsquo;il reçoit le point du début de seconde, normalement environ 0,1&nbsp;s après la mesure. La radio garde la priorité. Seul l&rsquo;indicatif, émis par le Go toutes les dix secondes, peut encore être en attente à l&rsquo;arrivée du point. Dans ce cas, l&rsquo;envoi en Bluetooth peut attendre jusqu&rsquo;à 0,1&nbsp;s de plus. Ces estimations viennent du code et des délais du récepteur. Nous n&rsquo;avons pas mesuré le délai en vol ni sur un banc avec une tablette. La transmission en Bluetooth prend du temps en plus.</p>
   <p>À 100&nbsp;kt de vitesse sol, vous parcourez environ 30&nbsp;m en 0,6&nbsp;s et 5 à 10&nbsp;m en 0,1 à 0,2&nbsp;s. C&rsquo;est la distance parcourue avant que le Go commence l&rsquo;envoi. Nous n&rsquo;avons pas mesuré la différence sur la carte.</p>

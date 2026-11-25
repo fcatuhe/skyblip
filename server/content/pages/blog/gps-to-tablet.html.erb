@@ -1,7 +1,7 @@
 ---
 title: "The Go's GPS position on your tablet"
 nav_title: GPS on your tablet
-description: "The Go sends its GPS position and traffic over Bluetooth once a second, even to a tablet without GPS. The next firmware sends the position sooner."
+description: "The Go sends its GPS position and traffic over Bluetooth once a second, even to a tablet without GPS. Firmware 0.8.1 sends the position sooner."
 published_on: "2026-11-25"
 parent: blog
 updated_on: "2026-11-25"
@@ -10,7 +10,7 @@ updated_on: "2026-11-25"
 <section>
   <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 25 November 2026</p>
   <h1>The Go&rsquo;s GPS position on your tablet</h1>
-  <p class="lede">The skyBlip Go sends its GPS position over Bluetooth once a second, along with traffic. That gives an iPad without GPS a position to navigate on. The next firmware sends that position sooner: about a tenth of a second after the receiver measured it, before any delay on the Bluetooth link.</p>
+  <p class="lede">The skyBlip Go sends its GPS position over Bluetooth once a second, along with traffic. That gives an iPad without GPS a position to navigate on. Firmware 0.8.1 is available in Briefing. It starts sending the position about a tenth of a second after the receiver measured it, before any delay on the Bluetooth link.</p>
 </section>
 
 <section>
@@ -23,7 +23,7 @@ updated_on: "2026-11-25"
 
 <section>
   <h2 class="kicker">How old is the position?</h2>
-  <h3>The next firmware sends without waiting for a separate timer.</h3>
+  <h3>Firmware 0.8.1 sends without waiting for a separate timer.</h3>
   <p>In firmware 0.8.0 and earlier, the Go started a one-second send cycle when the app connected. The receiver normally delivered its whole-second fix about 0.1&nbsp;s after measuring it. If the fix had just missed a send, it could wait nearly another second. A radio transmission could delay the send further. We estimate that the position was about 0.6&nbsp;s old on average when the Go started sending, and up to about 1.2&nbsp;s old in the worst case.</p>
   <p>With firmware 0.8.1, the Go starts sending as soon as the whole-second fix comes in, normally about 0.1&nbsp;s after it was measured. The radio still takes priority. Only the callsign, which the Go broadcasts once every ten seconds, can still be pending when the fix arrives. If it is, the Bluetooth send can wait up to another 0.1&nbsp;s. These estimates come from the code and the receiver&rsquo;s timing. We have not measured the delay in flight or on a bench with a tablet. Bluetooth adds a delay of its own.</p>
   <p>At a ground speed of 100&nbsp;kt, you travel about 30&nbsp;m in 0.6&nbsp;s and about 5 to 10&nbsp;m in 0.1 to 0.2&nbsp;s. That is how far you travel before the Go starts sending. We have not measured the difference on the map.</p>
