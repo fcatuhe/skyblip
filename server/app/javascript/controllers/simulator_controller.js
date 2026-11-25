@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { FEET_PER_METRE, FPM_PER_METRE_SECOND, KNOTS_PER_METRE_SECOND } from "#skyblip/geo"
+import { FEET_PER_METRE, FPM_PER_METRE_SECOND, KNOTS_PER_METRE_SECOND, degrees, radians } from "#skyblip/geo"
 import { EQUIPMENT, addAircraft, airliner, callsign, nearbyAircraft } from "#skyblip/simulated_traffic"
 import { movePart } from "controllers/simulator/gauge"
 
@@ -10,8 +10,6 @@ const MM_PER_METRE = 1000
 const GRAVITY_M_S2 = 9.80665
 const signed = value => (Number(value) > 0 ? `+${value}` : `${value}`)
 const clamp = (value, limit) => Math.min(Math.max(value, -limit), limit)
-const degrees = radians => (radians * 180) / Math.PI
-const radians = degrees => (degrees * Math.PI) / 180
 
 const AXES = {
   speed: {
