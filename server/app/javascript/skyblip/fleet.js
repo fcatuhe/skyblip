@@ -187,6 +187,10 @@ export class Fleet {
     return this.units.filter(unit => unit.remembered);
   }
 
+  get holdsLink() {
+    return this.units.some(unit => unit.linked || unit.busy);
+  }
+
   unit(slug) {
     return this.#units.get(slug) ?? null;
   }
@@ -328,11 +332,14 @@ export class Fleet {
 
 let shared = null;
 
-// INFO: fc 11nov26 Turbo swaps pages without reloading this module, so every link outlives the page that opened it
+// INFO: fc 11nov26 Turbo swaps pages without reloading this module, so every link outlives the page that opened it | 25nov26 and a reload for new assets waits
 export function joinFleet(listener) {
   if (!shared) {
     shared = new Fleet({ storage: localStorageOrNull('it will not remember devices'), attestations: attestationServer() });
     bluetoothReadiness().listen(() => shared.changed());
+    document.addEventListener('skyblip:before-reload', event => {
+      if (shared.holdsLink) event.preventDefault();
+    });
   }
   const leave = shared.listen(listener);
   return { fleet: shared, leave };

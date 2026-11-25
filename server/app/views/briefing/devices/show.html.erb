@@ -1,3 +1,4 @@
+<% content_for :head, tag.meta(name: "assets-refresh", content: "foreground") %>
 <% name = device_name(@slug) %>
 <% content_for :title, name %>
 <% content_for :rail, render("briefing/rail", variant: "rail", current: @slug) %>
