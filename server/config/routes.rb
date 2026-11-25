@@ -7,6 +7,7 @@ Rails.application.routes.draw do
 
   resource :mcp, only: %i[show create destroy] do
     resource :server_card, only: :show, path: "server-card", module: :mcps
+    match "server-card", to: "mcps/server_cards#show", via: :options
   end
 
   namespace :oauth do

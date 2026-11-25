@@ -11,7 +11,9 @@ class Mcps::ServerCardsController < ActionController::API
       "Access-Control-Allow-Headers" => "Content-Type, If-None-Match", "Access-Control-Expose-Headers" => "ETag"
     expires_in 1.hour, public: true
 
-    if stale?(etag: card, public: true)
+    if request.options?
+      head :no_content
+    elsif stale?(etag: card, public: true)
       render json: card, content_type: MEDIA_TYPE
     end
   end

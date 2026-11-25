@@ -28,6 +28,16 @@ class Mcps::ServerCardsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_modified
   end
 
+  # A browser that sends the ETag back asks first whether it may, since If-None-Match is not a header it sends freely.
+  test "a browser's preflight for the card is allowed with If-None-Match" do
+    process :options, mcp_server_card_path, headers: { "Origin" => "https://client.example", "Access-Control-Request-Method" => "GET",
+                                                       "Access-Control-Request-Headers" => "if-none-match" }
+
+    assert_response :no_content
+    assert_equal [ "*", "GET", "Content-Type, If-None-Match" ],
+      response.headers.values_at("Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "Access-Control-Allow-Headers")
+  end
+
   private
     # The schema comes from modelcontextprotocol/experimental-ext-server-card at 28db12c9, so the test reads no network.
     def schema = JSONSchemer.schema(file_fixture("mcp/server-card.schema.json").read).ref("#/$defs/ServerCard")
