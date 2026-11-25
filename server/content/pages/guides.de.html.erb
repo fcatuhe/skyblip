@@ -2,28 +2,28 @@
 title: "Anleitungen und erste Schritte für skyBlip Go und Bravo"
 nav_title: Anleitungen
 slug: anleitungen
-description: "Installieren Sie die Software auf Ihrem Go oder Bravo. Lernen Sie die Bedienelemente und LEDs kennen und richten Sie das Gerät für Ihren ersten Flug ein."
+description: "Installieren Sie skyBlip auf Ihrem Go oder Bravo. Lernen Sie Bedienelemente und LEDs kennen und finden Sie die Einstellungen für den ersten Flug."
 share_image: radar
 updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
   <h1>Die passende Anleitung für Ihren Go oder Bravo</h1>
-  <p class="page-hero-subtitle">Haben Sie Ihr Gerät neu? <%= link_to_page "install", label: "Installieren Sie zuerst die Software" %>. Sobald Briefing das Gerät als bereit meldet, öffnen Sie die passende Anleitung.</p>
+  <p class="page-hero-subtitle">Haben Sie Ihr Gerät gerade erhalten? <%= link_to_page "install", label: "Installieren Sie skyBlip" %>. Sobald Briefing Ihren Go oder Bravo als bereit meldet, öffnen Sie die Anleitung für die ersten Schritte mit Ihrem Gerät.</p>
 </header>
 
 <section id="install" class="band">
-  <h2 class="section-title">Installieren</h2>
+  <h2 class="section-title">Software installieren und Gerät befestigen</h2>
   <div class="guide-cards">
     <article>
       <%= screen_image_tag "self-test.png", alt: "Die Selbsttestansicht mit Namen und Testergebnis jedes Bauteils, darunter TEMP NRF52840 mit dem Ergebnis NOT FOUND" %>
       <h3><%= link_to_page "install", label_type: :nav %></h3>
-      <p>Installieren Sie skyBlip im Browser auf Ihrem Go oder Bravo. Bei jedem Start prüft der Go sein Funkmodul, sein GPS und sein Barometer und funktioniert ohne sie nicht.</p>
+      <p>Installieren Sie skyBlip im Browser auf Ihrem Go oder Bravo. Bei jedem Start prüft der Go sein Funkmodul, sein GPS und sein Barometer. Ohne sie funktioniert er nicht.</p>
     </article>
     <article>
       <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ auf einem weißen LilyGO T-Echo Plus neben der Klemme mit orangefarbenem Griff, die ihn auf der Instrumentenbrettabdeckung hält", class: "guide-photo" %>
       <h3><%= link_to_page "mount", label_type: :nav %></h3>
-      <p>Befestigen Sie Go oder Go+ mit den von uns getesteten Teilen an einem Kugelgelenk auf der Instrumentenbrettabdeckung. Richten Sie die Antenne aus. Hängen Sie Bravo an seiner Schlaufe auf.</p>
+      <p>Lassen Sie Go oder Go+ an einem Kugelgelenk auf der Instrumentenbrettabdeckung einrasten und richten Sie die Antenne aus. Die Anleitung zeigt die von uns getesteten Teile und wie Sie Bravo an seiner Schlaufe aufhängen.</p>
     </article>
   </div>
 </section>
@@ -42,7 +42,7 @@ updated_on: "2026-11-25"
       <p>Finden Sie die Taste und die LED. Sehen Sie Verkehr in Ihrer Navigations-App oder auf einem gekoppelten Go.</p>
     </article>
   </div>
-  <p class="signature">Öffnen Sie für Tango beide Anleitungen. Go zeigt den Verkehr an und Bravo ergänzt den Empfang.</p>
+  <p class="signature">Öffnen Sie für Tango beide Anleitungen. Go zeigt den Verkehr an und Bravo ergänzt den Verkehr, den Go empfängt.</p>
 </section>
 
 <section class="band">
@@ -77,7 +77,7 @@ updated_on: "2026-11-25"
     <article>
       <%= screen_image_tag "off-flat-battery.png", alt: "Anzeige eines Geräts, das sich wegen eines leeren Akkus ausgeschaltet hat" %>
       <h3><%= link_to_page "power" %></h3>
-      <p>Erfahren Sie, worauf das Gerät auf dem Vorfeld wartet, wie es ausgeschaltet aussieht und wie es bei sinkendem Akkustand warnt.</p>
+      <p>Erkennen Sie die Anzeige eines ausgeschalteten Go und seine Warnungen bei sinkendem Akkustand. Erfahren Sie auch, worauf er auf dem Vorfeld wartet.</p>
     </article>
     <article>
       <%= screen_image_tag "confirm.png", alt: "Bestätigungsanfrage auf dem Display" %>
@@ -93,23 +93,23 @@ updated_on: "2026-11-25"
     <article>
       <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
-      <p>Ein Funkmodul nutzt vier Zeitfenster pro Sekunde und empfängt Signale zweier Systeme im selben Fenster.</p>
+      <p>Ein einziges Funkmodul nutzt vier Zeitfenster pro Sekunde. Im selben Fenster empfängt es die Signale zweier Systeme.</p>
     </article>
     <article>
       <%= render "shared/cycle", compact: true %>
       <h3><%= link_to_page "timing" %></h3>
-      <p>Die Seriennummer bestimmt die Sekunden eines Zyklus von 20&nbsp;s. Ob die Sekunde gerade oder ungerade ist, bestimmt den Kanal. Die Millisekunde wird jede Sekunde neu ausgelost.</p>
+      <p>Die Seriennummer bestimmt die genutzten Sekunden in einem Zyklus von 20&nbsp;s. Der Kanal hängt davon ab, ob die Sekunde gerade oder ungerade ist. Die Millisekunde wird jede Sekunde neu ausgelost.</p>
     </article>
     <article>
       <%= render "shared/flight_state", compact: true %>
       <h3><%= link_to_page "gps" %></h3>
-      <p>Der Positionsfix muss stabil sein und vor 450&nbsp;ms eintreffen. Ein Impuls startet jede Sekunde. Ob Sie fliegen, ergibt sich allein aus der Geschwindigkeit über Grund.</p>
+      <p>Der Positionsfix muss stabil sein und vor 450&nbsp;ms eintreffen. Ein Impuls markiert den Beginn jeder Sekunde. Go bestimmt allein anhand der Geschwindigkeit über Grund, ob er sich im Flug befindet.</p>
     </article>
     <article>
       <%= render "shared/advisory_ring", compact: true %>
       <h3><%= link_to_page "traffic" %></h3>
-      <p>Ein Hinweisbereich von 3&nbsp;km und 300&nbsp;m, keine Verkehrshinweise am Boden, sechs ausgebliebene Meldungen bis zum Entfernen eines Ziels und Formationsflug.</p>
+      <p>Go gibt Verkehrshinweise innerhalb eines einzigen Hinweisbereichs von 3&nbsp;km und 300&nbsp;m. Am Boden gibt er keine Verkehrshinweise. Nach sechs ausgebliebenen Meldungen entfernt er ein Ziel. Die Anleitung behandelt auch den Formationsflug.</p>
     </article>
   </div>
-  <p class="signature">Noch Fragen? Der <%= link_to_page "blog", label_type: :nav %> beantwortet, was Piloten in Foren fragen, und vergleicht skyBlip mit anderen Geräten.</p>
+  <p class="signature">Noch Fragen? Im <%= link_to_page "blog", label_type: :nav %> finden Sie unsere Antworten auf Pilotenfragen aus Foren und den Vergleich von skyBlip mit anderen Systemen.</p>
 </section>

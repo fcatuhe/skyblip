@@ -5,21 +5,21 @@ slug: smartphone
 description: "Sehen Sie den Verkehr von skyBlip Go per Bluetooth in SDVFR Next, SkyDemon oder ForeFlight. Drei Verbindungen gleichzeitig, ohne Kopplung."
 parent: guides
 share_image: radar
-updated_on: "2026-11-15"
+updated_on: "2026-11-25"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Das letzte Wort hat das Gerät, nicht das Smartphone.</h1>
+  <h1>Verkehr auf dem Smartphone anzeigen</h1>
   <p class="lede">
-    Was eine App sehen und anfragen kann, und warum das Display am Gerät entscheidet.
+    Verbinden Sie Ihre Navigations-App per Bluetooth. Bestätigen Sie Änderungen auf dem Display des Go.
   </p>
 </section>
 
 <section>
   <div class="feature">
     <div>
-      <h3 id="by-name">Go erscheint unter seinem Namen. <span class="highlight">Drei Displays</span> zeigen seinen Verkehr gleichzeitig.</h3>
+      <h3 id="by-name">Go erscheint unter seinem Namen. <span class="highlight">Drei Verbindungen</span> empfangen seinen Verkehr gleichzeitig.</h3>
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>: zuerst das Produkt, dann die 24-Bit-Adresse, die das Gerät bei der <%= link_to "Aktivierung", briefing_activation_path %> erhalten hat. Sie müssen nichts koppeln und keinen Code eingeben. Go sendet den Verkehr als FLARM-NMEA-Datenstrom über beide seriellen Bluetooth-Verbindungsarten, nach denen Navigationssoftware sucht. Die App, mit der Sie bereits fliegen, findet ihn dadurch.
       </p>
@@ -43,7 +43,7 @@ updated_on: "2026-11-15"
 
   <h3 id="asked">Drücken bestätigt, <span class="highlight">Antippen lehnt ab</span>.</h3>
   <p class="lede">
-    Neue Firmware, Neustart im USB-Bootloader, Einstellungen speichern, Flüge löschen oder Ausschalten: Betrifft die Anfrage einer App das Gerät an Bord, reicht die Bestätigung am Smartphone nicht. Das Gerät nennt die Anfrage auf seinem eigenen Display und wartet dreißig Sekunden. Drücken Sie die Taste bei <span class="mono">ACCEPT</span>, um zu bestätigen. Tippen Sie auf das Touchfeld bei <span class="mono">CANCEL</span>, um abzulehnen. Das Display zählt herunter: <span class="mono">CANCELS IN 30 S</span>. Antworten Sie bis dahin nicht, lehnt das Gerät die Anfrage ab.
+    Eine App kann die Aktualisierung der Gerätesoftware, der Firmware, anfragen. Sie kann auch einen Neustart im Installationsprogramm für USB, dem USB-Bootloader, das Speichern von Einstellungen, das Löschen Ihrer Flüge oder das Ausschalten anfragen. Die Bestätigung am Smartphone reicht dafür nicht. Das Gerät zeigt die Anfrage auf seinem Display und wartet dreißig Sekunden. Drücken Sie die Taste bei <span class="mono">ACCEPT</span>, um die Anfrage zu bestätigen. Tippen Sie auf das Touchfeld bei <span class="mono">CANCEL</span>, um sie abzulehnen. <span class="mono">CANCELS IN 30 S</span> zählt die verbleibende Zeit herunter. Ohne Antwort in dieser Zeit lehnt das Gerät die Anfrage ab.
   </p>
 
   <figure class="shot">
@@ -52,13 +52,13 @@ updated_on: "2026-11-15"
   </figure>
 
   <p class="lede">
-    Auch das Rufzeichen ist eine dieser Einstellungen. Die App sendet es. Das Display fragt nach Ihrer Zustimmung. Danach erscheint es in der Statusansicht. Go sendet es alle zehn Sekunden, und Luftfahrzeuge in der Nähe zeigen es an. Sie können es auch direkt am Gerät im <%= link_to_page "controls", label: "Rufzeichenfeld", anchor: "callsign" %> eingeben oder im Browser in <%= link_to "Briefing", briefing_root_path %> neben Luftfahrzeugtyp, Einheiten und Warnung einstellen.
+    Auch das Rufzeichen ist eine dieser Einstellungen. Die App sendet es. Das Display fragt nach Ihrer Zustimmung. Danach erscheint es in der Statusansicht. Go sendet es alle zehn Sekunden. Geräte in Luftfahrzeugen in der Nähe können es anzeigen, wenn sie diese Meldung auswerten. Sie können es auch direkt am Gerät im <%= link_to_page "controls", label: "Rufzeichenfeld", anchor: "callsign" %> eingeben oder im Browser in <%= link_to "Briefing", briefing_root_path %> neben Luftfahrzeugtyp, Einheiten und Warnung einstellen.
   </p>
   <p class="lede">
     Erst wenn die Frage angezeigt wird und Sie die Taste losgelassen haben, zählt ein Tastendruck. Eine Folge von Tastendrücken zum Ändern einer Einstellung kann also nicht auch eine Anfrage bestätigen.
   </p>
 
-  <h3 id="firmware">Neue Firmware kommt <span class="highlight">von einer Webseite</span>.</h3>
+  <h3 id="firmware">Ein Update <span class="highlight">im Browser installieren</span>.</h3>
   <p class="lede">
     <%= link_to "Briefing", briefing_root_path %> sendet eine signierte Firmwaredatei über dieselbe Bluetooth-Verbindung aus Chrome oder Edge. Das Display fragt einmal nach und nennt die Version, bevor das Gerät die Datei annimmt und installiert. Das Gerät behält die neue Firmware nur, wenn diese das Funkmodul startet, Daten vom Empfänger empfängt und das Display aktualisiert. Andernfalls kehrt es zur vorherigen Firmware und zu den Einstellungen vom Beginn des Updates zurück.
   </p>
@@ -66,7 +66,7 @@ updated_on: "2026-11-15"
     Kann das Gerät Ihre Einstellungen nicht lesen, meldet es das und verwendet die Standardwerte. Im Selbsttest steht in der Zeile <span class="mono">STORAGE</span> der Eintrag <span class="mono">NVS+NOR DEFAULTS</span>. Das Smartphone zeigt einen Hinweis an: Prüfen Sie Rufzeichen und Luftfahrzeugtyp vor dem Flug.
   </p>
   <p class="lede">
-    Lässt sich die Firmware gar nicht installieren, startet dieselbe Seite nach Bestätigung den USB-Bootloader. Das Gerät schaltet sich mit der unten gezeigten Anzeige aus. Der nächste Tastendruck startet den Bootloader. Über USB erscheint das Gerät als Laufwerk namens <span class="mono">TECHOBOOT</span>. Kopieren Sie eine <span class="mono">.uf2</span> -Datei darauf, um neue Firmware zu installieren.
+    Lässt sich die Firmware gar nicht installieren, öffnen Sie auf derselben Seite den Wiederherstellungsmodus. Bestätigen Sie am Gerät mit einem Tastendruck. Das Gerät schaltet sich mit der unten gezeigten Anzeige aus. Drücken Sie erneut die Taste, um den USB-Bootloader zu starten. Schließen Sie das Gerät per USB-Kabel an. Es erscheint als Laufwerk namens <span class="mono">TECHOBOOT</span>. Kopieren Sie eine <span class="mono">.uf2</span> -Datei darauf, um neue Firmware zu installieren.
     <span class="mono">RESET</span> führt zurück zu skyBlip. Während der Wiederherstellung sendet das Gerät nichts. Zweimaliges Drücken von <span class="mono">RESET</span> öffnet dasselbe Laufwerk ohne Smartphone.
   </p>
 
@@ -88,7 +88,7 @@ updated_on: "2026-11-15"
   <ul class="points">
     <li>Der Bootloader prüft die Signatur der Firmware mit unserem Schlüssel</li>
     <li>Er lehnt Firmware ab, die älter ist als die installierte Version</li>
-    <li>Ohne diese Prüfung lässt sich über die offene Verbindung keine Firmware installieren</li>
+    <li>Eine Bluetooth-Verbindung ohne Kopplung allein erlaubt keine Firmwareinstallation. Die Firmware muss diese Prüfung bestehen</li>
     <li>Alle übrigen Anfragen sind nur am Boden möglich</li>
     <li>Das Gerät lehnt sie ab, wenn Sie sie nicht am Display bestätigen</li>
     <li>Ihre Anwesenheit am Gerät ersetzt den Kopplungscode</li>
