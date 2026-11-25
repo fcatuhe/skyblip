@@ -81,7 +81,8 @@ TEST_CASE("board: a trigger never waits, and the edge's conversion is read on a 
     CHECK(unit.chip().reads == read_after_edge);
 }
 
-TEST_CASE("board: four conversions a second, one published") {
+// One read a second left the climb's newest pressure up to a second old for ADS-L G.1.16.
+TEST_CASE("board: four conversions a second, each one published") {
     Unit unit;
     unit.sample_instants(0, 1000);
     const int conversions = unit.chip().conversions;
@@ -89,7 +90,7 @@ TEST_CASE("board: four conversions a second, one published") {
     const std::vector<uint32_t> at = unit.sample_instants(1000, 11000);
 
     CHECK(unit.chip().conversions - conversions == 40);
-    CHECK(at.size() == 10);
+    CHECK(at.size() == 40);
     CHECK(unit.board.barometer_faults() == 0);
 }
 
@@ -112,29 +113,30 @@ TEST_CASE("board: a barometer sample is dated at its conversion, not at its read
     CHECK(at.front() == 1000 + kMidpointMs);
 }
 
-TEST_CASE("board: the published sample is the one triggered at the edge") {
+TEST_CASE("board: each published sample is the pressure its own conversion read") {
     Unit unit;
-    std::vector<uint32_t> published;
+    int published = 0;
     for (uint32_t now_ms = 0; now_ms < 4000; now_ms += runtime::kServicePassCeilingMs) {
         unit.chip().set_pressure_mpa(now_ms % 1000 == 0 ? 95000000 : 90000000);
         events::BarometerSample sample{};
-        if (unit.pass(now_ms, sample)) published.push_back(sample.pressure_mpa);
+        if (!unit.pass(now_ms, sample)) continue;
+        const bool on_edge = (sample.at_ms - kMidpointMs) % 1000 == 0;
+        CHECK((sample.pressure_mpa + 500) / 1000 == (on_edge ? 95000u : 90000u));
+        published++;
     }
-
-    REQUIRE(published.size() == 3);
-    for (uint32_t pressure_mpa : published) CHECK((pressure_mpa + 500) / 1000 == 95000);
+    CHECK(published == 15);
 }
 
-TEST_CASE("board: the barometer is published once a second, on the PPS edge") {
+TEST_CASE("board: the barometer is published four times a second, on the PPS quarters") {
     Unit unit;
 
-    const std::vector<uint32_t> at = unit.sample_instants(0, 10000);
+    const std::vector<uint32_t> at = unit.sample_instants(1000, 10000);
 
-    REQUIRE(at.size() == 9);
+    REQUIRE(at.size() == 36);
     CHECK(at.front() == 1000 + kMidpointMs);
     for (size_t i = 0; i < at.size(); i++) {
-        CHECK((at[i] - kMidpointMs) % 1000 < boards::kBarometerPpsWindowMs);
-        if (i > 0) CHECK(at[i] - at[i - 1] == boards::kBarometerPublishPeriodMs);
+        CHECK((at[i] - kMidpointMs) % boards::kBarometerConversionPeriodMs == 0);
+        if (i > 0) CHECK(at[i] - at[i - 1] == boards::kBarometerConversionPeriodMs);
     }
 }
 
@@ -145,9 +147,9 @@ TEST_CASE("board: with no PPS the barometer keeps its own second and its own qua
     const std::vector<uint32_t> at = unit.sample_instants(55, 10055);
     const std::vector<uint32_t> triggers = unit.trigger_instants(10055, 12055);
 
-    REQUIRE(at.size() >= 9);
+    REQUIRE(at.size() >= 36);
     for (size_t i = 1; i < at.size(); i++)
-        CHECK(at[i] - at[i - 1] == boards::kBarometerPublishPeriodMs);
+        CHECK(at[i] - at[i - 1] == boards::kBarometerConversionPeriodMs);
     REQUIRE(triggers.size() == 8);
     for (size_t i = 1; i < triggers.size(); i++)
         CHECK(triggers[i] - triggers[i - 1] == boards::kBarometerConversionPeriodMs);
@@ -160,11 +162,11 @@ TEST_CASE("board: a conversion that never ends is given up at its ceiling and co
 
     CHECK(unit.sample_instants(1000, 1000 + boards::kBarometerConversionCeilingMs).empty());
     CHECK(unit.board.barometer_faults() == 0);
-    CHECK(unit.sample_instants(1000 + boards::kBarometerConversionCeilingMs, 1500).empty());
+    CHECK(unit.sample_instants(1000 + boards::kBarometerConversionCeilingMs, 1250).empty());
     CHECK(unit.board.barometer_faults() == 1);
 
     unit.chip().extra_measurement_us = 0;
-    CHECK(unit.sample_instants(1500, 2100).size() == 1);
+    CHECK(unit.sample_instants(1250, 2100).size() == 4);
     CHECK(unit.board.barometer_faults() == 1);
 }
 

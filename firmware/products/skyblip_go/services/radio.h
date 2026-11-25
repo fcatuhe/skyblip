@@ -32,6 +32,8 @@ class RadioService : public runtime::Service {
     static constexpr uint32_t kRadioAnswerMaxAgeMs = 3000;
     // INFO: fc 19nov26 one refused dwell is a transient, a second inside the age a fault
     static constexpr uint32_t kRadioRefusalSamples = 2;
+    // INFO: fc 22nov26 a climb this recent has a fresher one coming, worth a position's wait
+    static constexpr uint32_t kClimbAwaitMaxAgeMs = 500;
 
     RadioService(runtime::Context& context, const Settings& settings,
                  const traffic::VersionTable& versions)
@@ -132,8 +134,9 @@ class RadioService : public runtime::Service {
     static uint64_t instant_us(const timing::Transmitter::Attempt& attempt, int64_t origin_us);
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
     uint32_t slot_utc_s(uint32_t now_ms) const;
-    int32_t fix_lag_ms(int64_t origin_us) const;
-    int32_t fix_in_hand_ms(int64_t origin_us) const;
+    int32_t navigation_lag_ms(int64_t origin_us) const;
+    int32_t navigation_in_hand_ms(int64_t origin_us) const;
+    bool climb_awaited() const;
     bool full_rate() const;
     void count_given_up(uint32_t now_ms);
     void count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
@@ -184,6 +187,7 @@ class RadioService : public runtime::Service {
     void keep_readable();
     bool carries_position() const;
     bool fix_too_old_at(uint64_t tx_at_us) const;
+    static bool too_old_at(uint32_t measured_ms, uint64_t tx_at_us);
     void await_fix(uint32_t utc_s);
     bool silenced(uint64_t tx_at_us) const;
     static uint64_t forced_end_us(uint64_t forced_at_us);

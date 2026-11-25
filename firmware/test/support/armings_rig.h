@@ -130,7 +130,10 @@ struct Armings {
         state.clock.pps_locked = true;
         state.clock.utc_valid = true;
         state.clock.pps_edge_us = edge_us;
-        if (solving) state.own.fix_at_ms = static_cast<uint32_t>(now_us / 1000);
+        if (solving) {
+            state.own.fix_at_ms = static_cast<uint32_t>(now_us / 1000);
+            state.own.climb_at_ms = state.own.fix_at_ms;
+        }
         radio.tick(static_cast<uint32_t>(now_us / 1000));
     }
 

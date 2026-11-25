@@ -43,14 +43,14 @@ int Transmitter::instant_in(Payload payload, int slot, uint32_t utc_s) const {
     return first + static_cast<int>(drawn % static_cast<uint32_t>(last - first + 1));
 }
 
-std::optional<int> Transmitter::redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,
-                                           int32_t fix_in_hand_ms) const {
+std::optional<int> Transmitter::redrawn_in(int slot, uint32_t utc_s, int32_t navigation_lag_ms,
+                                           int32_t navigation_in_hand_ms) const {
     const int window_last = last_instant(Payload::Position, slot);
-    if (fix_in_hand_ms > window_last) return std::nullopt;
+    if (navigation_in_hand_ms > window_last) return std::nullopt;
     const int first = std::max(window_of(Payload::Position, slot).start_ms,
-                               static_cast<int>(fix_in_hand_ms) + kRedrawLeadMs);
-    const int last =
-        std::min(window_last, static_cast<int>(kFixMaxAgeMs - kFixAgeAllowanceMs - fix_lag_ms));
+                               static_cast<int>(navigation_in_hand_ms) + kRedrawLeadMs);
+    const int last = std::min(
+        window_last, static_cast<int>(kFixMaxAgeMs - kFixAgeAllowanceMs - navigation_lag_ms));
     // INFO: fc 19nov26 a fix by the last instant keys after its listen, inside the allowance
     if (first >= last) return first;
     const uint32_t drawn = hash(hash(hash(hash(address_ ^ hash(utc_s)))));
@@ -154,10 +154,10 @@ bool Transmitter::sent_in(uint32_t utc_s, Payload payload) const {
 }
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,
-                                          bool airborne, int32_t fix_lag_ms) const {
+                                          bool airborne, int32_t navigation_lag_ms) const {
     Attempt held{};
     for (const Payload payload : {Payload::Position, Payload::Status, Payload::Callsign}) {
-        const Attempt owed = attempt(plan, utc_s, now_ms, airborne, fix_lag_ms, payload);
+        const Attempt owed = attempt(plan, utc_s, now_ms, airborne, navigation_lag_ms, payload);
         if (owed.go || owed.over_budget) return owed;
         if (owed.stale) held = owed;
     }
@@ -165,8 +165,8 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
 }
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,
-                                          bool airborne, int32_t fix_lag_ms, Payload payload,
-                                          int32_t fix_in_hand_ms) const {
+                                          bool airborne, int32_t navigation_lag_ms, Payload payload,
+                                          int32_t navigation_in_hand_ms) const {
     Attempt attempt{};
     attempt.payload = payload;
     if (!plan.tx_allowed) return attempt;
@@ -175,10 +175,11 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     if (sent_in(utc_s, payload) || !due(payload, plan, utc_s, airborne)) return attempt;
     const int drawn_ms = instant_in(payload, dwell_slot, utc_s);
     // INFO: fc 19nov26 a fix that came after the drawn instant, and its listen, gets a new draw
-    const bool late = payload == Payload::Position && fix_in_hand_ms + kRedrawLeadMs > drawn_ms;
+    const bool late =
+        payload == Payload::Position && navigation_in_hand_ms + kRedrawLeadMs > drawn_ms;
     const std::optional<int> instant =
-        late ? redrawn_in(dwell_slot, utc_s, fix_lag_ms, fix_in_hand_ms) : drawn_ms;
-    if (payload == Payload::Position && !(instant && fresh(fix_lag_ms + *instant))) {
+        late ? redrawn_in(dwell_slot, utc_s, navigation_lag_ms, navigation_in_hand_ms) : drawn_ms;
+    if (payload == Payload::Position && !(instant && fresh(navigation_lag_ms + *instant))) {
         attempt.stale = true;
         attempt.at_ms = drawn_ms;
         return attempt;
