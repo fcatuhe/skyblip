@@ -55,6 +55,14 @@ class Device {
     this.now = 0;
   }
 
+  // A scenario from the firmware's tree, loaded before the first step as the simulator page does.
+  load(file) {
+    const text = readFileSync(join(firmware, "scenarios", file), "utf8");
+    if (this.sim.loadScenario(text, text.length) !== 1)
+      throw new Error(`the firmware refused scenarios/${file}`);
+    return this;
+  }
+
   run(ms) {
     this.now = this.sim.advance(this.now + ms);
     return this;
@@ -238,6 +246,9 @@ function namedAndFlying(device) {
 }
 const CRUISE = { kt: 95, ft: 3911, track: 0, fpm: 0, dps: 0 };
 const PPS_LOST_SHOWN_MS = 15_000;
+const OWN_TRANSPONDER = "paired_own_transponder.json";
+// Bravo names a transponder after 10 s ahead of every other, and the notice follows.
+const BRAVO_NAMES_MS = 16_000;
 const LEG_MS = 47 * 60_000;
 const HEARD_MS = 20_000;
 
@@ -369,6 +380,39 @@ const scenes = [
       device.run(HEARD_MS);
       return brightestFlip(device);
     }
+  },
+  // A wingman 60 m off the right wing, holding station: the square takes its place.
+  {
+    name: "formation",
+    page: PAGE.Radar,
+    shot: device =>
+      flying(device)
+        .traffic({
+          bearing: 90, range: 60, ft: 0, kt: CRUISE.kt, track: CRUISE.track, addr: 0x3c4a22
+        })
+        .run(HEARD_MS)
+  },
+  // Bravo names the transponder it hears loudest, and it is not the one the Go holds.
+  {
+    name: "aircraft-notice",
+    page: PAGE.Radar,
+    scenario: OWN_TRANSPONDER,
+    shot: device => device.run(BRAVO_NAMES_MS)
+  },
+  {
+    name: "aircraft-proposal",
+    page: PAGE.Radar,
+    menu: true,
+    scenario: OWN_TRANSPONDER,
+    shot: device =>
+      device.run(BRAVO_NAMES_MS).tap().openMenu(PAGE.Radar, RADAR_MENU.Aircraft).press()
+  },
+  {
+    name: "aircraft-in-flight",
+    page: PAGE.Radar,
+    menu: true,
+    scenario: "paired_quiet_sky.json",
+    shot: device => device.run(20_000).openMenu(PAGE.Radar, RADAR_MENU.Aircraft).press()
   },
   {
     name: "nearby",
@@ -625,6 +669,7 @@ function* drawnBlips() {
 mkdirSync(shots, { recursive: true });
 for (const scene of scenes) {
   const device = await Device.boot();
+  if (scene.scenario) device.load(scene.scenario);
   device.run(STEP_MS);
   const captured = scene.shot(device);
   const shot = captured instanceof Buffer ? captured : png(panel(device.run(SETTLE_MS)));

@@ -42,7 +42,7 @@ Airborne, the position carries the pressure altitude the world's airmass gives t
 
 The world does not model:
 
-- **path loss at 1090 MHz:** every squitter lands at -70 dBm;
+- **path loss at 1090 MHz:** every squitter lands at -70 dBm, except the aircraft's own transponder at -20 dBm;
 - **garbling:** two squitters that overlap are both heard;
 - **DF18:** Bravo receives DF17 only (`protocols/adsb/README.md`);
 - **aircraft status, target state and operational status,** TC 28, 29 and 31, so Bravo never learns an aircraft's ADS-B version or GVA.
@@ -61,6 +61,9 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - An aircraft's `"system"` is `adsl_direct`, `alptas`, `adsl_uplink`, or `adsb` for ADS-B Out alone.
 - `"adsb": 1` adds ADS-B Out to an 868 MHz system. Such an aircraft sends its ICAO address under table 5 on ADS-L too, as ADS-L F.2.3 asks of a unit beside a transponder.
 - `"on_ground": 1` sends surface positions, and `"pressure_only": 1` sends no GNSS-baro difference.
+- `"aboard": 1` makes an ADS-B aircraft the transponder of the aircraft a Bravo flies in. Its squitters land at -20 dBm, loud enough for Bravo to name it (`../products/skyblip_bravo/README.md`, Own transponder). Place it at `north_m`, `east_m` and `up_m` 0, with own-ship's speed and track.
+- `"address"` gives an aircraft its 24-bit address, in decimal since JSON has no hex. Left out, the world numbers the aircraft from 0x300001.
+- An aircraft's `"callsign"` is the name it puts on air, in its ADS-L name or its ADS-B identification. ADS-B sends letters and digits only, so a registration goes without its dash: `DEFLY`.
 - `"category"` is the emitter category, `A0` to `C7`, in the shorthand of `core/protocol/README.md`: the letter is the identification's type code, A for 4, B for 3 and C for 2, and the digit is the category. Any other value refuses the file.
 - `"phase_ms"` and `"slot"` pin where in the second, and on which M-band channel, an aircraft transmits. Left out, it picks its own instant as a conforming transmitter does.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.

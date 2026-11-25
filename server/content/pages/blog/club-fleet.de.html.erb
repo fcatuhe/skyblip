@@ -37,7 +37,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Flugzeuge mit Transponder</h2>
   <h3>Geben Sie diesen Flugzeugen einen eigenen Go.</h3>
   <p>Ein Flugzeug, das Mode S oder ADS-B sendet, sollte ADS-L unter derselben ICAO-Adresse senden. Dann wissen Empfänger, dass beide Signale vom selben Flugzeug kommen. Die ADS-L-Spezifikation verlangt das. Diese Adresse gehört zum Flugzeug, nicht zum Piloten. Ein Go, den mehrere Flugzeuge teilen, bräuchte also vor jedem Flug eine neue Adresse.</p>
-  <p>Die einfachste Regel: ein Go pro Flugzeug mit Transponder, dessen Adresse einmal in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> eingestellt wird, und geteilte Go für die Flugzeuge ohne Transponder. Ein Bravo, der mit dem Go gekoppelt ist, kann die Adresse am Boden vom Transponder ablesen. Dann muss niemand sie eintippen.</p>
+  <p>Die einfachste Regel: ein Go pro Flugzeug mit Transponder, dessen Adresse einmal in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %> eingestellt wird, und geteilte Go für die Flugzeuge ohne Transponder. Ein Bravo, der mit dem Go gekoppelt ist, kann die Adresse am Boden vom Transponder ablesen. Dann muss niemand sie eintippen. Kommt ein Tango in ein anderes Flugzeug, schlägt er die neue Adresse vor, und ein Druck speichert sie: <%= link_to_page "blog/own-aircraft", label: "so sieht es auf dem Go aus" %>.</p>
 </section>
 
 <section>

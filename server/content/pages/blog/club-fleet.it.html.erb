@@ -37,7 +37,7 @@ updated_on: "2026-11-25"
   <h2 class="kicker">Aeromobili con transponder</h2>
   <h3>Dai a questi aeromobili un Go tutto loro.</h3>
   <p>Un aeromobile che trasmette in Mode S o ADS-B dovrebbe trasmettere in ADS-L con lo stesso indirizzo ICAO, perché i ricevitori sappiano che i due segnali vengono dallo stesso aeromobile. La specifica ADS-L lo richiede. L&rsquo;indirizzo appartiene all&rsquo;aeromobile, non al pilota. Un Go condiviso fra più aeromobili richiederebbe quindi un nuovo indirizzo prima di ogni volo.</p>
-  <p>La regola più semplice: un Go per ogni aeromobile con transponder, con il suo indirizzo impostato una volta per tutte in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, e Go condivisi per gli aeromobili senza transponder. Un Bravo abbinato al Go può leggere l&rsquo;indirizzo dal transponder a terra, così nessuno deve digitarlo.</p>
+  <p>La regola più semplice: un Go per ogni aeromobile con transponder, con il suo indirizzo impostato una volta per tutte in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, e Go condivisi per gli aeromobili senza transponder. Un Bravo abbinato al Go può leggere l&rsquo;indirizzo dal transponder a terra, così nessuno deve digitarlo. Portato su un altro aereo, un Tango propone il nuovo indirizzo e una pressione lo salva: <%= link_to_page "blog/own-aircraft", label: "ecco come appare sul Go" %>.</p>
 </section>
 
 <section>
