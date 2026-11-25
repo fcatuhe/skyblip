@@ -237,7 +237,7 @@ oauth_token.refused:
   answers: Whether agents fail to connect, and why.
 mcp.answered:
   group: Agents
-  says: The MCP server answered a call, by method and tool, with its duration and error.
+  says: An MCP server answered a call, by method and tool, with its duration and error. The `path` is `/admin/mcp` for the admins' agents and `/mcp` for the public one that reads the website.
   answers: Which tools agents call, how long they take and which fail.
 event.listed:
   group: Agents

@@ -21,7 +21,7 @@ class Event::Review
 
   def to_h
     { window: "#{since.to_date} to #{till.to_date}", headline:, browsers:, devices:, notices:, tasks:, installs:, firmware:,
-      activations:, stranded:, errors: errors.merge(open:), requests:, jobs:, agents: }
+      activations:, stranded:, errors: errors.merge(open:), requests:, jobs:, agents:, connectors: }
   end
 
   def headline
@@ -135,13 +135,19 @@ class Event::Review
     { failed: top(rows("active_job.completed", "payload.job_class", "payload.exception_class").select { it["payload.exception_class"] }.map { it["payload.job_class"] }) }
   end
 
-  # INFO: fc 19nov26 an agent opens a session and lists the tools before each call, so the protocol's requests would outnumber the calls twenty to one
-  def agents
-    answered = rows("mcp.answered", "payload.method", "payload.tool")
-    { sessions: answered.count { it["payload.method"] == "initialize" }, calls: top(answered.filter_map { it["payload.tool"] }) }
-  end
+  def agents = mcp_use(routes.admin_mcp_path)
+
+  def connectors = mcp_use(routes.mcp_path)
 
   private
+    # INFO: fc 19nov26 an agent opens a session and lists the tools before each call, so the protocol's requests would outnumber the calls twenty to one
+    def mcp_use(path)
+      answered = rows("mcp.answered", "context.path", "payload.method", "payload.tool").select { it["context.path"] == path }
+      { sessions: answered.count { it["payload.method"] == "initialize" }, calls: top(answered.filter_map { it["payload.tool"] }) }
+    end
+
+    def routes = Rails.application.routes.url_helpers
+
     def within(names) = Event.where(name: names, occurred_at: since..till)
 
     def rows(name, *fields)

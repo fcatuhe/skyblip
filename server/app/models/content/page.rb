@@ -19,6 +19,21 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
     all.any? { |page| page.locale == locale.to_sym && page.base_slug != "index" && page.to_param == slug }
   end
 
+  def self.at(path)
+    path = path.to_s.delete_suffix("/").presence || "/"
+
+    all.find { |page| page.url_path == path || page.markdown_path == path }
+  end
+
+  def self.read_in(locale)
+    locale = locale.to_sym
+    translated = all.select { it.locale == locale }
+    slugs = translated.map(&:base_slug)
+    untranslated = all.select { it.locale == I18n.default_locale && slugs.exclude?(it.base_slug) }
+
+    (translated + untranslated).sort_by { it.base_slug == "index" ? "" : it.to_param }
+  end
+
   def url_path
     segments = [ locale_parameter, (to_param unless base_slug == "index") ].compact
     "/#{segments.join("/")}"
@@ -27,6 +42,13 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
   def markdown_path
     base_slug == "index" ? "#{url_path.delete_suffix("/")}/index.md" : "#{url_path}.md"
   end
+
+  def canonical_url = Content.canonical_url(url_path)
+
+  def markdown_url = Content.canonical_url(markdown_path)
+
+  # INFO: fc 25nov26 the pages change only with a deploy, and Content::Page.all keeps each one for the life of the process
+  def markdown = @markdown ||= to_markdown
 
   def to_markdown
     html = I18n.with_locale(locale) { Content::PagesController.render(:show, assigns: { page: self }, layout: false, formats: :html) }

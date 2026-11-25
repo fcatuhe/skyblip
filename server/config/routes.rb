@@ -15,7 +15,7 @@ Rails.application.routes.draw do
 
   scope ".well-known", module: :oauth do
     resource :authorization_server, only: :show, path: "oauth-authorization-server"
-    resource :protected_resource, only: :show, path: "oauth-protected-resource/mcp"
+    resource :protected_resource, only: :show, path: "oauth-protected-resource/admin/mcp"
   end
 
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
@@ -26,6 +26,7 @@ Rails.application.routes.draw do
   resources :events, only: :create
 
   namespace :admin do
+    resource :mcp, only: %i[show create destroy]
     resource :analytics, only: :show do
       scope module: :analytics do
         resources :visitors, only: %i[index show], param: :visitor_token
@@ -98,12 +99,13 @@ Rails.application.routes.draw do
     resource :ownship, only: :show
   end
 
-  scope module: :content, as: :content, format: false, defaults: { format: :text } do
-    resource :llms, only: :show, path: "llms.txt"
-    resource :llms_full, only: :show, path: "llms-full.txt", controller: :llms_full
-  end
-
   scope "(:locale)", locale: /#{I18n.available_locales.without(I18n.default_locale).join("|")}/ do
+    scope module: :content, as: :content, format: false do
+      resource :llms, only: :show, path: "llms.txt", defaults: { format: :text }
+      resource :llms_full, only: :show, path: "llms-full.txt", controller: :llms_full, defaults: { format: :text }
+      resource :feed, only: :show, path: "feed.atom", defaults: { format: :atom }
+    end
+
     draw :content
   end
 end

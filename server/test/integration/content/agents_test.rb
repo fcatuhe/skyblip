@@ -35,13 +35,13 @@ class Content::AgentsTest < ActionDispatch::IntegrationTest
     assert_response :not_acceptable
   end
 
-  test "a Markdown request for no page answers in Markdown and points at llms.txt" do
-    [ [ "/nope.md", {} ], [ "/fr/about.md", {} ], [ "/nope", { "Accept" => "text/markdown" } ] ].each do |path, headers|
+  test "a Markdown request for no page answers in Markdown and points at its language's llms.txt" do
+    [ [ "/nope.md", {}, "/llms.txt" ], [ "/fr/about.md", {}, "/fr/llms.txt" ], [ "/nope", { "Accept" => "text/markdown" }, "/llms.txt" ] ].each do |path, headers, llms|
       get path, headers: headers
 
       assert_response :not_found, path
       assert_equal "text/markdown", response.media_type
-      assert_includes response.body, "(https://skyblip.eu/llms.txt)"
+      assert_includes response.body, "(https://skyblip.eu#{llms})"
     end
 
     get "/nope"
@@ -60,6 +60,43 @@ class Content::AgentsTest < ActionDispatch::IntegrationTest
 
     get "/radar"
     assert_select "footer a[href='/llms.txt']"
+  end
+
+  test "each language has its llms.txt, which lists the pages not translated yet in English and names the MCP server" do
+    get "/fr/llms.txt"
+
+    assert_response :success
+    assert_includes response.body, "(https://skyblip.eu/fr/a-propos.md)"
+    assert_includes response.body, "(https://skyblip.eu/ads-l/nmea.md)"
+    assert_includes response.body, "(https://skyblip.eu/fr/llms-full.txt)"
+    assert_includes response.body, "https://skyblip.eu/mcp,"
+    assert_includes response.body, "- [English](https://skyblip.eu/llms.txt)"
+
+    get "/fr/a-propos"
+    assert_select "footer a[href='/fr/llms.txt']"
+  end
+
+  test "each language's llms-full.txt holds its own pages" do
+    get "/fr/llms-full.txt"
+
+    assert_includes response.body, "Source: https://skyblip.eu/fr/a-propos\n"
+    assert_includes response.body, "Source: https://skyblip.eu/ads-l/nmea\n"
+    assert_not_includes response.body, "Source: https://skyblip.eu/about\n"
+  end
+
+  test "each language has an Atom feed of its pages, latest change first, that every page links" do
+    get "/fr/feed.atom"
+
+    assert_response :success
+    assert_equal "application/atom+xml", response.media_type
+    feed = Nokogiri::XML(response.body).remove_namespaces!
+    updated = feed.xpath("//entry/updated").map(&:text)
+    assert_equal Content::Page.read_in(:fr).size, updated.size
+    assert_equal updated.sort.reverse, updated
+    assert_equal "https://skyblip.eu/fr/a-propos.md", feed.at_xpath("//entry[id='https://skyblip.eu/fr/a-propos']/link[@type='text/markdown']/@href").text
+
+    get "/fr/a-propos"
+    assert_select "link[rel=alternate][type='application/atom+xml'][href=?]", "https://skyblip.eu/fr/feed.atom"
   end
 
   test "llms-full.txt holds every English page but the legal notice" do

@@ -94,6 +94,15 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal({ sessions: 2, calls: { "list_errors" => 2, "get_insights" => 1 } }, Event::Review.new.agents)
   end
 
+  test "the public MCP server's calls are counted apart from the admins' agents" do
+    answered "initialize", path: "/mcp"
+    2.times { answered "tools/call", tool: "search_pages", path: "/mcp" }
+    answered "tools/call", tool: "list_errors"
+
+    assert_equal({ sessions: 1, calls: { "search_pages" => 2 } }, Event::Review.new.connectors)
+    assert_equal({ sessions: 0, calls: { "list_errors" => 1 } }, Event::Review.new.agents)
+  end
+
   test "the daily cap is compared with the busiest day, and a cap under twice it is advised up to three times it" do
     freeze_time
     3.times { Event.create!(name: "unit.enrolled", occurred_at: 2.days.ago) }
@@ -110,8 +119,8 @@ class Event::ReviewTest < ActiveSupport::TestCase
   end
 
   private
-    def answered(method, tool: nil)
-      Event.create! name: "mcp.answered", payload: { method:, tool: }.compact, occurred_at: 1.minute.ago
+    def answered(method, tool: nil, path: "/admin/mcp")
+      Event.create! name: "mcp.answered", payload: { method:, tool: }.compact, context: { path: }, occurred_at: 1.minute.ago
     end
 
     def journey(browser, name, at, **payload)
