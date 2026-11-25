@@ -5,7 +5,7 @@ description: Find a way to make skyBlip more secure, in the server, the firmware
 
 # Secure skyBlip
 
-Each run does the same three watches, then one deep strategy picked by the day of the week, and fixes at most two things it finds. The repository is public, so a finding is public once it is in a PR or an issue: read Disclosure before writing either.
+Each run does the same four watches, then one deep strategy picked by the day of the week, and fixes at most two things it finds. The repository is public, so a finding is public once it is in a PR or an issue: read Disclosure before writing either.
 
 ## Every run: the watches
 
