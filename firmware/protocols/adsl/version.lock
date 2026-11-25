@@ -1,4 +1,4 @@
-version 0.8.0
+version 0.8.1
 root firmware/protocols/adsl/
 root firmware/test/adsl/
 root firmware/test/en300220/
@@ -52,7 +52,7 @@ fc0a6aecea4f3c3221fc0d829cebd87a2b452b5ceb006bd3975b4c1ab350387a  firmware/proto
 6083190b41713d131790e5bc68988637db76bbf55221470e3339ff6764ae10bc  firmware/protocols/adsl/transmit.h
 35703abf55264d7a0c1c5fea9b547aca3efc2b90c6d44728618e0b0319d8dee7  firmware/protocols/adsl/uplink.cpp
 3d24deade5c66b0d977ec51a0cf36e4fe02f8ac85d3ad600856da3f6d096d780  firmware/protocols/adsl/uplink.h
-11bc186fb12ba3ebccb90e4eada07ac64fca00391efc19a70b38bb24456b02a4  firmware/protocols/adsl/version.h
+0ab97cefce0e9f04630d827e26db66412964a5d8722329d2d30725417a3fc038  firmware/protocols/adsl/version.h
 d0c8fe462b3eca224c689cef594e4811b313a8c596449da78287d7955c764aa0  firmware/protocols/common/bit_field.h
 ffe91a409ca0133fd3a7e4940194551c836cd30c97063efc13f380723a9fba91  firmware/protocols/common/crc.h
 40c5dc007ffb6f323f8b6003c2b4b9c8f9e4e1e1aa759c31f3f81a15525a7ad4  firmware/protocols/common/en300220.h
