@@ -17,6 +17,23 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal %w[CHOOSER0 STUCK000], stranded[:latest].pluck(:browser)
   end
 
+  # A task ends on its notice, so a save, a capture or a pairing that worked was counted as refused and its pilot as stranded.
+  test "a task that ended on its result is granted, and its pilot is not stranded" do
+    journey "SAVED000", "device.task_started", 4.minutes.ago, task: "set"
+    journey "SAVED000", "device.task_ended", 3.minutes.ago, task: "set", outcome: "saved"
+    journey "PAIRED00", "device.task_started", 4.minutes.ago, task: "pair"
+    journey "PAIRED00", "device.task_ended", 3.minutes.ago, task: "pair", outcome: "paired"
+    journey "PAIRED00", "device.noticed", 2.minutes.ago, key: "paired"
+    journey "REFUSED0", "device.task_started", 4.minutes.ago, task: "set"
+    journey "REFUSED0", "device.task_ended", 3.minutes.ago, task: "set", outcome: "refused_on_device"
+
+    review = Event::Review.new
+
+    assert_equal({ started: 2, granted: 1, refused: { "refused_on_device" => 1 } }, review.tasks["set"])
+    assert_equal({ started: 1, granted: 1, refused: {} }, review.tasks["pair"])
+    assert_equal %w[REFUSED0], review.stranded[:latest].pluck(:browser)
+  end
+
   test "installs count those started, those that came back on the new version, and the causes of those that did not" do
     journey "BROWSER0", "device.task_started", 30.minutes.ago, task: "install"
     journey "BROWSER0", "device.task_started", 20.minutes.ago, task: "install"
