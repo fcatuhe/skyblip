@@ -3,7 +3,7 @@ title: "Blog skyBlip: ADS-L, traffico e aviazione leggera"
 nav_title: Blog
 slug: blog
 description: "Risposte approfondite alle domande dei piloti sui forum: ADS-L o ADS-B, rete o radio, tascabile o installato, e come un club può equipaggiare la flotta."
-updated_on: "2026-11-24"
+updated_on: "2026-11-25"
 ---
 
 <header class="page-hero">
@@ -16,9 +16,29 @@ updated_on: "2026-11-24"
   <%= render "shared/post_cards", slugs: %w[blog/pocket-or-installed blog/club-fleet blog/network-or-radio blog/skyblip-softrf-stratux blog/who-sees-ads-l blog/why-ads-l] %>
 </section>
 
-<section id="long-reads" class="band">
+<section id="compare" class="band">
+  <h2 class="section-title">Confronta prima di scegliere</h2>
+  <p>skyBlip accanto all&rsquo;AERO Tracker, al PowerFLARM, al Funke TM350 e a SafeSky: cosa trasmette, cosa riceve e quanto costa ciascuno.</p>
+  <p class="signature"><%= link_to_page "compare", label: "Vedi il confronto", class: "button button--primary" %></p>
+</section>
+
+<section id="long-reads" class="band band--tint">
   <h2 class="section-title">Per approfondire</h2>
-  <%= render "shared/post_cards", slugs: %w[compare see-and-avoid ads-l] %>
+  <%= render "shared/post_cards", slugs: %w[see-and-avoid ads-l] %>
+</section>
+
+<section id="project" class="band">
+  <h2 class="section-title">Perché sviluppiamo skyBlip</h2>
+  <div class="resource-cards">
+    <article>
+      <h3><%= link_to_page "about", label: "Funzioni di sicurezza alla portata di tutti", anchor: "pledge" %></h3>
+      <p>Le funzioni di sicurezza di skyBlip restano gratuite per il volo da diporto. Il codice che riceve il traffico e condivide la tua posizione è aperto.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
+      <p>Scopri skyBlip Panel per gli schermi di cabina e le stazioni skyPost per ritrasmettere il traffico intorno a un campo di volo.</p>
+    </article>
+  </div>
 </section>
 
 <section class="band band--tint">
