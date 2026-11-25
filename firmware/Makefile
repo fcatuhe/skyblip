@@ -190,7 +190,7 @@ $(BUILD)/%.o: %.c
 
 # Rebuilds on every save, the host tests by default and the WASM with WATCH=browser. Needs watchexec.
 WATCH ?= test
-WATCH_SRC := protocols core ui ports hardware boards runtime products simulator scenarios test vendor
+WATCH_SRC := protocols core disciplines ui ports hardware boards runtime products simulator scenarios test vendor
 
 watch:
 	watchexec $(addprefix -w ,$(WATCH_SRC)) -e cpp,h,c,js,json --debounce 400ms -- $(MAKE) --no-print-directory $(WATCH)
