@@ -213,7 +213,7 @@ bool issue2_category(uint8_t aircraft_category) {
 uint8_t lowest_version(const Packet& packet) {
     if (!packet.is_position()) return Packet::kProtocolVersionIssue2;
     const bool issue2_codes =
-        !packet.has_altitude() || !packet.has_speed() || !packet.has_climb() ||
+        packet.has_issue2_motion_marker() ||
         packet.field(Packet::kLatitudeField) == Packet::kPositionInvalidCode ||
         packet.field(Packet::kLongitudeField) == Packet::kPositionInvalidCode ||
         packet.field(Packet::kLatitudeField) == Packet::kIssue1PositionInvalidCode ||
