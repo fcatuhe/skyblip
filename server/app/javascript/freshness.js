@@ -4,10 +4,13 @@ const loaded = document.querySelector('meta[name="assets-digest"]')?.content
 // INFO: fc 25nov26 a full load ends every Bluetooth link, so a page that holds one keeps its scripts and renders the new HTML
 addEventListener("turbo:before-fetch-response", event => {
   const { fetchResponse } = event.detail
-  if (!isPageVisit(event) || !fetchResponse.isHTML) return
-  if (stale(fetchResponse.header(DIGEST)) && mayReload()) {
+  if (!fetchResponse.isHTML || !stale(fetchResponse.header(DIGEST))) return
+  if (isPageVisit(event) && mayReload()) {
     event.preventDefault()
     location.assign(fetchResponse.location)
+  } else if (isFrame(event) && mayReload()) {
+    event.preventDefault()
+    location.reload()
   }
 })
 
@@ -33,6 +36,10 @@ function mayReload() {
 // INFO: fc 25nov26 Turbo sends a visit from the document, and a prefetch from its link, a form from its form and a frame from its frame
 function isPageVisit(event) {
   return event.target === document.documentElement
+}
+
+function isFrame(event) {
+  return event.target.localName === "turbo-frame"
 }
 
 function inForeground() {
