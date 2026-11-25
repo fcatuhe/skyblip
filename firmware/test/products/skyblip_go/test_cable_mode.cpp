@@ -5,6 +5,7 @@
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 #include "test/support/product_rig.h"
+#include "test/support/update_rig.h"
 
 using namespace skyblip;
 
@@ -105,6 +106,54 @@ TEST_CASE("product: a cable back while the Go parks for its loss restarts it ins
     pressed.run_for(10000);
     REQUIRE(pressed.product.ready_to_power_off());
     CHECK_FALSE(pressed.product.cable_returned());
+}
+
+// A cable pulled while an image uploads must not switch the Go off halfway through the upload.
+TEST_CASE("product: in cable mode an update under way holds the countdown until it ends") {
+    Rig rig;
+    store_power_switch(rig, power::Switch::Cable);
+    rig.platform.battery().external_power = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(5000);
+
+    open_upload_window(rig);
+    REQUIRE(config(rig).upload_allowed());
+    pull_cable_for(rig, power::kCableGoneHoldMs + 10000);
+    CHECK_FALSE(rig.product.shutdown().going_down());
+    CHECK_FALSE(rig.state().power.cable_off_in_ms);
+
+    rig.tap();
+    rig.run_for(1000);
+    REQUIRE_FALSE(config(rig).upload_allowed());
+    pull_cable_for(rig, power::kCableGoneHoldMs - 10000);
+    CHECK_FALSE(rig.product.shutdown().going_down());
+    REQUIRE(rig.state().power.cable_off_in_ms);
+
+    pull_cable_for(rig, 20000);
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::CableGone);
+}
+
+// An install restarts the Go, so the new image never saw the cable the old one followed.
+TEST_CASE("product: in cable mode the boot after an install switches off without the cable") {
+    Rig before;
+    store_power_switch(before, power::Switch::Cable);
+    stage_versions(before);
+    before.platform.battery().external_power = true;
+    REQUIRE(before.setup() == Status::Ok);
+    before.run_for(5000);
+    before.platform.battery().external_power = false;
+    install_and_swap(before);
+    REQUIRE(before.platform.dfu().triggered == 1);
+
+    Rebooted after(before, kStaged, /*confirmed=*/false);
+    after.rig.platform.system_power().causes = power::ResetCause::Software;
+    REQUIRE(after.rig.setup() == Status::Ok);
+    REQUIRE(after.rig.product.power_switch() == power::Switch::Cable);
+    pull_cable_for(after.rig, power::kCableGoneHoldMs - 10000);
+    CHECK_FALSE(after.rig.product.shutdown().going_down());
+
+    pull_cable_for(after.rig, 20000);
+    CHECK(after.rig.product.shutdown().reason() == power::ShutdownReason::CableGone);
 }
 
 TEST_CASE("product: a cable back on the ground stops the countdown the ring reads") {

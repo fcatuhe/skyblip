@@ -109,6 +109,7 @@ class ConfigService {
     bool upload_allowed() const { return upload_window_open_ && !install_held_; }
     // INFO: fc 13nov26 in flight the glass keeps the radar while an upload runs on behind it
     bool receiving_firmware() const { return upload_allowed() && !in_flight(); }
+    bool updating() const { return upload_window_open_; }
 
     void on_link_up(const events::LinkUp& event);
     void on_link_down(const events::LinkDown& event);
