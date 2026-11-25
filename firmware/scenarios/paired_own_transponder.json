@@ -1,0 +1,17 @@
+{
+  "name": "Go paired with Bravo: Bravo hears our own transponder while we taxi",
+  "product": "paired",
+  "callsign": "D-EABC",
+  "mode": "device",
+  "latitude_1e7": 485000000,
+  "longitude_1e7": 85000000,
+  "altitude_m": 400,
+  "speed_kt": 6,
+  "track_deg": 90,
+  "duration_ms": 40000,
+  "aircraft": [
+    {"system": "adsb", "aboard": 1, "on_ground": 1, "category": "A1", "address": 3951137, "callsign": "DEFLY", "north_m": 0, "east_m": 0, "up_m": 0, "speed_mps": 3, "track_deg": 90},
+    {"system": "adsb", "on_ground": 1, "category": "A1", "north_m": 40, "east_m": 25, "up_m": 0, "speed_mps": 0, "track_deg": 270}
+  ],
+  "events": []
+}

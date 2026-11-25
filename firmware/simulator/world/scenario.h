@@ -35,6 +35,8 @@ struct AdsbOut {
     bool on_ground{false};
     // INFO: fc 13nov26 its velocity messages carry no GNSS-baro difference
     bool pressure_only{false};
+    // INFO: fc 25nov26 the aircraft's own transponder, as loud in the cockpit as Bravo hears it
+    bool aboard{false};
     uint8_t category_type_code{4};
     uint8_t category{0};
 };
@@ -42,6 +44,8 @@ struct AdsbOut {
 struct ScenarioAircraft {
     protocol::System system{protocol::System::AdslDirect};
     AdsbOut adsb{};
+    uint32_t address{0};
+    std::string callsign;
     double north_m{0};
     double east_m{0};
     double up_m{0};
