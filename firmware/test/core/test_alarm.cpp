@@ -404,3 +404,39 @@ TEST_CASE("alarm: a reception dated half a second ahead of now is announced as f
     CHECK(decision.notify);
     CHECK(tracker.announced_level(now_ms) == Level::Advisory);
 }
+
+// A discipline pack predicts what the ring does not, so its level stands beyond the ring, and is
+// announced like any other advisory (firmware/disciplines/README.md).
+TEST_CASE("alarm: a discipline raises an aircraft beyond the ring to an advisory") {
+    AlarmTracker tracker;
+    const model::Ownship own = flying(30, 0);
+    const AlarmTracker::Decision decision =
+        tracker.update(own, target_at(own, 5000, 0, 0, 30, 180), 0, Level::Advisory);
+    CHECK(decision.assessment.level == Level::Advisory);
+    CHECK(decision.notify);
+    CHECK(tracker.announced_level(0) == Level::Advisory);
+}
+
+// A bug in a pack can only make the unit louder, never quieter.
+TEST_CASE("alarm: a discipline that grades nothing leaves the ring's advisory standing" *
+          doctest::test_suite("main")) {
+    AlarmTracker tracker;
+    const model::Ownship own = flying(30, 0);
+    const AlarmTracker::Decision decision =
+        tracker.update(own, target_at(own, 1200, 0, 0, 30, 180), 0, Level::None);
+    CHECK(decision.assessment.level == Level::Advisory);
+    CHECK(decision.notify);
+}
+
+TEST_CASE("alarm: a discipline raises nothing while either aircraft is on the ground") {
+    AlarmTracker tracker;
+    const model::Ownship own = flying(30, 0);
+    model::AircraftObservation parked_glider = target_at(own, 5000, 0, 0, 0, 0);
+    parked_glider.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+    CHECK(tracker.update(own, parked_glider, 0, Level::Advisory).assessment.level == Level::None);
+
+    model::Ownship rolling = flying(20, 0);
+    rolling.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+    CHECK(tracker.update(rolling, target_at(rolling, 5000, 0, 0, 30, 180), 0, Level::Advisory)
+              .assessment.level == Level::None);
+}

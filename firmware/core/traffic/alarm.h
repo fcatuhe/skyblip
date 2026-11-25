@@ -54,7 +54,7 @@ class AlarmTracker {
     };
 
     Decision update(const model::Ownship& own, const model::AircraftObservation& target,
-                    uint32_t now_ms);
+                    uint32_t now_ms, Level raised = Level::None);
 
     void forget_stale(uint32_t now_ms);
     void withdraw(uint8_t address_mapping_table, uint32_t address);

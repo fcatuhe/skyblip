@@ -1,8 +1,11 @@
 #include "core/flight/state.h"
 
+#include "core/model/aircraft_category.h"
 #include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
+
+using model::AircraftCategory;
 
 namespace {
 
@@ -10,21 +13,6 @@ int32_t derated(int32_t evidence, uint16_t hdop_e2) {
     if (hdop_e2 <= kDopUnityE2) return evidence;
     return wire::divide_rounded(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
 }
-
-enum class G13Category : uint8_t {
-    LightRotorcraft = 3,
-    LighterThanAir = 5,
-    Paraglider = 7,
-    Parachutist = 8,
-    Evtol = 9,
-    Gyrocopter = 10,
-    UasOpen = 11,
-    UasSpecific = 12,
-    UasCertified = 13,
-    HeavyRotorcraft = 15,
-    HangGlider = 16,
-    Paramotor = 17,
-};
 
 }  // namespace
 
@@ -97,19 +85,25 @@ FlightState FlightMonitor::update(const FlightSample& sample, uint32_t now_ms) {
 }
 
 bool flies_at_no_ground_speed(uint8_t aircraft_category) {
-    switch (static_cast<G13Category>(aircraft_category)) {
-        case G13Category::LightRotorcraft:
-        case G13Category::LighterThanAir:
-        case G13Category::Paraglider:
-        case G13Category::Parachutist:
-        case G13Category::Evtol:
-        case G13Category::Gyrocopter:
-        case G13Category::UasOpen:
-        case G13Category::UasSpecific:
-        case G13Category::UasCertified:
-        case G13Category::HeavyRotorcraft:
-        case G13Category::HangGlider:
-        case G13Category::Paramotor: return true;
+    switch (static_cast<AircraftCategory>(aircraft_category)) {
+        case AircraftCategory::LightRotorcraft:
+        case AircraftCategory::LighterThanAir:
+        case AircraftCategory::Paraglider:
+        case AircraftCategory::Parachutist:
+        case AircraftCategory::Evtol:
+        case AircraftCategory::Gyrocopter:
+        case AircraftCategory::UasOpen:
+        case AircraftCategory::UasSpecific:
+        case AircraftCategory::UasCertified:
+        case AircraftCategory::HeavyRotorcraft:
+        case AircraftCategory::HangGlider:
+        case AircraftCategory::Paramotor: return true;
+        case AircraftCategory::Unknown:
+        case AircraftCategory::LightFixedWing:
+        case AircraftCategory::HeavyFixedWing:
+        case AircraftCategory::Glider:
+        case AircraftCategory::Ultralight:
+        case AircraftCategory::ModelPlane: return false;
     }
     return false;
 }

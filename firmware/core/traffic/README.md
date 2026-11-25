@@ -26,6 +26,8 @@ There is no level above the advisory, because a resolution advisory needs a link
 
 The ring does not predict. A prediction needs a model of protection volume, spread and horizon, and that model would decide whether a pilot hears about an aeroplane a kilometre away. Aircraft flying with us are silenced by `formation` instead.
 
+A discipline may predict for the aircraft it serves, such as a glider circling towards us (`../../disciplines/README.md`). `AlarmTracker::update` takes the discipline's level beside the ring's and keeps the higher, except while either aircraft is on the ground. So a discipline can only add advisories, and the formation, the dismissal and the age rules still apply to them.
+
 A target that reports no velocity closes at `kUnknownTargetSpeedMps`, because zero would make a relayed position the safest thing in the sky.
 
 ## A target that sends no altitude

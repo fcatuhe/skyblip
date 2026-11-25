@@ -90,10 +90,15 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
 
 AlarmTracker::Decision AlarmTracker::update(const model::Ownship& own,
                                             const model::AircraftObservation& target,
-                                            uint32_t now_ms) {
+                                            uint32_t now_ms, Level raised) {
     Decision decision{};
     decision.assessment = assess(own, target, now_ms);
     if (!decision.assessment.valid) return decision;
+
+    const bool grounded =
+        flight::on_ground(target.flight_state) || flight::on_ground(own.flight_state);
+    // INFO: fc 25nov26 a discipline only raises a level, and never while either side is grounded
+    if (!grounded) decision.assessment.level = std::max(decision.assessment.level, raised);
 
     Slot* slot = slot_for(target, now_ms);
     if (slot == nullptr) return decision;
@@ -105,8 +110,6 @@ AlarmTracker::Decision AlarmTracker::update(const model::Ownship& own,
     }
     slot->forget_ms = forget_ms(target);
 
-    const bool grounded =
-        flight::on_ground(target.flight_state) || flight::on_ground(own.flight_state);
     const uint32_t floor_ms = grounded ? kGroundRenotifyFloorMs : kRenotifyFloorMs;
     if (static_cast<int32_t>(now_ms - target.at_ms) <= static_cast<int32_t>(kAlertMaxAgeMs))
         decision.notify = notify_for(*slot, decision.assessment.level, floor_ms, now_ms);

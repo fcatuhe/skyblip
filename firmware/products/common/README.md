@@ -6,7 +6,7 @@ The services more than one product runs, and the vocabulary they read. Why they 
 
 - `OwnshipService` owns `state.own`: it drains `bus.gnss`, `bus.barometer` and `bus.accelerometer`, and publishes the fix, the climb, the turn, the flight state and the ground latch.
 - `PowerService` owns `state.power`: it drains `bus.battery`, reads the die temperature, and runs `core/power`'s cutoff rule.
-- `AlarmService` owns the buzzer, the motor and the lamp. Its `AlarmGrader` (`alarm_grader.h`) grades each target and picks the call this unit plays. It also plays the signs on and off, because the loop no longer runs while the device goes off. It publishes its call as `state.alarm_call`, which a paired Go sends its Bravo, and a paired Bravo plays `state.followed_call` instead of its own grading (`../../core/comms/README.md`, The alarm).
+- `AlarmService` owns the buzzer, the motor and the lamp. Its `AlarmGrader` (`alarm_grader.h`) grades each target, on the ring and on own-ship's discipline (`../../disciplines/README.md`), and picks the call this unit plays. It also plays the signs on and off, because the loop no longer runs while the device goes off. It publishes its call as `state.alarm_call`, which a paired Go sends its Bravo, and a paired Bravo plays `state.followed_call` instead of its own grading (`../../core/comms/README.md`, The alarm).
 - `NmeaService` is the single writer of `events::Endpoint::Nmea`: the FLARM sentences a phone's map draws, once a second.
 - `FlightLogService` writes the flights ring: a takeoff opens a session and a landing closes it. It also drains `bus.log_rx` and answers the Log endpoint for both rings.
 - `CaptureService` drains `diagnostics::Recorder` into the diagnostics ring while a capture is armed.

@@ -4,6 +4,7 @@
 
 #include "core/diagnostics/payload.h"
 #include "core/util/clamp.h"
+#include "disciplines/discipline.h"
 
 namespace skyblip::common {
 
@@ -17,8 +18,10 @@ Announcement AlarmGrader::grade(Alarm alarm, uint32_t now_ms) {
             traffic::Target* target = context_.state.traffic.at(i);
             if (!target || !target->used) continue;
             const formation::State formation_state = watch_formation(*target, now_ms);
+            const traffic::Level raised =
+                discipline::grade(context_.state.own, target->observation, now_ms);
             const traffic::AlarmTracker::Decision decision =
-                tracker_.update(context_.state.own, target->observation, now_ms);
+                tracker_.update(context_.state.own, target->observation, now_ms, raised);
             target->alarm_level = decision.assessment.level;
             target->alarm_dismissed = decision.dismissed;
             const bool quiet = silenced(*target, formation_state);

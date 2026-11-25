@@ -37,6 +37,7 @@ AREAS = {
     "protocols/adsb/conformance": "protocols/adsb conformance - DO-260B draft 4.2, the component read clause by clause",
     "protocols/alptas": "protocols/alptas - the ALP-TAS stack",
     "core": "core - the logic the radio and the screen are built on",
+    "disciplines": "disciplines - what a way of flying adds to the alarm, one pack per discipline",
     "ui": "ui - screens, widgets and input",
     "ports": "ports - the roles a product needs filled",
     "hardware": "hardware - one folder per part, driver against model",

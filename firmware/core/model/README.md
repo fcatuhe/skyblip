@@ -5,6 +5,7 @@ The nouns of the air, with no behaviour, policy or I/O. A protocol decodes into 
 | File | Holds |
 |---|---|
 | `aircraft.h` | `AircraftObservation`, one aircraft as one reception saw it, and `Source`, which of the five ways it reached us |
+| `aircraft_category.h` | `AircraftCategory`, ADS-L G.1.3's aircraft categories. The settings, the wire, `Ownship` and `AircraftObservation` carry the code as a `uint8_t`, and code that decides by category casts it to this enum |
 | `ownship.h` | `Ownship`, this aircraft as the receiver and the barometer currently describe it |
 | `band.h` | `Band`, the M and O halves the single radio is shared between: two 200 kHz channels on M (ADS-L SRD-860 issue 2 clause C.2) and one HDR channel on O (clause C.4) |
 
