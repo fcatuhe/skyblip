@@ -7,6 +7,23 @@ namespace skyblip::protocol {
 
 namespace {
 
+constexpr int adsl_preamble_repetitions(uint8_t hardware_preamble) {
+    uint32_t prefix =
+        (uint32_t{hardware_preamble} << 16) | (uint32_t{kAdslTxSync[0]} << 8) | kAdslTxSync[1];
+    int repetitions = 0;
+    for (; (prefix & 0b11u) == 0b01u; prefix >>= 2) repetitions++;
+    return repetitions;
+}
+
+static_assert(kAdslTxPreambleChips == 8 && kAdslTxSync[2] == 0x99 &&
+              adsl_preamble_repetitions(0x55) == 7 && adsl_preamble_repetitions(0xAA) == 7);
+
+size_t encode_fifo(uint8_t first_byte, const uint8_t* frame, uint8_t bytes, uint8_t* chips) {
+    wire::manchester_encode(&first_byte, 1, chips);
+    wire::manchester_encode(frame, bytes, chips + 2);
+    return 2 + 2u * bytes;
+}
+
 // INFO: fc 20nov26 a dead chip pair decodes to a wrong bit, so the short tail allows one
 constexpr int kSyncTailErrorsCeiling = 1;
 
@@ -52,12 +69,15 @@ uint8_t frame_bytes(System system) {
 }
 
 size_t m_band_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips) {
-    uint8_t tail[kSyncTailBytes] = {0};
-    for (int i = 0; i < kSyncTailBytes; i++)
-        tail[i] = static_cast<uint8_t>(sync_word >> (8 * (kSyncTailBytes - 1 - i)));
+    const uint8_t tail[] = {static_cast<uint8_t>(sync_word >> 16),
+                            static_cast<uint8_t>(sync_word >> 8)};
     wire::manchester_encode(tail, sizeof(tail), chips);
-    wire::manchester_encode(frame, bytes, chips + kSyncTailChipBytes);
-    return kSyncTailChipBytes + 2u * bytes;
+    return 2 * sizeof(tail) +
+           encode_fifo(static_cast<uint8_t>(sync_word), frame, bytes, chips + 2 * sizeof(tail));
+}
+
+size_t adsl_m_band_fifo(const uint8_t* frame, uint8_t bytes, uint8_t* chips) {
+    return encode_fifo(bytes, frame, bytes, chips);
 }
 
 bool framed_noise(const Frame& frame) {
