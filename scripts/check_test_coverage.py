@@ -2,7 +2,7 @@
 """Fail if a logic module or a part has no host test that reaches it.
 
 This is a structural gate, not line coverage. Every directory with a header under
-protocols/, core/, ui/, products/, runtime/ and simulator/ must be included by a
+protocols/, core/, disciplines/, ui/, products/, runtime/ and simulator/ must be included by a
 test the host suite compiles. Every part with a driver must have
 test/hardware/test_<part>.cpp including both the driver and its model. Tests live
 in firmware/test/, never beside the code, except a protocol stack's, which travel
@@ -14,7 +14,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FW = os.path.join(ROOT, "firmware")
 
-MODULE_LAYERS = ("protocols", "core", "ui", "products", "runtime", "simulator")
+MODULE_LAYERS = ("protocols", "core", "disciplines", "ui", "products", "runtime", "simulator")
 NOT_HOST_TESTS = ("test/fuzz", "test/twister")
 PART_TEST_DIR = "test/hardware"
 
@@ -55,7 +55,7 @@ def has_driver(part):
 
 def strays():
     found = []
-    for layer in ("protocols", "core", "ui", "ports", "hardware", "boards", "runtime", "products",
+    for layer in ("protocols", "core", "disciplines", "ui", "ports", "hardware", "boards", "runtime", "products",
                   "simulator"):
         for dirpath, _, files in os.walk(os.path.join(FW, layer)):
             if layer == "protocols" and f"{os.sep}test" in os.path.relpath(dirpath, FW):

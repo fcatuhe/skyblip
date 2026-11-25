@@ -11,7 +11,7 @@ import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIRMWARE = os.path.join(ROOT, "firmware")
-LAYERS = ("protocols", "core", "runtime", "ui", "products")
+LAYERS = ("protocols", "core", "disciplines", "runtime", "ui", "products")
 
 OTHER_UNITS = (
     "Mv",

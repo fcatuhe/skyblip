@@ -6,6 +6,7 @@ The C++ tree. Each directory carries its own README for what it decides:
 |---|---|
 | `protocols/` | the radio protocols, each a stack another project can take with its tests |
 | `core/` | the portable logic |
+| `disciplines/` | what a way of flying, such as soaring, adds to the alarm, one pack per discipline |
 | `ports/` | the roles a product needs from a board |
 | `hardware/` | the parts and platforms that fill those roles |
 | `ui/` | the drawing kit |
@@ -14,11 +15,13 @@ The C++ tree. Each directory carries its own README for what it decides:
 | `test/` | the host suite |
 | `simulator/` | the world the host build flies in |
 
-Put a file in the narrowest layer that decides its content. A radio protocol's specification is `protocols/`, which includes nothing of skyBlip's ([`protocols/README.md`](protocols/README.md)). Any other spec, physical law or arithmetic is `core/`. What the core needs done for it is `ports/`. A datasheet is `hardware/` and a schematic is `boards/`. Which pages exist, what a press means and which settings a pilot gets belong to the product. Pixels any product would draw the same way are `ui/`.
+[`EXTENDING.md`](EXTENDING.md) lists where a contribution goes, the contract each place holds it to and what the maintainer keeps.
+
+Put a file in the narrowest layer that decides its content. A radio protocol's specification is `protocols/`, which includes nothing of skyBlip's ([`protocols/README.md`](protocols/README.md)). Any other spec, physical law or arithmetic is `core/`. What one way of flying adds to the alarm, such as predicting a circling glider, is `disciplines/` ([`disciplines/README.md`](disciplines/README.md)). What the core needs done for it is `ports/`. A datasheet is `hardware/` and a schematic is `boards/`. Which pages exist, what a press means and which settings a pilot gets belong to the product. Pixels any product would draw the same way are `ui/`.
 
 Put a service that more than one product runs in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)), not in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone, an alarm or a device. No file in `products/common/` includes a product's header. A product hands a shared service the settings it needs as a small struct the product fills. The config link loads and writes the settings, so it takes the product's `common::SettingsStore` instead. The device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`.
 
-`ports/` declares the roles the core needs filled, in the core's own vocabulary. It is a port layer, not a hardware abstraction layer, and holds no register code. `hardware/` fills the roles. The core calls a port. What the world does to a sensor arrives as an `events::` value on a queue instead ([`hardware/README.md`](hardware/README.md)). `protocols/`, `core/` and `ui/` compile with no framework headers, so the host suite and the WASM simulator can build them. Zephyr is used freely below `ports/` and never above it.
+`ports/` declares the roles the core needs filled, in the core's own vocabulary. It is a port layer, not a hardware abstraction layer, and holds no register code. `hardware/` fills the roles. The core calls a port. What the world does to a sensor arrives as an `events::` value on a queue instead ([`hardware/README.md`](hardware/README.md)). `protocols/`, `core/`, `disciplines/` and `ui/` compile with no framework headers, so the host suite and the WASM simulator can build them. Zephyr is used freely below `ports/` and never above it.
 
 | Command | What it does |
 |---|---|

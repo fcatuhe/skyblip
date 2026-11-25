@@ -47,7 +47,7 @@ CXXFLAGS += $(SANITIZE_FLAGS) -fsanitize=fuzzer-no-link
 endif
 
 # Every layer is globbed, so a file that exists is compiled and tested, the silicon platform and main.cpp aside.
-SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard protocols/*/*.cpp core/*/*.cpp ui/*.cpp ui/*/*.cpp \
+SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard protocols/*/*.cpp core/*/*.cpp disciplines/*.cpp disciplines/*/*.cpp ui/*.cpp ui/*/*.cpp \
        hardware/parts/*/*.cpp runtime/*.cpp products/*/*.cpp products/*/pages/*.cpp products/*/services/*.cpp \
        simulator/world/*.cpp))
 SRC := $(filter-out products/%/main.cpp %/test_%.cpp,$(SRC))

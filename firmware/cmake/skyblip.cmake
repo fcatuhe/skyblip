@@ -13,6 +13,7 @@ function(skyblip_shared_layers)
   file(GLOB_RECURSE shared
     ${SKYBLIP_FIRMWARE}/protocols/*.cpp
     ${SKYBLIP_FIRMWARE}/core/*.cpp
+    ${SKYBLIP_FIRMWARE}/disciplines/*.cpp
     ${SKYBLIP_FIRMWARE}/ui/*.cpp
     ${SKYBLIP_FIRMWARE}/runtime/*.cpp
     ${SKYBLIP_FIRMWARE}/products/common/*.cpp

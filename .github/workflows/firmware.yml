@@ -63,6 +63,7 @@ jobs:
             # What bin/screenshots compiles and flies, and the pictures it writes.
             glass:
               - 'firmware/core/**'
+              - 'firmware/disciplines/**'
               - 'firmware/ui/**'
               - 'firmware/ports/**'
               - 'firmware/runtime/**'
@@ -104,6 +105,8 @@ jobs:
         run: make test-protocols CXX="ccache g++"
       - name: the protocol stacks include no host header
         run: python3 scripts/check_protocol_boundary.py
+      - name: the discipline packs include only what a discipline may read
+        run: python3 scripts/check_discipline_boundary.py
       - name: every frozen protocol stack matches its version.lock
         run: python3 scripts/check_protocol_freeze.py
       - name: test-coverage structural gate
@@ -255,7 +258,7 @@ jobs:
         run: pip install --disable-pip-version-check -r .github/lint/requirements.txt
       - name: check formatting
         run: |
-          find firmware/protocols firmware/core firmware/ui firmware/ports firmware/hardware \
+          find firmware/protocols firmware/core firmware/disciplines firmware/ui firmware/ports firmware/hardware \
                firmware/boards firmware/runtime firmware/products firmware/simulator firmware/test \
             -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
 
