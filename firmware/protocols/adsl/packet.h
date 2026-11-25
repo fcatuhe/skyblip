@@ -145,7 +145,7 @@ struct __attribute__((packed)) Packet {
     bool is_relay() const { return field(kRelayField) != 0; }
     void set_relay(uint8_t relay = 1) { set_field(kRelayField, relay); }
 
-    // INFO: fc 18sep26 G.1.5: 0x800000 in either field is "no 2D fix", not a place on the globe
+    // INFO: fc 22nov26 Issue 2's marker 0x800000 is outside Issue 1 coordinate bounds
     static constexpr uint32_t kPositionInvalidCode = 0x800000;
     // INFO: fc 13nov26 Issue 1 marked no fix 0xFFFFFF, one step west or south of zero in Issue 2
     static constexpr uint32_t kIssue1PositionInvalidCode = 0xFFFFFF;
@@ -167,26 +167,43 @@ struct __attribute__((packed)) Packet {
     void set_latitude_1e7(int32_t latitude);
     void set_longitude_1e7(int32_t longitude);
 
-    // INFO: fc 20nov26 G.1.7 to G.1.9: invalid is unknown, and a value past the limit sends it
     static constexpr uint16_t kSpeedInvalidCode = 0xFF;
     static constexpr uint16_t kClimbInvalidCode = 0x1FF;
     static constexpr uint16_t kAltitudeInvalidCode = 0x3FFF;
+    // INFO: fc 22nov26 Issue 1 G.1 leaves negative zero as the only spare code for absent climb
+    static constexpr uint16_t kIssue1ClimbInvalidCode = 0x100;
     static constexpr int32_t kAltitudeOffsetM = 320;
+
+    bool has_issue2_motion_marker() const {
+        return field(kAltitudeField) == kAltitudeInvalidCode ||
+               field(kSpeedField) == kSpeedInvalidCode || field(kClimbField) == kClimbInvalidCode;
+    }
 
     uint16_t speed_q() const;
     void set_speed_q(uint16_t speed);
-    bool has_speed() const { return field(kSpeedField) != kSpeedInvalidCode; }
+    bool has_speed() const {
+        return protocol_version() == kProtocolVersionIssue1 ||
+               field(kSpeedField) != kSpeedInvalidCode;
+    }
     void set_speed_invalid() { set_field(kSpeedField, kSpeedInvalidCode); }
 
     // INFO: fc 20nov26 G.1.7 altitude is height above the WGS-84 ellipsoid, never pressure altitude
     int32_t altitude_m() const;
     void set_altitude_m(int32_t altitude);
-    bool has_altitude() const { return field(kAltitudeField) != kAltitudeInvalidCode; }
+    bool has_altitude() const {
+        return protocol_version() == kProtocolVersionIssue1 ||
+               field(kAltitudeField) != kAltitudeInvalidCode;
+    }
     void set_altitude_invalid() { set_field(kAltitudeField, kAltitudeInvalidCode); }
 
     int16_t climb_e8() const;
     void set_climb_e8(int16_t climb);
-    bool has_climb() const { return field(kClimbField) != kClimbInvalidCode; }
+    bool has_climb() const {
+        const uint16_t invalid = protocol_version() == kProtocolVersionIssue1
+                                     ? kIssue1ClimbInvalidCode
+                                     : kClimbInvalidCode;
+        return field(kClimbField) != invalid;
+    }
     void set_climb_invalid() { set_field(kClimbField, kClimbInvalidCode); }
 
     uint16_t track_c9() const { return static_cast<uint16_t>(field(kTrackField)); }

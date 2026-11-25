@@ -5,7 +5,6 @@
 #include "core/model/aircraft.h"
 #include "core/settings/address.h"
 #include "protocols/adsl/packet.h"
-#include "protocols/adsl/soft_versioning.h"
 #include "protocols/common/geometry.h"
 
 namespace skyblip::traffic {
@@ -13,14 +12,6 @@ namespace skyblip::traffic {
 namespace {
 uint32_t observation_at_s(const model::AircraftObservation& observation) {
     return observation.received.at_s;
-}
-// INFO: fc 12nov26 our second lags our clock by one, a paired Bravo's runs one ahead: no further
-constexpr int32_t kReceptionAheadCeilingS = 2;
-
-uint32_t age_s(const model::AircraftObservation& observation, uint32_t now_s) {
-    const int32_t age = static_cast<int32_t>(now_s - observation_at_s(observation));
-    if (age >= 0) return static_cast<uint32_t>(age);
-    return age >= -kReceptionAheadCeilingS ? 0u : UINT32_MAX;
 }
 int source_rank(model::Source source) {
     switch (source) {
@@ -114,7 +105,7 @@ TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObservation& o
     int32_t slant_m = 0;
     if (range_check(own_, observation, slant_m) == Plausibility::NoReference) slant_m = 0;
     return Weight{flight::on_ground(observation.flight_state), slant_m,
-                  source_rank(observation.source), age_s(observation, now_s)};
+                  source_rank(observation.source), age_s(observation_at_s(observation), now_s)};
 }
 
 int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint32_t now_s) {
@@ -149,7 +140,6 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
     int index = find(observation.address_mapping_table, observation.address);
     if (index >= 0) {
         Target& held = slots_[index];
-        note_version(held.version, observation);
         if (!prefer_new(observation, held.observation)) return index;
         watch_liftoff(held, observation);
         held.observation = observation;
@@ -163,58 +153,12 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
     slots_[index].observation = observation;
     slots_[index].revision = ++revisions_;
     slots_[index].turn = TargetTurn{};
-    slots_[index].version = PeerVersion{};
-    note_version(slots_[index].version, observation);
     slots_[index].liftoff = flight::Liftoff{};
     sample_turn(slots_[index].turn, observation);
     slots_[index].alarm_level = Level::None;
     slots_[index].alarm_dismissed = false;
     slots_[index].in_formation = false;
     return index;
-}
-
-void TrafficTable::note_version(PeerVersion& version,
-                                const model::AircraftObservation& observation) {
-    if (observation.source != model::Source::AdslDirect) return;
-    version.adsl = true;
-    if (!version.declared) version.max = observation.adsl_version;
-}
-
-bool TrafficTable::declare_max_version(uint8_t address_mapping_table, uint32_t address,
-                                       uint8_t version) {
-    const int index = find(address_mapping_table, address);
-    if (index < 0) return false;
-    slots_[index].version.adsl = true;
-    slots_[index].version.declared = true;
-    slots_[index].version.max = version;
-    return true;
-}
-
-// INFO: fc 13nov26 a neighbour with no valid height counts as level with us, the cautious reading
-uint8_t TrafficTable::readable_version(const model::Ownship& own, uint32_t now_ms) const {
-    uint8_t version = adsl::Packet::kMaxProtocolVersion;
-    for (const Target& target : slots_) {
-        if (!target.used || !target.version.adsl || target.version.max >= version) continue;
-        const AlarmAssessment seen = assess(own, target.observation, now_ms);
-        if (!seen.valid) continue;
-        const int32_t vertical_m = seen.relative_altitude_valid ? seen.relative_altitude_m : 0;
-        const int32_t closing_mm_s = model::velocity_valid(own)
-                                         ? seen.closing_mm_s
-                                         : fastest_closing_mm_s(target.observation);
-        if (adsl::close_client(seen.relative_distance_m, vertical_m, closing_mm_s))
-            version = target.version.max;
-    }
-    return version;
-}
-
-// INFO: fc 22nov26 B.5 with no own velocity: own-ship may close at the fastest speed G.1.8 encodes
-int32_t TrafficTable::fastest_closing_mm_s(const model::AircraftObservation& target) {
-    const QuarterMetresPerSecond fastest_q{static_cast<uint16_t>(
-        adsl::Packet::kSpeedCode.decode(adsl::Packet::kSpeedInvalidCode - 1))};
-    const int32_t target_mm_s = target.speed_valid
-                                    ? to_mm_s(QuarterMetresPerSecond(target.speed_q)).value
-                                    : kUnknownTargetSpeedMps * kMillimetresPerMetre;
-    return to_mm_s(fastest_q).value + target_mm_s;
 }
 
 void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservation& incoming) {
@@ -226,7 +170,7 @@ void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservatio
 void TrafficTable::age_out(uint32_t now_s) {
     for (int i = 0; i < kMaxTargets; i++) {
         if (!slots_[i].used) continue;
-        if (age_s(slots_[i].observation, now_s) > forget_s(slots_[i].observation))
+        if (age_s(observation_at_s(slots_[i].observation), now_s) > forget_s(slots_[i].observation))
             release(slots_[i]);
     }
 }
@@ -248,7 +192,6 @@ int TrafficTable::count_of(model::Source source) const {
 void TrafficTable::release(Target& target) {
     target.used = false;
     target.turn = TargetTurn{};
-    target.version = PeerVersion{};
     target.alarm_level = Level::None;
     target.alarm_dismissed = false;
     target.in_formation = false;

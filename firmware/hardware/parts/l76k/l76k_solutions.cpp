@@ -40,6 +40,7 @@ void L76k::flush() {
     }
     parser_.reset();
     published_stamp_ms_ = -1;
+    relabeled_ = false;
 }
 
 bool L76k::poll(uint32_t now_ms) {
@@ -71,6 +72,7 @@ bool L76k::poll(uint32_t now_ms) {
         heard_ms_ = now_ms;
     }
     const bool closed = pairs > 0 && newer_than_published(paired_stamp_ms);
+    relabeled_ = relabeled_ || (pairs > 0 && behind_published(paired_stamp_ms));
     if (closed && paired_stamp_ms >= 0) published_stamp_ms_ = paired_stamp_ms;
     // INFO: fc 29sep26 each burst: a GSV already on the wire lands after the $PCAS03 ending it
     if (closed && satellites_in_view_every_ == 0) parser_.forget_satellites_in_view();
@@ -91,6 +93,8 @@ bool L76k::poll(uint32_t now_ms) {
     solution_.fix_valid = paired_valid && valid;
     solution_.pps_latency_ms = pps_latency_ms();
     solution_.backlogged = pairs > 1;
+    solution_.relabeled = relabeled_;
+    relabeled_ = false;
     solution_.delivery_ms =
         static_cast<uint16_t>(kBurstStartMs + io::wire_ms(kBurstBytes, baud_rate()));
     return true;
@@ -101,6 +105,11 @@ bool L76k::newer_than_published(int32_t stamp_ms) const {
     if (stamp_ms < 0 || published_stamp_ms_ < 0) return true;
     const int32_t behind_ms = (published_stamp_ms_ - stamp_ms + kDayMs) % kDayMs;
     return behind_ms > static_cast<int32_t>(gnss::kSentenceMaxAgeMs) || behind_ms > kDayMs / 2;
+}
+
+bool L76k::behind_published(int32_t stamp_ms) const {
+    if (stamp_ms < 0 || published_stamp_ms_ < 0) return false;
+    return (published_stamp_ms_ - stamp_ms + kDayMs) % kDayMs <= kDayMs / 2;
 }
 
 }  // namespace skyblip::parts

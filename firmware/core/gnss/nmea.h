@@ -64,6 +64,9 @@ struct GnssSolution {
     uint16_t pps_latency_ms{0};
     // INFO: fc 18nov26 the drain that closed it closed an older pair too: the host was late
     bool backlogged{false};
+    // INFO: fc 22nov26 since the last solution the part named a stamp at or behind one already
+    // published
+    bool relabeled{false};
     // INFO: fc 18nov26 the part's start plus line time at the live rate, 0 when unknown
     uint16_t delivery_ms{0};
     uint8_t satellites{0};

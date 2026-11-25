@@ -11,8 +11,16 @@
 namespace skyblip::traffic {
 
 constexpr uint32_t kTargetForgetReports = 6;
+// INFO: fc 12nov26 our second lags our clock by one, a paired Bravo's runs one ahead: no further
+constexpr int32_t kReceptionAheadCeilingS = 2;
 constexpr uint32_t kAirborneTargetForgetS = kTargetForgetReports * adsl::kAirborneReportPeriodS;
 constexpr uint32_t kGroundTargetForgetS = kTargetForgetReports * adsl::kGroundReportPeriodS;
+
+inline uint32_t age_s(uint32_t heard_s, uint32_t now_s) {
+    const int32_t age = static_cast<int32_t>(now_s - heard_s);
+    if (age >= 0) return static_cast<uint32_t>(age);
+    return age >= -kReceptionAheadCeilingS ? 0u : UINT32_MAX;
+}
 
 inline uint32_t report_period_s(const model::AircraftObservation& observation) {
     return adsl::report_period_s(flight::state_from(observation.flight_state));

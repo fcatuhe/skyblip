@@ -27,11 +27,11 @@ These are skyBlip's choices, built on this stack:
 - which packets are forced and how a deferred burst is re-armed (`products/skyblip_go/services/radio_access.cpp`), and the channel assessment (`hardware/platform/zephyr/rf.h`)
 - the address table and the ICAO address (`core/settings/address.h`, `on_air()`), and the configurations the Go refuses (`products/skyblip_go/settings.*`)
 - the receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
-- B.5's bookkeeping: each target's Max. Protocol Version (`core/traffic/table.*`), and when own Traffic goes in its Issue 1 form or is held (`products/skyblip_go/services/radio_frames.cpp`)
+- B.5's bookkeeping: each client's Max. Protocol Version and where it is, apart from the display (`core/traffic/versions.*`), and when own Traffic goes in its Issue 1 form, is held or is written again before it keys (`products/skyblip_go/services/radio_frames.cpp`)
 
 ## What the receiver refuses
 
-The stack reads what Issue 2 defines and nothing looser, so another sender is heard only when it follows the specification too. `receive()` runs the erasure repair, then reads the E.1 header the CRC covers:
+The stack reads Issue 2 payloads and Issue 1 Traffic. `receive()` runs the erasure repair, then reads the E.1 header the CRC covers:
 
 - `Crc`: no repair fits.
 - `Invalid`: the header names the FEC, though an M-band frame is checked by its CRC, or the length is not the payload type's, 16 for a Status and 24 otherwise.
@@ -95,31 +95,36 @@ If both chips in a length pair flip, the receiver sees a clean wrong bit and los
 
 ## Which issue a payload is
 
-§E.1.1 asks every packet to carry the lowest protocol version whose encoding of its payload is the same: 0 for Issue 1, 1 for Issue 2. `lowest_version()` reads it off the clear packet, and the encoders set it. Issue 1 names only Traffic, so every other payload is version 1. A Traffic payload is version 0 unless it carries a code whose meaning Issue 2 changed. These are every G.1 code that changed from [Issue 1](../../../docs/reference/ads-l_4_srd860_issue_1.md):
+§E.1.1 asks every packet to carry the lowest protocol version whose encoding of its payload is the same: 0 for Issue 1, 1 for Issue 2. `lowest_version()` reads it off the clear packet, and the encoders set it. Issue 1 names only Traffic, so every other payload is version 1. The Traffic encoder uses version 0 unless the payload needs an Issue 2 encoding. These G.1 codes changed from [Issue 1](../../../docs/reference/ads-l_4_srd860_issue_1.md):
 
 | Field | Code | Issue 1 | Issue 2 | Version |
 |---|---|---|---|---|
-| G.1.5 latitude, longitude | 0x800000 | 90 S or 180 W | no 2D fix | 1 |
-| G.1.5 latitude, longitude | 0xFFFFFF | no 2D fix | one step south of the equator or west of Greenwich | 1. `has_position()` reads it as no fix in a version 0 packet |
+| G.1.5 latitude, longitude | 0x800000 | outside the latitude or longitude bounds | no 2D fix | 1 |
+| G.1.5 latitude, longitude | 0xFFFFFF | no 2D fix | one step south of the equator or west of Greenwich | 1 |
 | G.1.7 altitude | 0x3FFF | 61112 m | invalid | 1 |
 | G.1.7 altitude | 0x3FFE | 61104 m | 61104 m or more | 0 |
 | G.1.8 ground speed | 0xFF | 238 m/s | invalid | 1 |
 | G.1.8 ground speed | 0xFE | 236 m/s | 236 m/s or more | 0 |
 | G.1.9 vertical rate | 0x1FF | -119 m/s | invalid | 1 |
 | G.1.9 vertical rate | 0x1FE | -118 m/s | -118 m/s or less | 0 |
+| G.1.9 vertical rate | 0x100 | absent climb, inferred from G.1 and G.1.6 | noncanonical zero, not the invalid marker | not sent |
 | G.1.3 category | 3 | rotorcraft | light rotorcraft | 0 |
 | G.1.3 category | 6 | ultralight | ultralight and motorized hang-glider | 0 |
 | G.1.3 category | 7 | hang-glider or paraglider | paraglider | 0 |
 | G.1.3 category | 14 to 17 | reserved | model plane, heavy rotorcraft, hang-glider, paramotor | 1 |
-| G.1.15 GVA | 3 or 2 | 3 under 15 m | 3 under 10 m, 2 from 10 to 45 m | 1 for a VFOM from 10 to 15 m (`Integrity::vertical_accuracy_issue2_only`), else 0 |
+| G.1.15 GVA | 3 or 2 | 3 under 15 m, 2 from 15 to 45 m | 3 under 10 m, 2 from 10 to 45 m | 1 for a VFOM from 10 to 15 m (`Integrity::vertical_accuracy_issue2_only`), else 0 |
 
 A code marked 0 still reads as true to an Issue 1 receiver, so it stays at version 0 for the widest reach. SIL, SDA, NIC, HFOM and the velocity accuracy keep their thresholds and codes. NIC's 13 to 15 are reserved in Issue 2, undefined in Issue 1, and never sent.
+
+The low-level `set_*_invalid()` motion setters write Issue 2 markers but do not set the header. Use `encode_traffic()` to choose the version, or set it explicitly when building a packet by hand.
+
+For direct Traffic, `decode_traffic()` uses the received version for the motion validity checks. It reads the three top motion codes as values in version 0, with the same exponential decoding as other values, and as unavailable in version 1. It reads 0x100 as absent climb in version 0 only ([question for EASA](../../../docs/ADSL_EASA_QUESTIONS.md)). For position, 0x800000 never gives a valid position, and 0xFFFFFF gives no fix in version 0 only. Category and accuracy codes are returned as received, without inferring a narrower category or an accuracy in metres.
 
 ## Soft versioning
 
 §B.5 lets the specification move on without splitting the air. Every packet carries the version it is written in (§E.1.1), and the Status the highest version its sender reads (§G.2.1, `Packet::kMaxProtocolVersion`, 1 here). `status_max_version()` reads that field, and `traffic_max_version()` the version a Traffic payload came in, which §B.5 has a receiver assume until it hears a Status. Both return nothing for any other payload.
 
-`close_client()` is §B.5's test for a neighbour own Traffic must stay readable to: under 1 km horizontally and 800 m vertically, or under 800 m vertically and under 30 s from the closest point of approach, the horizontal distance over the closure rate (`kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`). Own Traffic then goes out in the lowest version any close neighbour reads.
+`close_client()` is §B.5's test for a neighbour own Traffic must stay readable to: under 1 km horizontally and 800 m vertically, or under 800 m vertically and under 30 s from the closest point of approach, the horizontal distance over the closure rate (`kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`). Own Traffic then goes out in the lowest version any close neighbour reads. The stack keeps no list of neighbours: which clients a device has heard, and for how long it believes them, is the integrator's (`core/traffic/README.md`, Which ADS-L version a client reads).
 
 `issue1_form()` re-codes a Traffic payload in Issue 1's codes, as version 0. It answers false, leaving the packet as it was, for any other payload and wherever Issue 1 has no true code:
 
@@ -132,11 +137,13 @@ A code marked 0 still reads as true to an Issue 1 receiver, so it stays at versi
 | position 0x800000, no fix | 0xFFFFFF | Issue 1's marker for no fix |
 | a real position at 0xFFFFFF | 0xFFFFFE | one step on, inside any claimed accuracy, so Issue 1 does not read it as no fix |
 | GVA 2 for a VFOM from 10 to 15 m | 3 | Issue 1 draws code 3 at 15 m. The caller passes the VFOM, since the code cannot tell |
-| altitude, ground speed or vertical rate unknown | none: `issue1_form()` answers false | Issue 1 has no code for unknown, and its top codes are real values |
+| altitude, ground speed or vertical rate unknown | none: `issue1_form()` answers false | Issue 1 has no altitude or speed marker, and the transmit conversion does not use the inferred climb marker |
 
 ## The Traffic Uplink
 
 `Uplink::encode()` builds G.3's payload type 4 for a ground station: its own address in the F.2 header, then for each target the 30-bit address of the sender and its 120-bit Traffic payload copied byte for byte, then the F.2.5 padding. The header says version 1, since Issue 1 has no uplink, and sets the error control bit, since the parity is E.3.2's at every size: E.3.2 recommends it past 64 bytes and allows it below. A ground station may send the CRC instead, because E.3.2 lets operators deviate and G.3 names the channel and the slot but no parity, so `Uplink::decode()` reads both. It counts the records from the D.1.1 length byte, as G.3 asks. F.2.5 pads the data to whole words, so a CRC packet's length is always a multiple of 4 and a FEC packet's always 1 past one: one to ten records are 28 to 200 bytes under the CRC and 57 to 229 under the FEC. The length alone names the parity (`uplink_layout()`). It checks that parity, E.3.1's CRC-24 or E.3.2's code, refuses a header whose error control bit names the other one, descrambles, and drops a record with no address or no position. `uplink_record_current()` is G.3's age rule: current up to 10 s after the instant its G.1.1 timestamp names, never before it, and never for a timestamp of 60 to 63, which "shall not be used". Ten records under the FEC make the longest packet, 229 bytes behind its length byte and 9.4 ms on air at C.4's 200 kbps (`kUplinkBurstUs`). The Go's O-band dwell reads the length byte and 229 bytes behind the sync word whatever the packet, and the length byte says how many of them are the packet.
+
+An embedded Traffic record has no version field. The decoder uses `lowest_version()` to choose how to read it, so the three top motion codes select Issue 2 and read as unavailable. It cannot recover an original Issue 1 version from those codes. If no code selects Issue 2, a vertical rate of 0x100 reads as absent climb.
 
 E.3.2 computes the parity over the network header and the scrambled data, prefixed with zeros to 223 bytes, and sends no padding. `ReedSolomon255` uses the field 1+x2+x3+x4+x8 (`kFieldPolynomial`, 0x11D), the primitive element alpha^11 in index form, as CCSDS 131.0 and Karn's fec library count it (`kPrimitiveElement`), and 32 roots from the 121st (`kFirstRoot`). Its names map to the textbook's:
 
@@ -159,4 +166,4 @@ E.3.2 computes the parity over the network header and the scrambled data, prefix
 
 `test/conformance/` holds the cases this component meets on its own, one file per subpart. `firmware/test/adsl/` holds the cases that need skyBlip around it, and its README says how both halves are named and checked.
 
-Where the specification prints code or a worked example, the test carries it rather than restating our answer. E.2's XXTEA and E.3.1's CRC-24 are transcribed from the clause and compared against `protocols/common/`. `test/conformance/reference.h` lays out a Traffic Uplink from them and from E.3.2's three numbers, under either parity, so the component's G.3 receive cases decode packets `Uplink::encode()` never built. G.1.6's exponential encoder follows the algorithm as written. G.1.7 to G.1.9 assert the codes of the clauses' example tables, and the G.1 case reads every field at the payload table's bit offsets. The E.3.2 case checks `ReedSolomon255` against a bit-by-bit encoder written from the clause's three numbers and against one block the reedsolo library encoded.
+Where the specification prints code or a worked example, the test carries it rather than restating our answer. E.2's XXTEA and E.3.1's CRC-24 are transcribed from the clause and compared against `protocols/common/`. `test/conformance/reference.h` lays out a Traffic Uplink from them and from E.3.2's three numbers, under either parity, so the component's G.3 receive cases decode packets `Uplink::encode()` never built. G.1.6's exponential encoder follows the algorithm as written. G.1.7 to G.1.9 assert the codes of the clauses' example tables, and the G.1 case reads every field at the payload table's bit offsets. Literal frames built from the two issues' tables exercise the different motion validity rules in the stack and through the Go's receiver. The E.3.2 case checks `ReedSolomon255` against a bit-by-bit encoder written from the clause's three numbers and against one block the reedsolo library encoded.

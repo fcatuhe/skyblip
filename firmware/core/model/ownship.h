@@ -23,6 +23,9 @@ struct Ownship {
     uint32_t pressure_altitude_at_ms;
     bool pressure_altitude_valid;
     int32_t climb_mm_s;
+    // INFO: fc 22nov26 the newest height the climb was taken from: G.1.16 ages it as a position
+    uint32_t climb_at_ms;
+    uint32_t climb_in_hand_ms;
     // INFO: fc 19sep26 what the instruments resolve: the wire's coarser units are the encoder's
     int32_t speed_mm_s;
     // INFO: fc 20nov26 hundredths, 0 to 35999, because the turn rate is differentiated from it

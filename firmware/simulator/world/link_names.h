@@ -321,8 +321,9 @@ inline constexpr Value kNoTxValues[] = {
     {"fix", 4},
     {"utc", 5},
     {"pps", 6},
+    {"held", 7},
 };
-inline constexpr Enumeration kNoTx{kNoTxValues, 6};
+inline constexpr Enumeration kNoTx{kNoTxValues, 7};
 
 inline constexpr Value kCommandValues[] = {
     {"acknowledgement", 0},

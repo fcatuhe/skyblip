@@ -293,6 +293,7 @@ TEST_CASE("adsl: the invalid codes are reachable on purpose and round-trip") {
     REQUIRE(packet.has_speed());
     REQUIRE(packet.has_climb());
 
+    packet.set_protocol_version(1);
     packet.set_altitude_invalid();
     packet.set_speed_invalid();
     packet.set_climb_invalid();
