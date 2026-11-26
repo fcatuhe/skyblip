@@ -5,7 +5,6 @@ class Admin::CapturesController < Admin::ApplicationController
 
   def show
     capture = Capture.find(params[:id])
-    Rails.event.notify "capture.downloaded", by_id: Current.user.id, capture_id: capture.id, device: capture.device
-    send_data capture.body, filename: capture.filename, type: "application/gzip"
+    send_data capture.download(by: Current.user), filename: capture.filename, type: "application/gzip"
   end
 end

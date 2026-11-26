@@ -25,6 +25,11 @@ class Capture < CapturesRecord
 
   def filename = "#{device}-#{session}.ndjson.gz"
 
+  def download(by:)
+    Rails.event.notify("capture.downloaded", by_id: by.id, capture_id: id, device:)
+    body
+  end
+
   private
     def measure
       self.bytes = body.to_s.bytesize

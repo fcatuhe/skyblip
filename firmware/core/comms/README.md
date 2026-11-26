@@ -188,7 +188,7 @@ Bravo has no glass, so it answers `pair` only to a trusted session, refuses any 
 
 A whole reply wider than the asking session's payload is never sent short and never left unanswered: the sender counts a `link_drops` and answers `small_mtu`, 8 bytes on config and 8 or 10 on log, in `ConfigChannel::reply_to()` and `RecordPool::send()`. A timing or diagnostics report that cannot be split this narrow, a `register` or an `attest` whose frame does not fit, and a `read` whose chunk cannot hold one record are refused before any frame exists, and are not drops.
 
-A push is never refused, because the refusal would be noise: a push that does not fit is counted and dropped. The `update` frame pushed on a connection's first `Up` goes again on the late MTU exchange's second `Up`.
+A push is never refused, because the refusal would be noise: a push that does not fit is counted and dropped. A `status` push the link answers `WouldBlock` is not a drop: it goes on the next pass. Silicon answers `WouldBlock` both to a central short of notification buffers and to a connection where no central subscribed to the config endpoint, such as a Go on its Bravo, which subscribes to the peer endpoint alone. The `update` frame pushed on a connection's first `Up` goes again on the late MTU exchange's second `Up`.
 
 ## Measuring what links settle on
 
