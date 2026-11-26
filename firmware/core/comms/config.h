@@ -33,6 +33,7 @@ class ConfigChannel {
 
     void connect(uint16_t session_id);
     bool disconnect(uint16_t session_id);
+    bool release_departed_holder();
     bool link_up() const { return connected_count_ > 0; }
     bool live(const events::Peer& peer) const {
         return link_.connection(peer.session_id) == peer.connection;

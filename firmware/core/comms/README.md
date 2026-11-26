@@ -34,7 +34,7 @@ Events are one ordered queue, because an Up read before the Down that came first
 
 ## The claim
 
-`LinkClaim` grants config and log to the first session that writes a command, until it disconnects or releases it, because two apps writing settings disagree about what is stored. Another session's command is refused with a reason naming the state. Only the holder's disconnect cancels a pending prompt and closes an upload window.
+`LinkClaim` grants config and log to the first session that writes a command, until it disconnects or releases it, because two apps writing settings disagree about what is stored. Another session's command is refused with a reason naming the state. Only the holder's disconnect cancels a pending prompt and closes an upload window. The bus drops a Down when its queue is full, so every pass `ConfigLinkService` also releases a claim whose connection `ports::Link::connection()` no longer names, with the same effects as the holder's Down.
 
 The claim is not access control. `CONFIG_BT_SMP` is off on every product (`products/common/prj.conf`), so no identity stands behind a session id. What stops a hostile app is the MCUboot signature on the image and the gesture on the device, or a browser key that gesture once approved (Trusted browsers).
 
