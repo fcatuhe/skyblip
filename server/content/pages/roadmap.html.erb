@@ -2,7 +2,7 @@
 title: "What's next for skyBlip Panel and skyPost"
 nav_title: Roadmap
 description: "skyBlip Panel will show traffic on a cockpit display. skyPost stations will relay traffic and weather around an airfield."
-updated_on: "2026-11-18"
+updated_on: "2026-11-26"
 ---
 
 <header class="page-hero">
@@ -27,4 +27,35 @@ updated_on: "2026-11-18"
   <h3 id="bridge">skyPost Bridge</h3>
   <p>Bridge will work alongside existing OGN, PiAware or adsb.lol stations. It will relay the traffic they already receive in ADS-L without changing their data feeds. It will use a LilyGO T-Beam Supreme board.</p>
   <p><%= link_to_page "buy", label: "See the hardware you can use today" %> · <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo", id: "bravo" %> · <%= link_to_page "skyblip-tango", label: "skyBlip Tango", id: "tango" %></p>
+</section>
+
+<section id="ideal-device" class="band band--tint">
+  <h2 class="section-title">A wish list for an electronic conspicuity device</h2>
+  <p>Here are the parts we&rsquo;d ask a manufacturer to try in a device that shares your position and listens for nearby aircraft. It&rsquo;s a wish list. We have no plans to build it, and it isn&rsquo;t for sale. skyBlip supports Go and Bravo on their current boards.</p>
+
+  <div class="table-scroll">
+    <table class="prose">
+      <thead>
+        <tr><th scope="col">Role</th><th scope="col">Part</th><th scope="col">Why we&rsquo;d try it</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Processor</th><td>Nordic nRF54L15 or nRF54LM20A</td><td>Both run at 128&nbsp;MHz. Choose the nRF54LM20A to keep USB.</td></tr>
+        <tr><th scope="row">ADS-L radio</th><td>Semtech LR2021 at 868&nbsp;MHz</td><td>Send and receive ADS-L. The datasheet lists 27&nbsp;mA when transmitting at +14&nbsp;dBm.</td></tr>
+        <tr><th scope="row">ADS-B receiver</th><td>Second LR2021 at 1090&nbsp;MHz</td><td>Bravo already uses this chip to receive ADS-B at 1090&nbsp;MHz. That is outside the specified 150 to 960&nbsp;MHz range. We&rsquo;d ask for a receive circuit with measured performance at 1090&nbsp;MHz.</td></tr>
+        <tr><th scope="row">Optional third radio</th><td>Third LR2021 in the 868&nbsp;MHz band</td><td>Try listening on the other ADS-L channel or for messages from the ground, including while the first radio transmits. We haven&rsquo;t measured how much this would help.</td></tr>
+        <tr><th scope="row">Satellite positioning</th><td>u-blox NEO-F10N or MAX-M10S</td><td>The NEO-F10N tracks two bands, L1 and L5, at 21&nbsp;mA. The L1-only MAX-M10S draws about 12&nbsp;mA while tracking.</td></tr>
+        <tr><th scope="row">Air pressure</th><td>Bosch BMP581</td><td>Low noise when averaging samples: 0.08&nbsp;Pa RMS at the highest setting. Absolute accuracy is &plusmn;0.3&nbsp;hPa.</td></tr>
+        <tr><th scope="row">Motion</th><td>ST LSM6DSV16X</td><td>Motion can wake the processor. The accelerometer alone draws 17 to 20&nbsp;&micro;A in low-power mode.</td></tr>
+        <tr><th scope="row">Screen</th><td>Memory LCD or e-paper, up to 4.7&nbsp;inches</td><td>The Sharp LS027B7DH01 LCD is 2.7&nbsp;inches at 400&nbsp;&times;&nbsp;240 pixels. It updates faster and works down to -20&nbsp;&deg;C. Good Display&rsquo;s GDEY042T81 e-paper offers better contrast and takes 0.3&nbsp;s to refresh part of the screen.</td></tr>
+        <tr><th scope="row">Alerts</th><td>TI DRV2605L, LRA vibration motor and buzzer</td><td>Give pilots an alert they can feel and hear.</td></tr>
+        <tr><th scope="row">Storage and power</th><td>8&nbsp;MB QSPI NOR flash, a 2000 to 2500&nbsp;mAh cell and a TI BQ27220 or similar battery gauge</td><td>Store data in flash and track battery charge as it flows in and out.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>From datasheets, we estimate a draw of about 41&nbsp;mA with two radios and 48&nbsp;mA with three. We haven&rsquo;t measured either figure on a board.</p>
+
+  <p>Connect the satellite receiver&rsquo;s pulse-per-second signal and the sensors&rsquo; interrupt lines to the processor. Use separate antennas for 868 and 1090&nbsp;MHz, with an option for an external antenna. Run each radio on its built-in DC-DC converter. Publish the EU declaration of conformity and the Radio Equipment Directive test reports.</p>
+
+  <p>If you build boards at Seeed Studio or LilyGO, we&rsquo;d like to hear what you could build and test. Write to <%= mail_to Rails.configuration.x.contact_email %>.</p>
 </section>
