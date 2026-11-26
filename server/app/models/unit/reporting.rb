@@ -29,7 +29,9 @@ module Unit::Reporting
 
       def report_install(report, at:)
         find_by(device_id: report.device_id)&.latest_firmware&.then do |firmware|
-          firmware.continue(source: "installed", at:, from_version: report.from, lasted_ms: report.lasted_ms) if firmware.version == report.to
+          if firmware.version == report.to && at >= firmware.created_at
+            firmware.continue(source: "installed", at:, from_version: report.from, lasted_ms: report.lasted_ms)
+          end
         end
       end
 
