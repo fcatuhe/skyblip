@@ -64,7 +64,7 @@ CONSUMERS = (
              "a motor and a magnet nobody has metered"),
 )
 
-# INFO: fc 21sep26 the callsign burst is not gated on airborne, so parked keys 58 ms a minute
+# INFO: fc 21sep26 the callsign burst is not gated on airborne, so parked keys 58 ms a minute | 26nov26 90 with the Status burst
 AIRBORNE_KEYED_MS_PER_MINUTE = 160
 
 # INFO: fc 05oct26 G.1.16 holds the ground to 0.1 Hz, 27 positions in 30 s a flight run never sends
