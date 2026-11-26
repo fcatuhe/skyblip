@@ -178,6 +178,8 @@ Status Lr2021::sample(ports::ReceiverProbe& probe) {
     probe.reset = reset_of(chip_status[1]);
     if (probe.reset != ports::ReceiverReset::None) {
         part_resets_++;
+        // INFO: fc 26nov26 the reset took the OOK modem, so only a bring-up hears again
+        reset_owed_ = true;
         status = clear_reset_source();
         if (status != Status::Ok) return status;
     }

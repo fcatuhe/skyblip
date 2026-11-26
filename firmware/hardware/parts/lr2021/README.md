@@ -95,7 +95,7 @@ The driver leaves out RadioLib's DC-DC workaround, `setDCDCworkaround()` (`67d71
 
 The status word that opens every SPI frame gives the chip mode in bits 2:0 and the reset source in bits 7:4 (DS 6.7.1, table 6-38). Bring-up ends on GetStatus, which clears the reset source, so a probe that reads one counts it in `part_resets()` and clears it again. A brown-out resets the part as a power-on does (`Analog (POR/BRN)`), and the part comes back in STDBY_RC without its OOK modem, its threshold or its 0xF30150 byte. The probe reports all three, and `ports::ReceiverProbe` carries them to a capture (`../../../core/diagnostics/README.md`, The receiver and reception records).
 
-The re-arm does not recover from that reset: it sends SetRx to a part that has lost its modem, so the part receives on its power-on defaults instead of the 1090 MHz OOK modem until Bravo boots again. `test/hardware/test_lr2021_probe.cpp` holds the case, skipped until a Full run says whether this is the outage Bravo shows.
+A re-arm cannot recover from that reset: SetRx alone restarts receive on the part's power-on defaults, not on the 1090 MHz OOK modem, and Bravo stayed deaf until it booted again. So a probe that reads a reset source owes a reset, and the next `service()` brings the part up from NRESET, counted in `resets()`. On the Zephyr adapter that is within a second of the reset and a 250 ms health tick.
 
 ## Errors
 

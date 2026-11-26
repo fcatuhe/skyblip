@@ -124,7 +124,7 @@ Bravo writes one `Receiver` and one `Reception` each second of a `Full` capture,
 
 | What the records show | What it means |
 |---|---|
-| `part_reset` `power_on`, then `front_end_kept` false and `threshold_dbm` not -110 | the part reset itself, from a brown-out or its rail, and lost its 1090 MHz configuration |
+| `part_reset` `power_on`, with `front_end_kept` false and `threshold_dbm` not -110 | the part reset itself, from a brown-out or its rail, and lost its 1090 MHz configuration. `resets` rises a second later, when the driver brings it up again |
 | `part_mode` anything but `receive` while `listening` | the part left receive and the driver did not notice |
 | `part_packets` rising while `frames` does not | the part decodes frames that never reach the driver: a lost IRQ edge or a FIFO read |
 | `missed_edges` rising | frames found on a timed wake, with no IRQ edge to wake the thread |

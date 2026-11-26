@@ -72,8 +72,8 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
     CHECK(reception.fix_valid);
 }
 
-// The outage a brown-out of the LR2021 would cause: the part forgets its modem and hears nothing.
-TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded with what it lost") {
+// A brown-out makes the LR2021 forget its modem: the capture says so, and Bravo hears again.
+TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded, and reception comes back") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -102,8 +102,12 @@ TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded with what it l
     diagnostics::Receiver last{};
     REQUIRE(last_of(records, last));
     CHECK(last.part_resets == 1);
+    CHECK(last.resets == 1);
     CHECK(last.part_reset == ports::ReceiverReset::None);
-    CHECK(last.frames == 2);
+    CHECK(last.part_mode == ports::ReceiverMode::Receive);
+    CHECK(last.threshold_dbm == parts::lr2021::kDetectionThresholdDbm);
+    CHECK(last.front_end_kept);
+    CHECK(last.frames == 4);
 }
 
 TEST_CASE("bravo reception: a power run leaves both records out, as it does every second's") {

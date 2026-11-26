@@ -179,7 +179,8 @@ def verdicts(run, floor):
               if receiver.get("part_reset", "none") != "none"]
     if total["part_resets"] or resets:
         found.append("the LR2021 reset itself (%s): a brown-out or its rail, and it lost its "
-                     "1090 MHz configuration" % (resets[0] if resets else "source not seen"))
+                     "1090 MHz configuration until the driver brought it up again"
+                     % (resets[0] if resets else "source not seen"))
     modes = sorted({receiver["part_mode"] for receiver in probed
                     if receiver.get("part_mode") != "receive" and receiver.get("listening")})
     if modes:

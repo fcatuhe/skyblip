@@ -73,13 +73,38 @@ TEST_CASE("lr2021: a brown-out is reported once, with the mode and settings the 
     CHECK(radio.part_resets() == 1);
 }
 
-// TODO: fc 26nov26 the re-arm skips the bring-up a brown-out undid, until a Full run blames it
-TEST_CASE("lr2021: a re-arm after a brown-out brings the 1090 MHz receiver back" *
-          doctest::skip()) {
+TEST_CASE("lr2021: a part the probe found reset is brought up again at the next service") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     part.brown_out();
+    REQUIRE_FALSE(part.listening_for_adsb());
+    ports::ReceiverProbe probe{};
+    REQUIRE(radio.sample(probe) == Status::Ok);
+    REQUIRE(probe.reset == ports::ReceiverReset::PowerOn);
+
+    CHECK(radio.service(250, 30000));
+    CHECK(radio.resets() == 1);
+    CHECK(radio.mode() == parts::Lr2021Mode::Receive);
+    CHECK(part.listening_for_adsb());
+    CHECK(part.reg(chip::kOokThresholdRegister) != 0);
+    hear_one(part, radio);
+
+    REQUIRE(radio.sample(probe) == Status::Ok);
+    CHECK(probe.reset == ports::ReceiverReset::None);
+    CHECK(probe.threshold_dbm == chip::kDetectionThresholdDbm);
+    CHECK(probe.front_end_kept);
+    CHECK(radio.part_resets() == 1);
+}
+
+// Before the probe, a re-arm sent SetRx to a part that had lost its modem, and Bravo stayed deaf.
+TEST_CASE("lr2021: a silent part that reset itself is not merely re-armed") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    part.brown_out();
+    ports::ReceiverProbe probe{};
+    REQUIRE(radio.sample(probe) == Status::Ok);
     CHECK(radio.service(30000, 30000));
+    CHECK(radio.rearms() == 0);
     CHECK(part.listening_for_adsb());
 }
 
