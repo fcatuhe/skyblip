@@ -9,7 +9,10 @@ class Event::Review
   JOURNEY = %w[
     device.connected device.read device.task_ended device.installed device.noticed
     bluetooth.chooser_closed bluetooth.chooser_failed activation.stepped activation.noticed
+    installer.port_chosen installer.drive_chosen installer.wrote installer.finished installer.noticed
   ].freeze
+  SETUP_STEPS = { port_chosen: "installer.port_chosen", drive_chosen: "installer.drive_chosen", wrote: "installer.wrote",
+    finished: "installer.finished" }.freeze
 
   attr_reader :since, :till
 
@@ -20,13 +23,14 @@ class Event::Review
   def previous = self.class.new(since: since - (till - since), till: since)
 
   def to_h
-    { window: "#{since.to_date} to #{till.to_date}", headline:, browsers:, devices:, notices:, tasks:, installs:, firmware:,
+    { window: "#{since.to_date} to #{till.to_date}", headline:, browsers:, devices:, notices:, tasks:, installs:, setups:, firmware:,
       activations:, stranded:, errors: errors.merge(open:), requests:, jobs:, agents:, connectors: }
   end
 
   def headline
     { browsers: browsers[:total], without_bluetooth: browsers[:without_bluetooth], devices: devices[:connected],
-      installs_started: installs[:started], installs_succeeded: installs[:installed], stranded: stranded[:count],
+      installs_started: installs[:started], installs_succeeded: installs[:installed],
+      setups_started: setups.dig(:browsers, :started), setups_finished: setups.dig(:browsers, :finished), stranded: stranded[:count],
       server_errors: errors[:server], browser_errors: errors[:browser] }
   end
 
@@ -79,6 +83,17 @@ class Event::Review
       { started: tasks.dig("install", :started).to_i, installed: installed.size,
         minutes: spread(installed.map { it["payload.lasted_ms"]&.fdiv(60_000)&.round(1) }),
         failed_by_cause: top(failed_installs.map { it["payload.cause"] || "image_failed" }) }
+    end
+  end
+
+  def setups
+    @setups ||= begin
+      started = rows("installer.stepped", "browser", "payload.phase").select { it["payload.phase"] == "choosing_port" }
+      reached = SETUP_STEPS.transform_values { |name| rows(name, "browser").map { it["browser"] }.uniq.size }
+
+      { browsers: { started: started.map { it["browser"] }.uniq.size, **reached },
+        noticed: top(rows("installer.noticed", "payload.key").map { it["payload.key"] }),
+        handed_off: top(rows("installer.handed_off", "payload.cause").map { it["payload.cause"] }) }
     end
   end
 
@@ -169,7 +184,7 @@ class Event::Review
       when "device.noticed" then !event.payload["key"].in?(RESULTS)
       when "device.task_ended" then !granted?(event.payload["outcome"])
       when "activation.noticed" then event.payload["key"] != "activated"
-      when "bluetooth.chooser_closed", "bluetooth.chooser_failed" then true
+      when "bluetooth.chooser_closed", "bluetooth.chooser_failed", "installer.noticed" then true
       else false
       end
     end
