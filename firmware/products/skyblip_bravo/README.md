@@ -23,6 +23,8 @@ skyBlip Bravo is a Seeed SenseCAP MeshTracker X1 that receives 1090 MHz ADS-B fu
 
 Bravo runs no `TrafficService`: 1090 MHz is its only source, so `AdsbService` owns `state.traffic`. It drains `bus::AdsbQueue`, which the radio thread fills, decodes each frame with `adsb::receive`, and folds DF17 messages into `adsb::Assembly`. Each folded observation goes to `common::AdsbCapture::record` before the table, because a capture asks about every aircraft heard and a full table keeps only the nearest. Callsigns go to `state.callsigns`, where `$PFLAA` and the Go both read them. `age_out` runs on the assembly every pass, as `protocols/adsb/README.md` requires.
 
+A pass decodes at most `kFramesPerPassCeiling` frames, `events::kAdsbLoadFrames`, a drain window's design load, and comes back on the next pass while the queue holds more. The radio thread refills the queue while the loop drains it, so before the ceiling a flood of noise kept one pass decoding: on bravo-d582, 1000 to 1500 frames a second held a pass up to 561 ms and the loop fell to 7 passes a second. A flood now costs frames, counted in the queue's drops, and never the loop.
+
 ## The GNSS rate
 
 Bravo asks its AG3335 for one solution a second, `kSolutionRate` in `product.h`, because it transmits nothing and no ADS-L clause dates its position to a quarter second. Its flight log, its EFB sentences and its ADS-B gate read one position a second, as on the Go. The AG3335 driver solves only at that rate, and `common::solution_rate_serves` refuses at compile time a product that asks for more (`../../hardware/parts/ag3335/README.md`).

@@ -23,6 +23,8 @@ class AdsbService : public runtime::Service {
    public:
     // INFO: fc 26nov26 the cadence of Power and Loop, so an outage lines up with them
     static constexpr uint32_t kRecordPeriodMs = 1000;
+    // INFO: fc 26nov26 the radio thread refills the queue mid-drain: a flood held one pass 561 ms
+    static constexpr int kFramesPerPassCeiling = events::kAdsbLoadFrames;
 
     AdsbService(runtime::Context& context, bus::AdsbQueue& frames,
                 const ports::AdsbReceiver& receiver, common::TrafficSettings settings,

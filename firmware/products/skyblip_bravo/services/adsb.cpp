@@ -18,7 +18,8 @@ void AdsbService::tick(uint32_t now_ms) {
     assembly_.set_own_address(aircraft_address);
     const adsb::Reference here = reference(gate.own);
     events::AdsbFrame frame{};
-    while (frames_.pop(frame)) hear(frame, here, now_ms);
+    for (int heard = 0; heard < kFramesPerPassCeiling && frames_.pop(frame); heard++)
+        hear(frame, here, now_ms);
     own_transponder_.tick(now_ms);
     transponders_.age_out(now_ms);
     // INFO: fc 15nov26 on the ground only, as the Go proposes it: aloft a wingman is as loud
@@ -60,6 +61,7 @@ void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
 }
 
 uint32_t AdsbService::due_in_ms(uint32_t /*now_ms*/) const {
+    if (!frames_.empty()) return 0;
     return events::kAdsbQueueDrainWindowMs - kFlashPassCeilingMs;
 }
 
