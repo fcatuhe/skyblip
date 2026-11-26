@@ -42,6 +42,20 @@ class DeploymentTest < Minitest::Test
     assert_equal [ "draft" ], jobs.select { |_name, job| job.dig("permissions", "contents") == "write" }.keys
   end
 
+  # A moved tag runs new code in a job that can deploy, sign or write a release.
+  def test_every_action_of_a_job_that_holds_a_secret_is_pinned_by_commit
+    %w[firmware release server].each do |name|
+      jobs = workflow(name).fetch("jobs").select { |_job_name, job| holds_a_secret?(job) }
+
+      refute_empty jobs, name
+      jobs.each do |job_name, job|
+        job.fetch("steps").filter_map { it["uses"] }.each do |action|
+          assert_match(/\A[\w.-]+\/[\w.\/-]+@\h{40}\z/, action, "#{name}.yml #{job_name}")
+        end
+      end
+    end
+  end
+
   def test_every_emsdk_setup_installs_the_version_the_pins_hold
     %w[firmware release server].each do |name|
       steps = workflow(name).fetch("jobs").values.flat_map { |job| job.fetch("steps", []) }
@@ -91,5 +105,9 @@ class DeploymentTest < Minitest::Test
 
   private
     def workflow(name) = YAML.load_file(File.join(ROOT, ".github/workflows/#{name}.yml"))
+
+    def holds_a_secret?(job)
+      job.key?("environment") || job.to_s.include?("secrets.") || job.fetch("permissions", {}).value?("write")
+    end
 
 end
