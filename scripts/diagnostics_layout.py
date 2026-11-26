@@ -7,6 +7,9 @@ import json
 import pathlib
 import sys
 
+from link_registry import (CLANG_FORMAT_OFF, committed, constant, enum_class, exhaustive_switch,
+                           pascal, refuse_duplicates, stale, write)
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LAYOUT = ROOT / "schemas" / "diagnostics_layout.v1.json"
 FIRMWARE_HEADER = "firmware/core/diagnostics/layout.h"
@@ -20,7 +23,6 @@ WIDTHS = {"u8": 1, "i8": 1, "u16": 2, "i16": 2, "u24": 3, "u32": 4, "i32": 4, "e
           "code8": 1, "bits": 1}
 FLAG_KINDS = ("flag", "vouch")
 KINDS = tuple(WIDTHS) + FLAG_KINDS
-CLANG_FORMAT_OFF = "// clang-format off"
 LINE_WIDTH = 100
 
 
@@ -108,22 +110,6 @@ def check_valid_when(where, field, by_name):
         raise ValueError("%s: valid_when reaches through more than one flag" % where)
 
 
-def refuse_duplicates(what, items):
-    seen = set()
-    for item in items:
-        if item in seen:
-            raise ValueError("%s %r appears twice" % (what, item))
-        seen.add(item)
-
-
-def pascal(name):
-    return "".join(part.capitalize() for part in name.split("_"))
-
-
-def constant(name):
-    return "k" + pascal(name)
-
-
 def flag_constant(type_name, field_name):
     return "k%sFlag%s" % (pascal(type_name), pascal(field_name))
 
@@ -142,22 +128,15 @@ def firmware_header(layout):
              "#define SKYBLIP_CORE_DIAGNOSTICS_LAYOUT_H", "", "#include <cstdint>", "",
              "namespace skyblip::diagnostics {", ""]
     types = [{"name": "none", "code": 0}] + layout["types"]
-    lines += enum_class("Type", [(pascal(kind["name"]), kind["code"]) for kind in types])
+    lines += enum_class("Type", types)
     lines += ["constexpr uint8_t kHighestType = %d;" % layout["types"][-1]["code"], ""]
     for name, enum in layout["enums"].items():
         if enum.get("declared"):
-            lines += enum_class(pascal(name), [(pascal(value["name"]), value["code"])
-                                               for value in enum["values"]])
+            lines += enum_class(pascal(name), enum["values"])
     for kind in layout["types"]:
         lines += type_constants(kind)
     lines += ["}", "", "#endif"]
     return "\n".join(lines) + "\n"
-
-
-def enum_class(name, members):
-    lines = ["enum class %s : uint8_t {" % name]
-    lines += ["    %s = %d," % member for member in members]
-    return lines + ["};", ""]
 
 
 def type_constants(kind):
@@ -210,14 +189,6 @@ def mirrors_test(layout):
             cpp, enum["values"][0]["mirrors"], name), ""]
     lines += ["}", "}"]
     return "\n".join(lines) + "\n"
-
-
-def exhaustive_switch(enum):
-    # INFO: fc 22nov26 the switch has no default so -Wswitch refuses a C++ member the layout lacks
-    cpp = enum["mirrors"]["type"]
-    lines = ["constexpr bool on_the_wire(%s value) {" % cpp, "    switch (value) {"]
-    lines += ["        case %s::%s:" % (cpp, value["mirrors"]) for value in enum["values"]]
-    return lines + ["            return true;", "    }", "    return false;", "}", ""]
 
 
 def decoder_tables(layout):
@@ -299,22 +270,8 @@ def javascript_module(layout):
     return "\n".join(lines + ["  ],", "});"]) + "\n"
 
 
-def stale(expected, read):
-    return [relative for relative, text in expected.items() if read(relative) != text]
-
-
-def committed(relative):
-    path = ROOT / relative
-    return path.read_text(encoding="utf-8") if path.exists() else None
-
-
 def main():
-    for relative, text in generated(load()).items():
-        path = ROOT / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-        print("wrote %s" % relative)
-    return 0
+    return write(generated(load()))
 
 
 if __name__ == "__main__":
