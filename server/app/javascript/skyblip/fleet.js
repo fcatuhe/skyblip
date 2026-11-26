@@ -41,10 +41,11 @@ function productOfSlug(slug) {
   return kind === 'activate' ? 'go' : kind ?? null;
 }
 
+// INFO: fc 26nov26 a Go keeps its activation through an install over USB, and then advertises its address, which the page cannot know
 export function installedNames(product, tag) {
   const code = tag?.toString(16).toUpperCase().padStart(4, '0');
-  if (product === 'go') return code ? { names: [`activate ${code} skyBlip`] } : { namePrefix: 'activate' };
-  return code ? { names: [`skyBlip Bravo ${code}`] } : { namePrefix: 'skyBlip Bravo' };
+  if (product === 'go') return code ? { names: [`activate ${code} skyBlip`], namePrefixes: ['skyBlip Go'] } : { namePrefixes: ['activate', 'skyBlip Go'] };
+  return code ? { names: [`skyBlip Bravo ${code}`] } : { namePrefixes: ['skyBlip Bravo'] };
 }
 
 export function nameOf(slug) {
@@ -210,9 +211,9 @@ export class Fleet {
   }
 
   // INFO: fc 11nov26 the browser's chooser is the only way to a device it never granted, so a new one always passes through it
-  async connectNew({ activation = false, names = [], namePrefix = null } = {}) {
-    const options = activation ? { namePrefix: 'activate' } : { names, namePrefix };
-    const device = await this.#choose(options, activation ? 'activation' : names.length > 0 || namePrefix ? 'installed' : 'new');
+  async connectNew({ activation = false, names = [], namePrefixes = [] } = {}) {
+    const options = activation ? { namePrefixes: ['activate'] } : { names, namePrefixes };
+    const device = await this.#choose(options, activation ? 'activation' : names.length > 0 || namePrefixes.length > 0 ? 'installed' : 'new');
     if (!device) return null;
     const unit = this.#unitFor(device);
     if (!unit.linked) await unit.connect();

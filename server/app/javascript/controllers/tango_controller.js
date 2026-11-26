@@ -56,7 +56,7 @@ export default class extends Controller {
   async connectNew() {
     const product = PARTNER[this.unit.product]
     try {
-      await this.fleet.connectNew({ namePrefix: product === "bravo" ? "skyBlip Bravo" : "skyBlip Go" })
+      await this.fleet.connectNew({ namePrefixes: [product === "bravo" ? "skyBlip Bravo" : "skyBlip Go"] })
     } catch (error) {
       this.failure = { key: "failed", detail: error.message }
     }
