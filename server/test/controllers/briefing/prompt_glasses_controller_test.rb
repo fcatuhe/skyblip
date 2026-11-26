@@ -3,7 +3,7 @@ require "test_helper"
 class Briefing::PromptGlassesControllerTest < ActionDispatch::IntegrationTest
   test "the prompt glass loads the local build's embed script" do
     Dir.mktmpdir do |directory|
-      Release::SimulatorFiles::CURRENT.runtime.each { |file| FileUtils.touch(File.join(directory, file)) }
+      Release::SIMULATOR_RUNTIME.each { |file| FileUtils.touch(File.join(directory, file)) }
 
       with_config(simulator_build: directory) { get "/briefing/prompt_glass" }
     end

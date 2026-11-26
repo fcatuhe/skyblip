@@ -5,7 +5,7 @@ class SimulatorHelperTest < ActionView::TestCase
   include Rails.application.routes.url_helpers
 
   test "runtime firmware sources use the same-origin release proxy" do
-    assert_equal "/releases/v0.2.0/skyblip-simulator-embed.js", simulator_module_path("v0.2.0", Release::SimulatorFiles::CURRENT)
+    assert_equal "/releases/v0.2.0/skyblip-simulator-embed.js", simulator_module_path("v0.2.0")
   end
 
   # The altimeter's 9 sat at 330.6 deg while its needle pointed 324 deg at 900 ft, as one turn was laid over 980 ft.
@@ -49,7 +49,6 @@ class SimulatorHelperTest < ActionView::TestCase
     @release = Release.new("tag_name" => "dev-1005", "name" => "Development", "prerelease" => true,
                            "created_at" => "2026-10-17T00:00:00Z", "assets" => [], "body" => nil)
     @tag = @release.tag
-    @files = Release::SimulatorFiles::CURRENT
     @workbench = true
 
     render template: "briefing/simulator_builds/show"

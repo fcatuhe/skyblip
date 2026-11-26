@@ -5,10 +5,9 @@ class ReleaseTest < ActiveSupport::TestCase
   test "a simulator release must have all three runtime files, the scenarios aside" do
     assert_not release("dev-1005", assets: %w[skyblip-simulator-embed.js]).simulator?
 
-    complete = release("dev-1005", assets: Release::SimulatorFiles::CURRENT.runtime)
+    complete = release("dev-1005", assets: Release::SIMULATOR_RUNTIME)
     assert complete.simulator?
     assert complete.development?
-    assert_equal "skyblip-simulator-embed.js", complete.simulator_files.embed
   end
 
   # GitHub releases are immutable, so v0.8.0 keeps the names it was built with (#483).
@@ -70,8 +69,8 @@ class ReleaseTest < ActiveSupport::TestCase
 
   # On Nov 19 two merges a few minutes apart could publish their builds in the other order, and the older one looked newest.
   test "a build is offered by when its commit was made, not by when its run published it" do
-    newer = release("dev-2032", prerelease: true, committed_at: "2026-11-19T07:26:25Z", published_at: "2026-11-19T07:33:56Z", assets: %w[skyblip-go-dev-2032.uf2 skyblip-go-dev-2032.signed.bin] + Release::SimulatorFiles::CURRENT.runtime)
-    older = release("dev-2030", prerelease: true, committed_at: "2026-11-19T07:23:13Z", published_at: "2026-11-19T07:36:10Z", assets: %w[skyblip-go-dev-2030.uf2 skyblip-go-dev-2030.signed.bin] + Release::SimulatorFiles::CURRENT.runtime)
+    newer = release("dev-2032", prerelease: true, committed_at: "2026-11-19T07:26:25Z", published_at: "2026-11-19T07:33:56Z", assets: %w[skyblip-go-dev-2032.uf2 skyblip-go-dev-2032.signed.bin] + Release::SIMULATOR_RUNTIME)
+    older = release("dev-2030", prerelease: true, committed_at: "2026-11-19T07:23:13Z", published_at: "2026-11-19T07:36:10Z", assets: %w[skyblip-go-dev-2030.uf2 skyblip-go-dev-2030.signed.bin] + Release::SIMULATOR_RUNTIME)
 
     assert_equal %w[dev-2032 dev-2030], Release.shelf([ older, newer ]).map(&:tag)
     assert_equal "dev-2032", Release.installers([ older, newer ]).fetch("go").first.tag
@@ -112,11 +111,11 @@ class ReleaseTest < ActiveSupport::TestCase
   end
 
   test "the simulator prefers the newest stable release, then the newest main build" do
-    older_stable = release("v0.1.0", committed_at: "2026-10-01T00:00:00Z", assets: Release::SimulatorFiles::CURRENT.runtime)
-    newer_stable = release("v0.2.0", committed_at: "2026-10-10T00:00:00Z", assets: Release::SimulatorFiles::CURRENT.runtime)
-    candidate = release("v0.3.0-rc1", prerelease: true, committed_at: "2026-10-12T00:00:00Z", assets: Release::SimulatorFiles::CURRENT.runtime)
-    branch = release("dev-1010-feat-x", prerelease: true, committed_at: "2026-10-15T00:00:00Z", assets: Release::SimulatorFiles::CURRENT.runtime)
-    main = release("dev-1005", prerelease: true, committed_at: "2026-10-14T00:00:00Z", assets: Release::SimulatorFiles::CURRENT.runtime)
+    older_stable = release("v0.1.0", committed_at: "2026-10-01T00:00:00Z", assets: Release::SIMULATOR_RUNTIME)
+    newer_stable = release("v0.2.0", committed_at: "2026-10-10T00:00:00Z", assets: Release::SIMULATOR_RUNTIME)
+    candidate = release("v0.3.0-rc1", prerelease: true, committed_at: "2026-10-12T00:00:00Z", assets: Release::SIMULATOR_RUNTIME)
+    branch = release("dev-1010-feat-x", prerelease: true, committed_at: "2026-10-15T00:00:00Z", assets: Release::SIMULATOR_RUNTIME)
+    main = release("dev-1005", prerelease: true, committed_at: "2026-10-14T00:00:00Z", assets: Release::SIMULATOR_RUNTIME)
 
     assert_equal "v0.2.0", Release.simulator([ branch, candidate, newer_stable, main, older_stable ]).tag
     assert_equal "dev-1005", Release.simulator([ branch, candidate, main ]).tag
@@ -125,7 +124,7 @@ class ReleaseTest < ActiveSupport::TestCase
 
   test "the prompt glass is drawn with the local build when one is complete" do
     Dir.mktmpdir do |directory|
-      Release::SimulatorFiles::CURRENT.runtime.each { |file| FileUtils.touch(File.join(directory, file)) }
+      Release::SIMULATOR_RUNTIME.each { |file| FileUtils.touch(File.join(directory, file)) }
 
       with_config(simulator_build: directory) { assert_equal [ Release::LOCAL_TAG, "skyblip-simulator-embed.js" ], Release.prompt_glass_embed }
     end
