@@ -49,11 +49,28 @@ Pattern 0x0285 read first bit first is `1010000101000000`, the 8 us preamble at 
 
 Each SPI frame opens on two status bytes whose command status is the result of the command before (DS 6.7.1). The driver counts a CMD_FAIL or CMD_PERR there as a `command_error` and runs on, as SoftRF does. A read is two frames: the command, then zeros that clock the answer out (DS 5.4.1.2). The FIFO read answers in its own frame (DS 5.4.1.3).
 
-On the IRQ the driver takes a snapshot: GetAndClearIrqStatus, GetOokPacketStatus, GetRxFifoLevel, GetAndClearFifoIrqFlags and GetOokPacketStatus again. It then reads one 14-byte frame per `poll()`, oldest first, as many as the level held. Frames keep landing meanwhile, so the driver holds three rules:
+On the IRQ the driver takes a snapshot: GetAndClearIrqStatus, GetOokPacketStatus, GetOokRxStats, GetRxFifoLevel, GetAndClearFifoIrqFlags, GetOokRxStats again and GetOokPacketStatus again. It then reads one 14-byte frame per `poll()`, oldest first, as many as the part counted. Frames keep landing meanwhile, so the driver holds four rules:
 
 - **An overflow stops the reading.** Nineteen frames fill the 256-byte FIFO with eighteen and 4 bytes of the nineteenth, so every later read would start 4 bytes off. The overflow flag latches whether or not its IRQ is enabled (DS 6.10.1, 6.10.2, 6.10.4). When it is set, the driver counts every frame the level held in `fifo_drops`, goes to STDBY_RC, clears the FIFO and restarts receive, before reading anything.
 - **An empty FIFO proves nothing.** A frame that lands after GetAndClearIrqStatus is read in the same snapshot, and its own RxDone then finds nothing. That RxDone is neither a frame nor a drop, and the FIFO is not cleared, because a frame may be landing.
+- **Every byte belongs to a frame.** See Framing, below.
 - **A level is given only when it is certain.** GetOokPacketStatus describes the last packet (DS 16.3.7), which may have landed after the level was read. Only the newest frame of the snapshot carries the RssiHigh level, in half-dB steps, and only when both reads of the packet status agree.
+
+## Framing
+
+The receive FIFO is a byte stream with no mark between frames. In continuous receive the part appends each packet to it, and DS 5.3.1 leaves framing to the host: "the payload length needs to be read after each RxDone interrupt to determine which data belongs to which packet". Cutting it into 14-byte blocks by its level holds only while it holds whole frames. One stray byte shifts every later block across two frames, and nothing decodes until the FIFO is emptied. On bravo-d582, after a flood outdoors, frames and noise came back to normal indoors and nothing decoded for minutes, until a reboot (#550).
+
+So the driver keeps a conservation law: every byte in the FIFO belongs to a frame the part counted or to the one frame still arriving. The part counts its packets itself (GetOokRxStats `pkt_rx`, DS 16.3.6). Two Full captures on bravo-d582 found it equal to the frames the driver read to 0.1% over 2.8 million frames, and never ahead of them. The count is taken once each time receive starts, in STDBY_RC where no frame can land, together with zero frames read.
+
+At each snapshot the driver reads the count on both sides of the level. When the two counts differ, a frame closed between them, so the driver reads only the frames both the count and the level vouch for, and checks the next snapshot. When they agree, the frames counted and not yet read are whole, and the level minus 14 bytes each is the excess:
+
+- **0:** the FIFO holds exactly those frames.
+- **1 to 13:** a frame still arriving, or the remains of one that never closed. A Manchester bit lasts 1 us, so a frame still arriving grows a byte every 8 us. The driver reads the count and the level again after `kInFlightGrowthUs`, 24 us. If either moved, the bytes are a frame arriving, and the driver reads the whole frames ahead of it. If neither moved, they are remains.
+- **Remains, negative, or 14 and more:** bytes that no counted frame owns, or counted frames whose bytes are gone. The driver counts the frames it cannot trust in `fifo_drops` and a `framing_resync`, goes to STDBY_RC, clears the FIFO and starts receive again with a new count.
+
+The law holds whether the part writes a frame byte by byte or whole at RxDone, and whatever left the stray bytes: a frame abandoned in a flood, an overflow missed, an underflow or a driver fault. It costs one register read a snapshot and, only when the excess is not zero, a 24 us wait. Recovery comes on the snapshot after the fault, not after a timer, and receive never stops to frame a healthy stream.
+
+On the SX1262 the Go reads ADS-L and FLARM with, the question never arises: each packet carries a sync word of 24 bits or more, and GetRxBufferStatus gives each packet's start and length. cb-tfc (`radio.cpp` `handle_es_rx`) and SoftRF frame the LR2021's FIFO by starting receive again after every frame, which loses the frames that land in the restart.
 
 ## The frame in the FIFO
 
@@ -108,6 +125,8 @@ DS 22.1 says a host may override the OOK threshold the part computes from the ba
 `lr2021::kDetectionThresholdDbm` is -110, the pick of #293's trial. Against -106 dBm it decoded 58 more positions a minute (95% interval +6 to +110) and 8 more aircraft a minute. -114 dBm decoded no more positions and refused 56% of its frames.
 
 Write the threshold after SetRfFrequency, as RadioLib's `beginOOK()` and cb-tfc do. Written before SetRxPath, CalibFE and SetRfFrequency, it behaved in #293 like the part's own threshold, so one of those commands most likely resets it. Which one is not known.
+
+`set_detection_threshold()` changes it while the part receives: STDBY_RC, the masked write, ClearRxFifo, and receive started again with a new packet count, so framing starts over with the threshold. The probe reads the register back, so a capture shows the threshold the part holds. Across the overflow restarts of the bravo-d582 floods the register kept -110 dBm, so SetRxPath alone does not reset it. A threshold set while the part is parked is the one the next bring-up writes. Bravo's product decides the value (`../../../products/skyblip_bravo/README.md`, The detection threshold).
 
 ## Unverified until #169 benches a unit
 

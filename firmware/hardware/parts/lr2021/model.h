@@ -133,6 +133,11 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
 
     uint8_t reset_source() const { return reset_source_; }
 
+    // INFO: fc 26nov26 bytes of a frame the part began and never counted, as a flood can leave
+    void strand(size_t bytes, uint8_t value = 0xA5) {
+        for (size_t i = 0; i < bytes && fifo.size() < kFifoBytes; i++) fifo.push_back(value);
+    }
+
     // INFO: fc 11nov26 a frame that lands after the given command, so a test can interleave the air
     void arrive_after(uint16_t opcode, std::function<void()> arrival) {
         arrivals_.push_back({opcode, std::move(arrival)});

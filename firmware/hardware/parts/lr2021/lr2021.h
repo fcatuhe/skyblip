@@ -38,6 +38,7 @@ class Lr2021 {
     Lr2021Event poll(uint8_t* frame, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
     Status sample(ports::ReceiverProbe& probe);
+    Status set_detection_threshold(int16_t dbm);
     Status sleep();
     void park();
     void hold_in_reset();
@@ -50,6 +51,8 @@ class Lr2021 {
     uint16_t device_errors() const { return device_errors_; }
     uint32_t fifo_drops() const { return fifo_drops_; }
     uint32_t part_resets() const { return part_resets_; }
+    uint32_t framing_resyncs() const { return framing_resyncs_; }
+    int16_t detection_threshold_dbm() const { return detection_threshold_dbm_; }
 
    private:
     Status wait_busy_low(uint32_t ceiling_us);
@@ -68,6 +71,10 @@ class Lr2021 {
                 size_t bytes);
     Status read_register(uint32_t address, uint32_t& value);
     Status clear_reset_source();
+    Status read_packets(uint16_t& packets);
+    Status check_framing(uint16_t whole, uint16_t level);
+    Status resync_framing(uint16_t whole);
+    Status write_threshold();
     Status write_mask(uint32_t address, uint32_t mask, uint32_t data);
     void note_status(const uint8_t* status);
     Status read_errors();
@@ -95,6 +102,9 @@ class Lr2021 {
     uint16_t device_errors_{0};
     uint32_t fifo_drops_{0};
     uint32_t part_resets_{0};
+    uint32_t framing_resyncs_{0};
+    uint16_t packets_at_clear_{0};
+    uint16_t frames_since_clear_{0};
 };
 
 // INFO: fc 11nov26 DS is Semtech's LR2021/LR2022/LR2012 Datasheet, Final Rev. 2.1, 13 April 2026,
@@ -195,6 +205,9 @@ constexpr uint8_t kFixedLength = 0x00;
 constexpr uint8_t kCrcOffManchesterInverted = 0x09;
 constexpr uint8_t kSyncwordNoneMsbFirst = 0x80;
 constexpr uint8_t kFifoFrameBytes = 14;
+// INFO: fc 26nov26 a Manchester bit lasts 1 us, so a frame still arriving grows a byte each 8 us
+constexpr uint32_t kFifoByteUs = 8;
+constexpr uint32_t kInFlightGrowthUs = 3 * kFifoByteUs;
 // INFO: fc 11nov26 DS 16.3.8 names these for ADS-B: pattern 0x0285, no repeat, falling edge, no SFD
 constexpr uint16_t kAdsbPreamblePattern = 0x0285;
 constexpr uint8_t kAdsbPreambleChips = 16;

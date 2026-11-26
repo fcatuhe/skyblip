@@ -90,10 +90,12 @@ Status Lr2021::start_receive() {
     Status status = command(lr2021::kSetRxPath, path, sizeof(path));
     if (status == Status::Ok) status = command(lr2021::kSetDioIrqConfig, irq_config, 5);
     if (status == Status::Ok) status = command(lr2021::kClearIrq, clear, sizeof(clear));
+    if (status == Status::Ok) status = read_packets(packets_at_clear_);
     if (status == Status::Ok) status = command(lr2021::kSetRx, continuous, sizeof(continuous));
     if (status != Status::Ok) return status;
     mode_ = Lr2021Mode::Receive;
     frames_waiting_ = 0;
+    frames_since_clear_ = 0;
     since_frame_ms_ = 0;
     return Status::Ok;
 }
@@ -112,6 +114,7 @@ Lr2021Event Lr2021::poll(uint8_t* frame, size_t capacity) {
         return event;
     }
     frames_waiting_--;
+    frames_since_clear_++;
     since_frame_ms_ = 0;
     event.type = Lr2021EventType::Frame;
     return event;
@@ -125,12 +128,16 @@ Status Lr2021::take_snapshot() {
     uint8_t level[2] = {};
     uint8_t fifo_flags[2] = {};
     uint8_t after[6] = {};
+    uint16_t packets_before = 0;
+    uint16_t packets_after = 0;
     Status status = read(lr2021::kGetAndClearIrqStatus, irq, sizeof(irq));
     if (status != Status::Ok || (be32(irq) & lr2021::kIrqRxDone) == 0) return status;
     status = read(lr2021::kGetOokPacketStatus, before, sizeof(before));
+    if (status == Status::Ok) status = read_packets(packets_before);
     if (status == Status::Ok) status = read(lr2021::kGetRxFifoLevel, level, sizeof(level));
     if (status == Status::Ok)
         status = read(lr2021::kGetAndClearFifoIrqFlags, fifo_flags, sizeof(fifo_flags));
+    if (status == Status::Ok) status = read_packets(packets_after);
     if (status == Status::Ok) status = read(lr2021::kGetOokPacketStatus, after, sizeof(after));
     if (status != Status::Ok) return status;
     if ((fifo_flags[0] & lr2021::kFifoOverflow) != 0) {
@@ -139,10 +146,46 @@ Status Lr2021::take_snapshot() {
         fifo_drops_ += lost != 0 ? lost : 1;
         return restart_receive();
     }
-    frames_waiting_ = static_cast<uint8_t>(be16(level) / lr2021::kFifoFrameBytes);
     newest_rssi_valid_ = std::memcmp(before, after, sizeof(before)) == 0;
     newest_rssi_dbm_ = rssi_high_dbm(after);
+    const uint16_t whole =
+        static_cast<uint16_t>(packets_before - packets_at_clear_ - frames_since_clear_);
+    // INFO: fc 26nov26 a frame that closed between the two counts may or may not be in the level
+    if (packets_before != packets_after) {
+        const uint16_t landed = be16(level) / lr2021::kFifoFrameBytes;
+        frames_waiting_ = static_cast<uint8_t>(whole < landed ? whole : landed);
+        return Status::Ok;
+    }
+    return check_framing(whole, be16(level));
+}
+
+// INFO: fc 26nov26 every byte belongs to a frame the part counted or to the one still arriving
+Status Lr2021::check_framing(uint16_t whole, uint16_t level) {
+    const int32_t excess =
+        static_cast<int32_t>(level) - static_cast<int32_t>(whole) * lr2021::kFifoFrameBytes;
+    if (excess > 0 && excess < lr2021::kFifoFrameBytes) {
+        uint16_t packets = 0;
+        uint8_t again[2] = {};
+        delay_.wait_at_least_us(lr2021::kInFlightGrowthUs);
+        Status status = read_packets(packets);
+        if (status == Status::Ok) status = read(lr2021::kGetRxFifoLevel, again, sizeof(again));
+        if (status != Status::Ok) return status;
+        const uint16_t counted =
+            static_cast<uint16_t>(packets - packets_at_clear_ - frames_since_clear_);
+        if (counted != whole || be16(again) != level) {
+            frames_waiting_ = static_cast<uint8_t>(whole);
+            return Status::Ok;
+        }
+    }
+    if (excess != 0) return resync_framing(whole);
+    frames_waiting_ = static_cast<uint8_t>(whole);
     return Status::Ok;
+}
+
+Status Lr2021::resync_framing(uint16_t whole) {
+    framing_resyncs_++;
+    fifo_drops_ += whole;
+    return restart_receive();
 }
 
 // INFO: fc 11nov26 SoftRF re-arms after 15 s of silence, and a fault resets the part instead
@@ -323,9 +366,6 @@ Status Lr2021::configure_ook() {
     put_be16(detector, lr2021::kAdsbPreamblePattern);
     detector[2] = lr2021::kAdsbPreambleChips - 1;
     const uint8_t gain = lr2021::kAgcAutomatic;
-    const uint32_t threshold =
-        (static_cast<uint32_t>(detection_threshold_dbm_ + lr2021::kOokThresholdOffsetDb) << 20) &
-        lr2021::kOokThresholdMask;
 
     Status status = command(lr2021::kSetOokModulationParams, modulation, sizeof(modulation));
     if (status == Status::Ok) status = command(lr2021::kSetOokPacketParams, packet, sizeof(packet));
@@ -334,8 +374,7 @@ Status Lr2021::configure_ook() {
     if (status == Status::Ok) status = command(lr2021::kSetOokSyncword, syncword, sizeof(syncword));
     if (status == Status::Ok) status = command(lr2021::kSetOokDetector, detector, sizeof(detector));
     if (status == Status::Ok) status = command(lr2021::kSetAgcGainManual, &gain, 1);
-    if (status == Status::Ok)
-        status = write_mask(lr2021::kOokThresholdRegister, lr2021::kOokThresholdMask, threshold);
+    if (status == Status::Ok) status = write_threshold();
     if (status == Status::Ok)
         status =
             write_mask(lr2021::kOokQuirkRegister, lr2021::kOokQuirkMask, lr2021::kOokQuirkData);
@@ -426,6 +465,33 @@ Status Lr2021::read_register(uint32_t address, uint32_t& value) {
     const Status status = read(lr2021::kReadRegMem32, arguments, sizeof(arguments), word, 4);
     if (status == Status::Ok) value = be32(word);
     return status;
+}
+
+Status Lr2021::read_packets(uint16_t& packets) {
+    uint8_t stats[6] = {};
+    const Status status = read(lr2021::kGetOokRxStats, stats, sizeof(stats));
+    if (status == Status::Ok) packets = be16(stats);
+    return status;
+}
+
+// INFO: fc 26nov26 the FIFO is cleared with it, so the counts that frame it start again together
+Status Lr2021::set_detection_threshold(int16_t dbm) {
+    detection_threshold_dbm_ = dbm;
+    if (mode_ != Lr2021Mode::Receive) return Status::Ok;
+    frames_waiting_ = 0;
+    Status status = enter_standby();
+    if (status == Status::Ok) status = write_threshold();
+    if (status == Status::Ok) status = command(lr2021::kClearRxFifo, nullptr, 0);
+    if (status == Status::Ok) status = start_receive();
+    return status;
+}
+
+Status Lr2021::write_threshold() {
+    const uint32_t threshold =
+        (static_cast<uint32_t>(detection_threshold_dbm_ + lr2021::kOokThresholdOffsetDb)
+         << lr2021::kOokThresholdShift) &
+        lr2021::kOokThresholdMask;
+    return write_mask(lr2021::kOokThresholdRegister, lr2021::kOokThresholdMask, threshold);
 }
 
 // INFO: fc 26nov26 DS 6.7.1: GetStatus clears the reset source every later status reports
