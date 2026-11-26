@@ -88,6 +88,8 @@ class Shell {
         // INFO: fc 13nov26 before drive_shutdown, so the sign starts after the park's flash work
         if (shutdown_.going_down()) finish_sign_off(now_ms);
         shutdown_.tick(now_ms, product_.platform_.button_down(), pad_down);
+        if (shutdown_.going_down() && !product_.platform_.external_power())
+            parked_off_cable_ = true;
         drive_shutdown(now_ms);
         if (shutdown_.going_down()) {
             product_.settle_glass(now_ms);
@@ -133,7 +135,10 @@ class Shell {
 
     // INFO: fc 26nov26 only VBUS rising wakes SYSTEM OFF, so a cable back during the park restarts
     bool cable_returned() const {
-        return shutdown_.reason() == power::ShutdownReason::CableGone &&
+        // INFO: fc 26nov26 CableGone trusts a stale battery sample, so the cable may be back
+        const bool cable_left =
+            parked_off_cable_ || shutdown_.reason() == power::ShutdownReason::CableGone;
+        return product_.power_switch() == power::Switch::Cable && !recovering() && cable_left &&
                product_.platform_.external_power();
     }
 
@@ -266,6 +271,7 @@ class Shell {
     std::optional<ports::RecoveryPath> recovery_taken_{};
     std::optional<uint32_t> radio_waited_since_ms_{};
     bool flyable_{false};
+    bool parked_off_cable_{false};
 };
 
 }  // namespace skyblip::common
