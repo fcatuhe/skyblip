@@ -128,8 +128,9 @@ TEST_CASE("product: a cable back while the Go parks for a flat cell restarts it 
     rig.run_for(5000);
 
     rig.platform.battery().divider_mv = 3100;
-    pull_cable_for(rig, 10000);
+    pull_cable_for(rig, 4000);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
+    REQUIRE_FALSE(rig.product.ready_to_power_off());
     rig.platform.battery().external_power = true;
     rig.run_for(10000);
     REQUIRE(rig.product.ready_to_power_off());
@@ -141,8 +142,9 @@ TEST_CASE("product: a cable back while the Go parks for a flat cell restarts it 
     REQUIRE(button.setup() == Status::Ok);
     button.run_for(5000);
     button.platform.battery().divider_mv = 3100;
-    pull_cable_for(button, 10000);
+    pull_cable_for(button, 4000);
     REQUIRE(button.product.shutdown().reason() == power::ShutdownReason::LowBattery);
+    REQUIRE_FALSE(button.product.ready_to_power_off());
     button.platform.battery().external_power = true;
     button.run_for(10000);
     REQUIRE(button.product.ready_to_power_off());
