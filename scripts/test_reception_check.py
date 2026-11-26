@@ -22,12 +22,15 @@ class Sky:
                          "part_reset": "none", "front_end_kept": True}
         self.reception = {"aircraft": 3, "tracked": 3, "reference": "own", "fix_valid": True}
 
-    def seconds(self, count, **per_second):
+    def seconds(self, count, step_s=1, **per_second):
         for _ in range(count):
-            self.at_s += 1
+            self.at_s += step_s
             for field, step in per_second.items():
                 self.totals[field] += step
             self.write()
+
+    def mark(self, **record):
+        self.records.append(dict(record, index=len(self.records), at_s=self.at_s))
 
     def write(self):
         wide = {field: self.totals[field] % check.WIDE for field in check.WIDE_COUNTERS}
@@ -105,6 +108,24 @@ class Outages(unittest.TestCase):
         self.assertIn("0 reception outages", report)
         self.assertIn("traffic placed, no own fix, so nothing reached an EFB", report)
 
+    def test_silences_either_side_of_a_gap_are_not_joined_into_one_outage(self):
+        sky = Sky()
+        sky.seconds(20, **HEARING)
+        sky.seconds(6)
+        sky.mark(type="gap")
+        sky.seconds(1)
+        sky.seconds(6)
+        self.assertIn("0 reception outages", sky.report())
+
+    def test_an_outage_is_timed_by_the_seconds_it_spans_not_the_records_it_holds(self):
+        sky = Sky()
+        sky.seconds(20, **HEARING)
+        sky.seconds(2, step_s=check.MAX_STEP_S)
+        sky.seconds(1, **HEARING)
+        report = sky.report()
+        self.assertIn("1 reception outages", report)
+        self.assertIn("10 s: no position placed", report)
+
 
 class Subtraction(unittest.TestCase):
 
@@ -127,6 +148,15 @@ class Subtraction(unittest.TestCase):
         seconds = check.seconds_of(sky.records)
         self.assertNotIn("part_packets", seconds[-2].counts)
         self.assertEqual(seconds[-1].counts["part_packets"], 0)
+
+    def test_nothing_is_subtracted_across_an_unreadable_or_a_missing_record(self):
+        sky = Sky()
+        sky.seconds(3, **HEARING)
+        sky.mark(error="unknown type 99")
+        sky.seconds(3, **HEARING)
+        sky.seconds(4, **HEARING)
+        del sky.records[-6:-4]
+        self.assertEqual(len(check.seconds_of(sky.records)), 2 + 2 + 2)
 
     def test_nothing_is_subtracted_across_a_gap_or_a_hole_in_time(self):
         sky = Sky()

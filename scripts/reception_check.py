@@ -7,7 +7,8 @@
 Bravo writes a receiver and a reception record each second of a Full capture
 (firmware/core/diagnostics/README.md, The receiver and reception records). Their counters cross
 as low bits since boot, so this subtracts each pair of seconds, as power_budget.py does Duty's,
-and never across a gap, a boot or a hole longer than MAX_STEP_S.
+and never across a gap, a boot, an unreadable or missing record, or a hole longer than
+MAX_STEP_S. An outage ends at such a break, because nothing says what the sky did inside it.
 """
 import argparse
 import collections
@@ -30,7 +31,8 @@ DETECTION_THRESHOLD_DBM = -110
 NOISE_RISE_DB = 6
 BREAKS = ("gap", "boot")
 
-Second = collections.namedtuple("Second", "at_s utc receiver reception counts")
+Second = collections.namedtuple("Second",
+                                "at_s utc elapsed_s stretch receiver reception counts")
 
 
 def main(argv=None):
@@ -55,32 +57,45 @@ def read(path):
     for line in ndjson.read_ndjson(path):
         if ndjson.is_note(line) or line.get("log") not in (None, "diagnostics"):
             continue
-        if "index" not in line or line.get("error"):
+        if "index" not in line:
             continue
         sessions.setdefault(line.get("session"), []).append(line)
     for records in sessions.values():
         records.sort(key=lambda record: record["index"])
     return collections.OrderedDict((session, records) for session, records in sessions.items()
-                                   if any(record["type"] == "receiver" for record in records))
+                                   if any(record.get("type") == "receiver" for record in records))
 
 
 def seconds_of(records):
     seconds = []
     before = None
     receiver = None
+    stretch = 0
+    last_index = None
     for record in records:
-        if record["type"] in BREAKS:
+        if breaks(record, last_index):
             before = receiver = None
-        elif record["type"] == "receiver":
+        last_index = record["index"]
+        if record.get("error") or record["type"] in BREAKS:
+            continue
+        if record["type"] == "receiver":
             receiver = record
         elif record["type"] == "reception" and receiver is not None:
             pair = dict(receiver, **record)
-            if before is not None and steps(before, pair):
-                seconds.append(Second(pair["at_s"], pair.get("utc_dated", False), receiver,
-                                      record, counts(before, pair)))
+            if before is None or not steps(before, pair):
+                stretch += 1
+            else:
+                seconds.append(Second(pair["at_s"], pair.get("utc_dated", False),
+                                      pair["at_s"] - before["at_s"], stretch, receiver, record,
+                                      counts(before, pair)))
             before = pair
             receiver = None
     return seconds
+
+
+def breaks(record, last_index):
+    return (record.get("error") or record.get("type") in BREAKS
+            or (last_index is not None and record["index"] != last_index + 1))
 
 
 def steps(before, after):
@@ -95,14 +110,14 @@ def counts(before, after):
             out[field] = (after[field] - before[field]) % WIDE
     for field in NARROW_COUNTERS:
         out[field] = (after[field] - before[field]) % NARROW
-    # INFO: fc 26nov26 the part's own count restarts at any reset of the part, so that second has none
+    # INFO: fc 26nov26 a reset of the part restarts its own count, so that second has none
     if out["part_resets"] or out["resets"]:
         out.pop("part_packets", None)
     return out
 
 
 def report(session, seconds, min_seconds):
-    lines = ["session %s: %d seconds measured" % (session, len(seconds))]
+    lines = ["session %s: %d s measured" % (session, duration(seconds))]
     if not seconds:
         return lines
     noise = [second.receiver["noise_dbm"] for second in seconds if "noise_dbm" in second.receiver]
@@ -131,42 +146,53 @@ def whole_run(seconds, floor):
     lines.append("  " + ", ".join("%s %d" % (field, total[field]) for field in NARROW_COUNTERS))
     if floor is not None:
         lines.append("  noise floor median %d dBm" % floor)
-    modes = collections.Counter(second.receiver.get("part_mode", "unprobed") for second in seconds)
+    modes = collections.Counter()
+    for second in seconds:
+        modes[second.receiver.get("part_mode", "unprobed")] += second.elapsed_s
     lines.append("  part mode " + ", ".join("%s %d s" % item for item in sorted(modes.items())))
     return lines
 
 
 def silences(seconds, min_seconds):
-    runs = []
-    run = []
-    heard_before = False
-    for second in seconds:
-        if second.counts.get("positions", 0) == 0:
-            if heard_before:
-                run.append(second)
-            continue
-        if len(run) >= min_seconds:
-            runs.append(run)
-        run = []
-        heard_before = True
-    if len(run) >= min_seconds:
-        runs.append(run)
-    return runs
+    return stretches(seconds, min_seconds, lambda second: second.counts.get("positions", 0) == 0,
+                     after_traffic=True)
 
 
 def unexported(seconds, min_seconds):
+    return stretches(seconds, min_seconds,
+                     lambda second: (not second.reception.get("fix_valid")
+                                     and second.reception.get("tracked", 0) > 0))
+
+
+def stretches(seconds, min_seconds, inside, after_traffic=False):
     runs = []
     run = []
+    heard = False
+    stretch = None
     for second in seconds:
-        if not second.reception.get("fix_valid") and second.reception.get("tracked", 0) > 0:
-            run.append(second)
+        if second.stretch != stretch:
+            keep(runs, run, min_seconds)
+            run = []
+            heard = False
+            stretch = second.stretch
+        if inside(second):
+            if heard or not after_traffic:
+                run.append(second)
             continue
-        if len(run) >= min_seconds:
-            runs.append(run)
+        keep(runs, run, min_seconds)
         run = []
-    if len(run) >= min_seconds:
-        runs.append(run)
+        heard = True
+    keep(runs, run, min_seconds)
     return runs
+
+
+def keep(runs, run, min_seconds):
+    if run and duration(run) >= min_seconds:
+        runs.append(run)
+
+
+def duration(run):
+    return sum(second.elapsed_s for second in run)
 
 
 def verdicts(run, floor):
@@ -222,7 +248,7 @@ def verdicts(run, floor):
 
 
 def describe(run, what, found):
-    head = "  %s, %d s: %s" % (stamp(run[0]), run[-1].at_s - run[0].at_s + 1, what)
+    head = "  %s, %d s: %s" % (stamp(run[0]), duration(run), what)
     return "\n".join([head] + ["    - " + line for line in found])
 
 
