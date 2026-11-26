@@ -90,6 +90,8 @@ class Shell {
         shutdown_.tick(now_ms, product_.platform_.button_down(), pad_down);
         drive_shutdown(now_ms);
         if (shutdown_.going_down()) {
+            // INFO: fc 26nov26 the park stops the link's tick, so a held reply goes out here
+            product_.config_link_.config().resume_replies(now_ms);
             product_.settle_glass(now_ms);
             await_radio_park(now_ms, ready_but_for_radio());
         }
