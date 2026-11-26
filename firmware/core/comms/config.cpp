@@ -68,9 +68,12 @@ Status ConfigChannel::reply_to(const events::Peer& peer, const uint8_t* frame, i
 
 // INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
 Status ConfigChannel::deliver(const events::Peer& peer, const uint8_t* frame, int bytes) {
-    if (bytes <= 0 || bytes > payload_bytes_to(peer.session_id) || held_bytes_ > 0) {
+    // INFO: fc 26nov26 the holder's verdict goes past a frame waiting for another phone
+    const bool holders_turn = claim_.holds(peer) && !claim_.holds(held_for_);
+    const bool full = held_bytes_ > 0 && !holders_turn;
+    if (bytes <= 0 || bytes > payload_bytes_to(peer.session_id) || full) {
         link_drops_++;
-        return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
+        return full ? Status::Full : Status::OutOfRange;
     }
     const Status sent = link_.send_to(peer, events::Endpoint::Config,
                                       ConstByteSpan(frame, static_cast<size_t>(bytes)));
@@ -86,6 +89,7 @@ void ConfigChannel::hold(const events::Peer& peer, const uint8_t* frame, int byt
         link_drops_++;
         return;
     }
+    if (held_bytes_ > 0) link_drops_++;
     std::memcpy(held_frame_, frame, static_cast<size_t>(bytes));
     held_bytes_ = bytes;
     held_for_ = peer;
