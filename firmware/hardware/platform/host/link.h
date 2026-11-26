@@ -87,6 +87,10 @@ class Link : public ports::Link {
     }
 
     Status send(events::Endpoint endpoint, ConstByteSpan bytes) override {
+        if (std::count(unsubscribed_.begin(), unsubscribed_.end(), endpoint) > 0) {
+            unheard++;
+            return Status::Unsubscribed;
+        }
         return record(0, endpoint, bytes);
     }
 
@@ -130,6 +134,12 @@ class Link : public ports::Link {
         if (held) held_sessions_.push_back(session_id);
     }
     void serve() { in_flight_ = 0; }
+    // INFO: fc 26nov26 no connected central subscribed to that endpoint, as a Go on Bravo's config
+    void subscribe(events::Endpoint endpoint, bool subscribed) {
+        unsubscribed_.erase(std::remove(unsubscribed_.begin(), unsubscribed_.end(), endpoint),
+                            unsubscribed_.end());
+        if (!subscribed) unsubscribed_.push_back(endpoint);
+    }
 
     void force_status(Status status, bool once = true) {
         next_status_ = status;
@@ -166,6 +176,7 @@ class Link : public ports::Link {
     int advertise_calls{0};
     int advertise_refusals{0};
     int refused_oversize{0};
+    int unheard{0};
 
    private:
     void forward_events() {
@@ -201,6 +212,7 @@ class Link : public ports::Link {
     comms::LinkSessions sessions_{};
     std::vector<uint16_t> live_;
     std::vector<uint16_t> held_sessions_;
+    std::vector<events::Endpoint> unsubscribed_;
     std::vector<std::deque<Frame>*> mailboxes_;
     uint16_t declared_payload_bytes_{kDefaultPayloadBytes};
     uint16_t last_session_id_{0};

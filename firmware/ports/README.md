@@ -10,7 +10,7 @@ A port is something the core calls: arm this dwell, send these bytes, paint this
 
 `AdsbReceiver` listens full time, so its frames arrive on a `bus::AdsbQueue` and the port keeps its counters and its sleep on the way to SYSTEM OFF. `Gnss` is a port because the core asks the receiver for a restart and reads its health.
 
-`Link::send()` puts one frame on every subscribed central, because the traffic picture is everyone's. So `payload_bytes()` with no session is the smallest of the connected centrals: a broadcast frame is formatted once and must fit the narrowest. `core/comms/README.md` has the rest.
+`Link::send()` puts one frame on every subscribed central, because the traffic picture is everyone's, and answers `Unsubscribed` when the connected centrals all left the endpoint unsubscribed. So `payload_bytes()` with no session is the smallest of the connected centrals: a broadcast frame is formatted once and must fit the narrowest. `core/comms/README.md` has the rest.
 
 `Link` keeps one connection for a paired peer whether or not the peer is connected, so a Go never reserves what it cannot keep (#178). Bravo keeps it for its paired Go's address (#192), and `phones()` leaves that Go out so Bravo's lamp shows a phone and not its own Go.
 

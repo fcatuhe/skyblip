@@ -33,6 +33,7 @@ class Link {
 
     // INFO: fc 18sep26 send() is every subscribed central, send_to() is the one that asked.
     // | 10nov26 Down once that connection is gone, even if its session id came back for another
+    // | 26nov26 send() answers Unsubscribed when centrals are connected but none subscribed
     virtual Status send_to(const events::Peer& peer, events::Endpoint endpoint,
                            ConstByteSpan bytes) = 0;
 
