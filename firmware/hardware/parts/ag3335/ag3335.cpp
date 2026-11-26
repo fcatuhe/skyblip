@@ -21,6 +21,7 @@ void Ag3335::service(uint32_t now_ms) {
             return;
         }
         validity_.reset();
+        satellites_in_view_sent_ = false;
         await(command, now_ms);
         stage_ = ConfigStage::Restarting;
         return;
@@ -62,14 +63,22 @@ void Ag3335::service(uint32_t now_ms) {
             if (now_ms - last_command_ms_ >= (processing_ ? kProcessingWindowMs : kAckWindowMs))
                 retry_command(now_ms);
             break;
+        case ConfigStage::Ready:
+        case ConfigStage::Degraded: pace_satellites_in_view(); break;
         case ConfigStage::Waking:
         case ConfigStage::Verifying:
         case ConfigStage::Confirming:
-        case ConfigStage::Ready:
-        case ConfigStage::Degraded:
         case ConfigStage::Probing:
         case ConfigStage::Resetting: break;
     }
+}
+
+// INFO: fc 26nov26 a set the receiver stopped sending is forgotten, so a zero count means not asked
+void Ag3335::pace_satellites_in_view() {
+    if (satellites_in_view_wanted_ == satellites_in_view_sent_) return;
+    satellites_in_view_sent_ = satellites_in_view_wanted_;
+    send(satellites_in_view_sent_ ? kGsvEverySolution : kGsvOff);
+    if (!satellites_in_view_sent_) parser_.forget_satellites_in_view();
 }
 
 void Ag3335::identify(uint32_t now_ms) {
