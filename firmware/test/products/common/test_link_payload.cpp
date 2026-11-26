@@ -466,6 +466,28 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     CHECK(link.sent.size() == 1);
 }
 
+// The app subscribes before it asks for status, so a push nobody could hear is not owed to anyone.
+TEST_CASE("comms: a status push no central subscribed to is neither counted nor retried") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
+
+    link.subscribe(events::Endpoint::Config, false);
+    config.set_battery_state(full_battery(), power::PowerLevel::Normal);
+    link.subscribe(events::Endpoint::Config, true);
+    for (uint32_t pass = 1; pass <= 100; pass++) config.tick(pass * 10);
+    CHECK(link.sent.empty());
+    CHECK(config.link_drops() == 0);
+
+    config.set_battery_state(full_battery(), power::PowerLevel::Low);
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link_text(link.last().bytes).find("\"command\":\"status\"") != std::string::npos);
+}
+
 // A Bravo's Go subscribes to the peer endpoint alone: bravo-d582 counted 6.7 million drops in 21 h.
 TEST_CASE("comms: a status push no central subscribed to waits without counting a drop each pass") {
     platform::host::Link link;

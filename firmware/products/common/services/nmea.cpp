@@ -264,6 +264,10 @@ void NmeaService::drain() {
             ConstByteSpan(reinterpret_cast<const uint8_t*>(pass_) + pass_sent_,
                           static_cast<size_t>(take)));
         if (sent == Status::WouldBlock) return;
+        if (sent == Status::Unsubscribed) {
+            pass_bytes_ = pass_sent_ = 0;
+            return;
+        }
         if (!is_ok(sent)) {
             abandon_pass();
             return;
