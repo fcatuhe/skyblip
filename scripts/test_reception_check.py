@@ -21,6 +21,7 @@ class Sky:
                          "noise_dbm": -118, "threshold_dbm": -110, "part_mode": "receive",
                          "part_reset": "none", "front_end_kept": True}
         self.reception = {"aircraft": 3, "tracked": 3, "reference": "own", "fix_valid": True}
+        self.loop = {"passes": 104, "worst_pass_us": 8000, "worst_service": "adsb"}
 
     def seconds(self, count, step_s=1, **per_second):
         for _ in range(count):
@@ -41,7 +42,8 @@ class Sky:
         reception = dict(envelope, type="reception",
                          **{field: wide[field] for field in check.WIDE_COUNTERS[2:]},
                          **self.reception)
-        for record in (receiver, reception):
+        loop = dict(envelope, type="loop", **self.loop)
+        for record in (loop, receiver, reception):
             record["index"] = len(self.records)
             self.records.append(record)
 
@@ -86,7 +88,8 @@ class Outages(unittest.TestCase):
         jammed.seconds(20, **HEARING)
         jammed.receiver["noise_dbm"] = -80
         jammed.seconds(15)
-        self.assertIn("noise +38 dB over the run's median", jammed.report())
+        self.assertIn("noise +38 dB over the run's median: jammed", jammed.report())
+        self.assertNotIn("as usual", jammed.report())
 
         quiet = Sky()
         quiet.seconds(20, **HEARING)
@@ -140,6 +143,21 @@ class Outages(unittest.TestCase):
         self.assertIn("session 1: 5 s measured", report)
         self.assertIn("  +550s to 2027-01-15T08:00:04\n", report)
         self.assertNotIn(str(START_S - 550), report)
+
+    def test_a_flood_of_noise_that_stalls_the_loop_is_named_while_frames_keep_coming(self):
+        sky = Sky()
+        sky.seconds(30, **HEARING)
+        sky.receiver["noise_dbm"] = -78
+        sky.loop = {"passes": 7, "worst_pass_us": 561000, "worst_service": "adsb"}
+        sky.seconds(20, frames=1200, part_packets=1200, crc=90, unsupported=900,
+                    frames_dropped=10)
+        report = sky.report()
+        self.assertIn("1 reception outages", report)
+        self.assertIn("noise +40 dB over the run's median: jammed or desensed", report)
+        self.assertIn("1200 frames a second, 20 times the run's median of 60", report)
+        self.assertIn("200 frames lost to a full queue", report)
+        self.assertIn("the service loop stalled: a pass of 561 ms in adsb, as few as 7 passes",
+                      report)
 
 
 class Subtraction(unittest.TestCase):

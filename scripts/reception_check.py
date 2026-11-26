@@ -29,10 +29,12 @@ NARROW_COUNTERS = ("frames_dropped", "rearms", "resets", "part_resets", "command
 MAX_STEP_S = 5
 DETECTION_THRESHOLD_DBM = -110
 NOISE_RISE_DB = 6
+FLOOD_FACTOR = 3
+LOOP_STALL_US = 100_000
 BREAKS = ("gap", "boot")
 
 Second = collections.namedtuple("Second",
-                                "at_s utc elapsed_s stretch receiver reception counts")
+                                "at_s utc elapsed_s stretch receiver reception counts loop")
 
 
 def main(argv=None):
@@ -70,15 +72,18 @@ def seconds_of(records):
     seconds = []
     before = None
     receiver = None
+    loop = None
     stretch = 0
     last_index = None
     for record in records:
         if breaks(record, last_index):
-            before = receiver = None
+            before = receiver = loop = None
         last_index = record["index"]
         if record.get("error") or record["type"] in BREAKS:
             continue
-        if record["type"] == "receiver":
+        if record["type"] == "loop":
+            loop = record
+        elif record["type"] == "receiver":
             receiver = record
         elif record["type"] == "reception" and receiver is not None:
             pair = dict(receiver, **record)
@@ -87,9 +92,9 @@ def seconds_of(records):
             else:
                 seconds.append(Second(pair["at_s"], pair.get("utc_dated", False),
                                       pair["at_s"] - before["at_s"], stretch, receiver, record,
-                                      counts(before, pair)))
+                                      counts(before, pair), loop))
             before = pair
-            receiver = None
+            receiver = loop = None
     return seconds
 
 
@@ -122,13 +127,14 @@ def report(session, seconds, min_seconds):
         return lines
     noise = [second.receiver["noise_dbm"] for second in seconds if "noise_dbm" in second.receiver]
     floor = statistics.median(noise) if noise else None
+    usual = statistics.median(rate(second, "frames") for second in seconds)
     lines += whole_run(seconds, floor)
     outages = silences(seconds, min_seconds)
     blind = unexported(seconds, min_seconds)
     lines.append("%d reception outages of %d s or more, %d stretches with traffic and no fix"
                  % (len(outages), min_seconds, len(blind)))
     for run in outages:
-        lines.append(describe(run, "no position placed", verdicts(run, floor)))
+        lines.append(describe(run, "no position placed", verdicts(run, floor, usual)))
     for run in blind:
         lines.append(describe(run, "traffic placed, no own fix, so nothing reached an EFB", []))
     return lines
@@ -194,11 +200,17 @@ def duration(run):
     return sum(second.elapsed_s for second in run)
 
 
-def verdicts(run, floor):
+def rate(second, field):
+    return second.counts.get(field, 0) / second.elapsed_s
+
+
+def verdicts(run, floor, usual):
     total = collections.Counter()
     for second in run:
         total.update(second.counts)
     probed = [second.receiver for second in run if second.receiver.get("probed")]
+    noise = [receiver["noise_dbm"] for receiver in probed if "noise_dbm" in receiver]
+    rise = statistics.median(noise) - floor if noise and floor is not None else 0
     found = []
     resets = [receiver["part_reset"] for receiver in probed
               if receiver.get("part_reset", "none") != "none"]
@@ -224,15 +236,18 @@ def verdicts(run, floor):
                      % total["part_packets"])
     if total["missed_edges"]:
         found.append("%d wakes found frames with no IRQ edge" % total["missed_edges"])
-    if total["frames"] == 0 and total["part_packets"] == 0:
-        noise = [receiver["noise_dbm"] for receiver in probed if "noise_dbm" in receiver]
-        rise = statistics.median(noise) - floor if noise and floor is not None else 0
-        if rise >= NOISE_RISE_DB:
-            found.append("nothing decoded, noise %+d dB over the run's median: jammed or desensed"
-                         % rise)
-        elif not found:
-            found.append("nothing decoded and the noise as usual: the antenna, the front end or "
-                         "an empty sky")
+    if rise >= NOISE_RISE_DB:
+        found.append("noise %+d dB over the run's median: jammed or desensed" % rise)
+    frames_per_s = total["frames"] / duration(run)
+    if usual and frames_per_s >= FLOOD_FACTOR * usual:
+        found.append("%d frames a second, %d times the run's median of %d: noise past the "
+                     "preamble detector" % (frames_per_s, frames_per_s / usual, usual))
+    if total["frames_dropped"]:
+        found.append("%d frames lost to a full queue" % total["frames_dropped"])
+    found += stalls(run)
+    if total["frames"] == 0 and total["part_packets"] == 0 and not found:
+        found.append("nothing decoded and the noise as usual: the antenna, the front end or "
+                     "an empty sky")
     if total["frames"] and total["crc"] >= total["frames"] - total["unsupported"]:
         found.append("%d frames heard, every one refused for parity" % total["frames"])
     if total["folded"] and not total["positions"]:
@@ -244,6 +259,18 @@ def verdicts(run, floor):
     if references:
         found.append("Bravo had no position to place traffic against (reference none)")
     return found
+
+
+def stalls(run):
+    loops = [second.loop for second in run if second.loop]
+    if not loops:
+        return []
+    worst = max(loops, key=lambda loop: loop["worst_pass_us"])
+    if worst["worst_pass_us"] < LOOP_STALL_US:
+        return []
+    return ["the service loop stalled: a pass of %d ms in %s, as few as %d passes a second"
+            % (worst["worst_pass_us"] // 1000, worst.get("worst_service", "?"),
+               min(loop["passes"] for loop in loops))]
 
 
 def describe(run, what, found):
