@@ -127,6 +127,21 @@ class Outages(unittest.TestCase):
         self.assertIn("10 s: no position placed", report)
 
 
+    def test_a_capture_dated_from_boot_then_by_utc_is_timed_by_what_it_measured(self):
+        sky = Sky()
+        sky.records[0]["utc_dated"] = False
+        sky.at_s = 548
+        sky.seconds(3, **HEARING)
+        for record in sky.records:
+            record["utc_dated"] = False
+        sky.at_s = START_S
+        sky.seconds(4, **HEARING)
+        report = sky.report()
+        self.assertIn("session 1: 5 s measured", report)
+        self.assertIn("  +550s to 2027-01-15T08:00:04\n", report)
+        self.assertNotIn(str(START_S - 550), report)
+
+
 class Subtraction(unittest.TestCase):
 
     def test_a_counter_crossing_its_wrap_still_counts_what_happened(self):

@@ -138,8 +138,7 @@ def whole_run(seconds, floor):
     total = collections.Counter()
     for second in seconds:
         total.update(second.counts)
-    span = seconds[-1].at_s - seconds[0].at_s
-    lines = ["  %s to %s, %d s" % (stamp(seconds[0]), stamp(seconds[-1]), span)]
+    lines = ["  %s to %s" % (stamp(seconds[0]), stamp(seconds[-1]))]
     lines.append("  frames %d, crc %d, unsupported %d, folded %d, positions %d"
                  % tuple(total[field] for field in ("frames", "crc", "unsupported", "folded",
                                                     "positions")))
