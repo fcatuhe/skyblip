@@ -1,5 +1,7 @@
 # Actions ride their major tag (actions/checkout@v7), and Dependabot opens the
-# PR when a new major ships. The repo's own scripts are stdlib-only Python.
+# PR when a new major ships. A job that holds a secret pins each action to a
+# commit with its version beside it, which Dependabot rewrites on each release.
+# The repo's own scripts are stdlib-only Python.
 #
 # Every upstream is watched here. One with no manifest a resolver understands,
 # emsdk, the vendored doctest and the Zephyr in west.yml, is named as a step in
