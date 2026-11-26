@@ -88,6 +88,12 @@ test('a capture opened before the unit clock wrapped started as long before as t
   assert.equal(captureOf(dump, Date.UTC(2026, 10, 25, 17)).startedAt, Date.UTC(2026, 10, 25, 17) - 167296);
 });
 
+// A capture takes the next second when an earlier capture on the unit holds the one it opened in.
+test('a capture named a second ahead of the unit clock started as the dump was read, not a wrap ago', () => {
+  const dump = { system: { uptime_s: 10 }, capture: { armed: true, profile: 'full', session: 11 } };
+  assert.equal(captureOf(dump, Date.UTC(2026, 10, 25, 17)).startedAt, Date.UTC(2026, 10, 25, 17));
+});
+
 test('a capture opened with the time started at the UTC second that names its session', () => {
   const dump = { system: { uptime_s: 4000 }, capture: { armed: true, profile: 'full', session: 1795969080 } };
   assert.equal(captureOf(dump, Date.UTC(2026, 10, 25, 17)).startedAt, 1795969080 * 1000);

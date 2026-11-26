@@ -134,11 +134,12 @@ export function captureOf(dump, now = Date.now()) {
   };
 }
 
-// INFO: fc 25nov26 a session is named by the UTC second it opened, or by the second since boot, which wraps with the 32-bit millisecond clock
+// INFO: fc 25nov26 a session is named by the UTC second it opened, or by the second since boot, which wraps with the 32-bit millisecond clock | 26nov26 or a few seconds ahead, past seconds earlier captures hold
 function startedAtOf(session, uptime, now) {
   if (uptime === undefined) return null;
   if (session >= BOOT_SECONDS_WRAP) return session * 1000;
-  return now - Math.round(((uptime - session + BOOT_SECONDS_WRAP) % BOOT_SECONDS_WRAP) * 1000);
+  const since = (uptime - session + BOOT_SECONDS_WRAP) % BOOT_SECONDS_WRAP;
+  return now - (since > BOOT_SECONDS_WRAP / 2 ? 0 : Math.round(since * 1000));
 }
 
 function percentOf({ sent, total }) {
