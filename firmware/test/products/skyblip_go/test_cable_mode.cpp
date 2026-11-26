@@ -24,6 +24,17 @@ void pull_cable_for(Rig& rig, uint32_t span_ms) {
     rig.run_for(span_ms, 1000);
 }
 
+void install_with_the_cable_pulled(Rig& before) {
+    store_power_switch(before, power::Switch::Cable);
+    stage_versions(before);
+    before.platform.battery().external_power = true;
+    REQUIRE(before.setup() == Status::Ok);
+    before.run_for(5000);
+    before.platform.battery().external_power = false;
+    install_and_swap(before);
+    REQUIRE(before.platform.dfu().triggered == 1);
+}
+
 }  // namespace
 
 TEST_CASE("product: in cable mode a cable gone for the hold switches the Go off for the cable" *
@@ -136,14 +147,7 @@ TEST_CASE("product: in cable mode an update under way holds the countdown until 
 // An install restarts the Go, so the new image never saw the cable the old one followed.
 TEST_CASE("product: in cable mode the boot after an install switches off without the cable") {
     Rig before;
-    store_power_switch(before, power::Switch::Cable);
-    stage_versions(before);
-    before.platform.battery().external_power = true;
-    REQUIRE(before.setup() == Status::Ok);
-    before.run_for(5000);
-    before.platform.battery().external_power = false;
-    install_and_swap(before);
-    REQUIRE(before.platform.dfu().triggered == 1);
+    install_with_the_cable_pulled(before);
 
     Rebooted after(before, kStaged, /*confirmed=*/false);
     after.rig.platform.system_power().causes = power::ResetCause::Software;
@@ -153,6 +157,22 @@ TEST_CASE("product: in cable mode the boot after an install switches off without
     CHECK_FALSE(after.rig.product.shutdown().going_down());
 
     pull_cable_for(after.rig, 20000);
+    CHECK(after.rig.product.shutdown().reason() == power::ShutdownReason::CableGone);
+}
+
+// A new image that fails its self test serves nothing, and would otherwise drain the cell.
+TEST_CASE("product: in cable mode a boot after an install that cannot fly switches off too") {
+    Rig before;
+    install_with_the_cable_pulled(before);
+
+    constexpr ports::Capabilities kNoGnss = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
+        ~static_cast<uint32_t>(ports::Capability::Gnss));
+    Rebooted after(before, kStaged, /*confirmed=*/false, std::nullopt, kNoGnss);
+    after.rig.platform.system_power().causes = power::ResetCause::Software;
+    REQUIRE(after.rig.setup() == Status::Down);
+    REQUIRE_FALSE(after.rig.product.flyable());
+    pull_cable_for(after.rig, power::kCableGoneHoldMs + 10000);
     CHECK(after.rig.product.shutdown().reason() == power::ShutdownReason::CableGone);
 }
 

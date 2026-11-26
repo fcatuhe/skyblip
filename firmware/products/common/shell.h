@@ -45,6 +45,9 @@ class Shell {
     }
 
     Status start(Status board) {
+        // INFO: fc 25nov26 an install restarts the unit, so the image it boots never saw the cable
+        if (product_.config_link_.config().image_state() != dfu::ImageState::Confirmed)
+            cable_.arm();
         if (board != Status::Ok) return board;
         if (!flyable_) return Status::Down;
         if (reset_reason_ == power::ResetReason::LowPowerWake ||
@@ -52,9 +55,6 @@ class Shell {
             product_.alarm_.sign_on();
         const Status loop = product_.loop_.setup();
         product_.state_.started = loop == Status::Ok;
-        // INFO: fc 25nov26 an install restarts the unit, so the image it boots never saw the cable
-        if (product_.config_link_.config().image_state() != dfu::ImageState::Confirmed)
-            cable_.arm();
         return loop;
     }
 

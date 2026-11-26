@@ -69,7 +69,9 @@ inline void install_and_swap(Rig& rig) {
 struct Rebooted {
     Rig rig;
     Rebooted(Rig& before, ports::ImageVersion running, bool confirmed,
-             std::optional<ports::ImageVersion> slot1 = std::nullopt) {
+             std::optional<ports::ImageVersion> slot1 = std::nullopt,
+             ports::Capabilities fitted = platform::host::Platform::kFullyFitted)
+        : rig(fitted) {
         rig.platform.key_value() = before.platform.key_value();
         rig.platform.dfu().running_version_valid = true;
         rig.platform.dfu().running_image_version = running;
