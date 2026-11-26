@@ -260,6 +260,12 @@ bool SectorAllocator::session_sector(SectorOwner owner, uint32_t session_id, uin
     return false;
 }
 
+uint32_t SectorAllocator::unused_session_id(SectorOwner owner, uint32_t wanted) const {
+    uint32_t session_id = wanted;
+    while (owns_session(owner, session_id)) session_id++;
+    return session_id;
+}
+
 bool SectorAllocator::choose(SectorOwner owner, uint32_t& sector) const {
     if (next_free(sector)) return true;
     if (owner == SectorOwner::Flights) {

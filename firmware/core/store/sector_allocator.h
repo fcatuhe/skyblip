@@ -80,6 +80,7 @@ class SectorAllocator {
     bool session_run(SectorOwner owner, uint32_t above_sequence, SessionRun& run) const;
     bool session_sector(SectorOwner owner, uint32_t session_id, uint32_t index,
                         uint32_t& sector) const;
+    uint32_t unused_session_id(SectorOwner owner, uint32_t wanted) const;
 
    private:
     struct Spare {
