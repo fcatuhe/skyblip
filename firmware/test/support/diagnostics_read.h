@@ -389,6 +389,8 @@ inline bool read(const Record& record, Reception& out) {
     out.aircraft = record.payload[reception_at::kAircraft];
     out.tracked = record.payload[reception_at::kTracked];
     out.reference = static_cast<comms::ExportReference>(record.payload[reception_at::kReference]);
+    out.framing_resyncs = record.payload[reception_at::kFramingResyncs];
+    out.impossible_formats = wire::get_uint16(record.payload + reception_at::kImpossibleFormats);
     out.fix_valid = record.flagged(kReceptionFlagFixValid);
     return true;
 }

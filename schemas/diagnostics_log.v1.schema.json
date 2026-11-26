@@ -390,6 +390,10 @@
                         "description": "reception. adsb records the capture's budget refused since boot, the low 16 bits, payload bytes 8-9. Readers subtract. A rise means adsb records are missing that the sky sent"},
     "aircraft": {"type": "integer", "minimum": 0, "maximum": 255,
                  "description": "reception. Aircraft the ADS-B assembly holds this second, payload byte 10"},
+    "framing_resyncs": {"type": "integer", "minimum": 0, "maximum": 255,
+                        "description": "reception. Times the LR2021 driver found bytes in the receive FIFO that belong to no frame the part counted, and emptied it, since boot, the low 8 bits, payload byte 13. Readers subtract. Without it one stray byte shifts every later frame and nothing decodes until a reboot"},
+    "impossible_formats": {"type": "integer", "minimum": 0, "maximum": 65535,
+                           "description": "reception. Frames whose downlink format no transponder sends (DF1-3, 6-10, 12-15) since boot, the low 16 bits, payload bytes 14-15. Readers subtract. They are noise past the preamble detector, and times 32/12 they estimate the false alarms the detection threshold is regulated on"},
     "reference": {"type": "string", "enum": ["none", "go", "own"],
                   "description": "reception. The position Bravo places traffic against, payload byte 12: go, its Go's from a fresh claim, own, its own fix, or none, so it exports nothing to its Go. Codes: 0 none, 1 go, 2 own"}
   },

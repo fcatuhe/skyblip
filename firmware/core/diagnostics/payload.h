@@ -311,6 +311,8 @@ struct Reception {
     uint32_t capture_refused{0};
     uint32_t aircraft{0};
     uint32_t tracked{0};
+    uint32_t framing_resyncs{0};
+    uint32_t impossible_formats{0};
     comms::ExportReference reference{comms::ExportReference::None};
     bool fix_valid{false};
 };

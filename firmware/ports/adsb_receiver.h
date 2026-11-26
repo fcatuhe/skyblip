@@ -50,6 +50,7 @@ struct AdsbReceiverStatistics {
     uint16_t device_errors{0};
     uint32_t missed_edges{0};
     uint32_t part_resets{0};
+    uint32_t framing_resyncs{0};
     // INFO: fc 21nov26 false means the thread polls every 200 us, since the IRQ edge never armed
     bool irq_armed{false};
     ReceiverProbe probe{};
@@ -88,6 +89,8 @@ class AdsbReceiver {
     virtual AdsbReceiverStatistics statistics() const = 0;
     // INFO: fc 11nov26 armed on 1090 MHz: false before begin(), through a reset, once parked
     virtual bool listening() const = 0;
+    // INFO: fc 26nov26 applied by whoever owns the part's bus, so it may land a pass later
+    virtual void set_detection_threshold(int16_t dbm) = 0;
     // INFO: fc 11nov26 terminal like ports::Rf::sleep(): parked() turns true only once the part
     // confirmed its sleep
     virtual void sleep() = 0;

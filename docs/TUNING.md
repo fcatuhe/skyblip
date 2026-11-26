@@ -285,6 +285,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kFalseAlarmWindowMs` | 5000 (5 s) | milliseconds | Window | five seconds hold 800 false alarms at the ceiling, enough to tell the edges |
+| `kFrameAirtimeUs` | 120 | microseconds | - | a false trigger holds the packet handler for a frame's 120 us of airtime |
 | `kFlashPassCeilingMs` | `events::kAdsbQueueDrainWindowMs / 2` = 50 | milliseconds | Ceiling | the ADS-B queue holds the design load for its drain window, so flash takes half |
 | `kClaimMaxAgeMs` | 4000 (4 s) | milliseconds | MaxAge | a fix period, a second of unknown phase and two claim periods, one lost |
 | `kTargetUpdateFloorMs` | 500 | milliseconds | Floor | schemas/link.v1.json observation: two frames a second for a target at most |
@@ -438,4 +440,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-293 constants over 26 folders.
+295 constants over 26 folders.

@@ -179,6 +179,9 @@ Record record_of(const Reception& value, const Instant& at) {
     record.payload[reception_at::kAircraft] = clamped<uint8_t>(value.aircraft);
     record.payload[reception_at::kTracked] = clamped<uint8_t>(value.tracked);
     record.payload[reception_at::kReference] = static_cast<uint8_t>(value.reference);
+    record.payload[reception_at::kFramingResyncs] = static_cast<uint8_t>(value.framing_resyncs);
+    wire::put_uint16(record.payload + reception_at::kImpossibleFormats,
+                     static_cast<uint16_t>(value.impossible_formats));
     set_flag(record.flags, kReceptionFlagFixValid, value.fix_valid);
     return record;
 }

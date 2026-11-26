@@ -127,12 +127,14 @@ Bravo writes one `Receiver` and one `Reception` each second of a `Full` capture,
 | `part_reset` `power_on`, with `front_end_kept` false and `threshold_dbm` not -110 | the part reset itself, from a brown-out or its rail, and lost its 1090 MHz configuration. `resets` rises a second later, when the driver brings it up again |
 | `part_mode` anything but `receive` while `listening` | the part left receive and the driver did not notice |
 | `part_packets` rising while `frames` does not | the part decodes frames that never reach the driver: a lost IRQ edge or a FIFO read |
+| `framing_resyncs` rising, in `reception` | the FIFO held bytes no frame owns, and the driver emptied it rather than read frames shifted across two |
+| `threshold_dbm` moving between -110 and -92 dBm | the detection threshold regulating the false-alarm rate, not a fault |
 | `missed_edges` rising | frames found on a timed wake, with no IRQ edge to wake the thread |
 | `noise_dbm` well above its usual floor | the band is jammed or the front end desensed |
 | `frames` rising, `crc` rising as fast | frames heard and refused, as #277 measured on the bench |
 | `rearms` or `resets` rising | the driver's own recovery ran, after 30 s of silence or a fault |
 
-`Reception` carries `AdsbService`'s counters: `crc`, `unsupported`, `folded`, `positions` and `capture_refused`, then the aircraft the assembly holds, those the table holds, `reference`, the position the traffic is placed against, and `fix_valid`, flag bit 2. Bravo's NMEA sends no traffic without a fix, and its peer link exports none while `reference` is `none`, so an EFB can lose every target while the receiver hears them all.
+`Reception` carries `AdsbService`'s counters: `crc`, `unsupported`, `folded`, `positions` and `capture_refused`, then the aircraft the assembly holds, those the table holds, `reference`, the position the traffic is placed against, and `fix_valid`, flag bit 2. `framing_resyncs` counts the times the LR2021 driver found bytes in its FIFO that no counted frame owns and emptied it (`../../hardware/parts/lr2021/README.md`, Framing). `impossible_formats` counts the frames whose downlink format no transponder sends, the noise the detection threshold is regulated on. Bravo's NMEA sends no traffic without a fix, and its peer link exports none while `reference` is `none`, so an EFB can lose every target while the receiver hears them all.
 
 ### The transmitter
 

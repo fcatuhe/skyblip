@@ -374,6 +374,8 @@ Reception reception() {
     value.aircraft = 12;
     value.tracked = 9;
     value.reference = comms::ExportReference::Own;
+    value.framing_resyncs = 2;
+    value.impossible_formats = 345;
     value.fix_valid = true;
     return value;
 }

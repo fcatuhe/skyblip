@@ -25,6 +25,22 @@ Bravo runs no `TrafficService`: 1090 MHz is its only source, so `AdsbService` ow
 
 A pass decodes at most `kFramesPerPassCeiling` frames, `events::kAdsbLoadFrames`, a drain window's design load, and comes back on the next pass while the queue holds more. The radio thread refills the queue while the loop drains it, so before the ceiling a flood of noise kept one pass decoding: on bravo-d582, 1000 to 1500 frames a second held a pass up to 561 ms and the loop fell to 7 passes a second. A flood now costs frames, counted in the queue's drops, and never the loop.
 
+## The detection threshold
+
+1090ES has only a four-pulse preamble, so the LR2021's detector fires on noise as well as on squitters, and every false alarm holds the packet handler for a frame's airtime and costs FIFO and decoder time. A fixed threshold fits one place. #293 picked -110 dBm on an indoor bench, below the -95 to -103 dBm floor bravo-d582 measured indoors, and outdoors with a clear sky the same unit took 1000 to 1500 frames a second of noise and decoded nothing (#550). cb-tfc settled on about -98 dBm after a soak at a window (`c07610c`), and RadioLib's ADS-B example sets the floor measured at boot plus 10 dB. ADSBee 1090 holds its comparator a fixed margin above a tracked noise floor, and chose the margin that decodes the most valid frames (`PantsForBirds/adsbee` #287, #356): a trigger too low lost 19 to 64% of valid frames to noise.
+
+So `DetectionThreshold` (`detection_threshold.h`) holds the false-alarm rate in a band, as radar CFAR does, and measures it where no aircraft can be. Noise past the preamble names a downlink format at random, and no transponder sends DF1 to DF3, DF6 to DF10 or DF12 to DF15, so frames in those 12 of the 32 codes are noise, and times 32/12 they estimate every false alarm. The estimate needs no RSSI calibration and counts exactly the load that broke the chain.
+
+| Rule | Value | Why |
+|---|---|---|
+| Band ceiling | `kFalseAlarmCeilingHz`, 166 a second | `kOccupancyCeilingPermille`, 2% of the detector given to noise, at `kFrameAirtimeUs`, 120 us a false alarm |
+| Band floor | `kFalseAlarmFloorHz`, 20 a second | an eighth of the ceiling, so one step does not cross the band |
+| Window | `kFalseAlarmWindowMs`, 5 s | |
+| Step | `kStepDb`, 1 dB a window, and `kFloodStepDb`, 3 dB, while the noise is over `kFloodFactor`, four times the ceiling | a flood leaves the band in a few windows, and a quiet band brings the threshold down a dB at a time |
+| Range | `kFloorDbm` -110 to `kCeilingDbm` -92 dBm | #293's indoor pick, and 2 dB under where cb-tfc's soak heard nothing |
+
+Inside the band nothing moves, so a quiet sky keeps -110 dBm and the weakest aircraft #293 found. `AdsbService` measures each window and asks `ports::AdsbReceiver::set_detection_threshold()` for a new value. The probe reads it back, so `receiver.threshold_dbm` in a capture shows the regulation, and `reception.impossible_formats` the noise it acted on. The band is chosen by argument, not measured. A bench run alternating thresholds a second at a time, as ADSBee's learner does, can set it from the valid frames decoded.
+
 ## The GNSS rate
 
 Bravo asks its AG3335 for one solution a second, `kSolutionRate` in `product.h`, because it transmits nothing and no ADS-L clause dates its position to a quarter second. Its flight log, its EFB sentences and its ADS-B gate read one position a second, as on the Go. The AG3335 driver solves only at that rate, and `common::solution_rate_serves` refuses at compile time a product that asks for more (`../../hardware/parts/ag3335/README.md`).

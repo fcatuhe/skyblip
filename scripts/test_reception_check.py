@@ -159,6 +159,18 @@ class Outages(unittest.TestCase):
         self.assertIn("the service loop stalled: a pass of 561 ms in adsb, as few as 7 passes",
                       report)
 
+    def test_lost_framing_and_a_regulated_threshold_are_named_and_not_taken_for_a_reset(self):
+        sky = Sky()
+        sky.seconds(20, **HEARING)
+        sky.seconds(1, framing_resyncs=1, frames=60, part_packets=60, unsupported=50)
+        sky.receiver["threshold_dbm"] = -104
+        sky.seconds(14, frames=60, part_packets=60, unsupported=50)
+        report = sky.report()
+        self.assertIn("the receive FIFO lost its framing and was emptied 1 time\n", report)
+        self.assertIn("the detection threshold moved from -110 to -104 dBm", report)
+        self.assertIn("detection threshold -110 to -104 dBm", report)
+        self.assertNotIn("lost what the driver wrote", report)
+
 
 class Subtraction(unittest.TestCase):
 

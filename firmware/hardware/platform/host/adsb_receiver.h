@@ -60,6 +60,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics.device_errors = radio_.device_errors();
         statistics.dropped = radio_.fifo_drops() + out_.dropped();
         statistics.part_resets = radio_.part_resets();
+        statistics.framing_resyncs = radio_.framing_resyncs();
         statistics.probe = probe_;
         return statistics;
     }
@@ -78,6 +79,11 @@ class AdsbReceiver : public ports::AdsbReceiver {
     }
 
     bool parked() const override { return parked_; }
+
+    void set_detection_threshold(int16_t dbm) override {
+        if (stopped_) return;
+        (void)radio_.set_detection_threshold(dbm);
+    }
 
     bool listening() const override {
         return started_ && !stopped_ && radio_.mode() == parts::Lr2021Mode::Receive;

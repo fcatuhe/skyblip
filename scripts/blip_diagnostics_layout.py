@@ -313,6 +313,8 @@ TYPES = (
         {"name": "aircraft", "kind": "u8", "at": 10},
         {"name": "tracked", "kind": "u8", "at": 11},
         {"name": "reference", "kind": "enum8", "at": 12, "enum": "export_reference"},
+        {"name": "framing_resyncs", "kind": "u8", "at": 13},
+        {"name": "impossible_formats", "kind": "u16", "at": 14},
         {"name": "fix_valid", "kind": "flag", "bit": 2},
     )),
 )

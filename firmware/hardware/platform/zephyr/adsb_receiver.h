@@ -32,7 +32,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
           clock_(clock),
           irq_(irq),
           out_(out),
-          detection_threshold_dbm_(detection_threshold_dbm) {
+          detection_threshold_dbm_(detection_threshold_dbm),
+          threshold_wanted_dbm_(detection_threshold_dbm) {
         k_sem_init(&wake_, 0, 1);
     }
 
@@ -85,6 +86,11 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     bool listening() const override { return listening_; }
 
+    void set_detection_threshold(int16_t dbm) override {
+        threshold_wanted_dbm_ = dbm;
+        k_sem_give(&wake_);
+    }
+
     // INFO: fc 11nov26 GPIO only: a thread aborted inside a transfer keeps the SPI lock, so no SPI
     // follows
     void abandon() override {
@@ -113,6 +119,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
                 park();
                 return;
             }
+            apply_threshold();
             const uint32_t drained = drain();
             // INFO: fc 26nov26 RxDone held the line high with no edge seen, so frames waited a tick
             if (!edge && irq_wakes_ && drained != 0) missed_edges_++;
@@ -151,6 +158,13 @@ class AdsbReceiver : public ports::AdsbReceiver {
             irq_wakes_ = irq_wakes_ && arm_irq();
     }
 
+    // INFO: fc 26nov26 the loop asks and this thread, which owns the SPI, writes it between drains
+    void apply_threshold() {
+        const int16_t wanted = threshold_wanted_dbm_;
+        if (wanted == radio_.detection_threshold_dbm()) return;
+        (void)radio_.set_detection_threshold(wanted);
+    }
+
     void probe() {
         const uint64_t now_us = clock_.microseconds();
         if (now_us - probed_us_ < kProbePeriodUs) return;
@@ -162,6 +176,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         k_sched_lock();
         statistics_.missed_edges = missed_edges_;
         statistics_.part_resets = radio_.part_resets();
+        statistics_.framing_resyncs = radio_.framing_resyncs();
         statistics_.probe = probe_;
         statistics_.rearms = radio_.rearms();
         statistics_.resets = radio_.resets();
@@ -197,6 +212,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     volatile bool parked_{false};
     volatile bool stopped_{false};
     volatile bool listening_{false};
+    volatile int16_t threshold_wanted_dbm_;
     struct k_thread thread_{};
     k_tid_t thread_id_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackBytes);

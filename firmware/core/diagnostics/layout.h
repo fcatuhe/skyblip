@@ -461,6 +461,8 @@ enum : uint32_t {
     kAircraft = 10,
     kTracked = 11,
     kReference = 12,
+    kFramingResyncs = 13,
+    kImpossibleFormats = 14,
 };
 }
 

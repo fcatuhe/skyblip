@@ -32,7 +32,13 @@ void AdsbService::tick(uint32_t now_ms) {
     const uint32_t now_s = state.traffic_now_s(now_ms);
     state.traffic.age_out(now_s);
     state.callsigns.age_out(now_s);
+    regulate_threshold(now_ms);
     record_second(gate, now_ms);
+}
+
+void AdsbService::regulate_threshold(uint32_t now_ms) {
+    if (!threshold_.update(DetectionThreshold::impossible_of(formats_), now_ms)) return;
+    receiver_.set_detection_threshold(threshold_.threshold_dbm());
 }
 
 // INFO: fc 26nov26 a pair every second whatever the sky does, so a silent receiver still records
@@ -45,8 +51,8 @@ void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     recorded_ = true;
     recorded_ms_ = now_ms;
     const diagnostics::Instant at = context_.instant(now_ms);
-    context_.diagnostics.record(
-        diagnostics::receiver_of(receiver_.statistics(), receiver_.listening()), at);
+    const ports::AdsbReceiverStatistics statistics = receiver_.statistics();
+    context_.diagnostics.record(diagnostics::receiver_of(statistics, receiver_.listening()), at);
     diagnostics::Reception reception{};
     reception.crc = crc_;
     reception.unsupported = unsupported_;
@@ -57,6 +63,8 @@ void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     reception.tracked = static_cast<uint32_t>(context_.state.traffic.count());
     reception.reference = gate.reference;
     reception.fix_valid = context_.state.own.fix_valid;
+    reception.framing_resyncs = statistics.framing_resyncs;
+    reception.impossible_formats = DetectionThreshold::impossible_of(formats_);
     context_.diagnostics.record(reception, at);
 }
 
