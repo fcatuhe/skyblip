@@ -34,6 +34,42 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal %w[REFUSED0], review.stranded[:latest].pluck(:browser)
   end
 
+  # Insights left out the setup over USB, where 15 of 22 browsers that opened the port chooser in a week never picked a port.
+  test "setups over USB count the browsers that reached each step, the notices they read and why they moved to a phone" do
+    journey "CLOSED00", "installer.stepped", 9.minutes.ago, phase: "choosing_port"
+    journey "CLOSED00", "installer.noticed", 8.minutes.ago, key: "port_closed"
+    journey "CLOSED00", "installer.stepped", 7.minutes.ago, phase: "choosing_port"
+    journey "CLOSED00", "installer.noticed", 6.minutes.ago, key: "port_closed"
+    journey "PHONE000", "installer.stepped", 9.minutes.ago, phase: "choosing_port"
+    journey "PHONE000", "installer.port_chosen", 8.minutes.ago, firmware: "meshtastic"
+    journey "PHONE000", "installer.drive_chosen", 7.minutes.ago, product: "go"
+    journey "PHONE000", "installer.wrote", 6.minutes.ago, product: "go"
+    journey "PHONE000", "installer.handed_off", 5.minutes.ago, cause: "adapter"
+    journey "DONE0000", "installer.stepped", 9.minutes.ago, phase: "choosing_port"
+    journey "DONE0000", "installer.port_chosen", 8.minutes.ago, firmware: "bootloader"
+    journey "DONE0000", "installer.drive_chosen", 7.minutes.ago, product: "go"
+    journey "DONE0000", "installer.wrote", 6.minutes.ago, product: "go"
+    journey "DONE0000", "installer.finished", 5.minutes.ago, kind: "go"
+
+    review = Event::Review.new
+
+    assert_equal({ started: 3, port_chosen: 2, drive_chosen: 2, wrote: 2, finished: 1 }, review.setups[:browsers])
+    assert_equal({ "port_closed" => 2 }, review.setups[:noticed])
+    assert_equal({ "adapter" => 1 }, review.setups[:handed_off])
+    assert_equal [ 3, 1 ], review.headline.values_at(:setups_started, :setups_finished)
+  end
+
+  test "a setup that stopped on a notice leaves its browser stranded, and one that went on after it does not" do
+    journey "CLOSED00", "installer.noticed", 3.minutes.ago, key: "port_closed"
+    journey "RETRIED0", "installer.noticed", 3.minutes.ago, key: "port_closed"
+    journey "RETRIED0", "installer.port_chosen", 2.minutes.ago, firmware: "bootloader"
+
+    stranded = Event::Review.new.stranded
+
+    assert_equal({ "installer.noticed port_closed" => 1 }, stranded[:by_reason])
+    assert_equal %w[CLOSED00], stranded[:latest].pluck(:browser)
+  end
+
   test "installs count those started, those that came back on the new version, and the causes of those that did not" do
     journey "BROWSER0", "device.task_started", 30.minutes.ago, task: "install"
     journey "BROWSER0", "device.task_started", 20.minutes.ago, task: "install"

@@ -4,7 +4,8 @@ class GetInsightsTool < ApplicationTool
   description "The numbers skyBlip keeps on its own use over the last days, against the period before: browsers that reach " \
               "the briefing app and those with no Bluetooth, devices connected and how long it takes, links dropped mid-task, " \
               "device choosers closed empty, the notices pilots read, tasks granted and refused, installs started, succeeded " \
-              "and failed by cause, the firmware the fleet runs, activations, the browsers whose last step was a failure, " \
+              "and failed by cause, setups over USB by the browsers that reached each step, the firmware the fleet runs, " \
+              "activations, the browsers whose last step was a failure, " \
               "errors, slow requests, failing jobs, agents' calls by tool beside the sessions they opened, and the same for the public MCP server that reads the website, connectors. Read it to find what to improve, and again after a change."
   input_schema properties: {
     days: { type: "integer", enum: Event::Review::PERIODS, description: "The period, #{Event::Review::PERIODS.first} unless said" }
