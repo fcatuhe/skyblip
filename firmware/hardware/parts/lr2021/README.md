@@ -39,6 +39,7 @@ SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and
 | WriteRegMemMask32 | 0xF30E14, mask 0x07F00000, the threshold | SoftRF `:2350`, `lr20xx_workarounds.c` for the register and field, DS 22.1 for the order |
 | WriteRegMemMask32 | 0xF30150, mask 0x000000FF, data 0x18 | SoftRF `:2359`. #293 measured it against 0x75, the part's own |
 | GetErrors | | DS 6.7.4 |
+| GetStatus | | DS 6.7.1: clears the reset source the NRESET pulse left, so a later one is a reset the driver never asked for |
 
 `start_receive()` sends SetRxPath, SetDioIrqConfig with RxDone alone on the IRQ DIO, ClearIrq and SetRx with timeout 0xFFFFFF, continuous receive (DS 6.3.5): the part keeps listening after each frame.
 
@@ -80,6 +81,22 @@ The thread sleeps on the IRQ's rising edge. If the GPIO driver refuses the trigg
 
 The driver leaves out RadioLib's DC-DC workaround, `setDCDCworkaround()` (`67d7121`, #1864), as SoftRF does: neither selects the DC-DC converter, and SetRegMode's default is SIMO_OFF, the LDOs (DS 6.3.18).
 
+## The probe
+
+`sample()` asks the part about itself, and both adapters call it once a second while it receives. Every command is a read, and none leaves receive:
+
+| Command | What it gives | Source |
+|---|---|---|
+| GetRssiInst | the level at 1090 MHz as NSS rises, the noise floor when no frame is on the air, in half-dB steps | DS 7.3.3 |
+| GetOokRxStats | `pkt_rx`, the packets the part counted itself since its last power-on, reset or cold sleep | DS 16.3.6 |
+| GetErrors | the error bits now, not only at bring-up | DS 6.7.4 |
+| ReadRegMem32 at 0xF30E14 | the detection threshold the part holds, a 7-bit two's complement field less 74 | DS 6.2.3, `lr20xx_workarounds.c` |
+| ReadRegMem32 at 0xF30150 | whether the low byte still holds the 0x18 the driver wrote | DS 6.2.3 |
+
+The status word that opens every SPI frame gives the chip mode in bits 2:0 and the reset source in bits 7:4 (DS 6.7.1, table 6-38). Bring-up ends on GetStatus, which clears the reset source, so a probe that reads one counts it in `part_resets()` and clears it again. A brown-out resets the part as a power-on does (`Analog (POR/BRN)`), and the part comes back in STDBY_RC without its OOK modem, its threshold or its 0xF30150 byte. The probe reports all three, and `ports::ReceiverProbe` carries them to a capture (`../../../core/diagnostics/README.md`, The receiver and reception records).
+
+The re-arm does not recover from that reset: it sends SetRx to a part that has lost its modem, so the part receives on its power-on defaults instead of the 1090 MHz OOK modem until Bravo boots again. `test/hardware/test_lr2021_probe.cpp` holds the case, skipped until a Full run says whether this is the outage Bravo shows.
+
 ## Errors
 
 GetErrors is read at the end of the bring-up. HF_XOSC_START_ERR (the TCXO never started) or PLL_LOCK_ERR (the synthesiser never locked) refuses the bring-up, because the part cannot receive. The other bits are kept in `device_errors()` for the bench. 1090 MHz is past the 150-960 MHz the LF path is specified to (DS tables 3-8 and 3-20), so a front-end or image calibration error there does not mean a dead receiver.
@@ -103,4 +120,5 @@ Each value below comes from SoftRF, RadioLib or the datasheet, has no bench meas
 - The X1's pins from SoftRF `Seeed_X1.h`: NSS P0.12, SCK P0.11, MOSI P1.09, MISO P1.08, NRESET P1.10, BUSY P0.07, the IRQ on DIO8 at P1.01. The board holds them (`boards/seeed/meshtracker_x1/pins.h`).
 - Whether GetRxFifoLevel counts a frame still arriving, which decides whether two frames 120 us apart both reach the FIFO.
 - That BUSY stays high in sleep, which `sleep()` reads.
+- That a ReadRegMem32 in receive loses no frame. GetRssiInst is meant for receive (DS 7.3.3), and the datasheet says nothing either way of a register read.
 - That the FIFO overflow flag latches as DS 6.10.4 says, and that a part held in reset through SYSTEM OFF draws little enough to be the shutdown's fallback.

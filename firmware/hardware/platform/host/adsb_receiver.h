@@ -13,6 +13,8 @@ namespace skyblip::platform::host {
 // INFO: fc 12nov26 the silicon thread's drain, run from the board's poll: the host has no IRQ edge
 class AdsbReceiver : public ports::AdsbReceiver {
    public:
+    static constexpr uint32_t kProbePeriodMs = 1000;
+
     AdsbReceiver(parts::Lr2021& radio, ports::Clock& clock, int, bus::AdsbQueue& out)
         : radio_(radio), clock_(clock), out_(out) {}
 
@@ -25,6 +27,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         }
         started_ = true;
         serviced_ms_ = clock_.milliseconds();
+        probed_ms_ = serviced_ms_;
         return Status::Ok;
     }
 
@@ -43,6 +46,9 @@ class AdsbReceiver : public ports::AdsbReceiver {
         }
         (void)radio_.service(now_ms - serviced_ms_, runtime::kRadioRxSilenceCeilingMs);
         serviced_ms_ = now_ms;
+        if (now_ms - probed_ms_ < kProbePeriodMs) return;
+        probed_ms_ = now_ms;
+        if (radio_.sample(probe_) != Status::Ok) probe_.valid = false;
     }
 
     ports::AdsbReceiverStatistics statistics() const override {
@@ -53,6 +59,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics.command_errors = radio_.command_errors();
         statistics.device_errors = radio_.device_errors();
         statistics.dropped = radio_.fifo_drops() + out_.dropped();
+        statistics.part_resets = radio_.part_resets();
+        statistics.probe = probe_;
         return statistics;
     }
 
@@ -86,7 +94,9 @@ class AdsbReceiver : public ports::AdsbReceiver {
     ports::Clock& clock_;
     bus::AdsbQueue& out_;
     ports::AdsbReceiverStatistics statistics_{};
+    ports::ReceiverProbe probe_{};
     uint32_t serviced_ms_{0};
+    uint32_t probed_ms_{0};
     bool started_{false};
     bool stopped_{false};
     bool parked_{false};

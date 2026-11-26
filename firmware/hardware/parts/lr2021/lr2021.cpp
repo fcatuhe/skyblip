@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include "core/util/clamp.h"
+
 namespace skyblip::parts {
 
 namespace {
@@ -30,6 +32,35 @@ int8_t rssi_high_dbm(const uint8_t* status) {
     const int raw = (status[3] << 1) | (status[4] & 0x01);
     const int dbm = -(raw / 2);
     return static_cast<int8_t>(dbm < -128 ? -128 : dbm);
+}
+
+// INFO: fc 26nov26 DS 7.3.3: nine bits, the low one in bit 7 of the second byte, minus half a dB
+int8_t rssi_inst_dbm(const uint8_t* rssi) {
+    const int raw = (rssi[0] << 1) | (rssi[1] >> 7);
+    const int dbm = -(raw / 2);
+    return static_cast<int8_t>(dbm < -128 ? -128 : dbm);
+}
+
+int8_t threshold_dbm(uint32_t reg) {
+    const uint32_t field = (reg & lr2021::kOokThresholdMask) >> lr2021::kOokThresholdShift;
+    const int32_t signed_field = (field & lr2021::kOokThresholdSignBit) != 0
+                                     ? static_cast<int32_t>(field) - lr2021::kOokThresholdSpan
+                                     : static_cast<int32_t>(field);
+    return clamp_int8(signed_field - lr2021::kOokThresholdOffsetDb);
+}
+
+ports::ReceiverMode mode_of(uint8_t status) {
+    const uint8_t code = status & lr2021::kChipModeMask;
+    return code <= static_cast<uint8_t>(ports::ReceiverMode::Transmit)
+               ? static_cast<ports::ReceiverMode>(code)
+               : ports::ReceiverMode::Unknown;
+}
+
+ports::ReceiverReset reset_of(uint8_t status) {
+    const uint8_t code = (status >> lr2021::kResetSourceShift) & lr2021::kResetSourceMask;
+    return code <= static_cast<uint8_t>(ports::ReceiverReset::Pin)
+               ? static_cast<ports::ReceiverReset>(code)
+               : ports::ReceiverReset::Unknown;
 }
 
 }  // namespace
@@ -126,6 +157,39 @@ bool Lr2021::service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms) {
     if (since_frame_ms_ < silence_ceiling_ms) return false;
     if (rearm() != Status::Ok) (void)reinitialise();
     return true;
+}
+
+// INFO: fc 26nov26 bring-up cleared the reset source, so one seen here is a reset nobody asked for
+Status Lr2021::sample(ports::ReceiverProbe& probe) {
+    probe = ports::ReceiverProbe{};
+    if (mode_ == Lr2021Mode::Sleep || mode_ == Lr2021Mode::Reset) return Status::Invalid;
+    uint8_t rssi[2] = {};
+    uint8_t stats[6] = {};
+    uint8_t errors[2] = {};
+    uint32_t threshold = 0;
+    uint32_t front_end = 0;
+    Status status = read(lr2021::kGetRssiInst, rssi, sizeof(rssi));
+    const uint8_t chip_status[2] = {last_status_[0], last_status_[1]};
+    if (status == Status::Ok) status = read(lr2021::kGetOokRxStats, stats, sizeof(stats));
+    if (status == Status::Ok) status = read(lr2021::kGetErrors, errors, sizeof(errors));
+    if (status == Status::Ok) status = read_register(lr2021::kOokThresholdRegister, threshold);
+    if (status == Status::Ok) status = read_register(lr2021::kOokQuirkRegister, front_end);
+    if (status != Status::Ok) return status;
+    probe.reset = reset_of(chip_status[1]);
+    if (probe.reset != ports::ReceiverReset::None) {
+        part_resets_++;
+        status = clear_reset_source();
+        if (status != Status::Ok) return status;
+    }
+    probe.packets = be16(stats);
+    probe.errors = be16(errors);
+    probe.noise_dbm = rssi_inst_dbm(rssi);
+    probe.threshold_dbm = threshold_dbm(threshold);
+    probe.mode = mode_of(chip_status[1]);
+    probe.interrupt_pending = (chip_status[0] & lr2021::kInterruptPending) != 0;
+    probe.front_end_kept = (front_end & lr2021::kOokQuirkMask) == lr2021::kOokQuirkData;
+    probe.valid = true;
+    return Status::Ok;
 }
 
 // INFO: fc 11nov26 a BUSY that blocks the standby gets one reset, so the part sleeps or the caller
@@ -232,6 +296,8 @@ Status Lr2021::bring_up() {
     if (status == Status::Ok) status = read_errors();
     if (status != Status::Ok) return status;
     if ((device_errors_ & lr2021::kFatalErrors) != 0) return Status::Down;
+    status = clear_reset_source();
+    if (status != Status::Ok) return status;
     mode_ = Lr2021Mode::Standby;
     return Status::Ok;
 }
@@ -324,10 +390,15 @@ Status Lr2021::command(uint16_t opcode, const uint8_t* arguments, size_t bytes) 
     return Status::Ok;
 }
 
-// INFO: fc 11nov26 DS 5.4.1.2: a read answers in a second frame of zeros, behind two status bytes
 Status Lr2021::read(uint16_t opcode, uint8_t* out, size_t bytes) {
+    return read(opcode, nullptr, 0, out, bytes);
+}
+
+// INFO: fc 11nov26 DS 5.4.1.2: a read answers in a second frame of zeros, behind two status bytes
+Status Lr2021::read(uint16_t opcode, const uint8_t* arguments, size_t argument_bytes, uint8_t* out,
+                    size_t bytes) {
     if (bytes + 2 > kFrameBytes) return Status::Invalid;
-    const Status status = command(opcode, nullptr, 0);
+    const Status status = command(opcode, arguments, argument_bytes);
     if (status != Status::Ok) return status;
     uint8_t tx[kFrameBytes] = {};
     uint8_t rx[kFrameBytes] = {};
@@ -344,6 +415,20 @@ Status Lr2021::read(uint16_t opcode, uint8_t* out, size_t bytes) {
     return Status::Ok;
 }
 
+// INFO: fc 26nov26 DS 6.2.3: the address, then a count of one word, which comes back big-endian
+Status Lr2021::read_register(uint32_t address, uint32_t& value) {
+    const uint8_t arguments[4] = {static_cast<uint8_t>(address >> 16),
+                                  static_cast<uint8_t>(address >> 8), static_cast<uint8_t>(address),
+                                  1};
+    uint8_t word[4] = {};
+    const Status status = read(lr2021::kReadRegMem32, arguments, sizeof(arguments), word, 4);
+    if (status == Status::Ok) value = be32(word);
+    return status;
+}
+
+// INFO: fc 26nov26 DS 6.7.1: GetStatus clears the reset source every later status reports
+Status Lr2021::clear_reset_source() { return command(lr2021::kGetStatus, nullptr, 0); }
+
 Status Lr2021::write_mask(uint32_t address, uint32_t mask, uint32_t data) {
     uint8_t arguments[11];
     arguments[0] = static_cast<uint8_t>(address >> 16);
@@ -356,6 +441,8 @@ Status Lr2021::write_mask(uint32_t address, uint32_t mask, uint32_t data) {
 
 // INFO: fc 11nov26 DS 6.7.1: each frame opens on the status of the command before it
 void Lr2021::note_status(const uint8_t* status) {
+    last_status_[0] = status[0];
+    last_status_[1] = status[1];
     if (last_opcode_ == lr2021::kNop) return;
     const uint8_t result = (status[0] >> lr2021::kCommandStatusShift) & lr2021::kCommandStatusMask;
     if (result == lr2021::kCommandFail || result == lr2021::kCommandParameterError)

@@ -167,6 +167,14 @@ Bravo keys no transmitter, so flash waits only for the 1090 MHz queue, which the
 
 Bravo has no glass, so a page or `scripts/blip.py capture` arms a capture over the link with the `capture` command, which stands as a prompt like every other. The press arms `diagnostics::Recorder`, and `CaptureService` drains it as on the Go, ADS-B records included (`../skyblip_go/README.md`, Which capture is armed).
 
+A `Full` capture also writes a `Receiver` and a `Reception` record each second from `AdsbService` (`../../core/diagnostics/README.md`, The receiver and reception records). They follow a frame from the LR2021's own status to the traffic table, so an outage on an EFB can be traced to the part, the driver, the decoder or the position Bravo places traffic against.
+
+To catch an outage that comes and goes:
+
+1. Arm a `Full` capture, `blip.py capture full`, and note the UTC time of each outage seen on the EFB.
+2. Stop it within the stretch the capture keeps, about 2 hours with no traffic and about 37 minutes with ten aircraft (`../../core/diagnostics/README.md`, The three profiles), because the ring recycles its oldest sector.
+3. Fetch it, `blip.py fetch --log diagnostics --all --out run.ndjson`, and read it with `scripts/reception_check.py run.ndjson`.
+
 ## Mode S transponders
 
 `Transponders` (`transponders.h`) holds up to `kMaxTransponders` Mode S transponders. A reply overlays its address on its parity, so noise reads as an address too (`../../protocols/adsb/README.md`, Mode S: replies with no position). A transponder is admitted only when heard in clear, in a DF17 or in a DF11 whose parity is zero, and a reply counts only from an address already held. A transponder silent for `kTransponderForgetMs`, 30 s, is freed.

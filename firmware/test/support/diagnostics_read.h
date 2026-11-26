@@ -354,6 +354,45 @@ inline bool read(const Record& record, Duty& out) {
     return true;
 }
 
+inline bool read(const Record& record, Receiver& out) {
+    if (record.type != Type::Receiver) return false;
+    out = Receiver{};
+    out.frames = wire::get_uint16(record.payload + receiver_at::kFrames);
+    out.part_packets = wire::get_uint16(record.payload + receiver_at::kPartPackets);
+    out.part_errors = wire::get_uint16(record.payload + receiver_at::kPartErrors);
+    out.frames_dropped = record.payload[receiver_at::kFramesDropped];
+    out.rearms = record.payload[receiver_at::kRearms];
+    out.resets = record.payload[receiver_at::kResets];
+    out.part_resets = record.payload[receiver_at::kPartResets];
+    out.command_errors = record.payload[receiver_at::kCommandErrors];
+    out.missed_edges = record.payload[receiver_at::kMissedEdges];
+    out.noise_dbm = get_int8(record.payload + receiver_at::kNoiseDbm);
+    out.threshold_dbm = get_int8(record.payload + receiver_at::kThresholdDbm);
+    out.part_mode = static_cast<ports::ReceiverMode>(record.payload[receiver_at::kPartMode]);
+    out.part_reset = static_cast<ports::ReceiverReset>(record.payload[receiver_at::kPartReset]);
+    out.listening = record.flagged(kReceiverFlagListening);
+    out.irq_armed = record.flagged(kReceiverFlagIrqArmed);
+    out.probed = record.flagged(kReceiverFlagProbed);
+    out.interrupt_pending = record.flagged(kReceiverFlagInterruptPending);
+    out.front_end_kept = record.flagged(kReceiverFlagFrontEndKept);
+    return true;
+}
+
+inline bool read(const Record& record, Reception& out) {
+    if (record.type != Type::Reception) return false;
+    out = Reception{};
+    out.crc = wire::get_uint16(record.payload + reception_at::kCrc);
+    out.unsupported = wire::get_uint16(record.payload + reception_at::kUnsupported);
+    out.folded = wire::get_uint16(record.payload + reception_at::kFolded);
+    out.positions = wire::get_uint16(record.payload + reception_at::kPositions);
+    out.capture_refused = wire::get_uint16(record.payload + reception_at::kCaptureRefused);
+    out.aircraft = record.payload[reception_at::kAircraft];
+    out.tracked = record.payload[reception_at::kTracked];
+    out.reference = static_cast<comms::ExportReference>(record.payload[reception_at::kReference]);
+    out.fix_valid = record.flagged(kReceptionFlagFixValid);
+    return true;
+}
+
 }  // namespace skyblip::diagnostics
 
 #endif

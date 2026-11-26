@@ -29,9 +29,11 @@ enum class Type : uint8_t {
     Switch = 19,
     Loop = 20,
     Adsb = 21,
+    Receiver = 22,
+    Reception = 23,
 };
 
-constexpr uint8_t kHighestType = 21;
+constexpr uint8_t kHighestType = 23;
 
 enum class Profile : uint8_t {
     Full = 0,
@@ -424,6 +426,45 @@ constexpr uint8_t kAdsbVersionMask = 0x07;
 constexpr uint8_t kGvaShift = 3;
 constexpr uint8_t kGvaMask = 0x03;
 }
+
+namespace receiver_at {
+enum : uint32_t {
+    kFrames = 0,
+    kPartPackets = 2,
+    kPartErrors = 4,
+    kFramesDropped = 6,
+    kRearms = 7,
+    kResets = 8,
+    kPartResets = 9,
+    kCommandErrors = 10,
+    kMissedEdges = 11,
+    kNoiseDbm = 12,
+    kThresholdDbm = 13,
+    kPartMode = 14,
+    kPartReset = 15,
+};
+}
+
+constexpr uint8_t kReceiverFlagListening = 1u << 2;
+constexpr uint8_t kReceiverFlagIrqArmed = 1u << 3;
+constexpr uint8_t kReceiverFlagProbed = 1u << 4;
+constexpr uint8_t kReceiverFlagInterruptPending = 1u << 5;
+constexpr uint8_t kReceiverFlagFrontEndKept = 1u << 6;
+
+namespace reception_at {
+enum : uint32_t {
+    kCrc = 0,
+    kUnsupported = 2,
+    kFolded = 4,
+    kPositions = 6,
+    kCaptureRefused = 8,
+    kAircraft = 10,
+    kTracked = 11,
+    kReference = 12,
+};
+}
+
+constexpr uint8_t kReceptionFlagFixValid = 1u << 2;
 
 }
 

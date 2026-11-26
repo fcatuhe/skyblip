@@ -341,6 +341,43 @@ Adsb adsb() {
     return value;
 }
 
+Receiver receiver() {
+    Receiver value{};
+    value.frames = 70000;
+    value.part_packets = 4500;
+    value.part_errors = 0x0040;
+    value.frames_dropped = 300;
+    value.rearms = 3;
+    value.resets = 1;
+    value.part_resets = 2;
+    value.command_errors = 5;
+    value.missed_edges = 7;
+    value.noise_dbm = -101;
+    value.threshold_dbm = -106;
+    value.part_mode = ports::ReceiverMode::StandbyRc;
+    value.part_reset = ports::ReceiverReset::PowerOn;
+    value.listening = true;
+    value.irq_armed = true;
+    value.probed = true;
+    value.interrupt_pending = true;
+    value.front_end_kept = false;
+    return value;
+}
+
+Reception reception() {
+    Reception value{};
+    value.crc = 1234;
+    value.unsupported = 56;
+    value.folded = 789;
+    value.positions = 321;
+    value.capture_refused = 4;
+    value.aircraft = 12;
+    value.tracked = 9;
+    value.reference = comms::ExportReference::Own;
+    value.fix_valid = true;
+    return value;
+}
+
 std::vector<std::vector<uint8_t>> written() {
     const Instant at = vector_instant();
     return {bytes_of(record_of(boot(), at)),      bytes_of(record_of(config(), at)),
@@ -353,7 +390,8 @@ std::vector<std::vector<uint8_t>> written() {
             bytes_of(record_of(screen(), at)),    bytes_of(record_of(gap(), at)),
             bytes_of(record_of(end(), at)),       bytes_of(record_of(duty(), at)),
             bytes_of(record_of(hop(), at)),       bytes_of(record_of(loop(), at)),
-            bytes_of(record_of(adsb(), at))};
+            bytes_of(record_of(adsb(), at)),      bytes_of(record_of(receiver(), at)),
+            bytes_of(record_of(reception(), at))};
 }
 
 }  // namespace

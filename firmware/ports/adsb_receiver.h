@@ -7,6 +7,32 @@
 
 namespace skyblip::ports {
 
+// INFO: fc 26nov26 the LR2021's own codes, DS 6.7.1 table 6-38, so a capture reads what the part
+// said
+enum class ReceiverMode : uint8_t {
+    Sleep = 0,
+    StandbyRc = 1,
+    StandbyXosc = 2,
+    Synthesis = 3,
+    Receive = 4,
+    Transmit = 5,
+    Unknown = 6
+};
+
+enum class ReceiverReset : uint8_t { None = 0, PowerOn = 1, Pin = 2, Unknown = 3 };
+
+struct ReceiverProbe {
+    uint32_t packets{0};
+    uint16_t errors{0};
+    int8_t noise_dbm{0};
+    int8_t threshold_dbm{0};
+    ReceiverMode mode{ReceiverMode::Unknown};
+    ReceiverReset reset{ReceiverReset::None};
+    bool interrupt_pending{false};
+    bool front_end_kept{false};
+    bool valid{false};
+};
+
 struct AdsbReceiverStatistics {
     static constexpr int kRssiBuckets = 8;
     // INFO: fc 11nov26 the floor under each bucket in dBm: the detection threshold, then 10 dB
@@ -22,8 +48,11 @@ struct AdsbReceiverStatistics {
     uint32_t resets{0};
     uint32_t command_errors{0};
     uint16_t device_errors{0};
+    uint32_t missed_edges{0};
+    uint32_t part_resets{0};
     // INFO: fc 21nov26 false means the thread polls every 200 us, since the IRQ edge never armed
     bool irq_armed{false};
+    ReceiverProbe probe{};
     uint32_t rssi[kRssiBuckets]{};
     uint64_t counting_second{0};
     uint32_t counted{0};

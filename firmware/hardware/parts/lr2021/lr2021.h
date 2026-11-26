@@ -6,6 +6,7 @@
 
 #include "core/util/result.h"
 #include "hardware/io/io.h"
+#include "ports/adsb_receiver.h"
 
 namespace skyblip::parts {
 
@@ -36,6 +37,7 @@ class Lr2021 {
     Status start_receive();
     Lr2021Event poll(uint8_t* frame, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
+    Status sample(ports::ReceiverProbe& probe);
     Status sleep();
     void park();
     void hold_in_reset();
@@ -47,6 +49,7 @@ class Lr2021 {
     uint32_t command_errors() const { return command_errors_; }
     uint16_t device_errors() const { return device_errors_; }
     uint32_t fifo_drops() const { return fifo_drops_; }
+    uint32_t part_resets() const { return part_resets_; }
 
    private:
     Status wait_busy_low(uint32_t ceiling_us);
@@ -61,6 +64,10 @@ class Lr2021 {
     Status enter_standby();
     Status command(uint16_t opcode, const uint8_t* arguments, size_t bytes);
     Status read(uint16_t opcode, uint8_t* out, size_t bytes);
+    Status read(uint16_t opcode, const uint8_t* arguments, size_t argument_bytes, uint8_t* out,
+                size_t bytes);
+    Status read_register(uint32_t address, uint32_t& value);
+    Status clear_reset_source();
     Status write_mask(uint32_t address, uint32_t mask, uint32_t data);
     void note_status(const uint8_t* status);
     Status read_errors();
@@ -76,6 +83,7 @@ class Lr2021 {
     Lr2021Mode mode_{Lr2021Mode::Reset};
     int16_t detection_threshold_dbm_{0};
     uint16_t last_opcode_{0};
+    uint8_t last_status_[2]{};
     uint8_t frames_waiting_{0};
     int8_t newest_rssi_dbm_{0};
     bool newest_rssi_valid_{false};
@@ -86,6 +94,7 @@ class Lr2021 {
     uint32_t command_errors_{0};
     uint16_t device_errors_{0};
     uint32_t fifo_drops_{0};
+    uint32_t part_resets_{0};
 };
 
 // INFO: fc 11nov26 DS is Semtech's LR2021/LR2022/LR2012 Datasheet, Final Rev. 2.1, 13 April 2026,
@@ -93,8 +102,10 @@ class Lr2021 {
 namespace lr2021 {
 constexpr uint16_t kNop = 0x0000;
 constexpr uint16_t kReadRadioRxFifo = 0x0001;
+constexpr uint16_t kGetStatus = 0x0100;
 constexpr uint16_t kGetVersion = 0x0101;
 constexpr uint16_t kWriteRegMemMask32 = 0x0105;
+constexpr uint16_t kReadRegMem32 = 0x0106;
 constexpr uint16_t kGetErrors = 0x0110;
 constexpr uint16_t kClearErrors = 0x0111;
 constexpr uint16_t kSetDioFunction = 0x0112;
@@ -113,12 +124,14 @@ constexpr uint16_t kSetRfFrequency = 0x0200;
 constexpr uint16_t kSetRxPath = 0x0201;
 constexpr uint16_t kSetRxTxFallbackMode = 0x0206;
 constexpr uint16_t kSetPacketType = 0x0207;
+constexpr uint16_t kGetRssiInst = 0x020B;
 constexpr uint16_t kSetRx = 0x020C;
 constexpr uint16_t kGetRxPktLength = 0x0212;
 constexpr uint16_t kSetAgcGainManual = 0x021A;
 constexpr uint16_t kSetOokModulationParams = 0x0281;
 constexpr uint16_t kSetOokPacketParams = 0x0282;
 constexpr uint16_t kSetOokSyncword = 0x0284;
+constexpr uint16_t kGetOokRxStats = 0x0286;
 constexpr uint16_t kGetOokPacketStatus = 0x0287;
 constexpr uint16_t kSetOokDetector = 0x0288;
 constexpr uint16_t kSetOokWhiteningParams = 0x0289;
@@ -129,6 +142,10 @@ constexpr uint8_t kVersionMinor = 0x18;
 
 constexpr uint8_t kCommandStatusShift = 1;
 constexpr uint8_t kCommandStatusMask = 0x07;
+constexpr uint8_t kInterruptPending = 0x01;
+constexpr uint8_t kChipModeMask = 0x07;
+constexpr uint8_t kResetSourceShift = 4;
+constexpr uint8_t kResetSourceMask = 0x0F;
 constexpr uint8_t kCommandFail = 0x00;
 constexpr uint8_t kCommandParameterError = 0x01;
 
@@ -186,8 +203,12 @@ constexpr uint8_t kAgcAutomatic = 0x00;
 // INFO: fc 11nov26 Semtech's lr20xx_workarounds.c, not the DS: register 0xF30E14 holds the
 // threshold in dB plus 74
 constexpr uint32_t kOokThresholdRegister = 0xF30E14;
-constexpr uint32_t kOokThresholdMask = 0x7FUL << 20;
+constexpr uint32_t kOokThresholdShift = 20;
+constexpr uint32_t kOokThresholdMask = 0x7FUL << kOokThresholdShift;
 constexpr int16_t kOokThresholdOffsetDb = 74;
+// INFO: fc 26nov26 -110 dBm writes -36 into the 7-bit field, so it reads back two's complement
+constexpr uint32_t kOokThresholdSignBit = 0x40;
+constexpr int16_t kOokThresholdSpan = 0x80;
 // INFO: fc 17nov26 #293 decoded the most positions at -110 dBm, and -114 dBm let noise through
 constexpr int16_t kDetectionThresholdDbm = -110;
 // INFO: fc 17nov26 #293: 0x18, SoftRF's, decoded more than 0x75, the part's own, which blanks a

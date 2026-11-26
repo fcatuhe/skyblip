@@ -24,6 +24,7 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     static constexpr size_t kFifoBytes = 256;
     static constexpr uint8_t kCommandOk = 0x02;
     static constexpr uint8_t kCommandData = 0x03;
+    static constexpr uint8_t kResetSourceAnalog = 0x01;
     static constexpr uint8_t kResetSourcePin = 0x02;
     static constexpr uint8_t kFifoFull = 0x08;
     static constexpr uint8_t kFifoOverflow = 0x10;
@@ -116,12 +117,21 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
             }
             if (fifo.size() == kFifoBytes) rx_fifo_flags |= kFifoFull;
             last_length = payload_bytes;
+            ook_packets++;
             rssi_high_raw = static_cast<uint16_t>(-2 * rssi_dbm);
             irq |= parts::lr2021::kIrqRxDone;
             return true;
         }
         return false;
     }
+
+    // INFO: fc 26nov26 DS 6.7.1: a brown-out resets the part as power-on does, and says so in Stat
+    void brown_out() {
+        power_on_reset();
+        reset_source_ = kResetSourceAnalog;
+    }
+
+    uint8_t reset_source() const { return reset_source_; }
 
     // INFO: fc 11nov26 a frame that lands after the given command, so a test can interleave the air
     void arrive_after(uint16_t opcode, std::function<void()> arrival) {
@@ -212,6 +222,8 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     uint8_t rx_fifo_flags{0};
     uint16_t last_length{0};
     uint16_t rssi_high_raw{0};
+    uint16_t ook_packets{0};
+    uint16_t noise_raw{240};
     std::vector<uint16_t> commands_seen;
     std::vector<uint8_t> refused;
     Fault fault{Fault::None};
@@ -281,6 +293,7 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
         registers.clear();
         fifo.clear();
         rx_fifo_flags = 0;
+        ook_packets = 0;
         response_pending_ = false;
         command_status_ = kCommandOk;
         reset_source_ = kResetSourcePin;
@@ -288,6 +301,17 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
 
     void respond(std::initializer_list<uint8_t> bytes) {
         response_.assign(bytes.begin(), bytes.end());
+        response_pending_ = true;
+    }
+
+    // INFO: fc 26nov26 DS 6.2.3: words from the address on, most significant byte first
+    void respond_words(uint32_t address, uint8_t words) {
+        response_.clear();
+        for (uint8_t i = 0; i < words; i++) {
+            const uint32_t word = reg(address + 4u * i);
+            for (int shift = 24; shift >= 0; shift -= 8)
+                response_.push_back(static_cast<uint8_t>(word >> shift));
+        }
         response_pending_ = true;
     }
 
@@ -311,6 +335,12 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
         switch (opcode) {
             case chip::kNop:
             case chip::kReadRadioRxFifo: break;
+            case chip::kGetStatus: reset_source_ = 0; break;
+            case chip::kReadRegMem32:
+                respond_words((static_cast<uint32_t>(args[0]) << 16) |
+                                  (static_cast<uint32_t>(args[1]) << 8) | args[2],
+                              args[3]);
+                break;
             case chip::kGetVersion: respond({version_major, version_minor}); break;
             case chip::kGetErrors: respond({high(errors), low(errors)}); break;
             case chip::kClearErrors: errors = 0; break;
@@ -426,6 +456,12 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                          low(static_cast<uint32_t>(fifo.size()))});
                 break;
             case chip::kGetRxPktLength: respond({high(last_length), low(last_length)}); break;
+            case chip::kGetRssiInst:
+                respond({low(noise_raw >> 1), static_cast<uint8_t>((noise_raw & 0x01) << 7)});
+                break;
+            case chip::kGetOokRxStats:
+                respond({high(ook_packets), low(ook_packets), 0, 0, 0, 0});
+                break;
             case chip::kGetOokPacketStatus:
                 respond({high(last_length), low(last_length), 0, low(rssi_high_raw >> 1),
                          low(rssi_high_raw & 0x01), 0});

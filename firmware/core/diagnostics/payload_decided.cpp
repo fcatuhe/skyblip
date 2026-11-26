@@ -166,4 +166,21 @@ Record record_of(const Duty& value, const Instant& at) {
     return record;
 }
 
+Record record_of(const Reception& value, const Instant& at) {
+    Record record = framed(Type::Reception, at);
+    wire::put_uint16(record.payload + reception_at::kCrc, static_cast<uint16_t>(value.crc));
+    wire::put_uint16(record.payload + reception_at::kUnsupported,
+                     static_cast<uint16_t>(value.unsupported));
+    wire::put_uint16(record.payload + reception_at::kFolded, static_cast<uint16_t>(value.folded));
+    wire::put_uint16(record.payload + reception_at::kPositions,
+                     static_cast<uint16_t>(value.positions));
+    wire::put_uint16(record.payload + reception_at::kCaptureRefused,
+                     static_cast<uint16_t>(value.capture_refused));
+    record.payload[reception_at::kAircraft] = clamped<uint8_t>(value.aircraft);
+    record.payload[reception_at::kTracked] = clamped<uint8_t>(value.tracked);
+    record.payload[reception_at::kReference] = static_cast<uint8_t>(value.reference);
+    set_flag(record.flags, kReceptionFlagFixValid, value.fix_valid);
+    return record;
+}
+
 }  // namespace skyblip::diagnostics

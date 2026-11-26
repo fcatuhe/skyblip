@@ -23,6 +23,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     // INFO: fc 11nov26 without the edge the FIFO's nine frames last 1 ms, so the thread polls well
     // inside it
     static constexpr int kFallbackPollUs = 200;
+    static constexpr uint64_t kProbePeriodUs = 1000000;
 
     AdsbReceiver(parts::Lr2021& radio, ports::Clock& clock, const struct gpio_dt_spec& irq,
                  bus::AdsbQueue& out,
@@ -48,6 +49,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         irq_wakes_ = gpio_add_callback(irq_.port, &irq_callback_) == 0 && arm_irq();
         listening_ = true;
         health_checked_us_ = clock_.microseconds();
+        probed_us_ = health_checked_us_;
         thread_id_ = k_thread_create(
             &thread_, stack_, K_THREAD_STACK_SIZEOF(stack_), entry, this, nullptr, nullptr,
             K_PRIO_COOP(static_cast<int>(runtime::TaskPriority::Rf)), 0, K_NO_WAIT);
@@ -106,13 +108,16 @@ class AdsbReceiver : public ports::AdsbReceiver {
     void run() {
         for (;;) {
             const k_timeout_t idle = irq_wakes_ ? K_MSEC(kHealthTickMs) : K_USEC(kFallbackPollUs);
-            (void)k_sem_take(&wake_, idle);
+            const bool edge = k_sem_take(&wake_, idle) == 0;
             if (sleep_requested_) {
                 park();
                 return;
             }
-            drain();
+            const uint32_t drained = drain();
+            // INFO: fc 26nov26 RxDone held the line high with no edge seen, so frames waited a tick
+            if (!edge && irq_wakes_ && drained != 0) missed_edges_++;
             health();
+            probe();
             publish();
             listening_ = radio_.mode() == parts::Lr2021Mode::Receive;
         }
@@ -120,12 +125,12 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     // INFO: fc 11nov26 every frame of one wake is dated when the thread woke, the newest carries
     // the RSSI
-    void drain() {
+    uint32_t drain() {
         const uint64_t woke_us = clock_.microseconds();
-        for (;;) {
+        for (uint32_t drained = 0;; drained++) {
             events::AdsbFrame frame{};
             const parts::Lr2021Event event = radio_.poll(frame.bytes.data(), frame.bytes.size());
-            if (event.type != parts::Lr2021EventType::Frame) return;
+            if (event.type != parts::Lr2021EventType::Frame) return drained;
             frame.at_us = woke_us;
             frame.rssi_dbm = event.rssi_dbm;
             frame.rssi_valid = event.rssi_valid;
@@ -146,8 +151,18 @@ class AdsbReceiver : public ports::AdsbReceiver {
             irq_wakes_ = irq_wakes_ && arm_irq();
     }
 
+    void probe() {
+        const uint64_t now_us = clock_.microseconds();
+        if (now_us - probed_us_ < kProbePeriodUs) return;
+        probed_us_ = now_us;
+        if (radio_.sample(probe_) != Status::Ok) probe_.valid = false;
+    }
+
     void publish() {
         k_sched_lock();
+        statistics_.missed_edges = missed_edges_;
+        statistics_.part_resets = radio_.part_resets();
+        statistics_.probe = probe_;
         statistics_.rearms = radio_.rearms();
         statistics_.resets = radio_.resets();
         statistics_.command_errors = radio_.command_errors();
@@ -171,7 +186,10 @@ class AdsbReceiver : public ports::AdsbReceiver {
     bus::AdsbQueue& out_;
     int16_t detection_threshold_dbm_;
     ports::AdsbReceiverStatistics statistics_{};
+    ports::ReceiverProbe probe_{};
     uint64_t health_checked_us_{0};
+    uint64_t probed_us_{0};
+    uint32_t missed_edges_{0};
     struct k_sem wake_{};
     struct gpio_callback irq_callback_{};
     volatile bool irq_wakes_{false};

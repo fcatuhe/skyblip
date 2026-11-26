@@ -31,6 +31,32 @@ void AdsbService::tick(uint32_t now_ms) {
     const uint32_t now_s = state.traffic_now_s(now_ms);
     state.traffic.age_out(now_s);
     state.callsigns.age_out(now_s);
+    record_second(gate, now_ms);
+}
+
+// INFO: fc 26nov26 a pair every second whatever the sky does, so a silent receiver still records
+void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
+    if (!context_.diagnostics.armed()) {
+        recorded_ = false;
+        return;
+    }
+    if (recorded_ && now_ms - recorded_ms_ < kRecordPeriodMs) return;
+    recorded_ = true;
+    recorded_ms_ = now_ms;
+    const diagnostics::Instant at = context_.instant(now_ms);
+    context_.diagnostics.record(
+        diagnostics::receiver_of(receiver_.statistics(), receiver_.listening()), at);
+    diagnostics::Reception reception{};
+    reception.crc = crc_;
+    reception.unsupported = unsupported_;
+    reception.folded = folded_;
+    reception.positions = positions_;
+    reception.capture_refused = capture_.refused();
+    reception.aircraft = static_cast<uint32_t>(assembly_.count());
+    reception.tracked = static_cast<uint32_t>(context_.state.traffic.count());
+    reception.reference = gate.reference;
+    reception.fix_valid = context_.state.own.fix_valid;
+    context_.diagnostics.record(reception, at);
 }
 
 uint32_t AdsbService::due_in_ms(uint32_t /*now_ms*/) const {
@@ -73,6 +99,7 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
                                        message.identification.callsign, now_s);
     (void)capture_.record(observation_, now_ms);
     if (!observation_.position_valid) return;
+    positions_++;
     context_.state.traffic.update(observation_, now_s);
 }
 

@@ -209,4 +209,53 @@ Record record_of(const Adsb& value, const Instant& at) {
     return record;
 }
 
+Receiver receiver_of(const ports::AdsbReceiverStatistics& statistics, bool listening) {
+    Receiver value{};
+    value.frames = statistics.frames;
+    value.frames_dropped = statistics.dropped;
+    value.rearms = statistics.rearms;
+    value.resets = statistics.resets;
+    value.part_resets = statistics.part_resets;
+    value.command_errors = statistics.command_errors;
+    value.missed_edges = statistics.missed_edges;
+    value.listening = listening;
+    value.irq_armed = statistics.irq_armed;
+    const ports::ReceiverProbe& probe = statistics.probe;
+    value.probed = probe.valid;
+    if (!probe.valid) return value;
+    value.part_packets = probe.packets;
+    value.part_errors = probe.errors;
+    value.noise_dbm = probe.noise_dbm;
+    value.threshold_dbm = probe.threshold_dbm;
+    value.part_mode = probe.mode;
+    value.part_reset = probe.reset;
+    value.interrupt_pending = probe.interrupt_pending;
+    value.front_end_kept = probe.front_end_kept;
+    return value;
+}
+
+Record record_of(const Receiver& value, const Instant& at) {
+    Record record = framed(Type::Receiver, at);
+    wire::put_uint16(record.payload + receiver_at::kFrames, static_cast<uint16_t>(value.frames));
+    wire::put_uint16(record.payload + receiver_at::kPartPackets,
+                     static_cast<uint16_t>(value.part_packets));
+    wire::put_uint16(record.payload + receiver_at::kPartErrors, value.part_errors);
+    record.payload[receiver_at::kFramesDropped] = static_cast<uint8_t>(value.frames_dropped);
+    record.payload[receiver_at::kRearms] = static_cast<uint8_t>(value.rearms);
+    record.payload[receiver_at::kResets] = static_cast<uint8_t>(value.resets);
+    record.payload[receiver_at::kPartResets] = static_cast<uint8_t>(value.part_resets);
+    record.payload[receiver_at::kCommandErrors] = static_cast<uint8_t>(value.command_errors);
+    record.payload[receiver_at::kMissedEdges] = static_cast<uint8_t>(value.missed_edges);
+    put_int8(record.payload + receiver_at::kNoiseDbm, value.noise_dbm);
+    put_int8(record.payload + receiver_at::kThresholdDbm, value.threshold_dbm);
+    record.payload[receiver_at::kPartMode] = static_cast<uint8_t>(value.part_mode);
+    record.payload[receiver_at::kPartReset] = static_cast<uint8_t>(value.part_reset);
+    set_flag(record.flags, kReceiverFlagListening, value.listening);
+    set_flag(record.flags, kReceiverFlagIrqArmed, value.irq_armed);
+    set_flag(record.flags, kReceiverFlagProbed, value.probed);
+    set_flag(record.flags, kReceiverFlagInterruptPending, value.interrupt_pending);
+    set_flag(record.flags, kReceiverFlagFrontEndKept, value.front_end_kept);
+    return record;
+}
+
 }  // namespace skyblip::diagnostics

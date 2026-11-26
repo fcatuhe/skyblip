@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/diagnostics/record.h"
 #include "core/events/input.h"
@@ -20,6 +21,7 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
 #include "core/traffic/alarm.h"
+#include "ports/adsb_receiver.h"
 
 namespace skyblip::diagnostics {
 
@@ -277,6 +279,42 @@ struct Adsb {
 
 Adsb adsb_of(const model::Ownship& own, const model::AircraftObservation& target, uint32_t now_ms);
 
+// INFO: fc 26nov26 every counter crosses as its low bits, which readers subtract, as Duty's do
+struct Receiver {
+    uint32_t frames{0};
+    uint32_t part_packets{0};
+    uint16_t part_errors{0};
+    uint32_t frames_dropped{0};
+    uint32_t rearms{0};
+    uint32_t resets{0};
+    uint32_t part_resets{0};
+    uint32_t command_errors{0};
+    uint32_t missed_edges{0};
+    int8_t noise_dbm{0};
+    int8_t threshold_dbm{0};
+    ports::ReceiverMode part_mode{ports::ReceiverMode::Unknown};
+    ports::ReceiverReset part_reset{ports::ReceiverReset::None};
+    bool listening{false};
+    bool irq_armed{false};
+    bool probed{false};
+    bool interrupt_pending{false};
+    bool front_end_kept{false};
+};
+
+Receiver receiver_of(const ports::AdsbReceiverStatistics& statistics, bool listening);
+
+struct Reception {
+    uint32_t crc{0};
+    uint32_t unsupported{0};
+    uint32_t folded{0};
+    uint32_t positions{0};
+    uint32_t capture_refused{0};
+    uint32_t aircraft{0};
+    uint32_t tracked{0};
+    comms::ExportReference reference{comms::ExportReference::None};
+    bool fix_valid{false};
+};
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -298,6 +336,8 @@ Record record_of(const Duty& value, const Instant& at);
 Record record_of(const Switch& value, const Instant& at);
 Record record_of(const Loop& value, const Instant& at);
 Record record_of(const Adsb& value, const Instant& at);
+Record record_of(const Receiver& value, const Instant& at);
+Record record_of(const Reception& value, const Instant& at);
 
 }  // namespace skyblip::diagnostics
 
