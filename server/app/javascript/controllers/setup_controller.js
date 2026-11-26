@@ -146,26 +146,28 @@ export default class extends Controller {
     this.#stage({ stage: "aircraft" })
   }
 
+  // INFO: fc 26nov26 the Activator keeps the notice of an earlier attempt until it connects or asks again, so only a new notice ends this one
   #activated(unit) {
     return new Promise(resolve => {
+      const activator = this.#activator(unit)
+      const earlier = activator.state.notice
+      let asked = false
       const stop = this.fleet.listen(() => check())
       const check = () => {
-        const activator = this.#activator(unit)
         const state = activator.state
         if (state.address) {
           stop()
           return resolve(true)
         }
-        if (state.phase === "offline" && !state.notice) activator.connect()
-        if (state.phase === "ready" && state.read && !state.notice && !this.activating) {
-          this.activating = true
-          activator.activate()
-        }
-        if (state.phase === "ready" && state.notice && state.notice.key !== "activated" && this.activating) {
-          this.activating = false
-          this.onboarding = { stage: "activating", failure: state.notice }
+        if (state.notice && state.notice !== earlier && state.notice.key !== "activated") {
           stop()
-          resolve(false)
+          this.#stage({ stage: "activating", failure: state.notice })
+          return resolve(false)
+        }
+        if (state.phase === "offline") activator.connect()
+        if (state.phase === "ready" && state.read && !asked) {
+          asked = true
+          activator.activate()
         }
       }
       check()
