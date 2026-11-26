@@ -33,6 +33,13 @@ std::string ask_frame(Rig& rig, const char* json) {
 
 std::string ask(Rig& rig, const char* json) { return link_text(ask_frame(rig, json)); }
 
+std::string last_config(Rig& rig) {
+    std::string reply;
+    for (const auto& frame : rig.platform.link().sent)
+        if (frame.endpoint == events::Endpoint::Config) reply = link_text(frame.bytes);
+    return reply;
+}
+
 struct Capture {
     uint32_t records{0};
     int chunks{0};
@@ -340,6 +347,39 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
     CHECK(field(listed, "session") == std::to_string(session));
     CHECK(field(listed, "closed") == "true");
     CHECK(field(listed, "truncated") == "false");
+}
+
+// An arm while a stopped capture still drained wiped its queue, and the capture ran on under its
+// stop.
+TEST_CASE("capture: a page cannot start a capture while the last one is still closing") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.now_ms = 100;
+    taxi(rig, 5);
+    arm_over_the_link(rig);
+    const uint32_t first = rig.product.capture().session_id();
+
+    rig.platform.log_flash().set_fitted(false);
+    stop_over_the_link(rig);
+    REQUIRE(rig.product.capture().capturing());
+    REQUIRE(rig.product.diagnostics().queued() > 0);
+
+    rig.send("{\"command\":\"capture\",\"profile\":\"full\"}");
+    rig.run_for(1000);
+    CHECK(last_config(rig) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"capturing\"}");
+    CHECK(rig.product.config_link().config().pending() == common::Pending::None);
+
+    rig.platform.log_flash().set_fitted(true);
+    taxi(rig, 2);
+    REQUIRE_FALSE(rig.product.capture().capturing());
+    arm_over_the_link(rig);
+    CHECK(rig.product.capture().session_id() != first);
+    CHECK(rig.product.capture().stopped() == bus::CaptureStop::None);
+    const std::string listed =
+        ask(rig, "{\"command\":\"list\",\"log\":\"diagnostics\",\"index\":0}");
+    CHECK(field(listed, "session") == std::to_string(first));
+    CHECK(field(listed, "closed") == "true");
 }
 
 TEST_CASE("capture: a device with no partition refuses a capture as no_storage") {
