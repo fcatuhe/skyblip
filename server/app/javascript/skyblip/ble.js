@@ -133,10 +133,10 @@ const DEVICE_FILTERS = [
 const OPTIONAL_SERVICES = [UUID.nus, UUID.hm10, UUID.skyblip, UUID.smp];
 
 // INFO: fc 11nov26 names narrow the browser's chooser to the devices this browser already met
-export function requestDevice({ names = [], namePrefix = null } = {}) {
+export function requestDevice({ names = [], namePrefixes = [] } = {}) {
   if (!hasWebBluetooth()) throw new Error('This browser has no Web Bluetooth: use Chrome or Edge.');
-  const filters = namePrefix ? [{ namePrefix }] : names.length > 0 ? names.map(name => ({ name })) : DEVICE_FILTERS;
-  return navigator.bluetooth.requestDevice({ filters, optionalServices: OPTIONAL_SERVICES });
+  const filters = [...names.map(name => ({ name })), ...namePrefixes.map(namePrefix => ({ namePrefix }))];
+  return navigator.bluetooth.requestDevice({ filters: filters.length > 0 ? filters : DEVICE_FILTERS, optionalServices: OPTIONAL_SERVICES });
 }
 
 export async function permittedDevices() {

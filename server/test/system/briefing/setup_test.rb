@@ -159,7 +159,21 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       assert_text "Choose activate … skyBlip in the list."
       click_button "Connect"
       assert_text "Name your aircraft."
-      assert_equal [ [ { "namePrefix" => "activate" } ] ], page.evaluate_script("fakeFleet.asked")
+      assert_equal [ [ { "namePrefix" => "activate" }, { "namePrefix" => "skyBlip Go" } ] ], page.evaluate_script("fakeFleet.asked")
+    end
+  end
+
+  # An activated Go keeps its activation through an install over USB and advertises its address, so a chooser asking for activate only listed nothing.
+  test "a Go activated before and installed again from its bootloader is listed at Connect, and goes on to its aircraft" do
+    in_range
+    plugged_in a_meshtastic_go(mode: "bootloader", unit: a_go)
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      click_button "Choose the drive"
+      click_button "Connect"
+      assert_text "Name your aircraft."
+      assert_equal [ [ { "namePrefix" => "activate" }, { "namePrefix" => "skyBlip Go" } ] ], page.evaluate_script("fakeFleet.asked")
     end
   end
 
@@ -347,7 +361,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       page.execute_script("#{unit("3F2A skyBlip")}.press()")
       assert_text "Name your aircraft."
       assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
-      assert_equal [ [ { "name" => "activate 3F2A skyBlip" } ] ], page.evaluate_script("fakeFleet.asked")
+      assert_equal [ [ { "name" => "activate 3F2A skyBlip" }, { "namePrefix" => "skyBlip Go" } ] ], page.evaluate_script("fakeFleet.asked")
       assert_equal({ "product" => "go", "from" => "code" }, journaled("installer.resumed").payload.slice("product", "from"))
     end
   end
