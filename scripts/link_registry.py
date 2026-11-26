@@ -253,7 +253,11 @@ def committed(relative):
 
 
 def main():
-    for relative, text in generated(load()).items():
+    return write(generated(load()))
+
+
+def write(files):
+    for relative, text in files.items():
         path = ROOT / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
