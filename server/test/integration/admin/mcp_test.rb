@@ -37,7 +37,7 @@ class Admin::McpTest < ActionDispatch::IntegrationTest
       mcp "tools/list", token: connect(client_id:, redirect_uri:).fetch("access_token")
 
       tools = response.parsed_body.dig("result", "tools")
-      assert_equal %w[get_insights list_events list_errors resolve_error get_unit get_analytics list_visitors get_visitor list_outbound_clicks],
+      assert_equal %w[get_insights list_events list_errors resolve_error get_unit get_capture get_analytics list_visitors get_visitor list_outbound_clicks],
         tools.pluck("name"), client_id
       assert_equal %w[resolve_error], tools.reject { it.dig("annotations", "readOnlyHint") }.pluck("name")
     end
@@ -104,6 +104,24 @@ class Admin::McpTest < ActionDispatch::IntegrationTest
     assert_equal({ "fingerprint" => fingerprint, "by_id" => users(:francois).id }, Event.find_by(name: "error.resolved").payload)
 
     call_tool("resolve_error", { fingerprint: "ffffffffffffffff" }, token:)
+    assert response.parsed_body.dig("result", "isError")
+  end
+
+  # A pilot sent a power run from the device page, and the agent fetches the file the bench scripts read.
+  test "get_capture hands over the gzipped capture as a blob, and logs who downloaded it" do
+    token = connect(client_id: CLAUDE_CODE).fetch("access_token")
+    capture = Capture.create!(device: "go-00012a", profile: "power_run", body: capture_body)
+
+    facts = JSON.parse(call_tool("get_capture", { capture_id: capture.id }, token:))
+
+    assert_equal [ "go-00012a", "power_run", 2, "go-00012a-1785628800.ndjson.gz" ], facts.values_at("device", "profile", "records", "filename")
+    resource = response.parsed_body.dig("result", "content", 1, "resource")
+    assert_equal [ "application/gzip", "https://www.example.com/admin/captures/#{capture.id}" ], resource.values_at("mimeType", "uri")
+    assert_equal capture.body, Base64.strict_decode64(resource["blob"])
+    assert_equal({ "by_id" => users(:francois).id, "capture_id" => capture.id, "device" => "go-00012a" },
+      Event.find_by!(name: "capture.downloaded").payload)
+
+    call_tool("get_capture", { capture_id: capture.id + 1 }, token:)
     assert response.parsed_body.dig("result", "isError")
   end
 

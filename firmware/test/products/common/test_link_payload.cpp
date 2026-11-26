@@ -454,16 +454,38 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     link.force_status(Status::WouldBlock);
     config.set_battery_state(full_battery(), power::PowerLevel::Normal);
     CHECK(link.sent.empty());
-    CHECK(config.link_drops() == 1);
+    CHECK(config.link_drops() == 0);
 
     config.tick(10);
     REQUIRE(link.sent.size() == 1);
     CHECK(link_text(link.last().bytes).find("\"command\":\"status\"") != std::string::npos);
-    CHECK(config.link_drops() == 1);
+    CHECK(config.link_drops() == 0);
 
     // And a second pass does not send it again: a retry is not a stream.
     config.tick(20);
     CHECK(link.sent.size() == 1);
+}
+
+// A Bravo's Go subscribes to the peer endpoint alone: bravo-d582 counted 6.7 million drops in 21 h.
+TEST_CASE("comms: a status push no central subscribed to waits without counting a drop each pass") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
+
+    link.force_status(Status::WouldBlock, false);
+    config.set_battery_state(full_battery(), power::PowerLevel::Normal);
+    for (uint32_t pass = 1; pass <= 100; pass++) config.tick(pass * 10);
+    CHECK(link.sent.empty());
+    CHECK(config.link_drops() == 0);
+
+    link.force_status(Status::Ok);
+    config.tick(1010);
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link_text(link.last().bytes).find("\"command\":\"status\"") != std::string::npos);
 }
 
 // The widest status without the transponder is 20 bytes, so a central that never exchanged its MTU

@@ -74,7 +74,7 @@ A dead fetch resumes: run the same line again, and `fetch` reads the tail of `--
 
 `fetch` never writes the last record of a session the device reports as unclosed and not `recording`: the power stopped there, and a diagnostics record can be a torn write that still decodes. A `torn` line takes its place, and `decode --summary` says so first. A session marked `"truncated": true` lost its opening `boot` and `config` records to the ring, so nothing says which build or settings produced it. Records the ring recycles between two reads are printed and listed as missing.
 
-The device refuses a command while flying and a command from a second app while another holds the claim, with `acknowledge: false` and a reason, and `blip.py` stops on it. A reply wider than the link's payload is answered `small_mtu` (`firmware/core/comms/README.md`), and `blip.py` says what to try. A diagnostics capture lives in RAM and does not survive a power cycle, so fetch it before switching the device off.
+The device refuses a command while flying and a command from a second app while another holds the claim, with `acknowledge: false` and a reason, and `blip.py` stops on it. A reply wider than the link's payload is answered `small_mtu` (`firmware/core/comms/README.md`), and `blip.py` says what to try. A diagnostics capture drains from RAM to the flash ring as it records, so it survives a switch-off and the cutoff, until the ring rotates it away.
 
 ### Reading what came back
 
@@ -112,7 +112,7 @@ Three rows carry a datasheet figure for the part as this firmware drives it: the
 
 The duty counters wrap at 65536, and a reader subtracts two records, which crosses one wrap correctly. The firmware emits them at least every 60 s (`kDutyPeriodCeilingMs`), so the script subtracts a pair only when nothing hides between them: it refuses a pair more than 60 s apart, on two clocks, or with a missing index, an unreadable slot, a `gap` or a `boot` between them. It also drops an interval on `external_power` or `charging`, because time on USB is not drain.
 
-Posture is read off the transmitter's air time: parked keys about 58 ms a minute, airborne about 318, and the threshold is 160. A flight run keys as parked, so its intervals read `simulated flight`, and `transmit not sent` prints what a flier would add, outside the modelled total.
+Posture is read off the transmitter's air time: parked keys about 90 ms a minute, airborne about 350, and the threshold is 160. A flight run keys as parked, so its intervals read `simulated flight`, and `transmit not sent` prints what a flier would add, outside the modelled total.
 
 ## link_budget.py
 
