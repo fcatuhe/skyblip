@@ -165,7 +165,10 @@ class Shell {
     void watch_cable(uint32_t now_ms) {
         std::optional<uint32_t>& off_in_ms = product_.state_.power.cable_off_in_ms;
         off_in_ms.reset();
-        if (product_.power_switch() != power::Switch::Cable) return;
+        if (product_.power_switch() != power::Switch::Cable) {
+            cable_.drop_hold();
+            return;
+        }
         const bool kept_on =
             product_.state_.flight.confirmed_state == flight::FlightState::Airborne ||
             product_.config_link_.config().updating();
