@@ -13,7 +13,7 @@ The state, which files were read, the findings and their verdicts, lives in `~/.
 ```sh
 npm ci
 npx deepsec scan --project-id skyblip-server --root "$PWD/../server"
-npx deepsec process --project-id skyblip-server --root "$PWD/../server" --diff origin/main~10..origin/main
+git -C ../server diff --name-only --relative origin/main~10..origin/main | npx deepsec process --project-id skyblip-server --root "$PWD/../server" --files-from -
 npx deepsec revalidate --project-id skyblip-server
 npx deepsec export --project-id skyblip-server --format md-dir --out findings/server
 ```
