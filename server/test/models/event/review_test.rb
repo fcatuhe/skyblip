@@ -34,7 +34,7 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal %w[REFUSED0], review.stranded[:latest].pluck(:browser)
   end
 
-  # Insights left out the setup over USB, where 15 of 22 browsers that opened the port chooser in a week never picked a port.
+  # Insights left out the setup over USB, where 17 of 21 browsers that opened the port chooser in a week never picked a port.
   test "setups over USB count the browsers that reached each step, the notices they read and why they moved to a phone" do
     journey "CLOSED00", "installer.stepped", 9.minutes.ago, phase: "choosing_port"
     journey "CLOSED00", "installer.noticed", 8.minutes.ago, key: "port_closed"
