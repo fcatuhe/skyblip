@@ -597,3 +597,48 @@ TEST_CASE("bravo pairing: a Go replaced while away never asks while the new Go i
     CHECK(bravo::address_of(tango.bravo.product.settings().peer) == kSecondGo);
     CHECK(tango.go.product.screen().notice() == go::ScreenService::Notice::BravoForgot);
 }
+
+// A Go Bravo heard as pinned on this link, then replaced, hears paired false before its next claim
+// lands, so it asks again, and a press would take Bravo back.
+TEST_CASE("bravo pairing: a Go replaced while connected never asks while the new Go is connected") {
+    PairedProducts tango;
+    tango.pair_and_store();
+    tango.air.drop();
+    tango.run_for(5000);
+    REQUIRE(tango.service().link() == go::BravoLink::Up);
+
+    Rig second{};
+    REQUIRE(second.setup() == Status::Ok);
+    PairedLink second_air{tango.bravo.platform.link(), second.platform.central(), 2, kSecondGo};
+    bool replaced = false;
+    tango.go.world = [&](uint32_t at_ms) {
+        tango.bravo.now_ms = at_ms;
+        tango.bravo.step();
+        tango.air.pump();
+        second.platform.clock().set_milliseconds(at_ms);
+        second.product.run_pass(at_ms);
+        second_air.pump();
+        if (!replaced && bravo::address_of(tango.bravo.product.settings().peer) == kSecondGo) {
+            replaced = true;
+            tango.air.set_flow(Direction::ToPeripheral, Flow::Lost);
+        }
+        if (replaced && tango.service().asking_again())
+            tango.air.set_flow(Direction::ToPeripheral, Flow::Flowing);
+        if (replaced) CHECK_FALSE(tango.peer().requested());
+    };
+    second.show(tango.now_ms, go::Page::Bravo);
+    tango.run_for(300);
+    REQUIRE(second.product.bravo().found_count() == 1);
+    second.press(tango.now_ms);
+    second.press(tango.now_ms);
+    tango.run_for(2000);
+    tango.press_bravo();
+    tango.run_for(3000);
+    REQUIRE(replaced);
+    REQUIRE(tango.service().asking_again());
+
+    tango.press_bravo();
+    tango.run_for(3000);
+    CHECK(go::paired(second.settings()));
+    CHECK(bravo::address_of(tango.bravo.product.settings().peer) == kSecondGo);
+}
