@@ -39,7 +39,7 @@ updated_on: "2026-11-26"
         <tr><th scope="col">Role</th><th scope="col">Part</th><th scope="col">Why we&rsquo;d try it</th></tr>
       </thead>
       <tbody>
-        <tr><th scope="row">Processor</th><td>Nordic nRF54L15 or nRF54LM20A</td><td>Both run at 128&nbsp;MHz. Choose the nRF54LM20A to keep USB.</td></tr>
+        <tr><th scope="row">Processor</th><td>Nordic nRF54LM20A</td><td>It runs at 128&nbsp;MHz with 512&nbsp;KB of RAM and up to 66 GPIO, enough for two or three radios. Its USB keeps UF2 recovery: copy a file to the device to reinstall it.</td></tr>
         <tr><th scope="row">ADS-L radio</th><td>Semtech LR2021 at 868&nbsp;MHz</td><td>Send and receive ADS-L. The datasheet lists 27&nbsp;mA when transmitting at +14&nbsp;dBm.</td></tr>
         <tr><th scope="row">ADS-B receiver</th><td>Second LR2021 at 1090&nbsp;MHz</td><td>Bravo already uses this chip to receive ADS-B at 1090&nbsp;MHz. That is outside the specified 150 to 960&nbsp;MHz range. We&rsquo;d ask for a receive circuit with measured performance at 1090&nbsp;MHz.</td></tr>
         <tr><th scope="row">Optional third radio</th><td>Third LR2021 in the 868&nbsp;MHz band</td><td>Try listening on the other ADS-L channel or for messages from the ground, including while the first radio transmits. We haven&rsquo;t measured how much this would help.</td></tr>
