@@ -53,7 +53,7 @@ updated_on: "2026-11-26"
     </table>
   </div>
 
-  <p>From datasheets, we estimate a draw of about 41&nbsp;mA with two radios and 48&nbsp;mA with three. We haven&rsquo;t measured either figure on a board.</p>
+  <p>From datasheets, we estimate a draw of about 41&nbsp;mA with two radios and 48&nbsp;mA with three, at the datasheets&rsquo; 3.0 to 3.3&nbsp;V. The sum counts the NEO-F10N tracking at 21&nbsp;mA. Each 868&nbsp;MHz receiver counts 5.7&nbsp;mA in FSK on its DC-DC converter. The 1090&nbsp;MHz receiver counts 7.9&nbsp;mA, the LR2021&rsquo;s figure for 2&nbsp;Mbps MSK, the closest to ADS-B. Each radio&rsquo;s oscillator adds 1.5&nbsp;mA. The processor counts about 2&nbsp;mA and a Bluetooth link about 1&nbsp;mA. The sensors and a memory LCD stay under 0.5&nbsp;mA, and transmitting under 0.1&nbsp;mA. The MAX-M10S would save about 9&nbsp;mA. We haven&rsquo;t measured any of these figures on a board.</p>
 
   <p>Connect the satellite receiver&rsquo;s pulse-per-second signal and the sensors&rsquo; interrupt lines to the processor. Share one small antenna, like the Go&rsquo;s, between 868 and 1090&nbsp;MHz through a diplexer, with an option for an external antenna. Give a third radio its own small antenna. Run each radio on its built-in DC-DC converter. Put a 1/4&Prime; threaded insert in the centre of the back, as on the Go+, so the device clicks onto a quick release. Publish the EU declaration of conformity and the Radio Equipment Directive test reports.</p>
 
