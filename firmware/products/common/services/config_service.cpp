@@ -39,9 +39,12 @@ void ConfigService::tick(uint32_t now_ms) {
     // INFO: fc 04aug26 nobody asks for a push again, so a transient refusal retries it
     if (status_push_due_ && link_up()) push_status();
     install_held_ = upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished();
+    // INFO: fc 26nov26 the SMP thread can land the last chunk after this close, so tell the page
     if (upload_window_open_ && !install_held_ &&
-        now_ms - upload_window_opened_ms_ >= kUploadWindowMs)
+        now_ms - upload_window_opened_ms_ >= kUploadWindowMs) {
         upload_window_open_ = false;
+        refuse(link::Reason::WindowClosed);
+    }
     if (install_held_ && !in_flight() && pending_ == Pending::None) install_received_image();
     if (identity_ != nullptr) identity_->tick(now_ms);
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptCeilingMs) {
