@@ -51,7 +51,7 @@ Status ConfigChannel::broadcast(const uint8_t* frame, int bytes) {
     }
     const Status sent =
         link_.send(events::Endpoint::Config, ConstByteSpan(frame, static_cast<size_t>(bytes)));
-    if (!is_ok(sent)) link_drops_++;
+    if (!is_ok(sent) && sent != Status::WouldBlock) link_drops_++;
     return sent;
 }
 
