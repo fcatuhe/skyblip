@@ -2,7 +2,7 @@
 
 A pilot who helps measure a unit arms a diagnostics capture from its device page, lets the unit record on its own, then fetches the capture over Bluetooth and sends it from the same page (`app/javascript/skyblip/README.md`). The server keeps it as a row of `captures`, in a SQLite database of its own, `storage/production_captures.sqlite3`, so a capture's megabyte never sits in the app's database or in the events log. The body is the gzipped NDJSON `blip.py fetch --log diagnostics` writes, so the file an admin downloads is the file the bench tools read.
 
-A capture is not an event. Its records hold the unit's track and every aircraft it heard, addresses included, which the events log never holds (`app/models/event/README.md`, Privacy). Receiving one is an event, `capture.received`, with the device, the profile, the counts and the firmware, so the story of a pilot who helped still lines up by support code. Each download from the admin area is `capture.downloaded`, with the admin who made it.
+A capture is not an event. Its records hold the unit's track and every aircraft it heard, addresses included, which the events log never holds (`app/models/event/README.md`, Privacy). Receiving one is an event, `capture.received`, with the device, the profile, the counts and the firmware, so the story of a pilot who helped still lines up by support code. Each download is `capture.downloaded`, with the admin who made it, from the admin area or through `get_capture` on the admin MCP server, which hands an agent the same file as a base64 blob.
 
 ## What is kept, and how long
 
