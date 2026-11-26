@@ -51,8 +51,8 @@ module SimulatorHelper
     { keys: "T", action: :traffic }
   ].freeze
 
-  def simulator_module_path(tag, files)
-    release_asset_path(tag, files.embed, locale: nil)
+  def simulator_module_path(tag)
+    release_asset_path(tag, Release::SIMULATOR_EMBED, locale: nil)
   end
 
   def gauge_marks(dial)

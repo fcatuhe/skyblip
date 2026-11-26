@@ -9,7 +9,10 @@ class Release
   FIRMWARE = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   INSTALLER = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+\.uf2\z/
-  FILE = /#{FIRMWARE}|#{INSTALLER}|\A#{Regexp.union(SimulatorFiles::CURRENT.names)}\z/
+  SIMULATOR_EMBED = "skyblip-simulator-embed.js".freeze
+  SIMULATOR_RUNTIME = [ "skyblip-simulator.js", "skyblip-simulator.wasm", SIMULATOR_EMBED ].freeze
+  SIMULATOR_SCENARIOS = "skyblip-simulator-scenarios.json".freeze
+  FILE = /#{FIRMWARE}|#{INSTALLER}|\A#{Regexp.union(*SIMULATOR_RUNTIME, SIMULATOR_SCENARIOS)}\z/
   LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
@@ -55,11 +58,11 @@ class Release
 
   def self.prompt_glass_embed
     if local_simulator
-      [ LOCAL_TAG, SimulatorFiles::CURRENT.embed ]
+      [ LOCAL_TAG, SIMULATOR_EMBED ]
     elsif Rails.configuration.x.local_simulator_only
       raise Unavailable, "No local simulator build"
     elsif (release = simulator)
-      [ release.tag, release.simulator_files.embed ]
+      [ release.tag, SIMULATOR_EMBED ]
     else
       raise Unavailable, "No release holds the simulator"
     end
@@ -83,7 +86,7 @@ class Release
   # INFO: fc 14nov26 development and test serve the WASM `make -C firmware browser` built, which no release holds yet
   def self.local_simulator
     directory = Rails.configuration.x.simulator_build
-    directory if directory && SimulatorFiles::CURRENT.runtime.all? { File.file?(File.join(directory, it)) }
+    directory if directory && SIMULATOR_RUNTIME.all? { File.file?(File.join(directory, it)) }
   end
 
   def self.download(tag, file)
@@ -140,7 +143,7 @@ class Release
 
   def self.local_file(file)
     directory = local_simulator
-    raise NotFound unless directory && SimulatorFiles::CURRENT.runtime.include?(file)
+    raise NotFound unless directory && SIMULATOR_RUNTIME.include?(file)
 
     File.binread(File.join(directory, file))
   end
@@ -176,8 +179,7 @@ class Release
   def channel = development? ? "development" : "release"
   def key = KEYS.fetch(channel)
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
-  def simulator_files = SimulatorFiles.in(assets)
-  def simulator? = !simulator_files.nil?
+  def simulator? = (SIMULATOR_RUNTIME - assets).empty?
   def firmware_files = assets.grep(FIRMWARE)
   def installer_file(product) = assets.find { |asset| asset[INSTALLER, 1] == product }
 end
