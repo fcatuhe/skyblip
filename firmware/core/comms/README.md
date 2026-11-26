@@ -12,7 +12,7 @@ Every frame on the config, log and peer endpoints is one CBOR map (RFC 8949) in 
 
 ## Three endpoints, two shapes of send
 
-`events::Endpoint` splits a phone's link by owner. NMEA, the traffic picture, is broadcast: every subscribed central gets the same bytes, and `ports::Link::send()` reports Ok when one of them took it, so a phone with full buffers cannot end the pass for the tablet beside it. Config and Log are conversations, sent by `send_to()` to the connection whose request they answer (Sessions). Peer is the link between a paired Go and Bravo (The peer endpoint).
+`events::Endpoint` splits a phone's link by owner. NMEA, the traffic picture, is broadcast: every subscribed central gets the same bytes, and `ports::Link::send()` reports Ok when one of them took it, so a phone with full buffers cannot end the pass for the tablet beside it. It answers `Unsubscribed` when centrals are connected but none subscribed to the endpoint, and the NMEA service then lets the pass go uncounted, as it would with nobody connected. `send_to()` answers a central that has not subscribed yet with `WouldBlock`, because a central may write before it subscribes, so its answer waits as for buffers. Config and Log are conversations, sent by `send_to()` to the connection whose request they answer (Sessions). Peer is the link between a paired Go and Bravo (The peer endpoint).
 
 So `payload_bytes()` with no argument is the smallest payload any connected central negotiated, because one NMEA frame is formatted once for all: an iPhone at ATT_MTU 185 beside an Android at 247 pulls every broadcast frame down to 182 bytes. A conversation is sized for its own session, by `payload_bytes_to()`.
 
@@ -188,7 +188,7 @@ Bravo has no glass, so it answers `pair` only to a trusted session, refuses any 
 
 A whole reply wider than the asking session's payload is never sent short and never left unanswered: the sender counts a `link_drops` and answers `small_mtu`, 8 bytes on config and 8 or 10 on log, in `ConfigChannel::reply_to()` and `RecordPool::send()`. A timing or diagnostics report that cannot be split this narrow, a `register` or an `attest` whose frame does not fit, and a `read` whose chunk cannot hold one record are refused before any frame exists, and are not drops.
 
-A push is never refused, because the refusal would be noise: a push that does not fit is counted and dropped. A `status` push the link answers `WouldBlock` is not a drop: it goes on the next pass. Silicon answers `WouldBlock` both to a central short of notification buffers and to a connection where no central subscribed to the config endpoint, such as a Go on its Bravo, which subscribes to the peer endpoint alone. The `update` frame pushed on a connection's first `Up` goes again on the late MTU exchange's second `Up`.
+A push is never refused, because the refusal would be noise: a push that does not fit is counted and dropped. A `status` push the link answers `WouldBlock`, a central short of notification buffers, is not a drop: it goes on the next pass. One it answers `Unsubscribed` is neither counted nor retried, because no connected central subscribed to the config endpoint, such as a Go on its Bravo, which subscribes to the peer endpoint alone. The app subscribes before it asks for `status`, so nobody is owed that push. The `update` frame pushed on a connection's first `Up` goes again on the late MTU exchange's second `Up`.
 
 ## Measuring what links settle on
 

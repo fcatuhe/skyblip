@@ -436,6 +436,24 @@ struct ServiceRig {
 
 }  // namespace
 
+// A Bravo's Go subscribes to the peer endpoint alone, so the Bravo's NMEA has nobody to reach.
+TEST_CASE("nmea: a pass no central subscribed to is let go, uncounted and not retried") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    fly(rig, 3);
+    rig.raise_link();
+    rig.platform.link().subscribe(events::Endpoint::Nmea, false);
+    fly(rig, 3);
+
+    CHECK(rig.platform.link().count_on(events::Endpoint::Nmea) == 0);
+    CHECK(rig.product.nmea().link_drops() == 0);
+    CHECK(rig.platform.link().unheard <= 6);
+
+    rig.platform.link().subscribe(events::Endpoint::Nmea, true);
+    fly(rig, 2);
+    CHECK(count_of(rig, "$PFLAU") >= 1);
+}
+
 TEST_CASE("nmea: a board with no link fitted says nothing on it") {
     ServiceRig unfitted(ports::Capability::None);
     for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) unfitted.nmea.tick(now_ms);

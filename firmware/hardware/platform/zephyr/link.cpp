@@ -248,7 +248,7 @@ Status Link::notify_one(struct bt_conn* connection, Endpoint endpoint, ConstByte
         atomic_dec(in_flight);
         if (error != -ENOMEM && error != -EAGAIN) result = Status::Invalid;
     }
-    return subscribed ? result : Status::WouldBlock;
+    return subscribed ? result : Status::Unsubscribed;
 }
 
 Status Link::send(Endpoint endpoint, ConstByteSpan bytes) {
@@ -262,7 +262,7 @@ Status Link::send(Endpoint endpoint, ConstByteSpan bytes) {
         bt_conn_unref(connection);
         if (one == Status::Ok)
             delivered = true;
-        else
+        else if (one != Status::Unsubscribed || result == Status::Down)
             result = one;
     }
     return delivered ? Status::Ok : result;
@@ -274,7 +274,8 @@ Status Link::send_to(const events::Peer& peer, Endpoint endpoint, ConstByteSpan 
     if (connection == nullptr) return Status::Down;
     const Status sent = notify_one(connection, endpoint, bytes);
     bt_conn_unref(connection);
-    return sent;
+    // INFO: fc 26nov26 a central may write before it subscribes, so its answer waits as for buffers
+    return sent == Status::Unsubscribed ? Status::WouldBlock : sent;
 }
 
 void Link::deliver_to(bus::Bus& bus) { g_bus = &bus; }
