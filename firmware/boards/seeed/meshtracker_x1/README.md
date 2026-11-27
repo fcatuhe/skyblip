@@ -28,7 +28,7 @@ SoftRF and Meshtastic are GPL-3.0 and were read for facts only. No code is copie
 | Charge done | P1.04, low when charged | Meshtastic (commented out), SoftRF's T1000-E map | |
 | USB-C detect | P0.05 | SoftRF (`CHG_VUSB`), Meshtastic (`EXT_PWR_DETECT`), Seeed | No source gives its polarity. The platform reads VBUS from the SoC instead, as Meshtastic does (`NRF_APM`). |
 | QSPI NOR | SCK P0.19, CS P0.20, IO0 P0.21, IO1 P0.22, IO2 P0.23, IO3 P1.00, enable P0.15 active high | SoftRF, Seeed | |
-| Radio SPI | SCK P0.11, MOSI P1.09, MISO P1.08, CS P0.12 | SoftRF, Meshtastic, Seeed | The LR2021, for #172 and #176. |
+| Radio SPI | SCK P0.11, MOSI P1.09, MISO P1.08, CS P0.12 | SoftRF, Meshtastic, Seeed | The LR2021, for #172 and #176, on SPIM3. The devicetree disables `spi3`, so no Zephyr driver claims it, and the platform drives it through nrfx (`hardware/README.md`, The X1's radio bus). |
 | Radio control | reset P1.10, busy P0.07, IRQ P1.01 (DIO8) | SoftRF, Meshtastic, Seeed | |
 | GNSS UART | nRF TX P0.13, nRF RX P0.14, 115200 baud | SoftRF, Meshtastic, Seeed | The AG3335, for #171 and #176. |
 | GNSS control | enable P1.11, reset P0.08 high to reset, RTC supply P1.13, sleep P0.30, RTC wake P0.29, PPS P0.04 | SoftRF, Meshtastic, Seeed | Meshtastic's comment calls P0.04 `VCC_ADC`. SoftRF and Seeed call it the PPS. |
