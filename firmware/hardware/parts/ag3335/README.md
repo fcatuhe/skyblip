@@ -50,7 +50,7 @@ The sequence, in order:
 
 **What the sequence leaves out.**
 
-- No `$PAIR513` save to flash (§2.3.103): the driver sends the sequence on every boot, and VRTC keeps the backup domain powered between boots.
+- No `$PAIR513` save to flash (§2.3.103): the driver sends the sequence on every boot, and VRTC keeps the backup domain powered between boots. `board.c` raises VRTC's enable, P1.13, at every boot (`../../../boards/seeed/meshtracker_x1/README.md`, The way down).
 - No autobaud: SoftRF (`nRF52.cpp:4022`) and Meshtastic (`variant.h:126`) both run the X1's port at 115200. It is also the lowest rate `$PAIR864` lists, and that command takes a reboot (§2.3.151).
 - No `$PAIR154,0`, which SoftRF sends to turn RLM off (`GNSS.cpp:1311`) and the guide does not document.
 
@@ -79,7 +79,7 @@ A receiver with no fix sends a 37-byte GGA (Meshtastic issue #4626). `core/gnss`
 | Sleep | P0.30 | high | SoftRF `Seeed_X1.h:14`, Meshtastic `variant.h:136` |
 | RTC wake | P0.29 | low, high wakes | SoftRF `Seeed_X1.h:15`, Meshtastic `variant.h:137` |
 
-`Ag3335Wiring::begin()` drives the five control lines in SoftRF's order (`nRF52.cpp:1865-1878`): enable, RTC supply, reset, sleep, RTC wake. It then opens the UART and arms the PPS. It reads them from the devicetree aliases `gnss-uart`, `gnss-pps`, `gnss-enable`, `gnss-rtc-enable`, `gnss-reset`, `gnss-sleep` and `gnss-rtc-wake`.
+`Ag3335Wiring::begin()` drives four control lines in SoftRF's order (`nRF52.cpp:1865-1878`): enable, reset, sleep, RTC wake. The board raised the RTC supply before. It then opens the UART and arms the PPS. It reads them from the devicetree aliases `gnss-uart`, `gnss-pps`, `gnss-enable`, `gnss-reset`, `gnss-sleep` and `gnss-rtc-wake`.
 
 ## The model
 

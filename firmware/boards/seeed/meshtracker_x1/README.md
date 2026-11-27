@@ -53,7 +53,7 @@ SoftRF lists a console UART on P0.16 and P0.17, and also says the X1 does not ex
 | GD25Q64E NOR, 8 MiB | QSPI | JEDEC `c8 40 17` | Seeed names a GD25Q64ENIGR. GigaDevice's GD25Q64E datasheet, DS-00484 Rev 1.4, gives that JEDEC ID, as does the GD25Q64C entry of Adafruit_SPIFlash `flash_devices.h` that SoftRF probes it with. |
 | Charger | | | SoftRF names an SGM40571. Seeed's block diagram names a BQ24045. #169 reads the part. |
 
-The NOR runs single-line at 8 MHz, the Go's NOR clock, on high-drive QSPI pads, because two Bluetooth updates read slot1 corrupt at 32 MHz on standard-drive pads (#278). nrfx's own pin setup applies high drive (`nrfx_qspi.c:63-72`) and Zephyr's pinctrl leaves it to the board. 8 MHz single-line moves about 1 MB/s, far above the Bluetooth upload's 8 KB/s. With `quad-enable-requirements = "NONE"` the driver never writes a status register. MCUboot takes these settings from this devicetree, so only a `.uf2` changes them on a unit. The devicetree sets `has-dpd` with the datasheet's tDP of 3 us and tRES1 of 20 us, so the driver wakes a part a previous firmware left in deep power-down before it reads the JEDEC ID. `board.c` raises the NOR's enable, and outside MCUboot the sensor rail, then waits the 30 ms SoftRF waits (`nRF52.cpp:934-942`).
+The NOR runs single-line at 8 MHz, the Go's NOR clock, on high-drive QSPI pads, because two Bluetooth updates read slot1 corrupt at 32 MHz on standard-drive pads (#278). nrfx's own pin setup applies high drive (`nrfx_qspi.c:63-72`) and Zephyr's pinctrl leaves it to the board. 8 MHz single-line moves about 1 MB/s, far above the Bluetooth upload's 8 KB/s. With `quad-enable-requirements = "NONE"` the driver never writes a status register. MCUboot takes these settings from this devicetree, so only a `.uf2` changes them on a unit. The devicetree sets `has-dpd` with the datasheet's tDP of 3 us and tRES1 of 20 us, so the driver wakes a part a previous firmware left in deep power-down before it reads the JEDEC ID. `board.c` raises the NOR's enable and the GNSS RTC supply, and outside MCUboot the sensor rail, then waits the 30 ms SoftRF waits (`nRF52.cpp:934-942`).
 
 A NOR that fails its JEDEC check leaves MCUboot without slot1: `flash_area_open` returns `-ENODEV` and MCUboot stops at `FIH_PANIC`, with no console to say so. A unit that shows nothing on USB after the smoke image is installed failed there. Recover it with the bootloader's 3 s hold and a fresh drag-and-drop, or with #169's SWD restore.
 
@@ -109,7 +109,9 @@ Bravo's product parks the LR2021, the buzzer, the motor, the lamps and the DRV26
 | peripheral rail off | the sensor rail P1.07, the RTC enable P0.09 and the NOR enable P0.15 driven low |
 | wake pin armed | the button, P0.06, armed as a level wake, high when pressed |
 
-GPREGRET is written first: `0x00`, which leaves the factory bootloader's button hold in reach, or its UF2 magic for a recovery (`factory/README.md`). The GNSS RTC supply, P1.13, is left as bring-up raised it. Every step is unverified until #169 measures the off current.
+GPREGRET is written first: `0x00`, which leaves the factory bootloader's button hold in reach, or its UF2 magic for a recovery (`factory/README.md`). The GNSS RTC supply, P1.13, stays high, so the AG3335 keeps its orbits, time and last position for a hot start. Every step is unverified until #169 measures the off current.
+
+System OFF and the wake from it keep every pin's level, while a soft, watchdog, pin or brownout reset releases them all (nRF52840 PS v1.1 §5.3.6.8). So after a reset P1.13 floats, and the AG3335 may lose its backup domain and start cold. `board.c` raises it in the first init of MCUboot and of the application, which leaves it floating only while the factory bootloader runs. MCUboot changes only with a `.uf2`, so on a unit updated over Bluetooth it floats through MCUboot too. #169 times a fix after a button switch-off and after a reboot to check it.
 
 ## The smoke image
 

@@ -11,6 +11,8 @@ enum {
 
 static const struct gpio_dt_spec board_rails[] = {
 	GPIO_DT_SPEC_GET(DT_ALIAS(flash_enable), gpios),
+	/* INFO: fc 27nov26 a soft, watchdog, pin or brownout reset releases every pin, and the AG3335 loses its orbits while VRTC floats */
+	GPIO_DT_SPEC_GET(DT_ALIAS(gnss_rtc_enable), gpios),
 #if !defined(CONFIG_MCUBOOT)
 	GPIO_DT_SPEC_GET(DT_ALIAS(sensor_rail), gpios),
 #endif
