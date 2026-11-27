@@ -15,7 +15,7 @@ root firmware/test/support/simulator_run.h
 root firmware/test/support/m_band_rig.h
 389b820521bcb9a82b4a9b8ef028c6eafd3689660d806f2e39eba2e90b1b24f7  firmware/core/protocol/air.cpp
 4f3da0db03b9fa9383ce04584c246a2a08a9593c1ef039bef7eb81c9902a0e17  firmware/core/protocol/air.h
-8a89f604572c01fbaa1d6482c31975bcc19f031abf182a4a94c711f8eb02c16a  firmware/hardware/parts/sx1262/sx1262.cpp
+d0c4d49b435e65d95cfe3470e9e9ebb2f452dfbb2b6b77b8f88a60b1f704d9cd  firmware/hardware/parts/sx1262/sx1262.cpp
 519e746ac69b273c5a4c7b398730a117d4ba199e14cf786895878c5bb16fe267  firmware/hardware/parts/sx1262/sx1262.h
 e54f225d2d7cbee3101f29148a2fb79852c43d9f93cca301770bb102ff5919a4  firmware/hardware/platform/zephyr/clock.h
 94a79dc6d4cdb552494fdf5fa91249eb1fb11a9f9645d01277c334010e1de488  firmware/hardware/platform/zephyr/io.h
