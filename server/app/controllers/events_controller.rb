@@ -10,7 +10,7 @@ class EventsController < ApplicationController
   before_action -> { head :content_too_large }, if: -> { request.content_length > LARGEST }
 
   def create
-    journal = Event::Journal.new(browser: params[:browser], entries: params.expect(entries: [ ENTRY ]),
+    journal = Event::Journal.new(browser: params[:browser], entries: params.expect(entries: [ ENTRY ]), sent_at: params[:sent_at],
       user: Current.user, request_id: request.request_id, ip_address: request.remote_ip)
 
     if journal.valid?

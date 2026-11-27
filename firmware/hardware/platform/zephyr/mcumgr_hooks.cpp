@@ -73,6 +73,13 @@ bool older(const img_mgmt_upload_req& request, Dfu& slots) {
            dfu::version_refusal(running, incoming.version, slots.downgrade_allowed()) != nullptr;
 }
 
+// INFO: fc 27nov26 the window opened for one version, so another is refused before the rest
+bool unapproved(const img_mgmt_upload_req& request) {
+    dfu::ImageHeader incoming;
+    return dfu::read_header(request.img_data.value, request.img_data.len, incoming) &&
+           incoming.version != UploadGate::approved();
+}
+
 std::optional<dfu::ImageClass> running_class(Dfu& slots) {
     dfu::ImageClass running;
     if (slots.running_class(running)) return running;
@@ -92,6 +99,7 @@ mgmt_cb_return on_chunk(uint32_t event, mgmt_cb_return, int32_t* error_code, uin
     Dfu slots;
     if (request.off == 0 && older(request, slots))
         return refuse_image(IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, error_code, group, abort_more);
+    if (request.off == 0 && unapproved(request)) return refuse(error_code, abort_more);
     const bool admitted =
         request.off == 0 ? g_product_check.begin(chunk, bytes, request.size, running_class(slots))
                          : g_product_check.admits(request.off, chunk, bytes);

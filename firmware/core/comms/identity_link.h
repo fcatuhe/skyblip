@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 
+#include "core/events/link.h"
 #include "core/identity/messages.h"
 #include "core/identity/unit.h"
 
@@ -25,16 +26,16 @@ class IdentityLink {
     identity::Unit& unit() { return unit_; }
     bool activated() const { return unit_.activation().activated(); }
 
-    bool open(uint16_t session_id, uint32_t now_ms) {
+    bool open(const events::Peer& peer, uint32_t now_ms) {
         close();
         if (!unit_.draw_nonce(unit_nonce_)) return false;
-        session_id_ = session_id;
+        peer_ = peer;
         opened_ms_ = now_ms;
         open_ = true;
         return true;
     }
-    bool live(uint16_t session_id, uint32_t now_ms) const {
-        return open_ && session_id_ == session_id && now_ms - opened_ms_ < kNonceForgetMs;
+    bool live(const events::Peer& peer, uint32_t now_ms) const {
+        return open_ && peer_ == peer && now_ms - opened_ms_ < kNonceForgetMs;
     }
     const identity::Nonce& unit_nonce() const { return unit_nonce_; }
 
@@ -42,8 +43,8 @@ class IdentityLink {
         server_nonce_ = server_nonce;
         registering_ = true;
     }
-    bool registering(uint16_t session_id, uint32_t now_ms) const {
-        return live(session_id, now_ms) && registering_;
+    bool registering(const events::Peer& peer, uint32_t now_ms) const {
+        return live(peer, now_ms) && registering_;
     }
     const identity::Nonce& server_nonce() const { return server_nonce_; }
 
@@ -57,8 +58,8 @@ class IdentityLink {
     }
 
     // INFO: fc 18oct26 a held unlock is its sender's: its answer must never reach another session
-    void forget(uint16_t session_id) {
-        if (session_id_ != session_id) return;
+    void forget(const events::Peer& peer) {
+        if (peer_ != peer) return;
         close();
         unlock_due_.reset();
     }
@@ -74,7 +75,7 @@ class IdentityLink {
     identity::Nonce server_nonce_{};
     uint32_t opened_ms_{0};
     std::optional<identity::UnlockCode> unlock_due_{};
-    uint16_t session_id_{0};
+    events::Peer peer_{0, 0};
     bool open_{false};
     bool registering_{false};
 };
