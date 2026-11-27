@@ -49,11 +49,12 @@ class Event::ReviewTest < ActiveSupport::TestCase
     journey "DONE0000", "installer.port_chosen", 8.minutes.ago, firmware: "bootloader"
     journey "DONE0000", "installer.drive_chosen", 7.minutes.ago, product: "go"
     journey "DONE0000", "installer.wrote", 6.minutes.ago, product: "go"
-    journey "DONE0000", "installer.finished", 5.minutes.ago, kind: "go"
+    journey "DONE0000", "installer.verified", 5.minutes.ago, product: "go"
+    journey "DONE0000", "installer.finished", 4.minutes.ago, kind: "go"
 
     review = Event::Review.new
 
-    assert_equal({ started: 3, port_chosen: 2, drive_chosen: 2, wrote: 2, finished: 1 }, review.setups[:browsers])
+    assert_equal({ started: 3, port_chosen: 2, drive_chosen: 2, wrote: 2, verified: 1, finished: 1 }, review.setups[:browsers])
     assert_equal({ "port_closed" => 2 }, review.setups[:noticed])
     assert_equal({ "adapter" => 1 }, review.setups[:handed_off])
     assert_equal [ 3, 1 ], review.headline.values_at(:setups_started, :setups_finished)
