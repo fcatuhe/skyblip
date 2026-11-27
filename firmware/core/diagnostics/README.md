@@ -78,6 +78,11 @@ The device never reads a record back. The C++ decoders the host suite reads reco
 | `Switch` 19 | whether `kSwitchRetuneMs` can shrink, from every change rather than the worst since boot |
 | `Loop` 20 | whether the loop is late because one pass is long or because nothing ran it, and which service holds it |
 | `Adsb` 21 | the ADS-B altitude questions of #183: which datum each installation's difference is on, how far the two relative altitudes disagree, and which versions and GVA values are heard |
+| `Receiver` 22 | when Bravo hears nothing, whether the LR2021 left receive, reset itself, lost its threshold, stopped raising its IRQ, or sat in noise |
+| `Reception` 23 | where the frames the LR2021 heard went: refused, folded, placed, and whether Bravo had a position to place them against |
+| `Framing` 24 | where Bravo lost frames, whether the LR2021 fills its FIFO as a frame arrives, and what the receiver thread costs the CPU |
+| `Screening` 25 | what the receiver thread passed to the decoder and refused, how many squitters it repaired, and how close the FIFO and the queue came to full |
+| `Drain` 26 | where each receiver thread wake's time went, how many SPI transactions it paid for, and what the repaired squitters became |
 
 ### Bursts that carry a name or a status
 
@@ -113,6 +118,54 @@ A target can have no relative altitude: it sent none, or it sent a pressure alti
 - **At most `kBudgetCeilingRecords` in any `kBudgetWindowMs`:** ten in any sliding second, which spreads `adsb::Assembly::kMaxAircraft`, 100, over the period. An aircraft due when the second's ten are spent is counted in `refused()` and admitted on a later fold. So a capture armed under a full sky never floods the 64-slot ring.
 
 Ten a second is at most a hundred a period, the size of the table that remembers each aircraft's last record, so an entry is always free or expired when the budget admits a record. A `static_assert` holds the three constants to that arithmetic. A held entry is never recycled, which would record its aircraft twice in one period.
+
+### The receiver and reception records
+
+Bravo writes one `Receiver`, one `Framing`, one `Screening`, one `Drain` and one `Reception` each second of a `Full` capture, so an outage reads as seconds whose counters stop, not as a hole. Every counter crosses as its low 8 or 16 bits since boot, and a reader subtracts two records as it does `Duty`'s. `scripts/reception_check.py` does that and names the outages.
+
+`Receiver` carries the driver's counters and the probe the receiver thread takes once a second (`../../hardware/parts/lr2021/README.md`, The probe). Flag bit 4, `probed`, vouches for the probe's fields: the LR2021's own packet count, its errors, the noise floor, the threshold it holds, its chip mode, its reset source, and the gain step and LF boost the driver set (`gain_step`, flag bit 7 `boosted`), so two builds' captures say which setting each measured. Read together they separate the causes of a silent receiver:
+
+| What the records show | What it means |
+|---|---|
+| `part_reset` `power_on`, with `front_end_kept` false and `threshold_dbm` not the part's own -106 | the part reset itself, from a brown-out or its rail, and lost its 1090 MHz configuration. `resets` rises a second later, when the driver brings it up again |
+| `part_mode` anything but `receive` while `listening` | the part left receive and the driver did not notice |
+| `part_packets` rising while `frames` does not | the part decodes frames that never reach the driver: a lost IRQ edge or a FIFO read |
+| `framing_resyncs` rising, in `reception` | the FIFO held bytes no frame owns, and the driver emptied it rather than read frames shifted across two |
+| `missed_edges` rising | a timed sweep found the FIFO past its IRQ level, so the edge never woke the thread |
+| `noise_dbm` well above its usual floor | the band is jammed or the front end desensed |
+| `frames` rising, `crc` rising as fast | frames heard and refused, as #277 measured on the bench |
+| `rearms` or `resets` rising | the driver's own recovery ran, after 30 s of silence or a fault |
+
+`Reception` carries `AdsbService`'s counters: `crc` and `unsupported`, which include the frames the receiver thread refused for the decoder, `folded`, `positions` and `capture_refused`, then the aircraft the assembly holds, those the table holds, `reference`, the position the traffic is placed against, and `fix_valid`, flag bit 2. `framing_resyncs` counts the times the LR2021 driver found bytes in its FIFO that no counted frame owns and emptied it (`../../hardware/parts/lr2021/README.md`, Framing). `impossible_formats` counts the frames whose downlink format no transponder sends, junk by definition, and times 32/12 an estimate of every false alarm. Bravo's NMEA sends no traffic without a fix, and its peer link exports none while `reference` is `none`, so an EFB can lose every target while the receiver hears them all.
+
+`Framing` answers what the framing law and the paced receiver thread rest on, which the bench has not yet measured (`../../hardware/parts/lr2021/README.md`, Framing):
+
+| Fields | What they answer |
+|---|---|
+| `overflow_drops`, `resync_drops`, `queue_drops` | where a lost frame went: a FIFO overflow, a framing resync, or the full queue to the decoder |
+| `in_flight`, `stranded_resyncs` | whether bytes past the counted frames were a frame still arriving or the remains of one never counted. `in_flight` rising says the LR2021 writes a frame into its FIFO as it arrives |
+| `split_counts` | snapshots where a frame closed while the level was read, so the bytes went unchecked until the next |
+| `short_resyncs` | a FIFO holding fewer bytes than the frames the part counted |
+| `drain_busy_ms`, `drains` | the receiver thread's own time and wakes. It runs ahead of the loop, so `loop.busy_ms` counts this time inside the service it interrupted, and only here does it show apart |
+
+`Screening` follows each frame the receiver thread read through its screen (`../../hardware/parts/lr2021/README.md`, The screen). `squitters`, `all_calls` and `replies` count the DF17, the DF11 and the other Mode S replies it passed to the decoder. `receiver.frames` less those three and `parity_refused` is the frames refused by format. The rest answer what the next change would rest on:
+
+| Fields | What they answer |
+|---|---|
+| `squitters` against `reception.positions` | how many sound squitters the decoder turned into positions. Fewer squitters than the aircraft send is air the LR2021 missed, not a CPU or queue loss |
+| `parity_refused`, `one_bit_errors`, `two_bit_errors` | DF11 and DF17 refused for parity, and the DF17 one or two flipped bits from sound, which the thread repaired and passed instead. `drain.repaired` says how many the decoder kept |
+| `unmatched` | replies the decoder dropped because their address was not heard in clear first, most of them noise in a reply format |
+| `fifo_peak_frames` | the most frames one wake found in the FIFO, which holds 18. Near 18 says the drain period is too long, or a FIFO-level IRQ is due |
+| `queue_peak_frames` | the most frames waiting for the decoder after a wake, of 64. Near 64 says the decoder falls behind |
+
+`Drain` splits the receiver thread's time, so the next change to it can be measured:
+
+| Fields | What they answer |
+|---|---|
+| `irq_wakes`, `empty_wakes` | wakes on the FIFO IRQ, and wakes that found nothing new. `framing.drains` less `irq_wakes` is the timed sweeps |
+| `poll_ms`, `busy_wait_ms`, `transactions` | the time in the LR2021 driver, the part of it spent waiting on BUSY, and the SPI transactions it made. `poll_ms` less `busy_wait_ms` over `transactions` is the cost of one transaction |
+| `worst_drain_us` | the longest one wake held the CPU in the last whole second. The thread is cooperative, so the loop waited that long |
+| `repaired`, `repairs_refused` | repaired squitters the decoder kept because it held their aircraft, and those it dropped because it held none |
 
 ### The transmitter
 
@@ -171,7 +224,12 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Contact` | `products/skyblip_go/services/screen.cpp` `record_contact` | every debounced edge, with the gesture the product made of it |
 | `Link` | `products/common/services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
 | `Traffic` | `products/common/alarm_grader.cpp` `record_traffic` | every reception that reached a target, once graded |
-| `Adsb` | `products/common/services/adsb_capture.cpp` `AdsbCapture::record` | every ADS-B observation folded, under the two rules above, from Bravo's `AdsbService` and a paired Go's `BravoService`. Nothing arms a capture on Bravo yet (#247) |
+| `Adsb` | `products/common/services/adsb_capture.cpp` `AdsbCapture::record` | every ADS-B observation folded, under the two rules above, from Bravo's `AdsbService` and a paired Go's `BravoService` |
+| `Receiver` | `products/skyblip_bravo/services/adsb.cpp` `record_second`, from `ports::AdsbReceiver::statistics()` | once a second, whatever the sky does |
+| `Reception` | the same | the same pass |
+| `Framing` | the same, from `ports::AdsbReceiverStatistics` | the same pass |
+| `Screening` | the same, from `ports::AdsbReceiverStatistics` and `Transponders::unmatched()` | the same pass |
+| `Drain` | the same, from `ports::AdsbReceiverStatistics` and `AdsbService`'s repair counts | the same pass |
 | `Write` | `products/common/services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `products/skyblip_go/services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `products/common/services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, the partition refused a sector, or the sector ring recycled one of this session's own |
@@ -191,7 +249,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 
 A profile is what a capture is for, chosen when it is armed and held in RAM beside the armed flag.
 
-- `Full` lists every type: the corpus the tuning work replays. A capture may take 170 sectors of the Go's 298, because the flights floor keeps 128 (`../store/README.md`), so 28,900 records. At `Recorder::kPeriodicRecordsPerSecond`, fifteen a second, that is about 32 minutes, and about 19 minutes with a full ADS-B sky's ten more a second.
+- `Full` lists every type: the corpus the tuning work replays. A capture may take 170 sectors of the Go's 298, because the flights floor keeps 128 (`../store/README.md`), so 28,900 records. At `Recorder::kPeriodicRecordsPerSecond`, fifteen a second, that is about 32 minutes, and about 19 minutes with a full ADS-B sky's ten more a second. Bravo's X1 has 512 sectors, so a capture takes 384 of them, 65,280 records. With no traffic Bravo writes about eleven a second, `Receiver`, `Framing`, `Screening`, `Drain` and `Reception` included, which is about 1 h 40 min. Each position heard adds a `Traffic` record, so ten aircraft sending two positions a second leave about 37 minutes. The ring recycles the capture's oldest sector, so a capture keeps the latest stretch of that length.
 - `PowerRun` lists `Boot`, `Config`, `Power`, `Duty`, `Gap` and `End`. A run to cutoff on the 2400 mAh pack is 35 to 50 hours. Two records every 30 s holds about 120 hours, so the run fits whole, start included. The cadence is one constant, not a knob, and `Power` and `Duty` go out on the same pass so a reader never interpolates between two clocks.
 - `FlightRun` lists the same six at the same cadence (`paced()`), and is the one profile that changes what the device does (`simulates_flight()`): the glass runs as in flight, with the radar's flight clock, the `FLIGHT` word and the g-meter's extremes cleared at the simulated takeoff (`../../products/skyblip_go/README.md`). Everything else reads the real flight state. A parked unit keeps the ground transmit cadence and on-ground flag, because ADS-L G.1.16 holds an on-ground report to 0.1 Hz and a false airborne aircraft would mislead every receiver in range. The flight log writes no flight, so the run leaves no fake flight and evicts no real one. `scripts/power_budget.py` models the transmit the run could not send.
 

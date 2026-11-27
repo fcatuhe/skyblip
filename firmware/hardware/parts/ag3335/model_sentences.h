@@ -123,9 +123,37 @@ inline void Ag3335::emit_burst() {
     if (due(kGga)) emit_gga();
     if (due(kGll)) emit_gll();
     if (due(kGsa)) emit_gsa();
+    if (due(kGsv)) emit_gsv();
     if (due(kRmc)) emit_rmc();
     if (due(kVtg)) emit_vtg();
     if (due(kZda)) emit_zda();
+}
+
+// INFO: fc 26nov26 GPS alone, four satellites a sentence, signal 1 for L1 in NMEA 4.10's last field
+inline void Ag3335::emit_gsv() {
+    const int sentences = (satellites_in_view + 3) / 4;
+    uint8_t at = 0;
+    for (int number = 1; number <= sentences; number++) {
+        char line[128];
+        int written = format_string(line, "$GPGSV,");
+        written += format_unsigned(line + written, static_cast<uint32_t>(sentences), 1);
+        line[written++] = ',';
+        written += format_unsigned(line + written, static_cast<uint32_t>(number), 1);
+        line[written++] = ',';
+        written += format_unsigned(line + written, satellites_in_view, 2);
+        for (int slot = 0; slot < 4 && at < satellites_in_view; slot++, at++) {
+            line[written++] = ',';
+            written += format_unsigned(line + written, static_cast<uint32_t>(at + 1), 2);
+            line[written++] = ',';
+            written += format_unsigned(line + written, static_cast<uint32_t>(15 + at * 3), 2);
+            line[written++] = ',';
+            written += format_unsigned(line + written, static_cast<uint32_t>((at * 47) % 360), 3);
+            line[written++] = ',';
+            written += format_unsigned(line + written, static_cast<uint32_t>(40 - at), 2);
+        }
+        written += format_string(line + written, ",1");
+        finish(line, written);
+    }
 }
 
 inline int Ag3335::put_stamp(char* out) const {

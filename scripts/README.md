@@ -16,6 +16,7 @@ This directory holds the host tooling. The Python scripts run on the standard li
 | [`diagnostics_layout.py`](diagnostics_layout.py) | write the C++ header, the C++ mirrors test and the Python and JavaScript decoder tables generated from `schemas/diagnostics_layout.v1.json` |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
+| [`reception_check.py`](reception_check.py) | find the seconds a Bravo placed no traffic in a Full capture, and say what its receiver and reception records blame |
 | `mkuf2.py` | build a board's drag-and-drop install image, refusing to write outside its factory bootloader window |
 | `build_local.sh` | build the device images of the products it is given, `skyblip_go` by default, off a committed ref, from a bare machine |
 | `build_image.sh` | build, sign and check one product's images in a ready workspace. `build_local.sh`, CI and a release share it |

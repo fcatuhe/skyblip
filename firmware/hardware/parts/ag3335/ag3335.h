@@ -58,6 +58,8 @@ class Ag3335 : public ports::Gnss {
     // INFO: fc 11nov26 GSA is the only sentence carrying VDOP, as on the L76K
     static constexpr const char* kGsaEverySolution = "$PAIR062,2,1*3D\r\n";
     static constexpr const char* kGsvOff = "$PAIR062,3,0*3D\r\n";
+    // INFO: fc 26nov26 asked only without a fix, when no export waits on the RMC it delays
+    static constexpr const char* kGsvEverySolution = "$PAIR062,3,1*3C\r\n";
     static constexpr const char* kRmcEverySolution = "$PAIR062,4,1*3B\r\n";
     static constexpr const char* kVtgOff = "$PAIR062,5,0*3B\r\n";
     static constexpr const char* kZdaOff = "$PAIR062,6,0*38\r\n";
@@ -125,6 +127,8 @@ class Ag3335 : public ports::Gnss {
 
     const gnss::SkyView& sky() const { return parser_.sky(); }
 
+    void request_satellites_in_view(bool wanted) { satellites_in_view_wanted_ = wanted; }
+
     uint32_t sentences() const { return parser_.solution().sentences; }
 
    private:
@@ -140,6 +144,7 @@ class Ag3335 : public ports::Gnss {
     void await(const char* sentence, uint32_t now_ms);
     void send(const char* sentence);
     void hear(PairReader::Heard heard);
+    void pace_satellites_in_view();
 
     ports::SolutionRate solution_rate_;
     io::Uart& uart_;
@@ -160,6 +165,8 @@ class Ag3335 : public ports::Gnss {
     bool setting_heard_{false};
     bool sequence_refused_{false};
     bool processing_{false};
+    bool satellites_in_view_wanted_{false};
+    bool satellites_in_view_sent_{false};
 };
 
 }  // namespace skyblip::parts

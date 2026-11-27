@@ -10,7 +10,7 @@ skyBlip keeps the rest: the observation a track becomes (`core/protocol/adsb_obs
 
 **Bits.** The receiver decides each bit from its two chips, so the decoder never sees a chip. 1090 MHz sends a 1 as `10`, so `squitter.h`'s `chips_of()` is `wire::manchester_encode` inverted. DF18 is refused as `Unsupported`, so TIS-B, ADS-R and non-transponder ADS-B are not read.
 
-**Parity.** Mode S parity is ADS-L's CRC (`protocols/common/crc.h`), so `wire::crc24_check` leaves 0 for a sound DF17 frame. A frame that fails is refused as `Crc` and never repaired: the LR2021 marks no doubtful chip, and a blind one-bit repair can draw a ghost aircraft.
+**Parity.** Mode S parity is ADS-L's CRC (`protocols/common/crc.h`), so `wire::crc24_check` leaves 0 for a sound DF17 frame. A frame that fails is refused as `Crc`. `receive()` repairs nothing: the LR2021 marks no doubtful chip, and a blind one-bit repair can draw a ghost aircraft. `repair_bits()` lets a caller repair a DF17 that holds an address it already knows (The screen).
 
 **Messages.** Each one carries the 24-bit address, the capability field and the type code. Units follow `firmware/README.md`:
 
@@ -48,6 +48,12 @@ Every other format is `Unsupported` with no parity checked. `kDownlinkFormats`, 
 **Address and parity.** A reply other than DF11 overlays its address on its parity, so noise reads as some address too. A `Reply` is never `address_verified`: believe it only for an address already heard in clear, which Bravo's `Transponders` tracks (`products/skyblip_bravo/README.md`). `Assembly::fold` refuses `AllCall` and `Reply`.
 
 **Altitude.** The 13-bit AC field is the 12-bit ES field with an M bit after A4, laid out C1 A1 C2 A2 C4 A4 M B1 Q B2 D2 B4 D4. With M = 0, removing M leaves the ES field, read as above. M = 1 is an altitude in metres, which this stack reads as no altitude. All zeros is no altitude.
+
+## The screen
+
+`screen()` gives `receive()`'s verdict on a frame without decoding it, so a radio thread can run it before a queue: `Squitter` for a DF17 whose parity leaves 0, `AllCall` for a DF11 whose parity leaves 0 or an interrogator code, `Reply` for DF0, 4, 5, 16, 20 and 21, `Format` for every other format and `Parity` for a DF11 or DF17 that fails. `Repaired` is the caller's verdict on a `Parity` frame that `repair_bits()` mended. It keeps every frame `receive()` reads: a test runs both on 20,000 frames of noise, squitters and all-calls and checks it. A `Reply` passes unchecked, because its parity is its address, and only the caller knows the addresses heard in clear. A DF17 with a type code the decoder does not read passes as a `Squitter` and comes back `Unsupported` from `receive()`. The parity costs one pass of the bitwise CRC over 7 or 14 bytes, run only for DF11 and DF17.
+
+`repair_bits()` mends a DF17 that fails by one or two flipped bits and says how many it flipped. Mode S parity is linear, so flipped bits in a sound frame leave the XOR of their syndromes. The stack holds the 107 syndromes of bits 6 to 112, sorted at compile time: a one-bit error is one binary search, and a two-bit error is at most 107, about 10 us on the nRF52840 by count, not yet timed. Every one of the 5671 pairs leaves a syndrome of its own, distinct from every single bit's, which a test checks pair by pair, so no repair is ambiguous. DO-260B 2.2.4.3.4.7.3.a never corrects the DF field, so its five bits are left out, and a DF11 is left alone because its parity may carry an interrogator code. Noise lands on one of the single-bit syndromes about once in 157,000 tries and on a pair about once in 3,000, and then names a random address. So the caller keeps a repaired frame only for an aircraft it already holds, as ADSBee does with its one- and two-bit repair (PantsForBirds/adsbee #382), and a repair never founds a track. dump1090 repairs the same way with `--fix` and `--fix-2bit`.
 
 ## ADS-B: from messages to an aircraft
 

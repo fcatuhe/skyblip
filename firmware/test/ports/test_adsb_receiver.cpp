@@ -1,9 +1,13 @@
 // What the 1090 MHz receiver counts for the bench, and how deep its queue is and why.
+#include <algorithm>
+#include <iterator>
+
 #include "core/bus/bus.h"
 #include "core/events/adsb.h"
 #include "doctest/doctest.h"
 #include "ports/adsb_receiver.h"
 #include "protocols/adsb/assembly.h"
+#include "protocols/adsb/squitter.h"
 
 using namespace skyblip;
 using ports::AdsbReceiverStatistics;
@@ -39,7 +43,8 @@ TEST_CASE("adsb receiver: every frame is counted, only a measured level lands in
 
 TEST_CASE("adsb receiver: the frame rate is the last whole second, and a silent one reads zero") {
     AdsbReceiverStatistics statistics;
-    for (int i = 0; i < 3; i++) statistics.heard(-70, true, 5 * kSecondUs + 1000 * i);
+    for (int i = 0; i < 3; i++)
+        statistics.heard(-70, true, 5 * kSecondUs + 1000 * static_cast<uint64_t>(i));
     statistics.roll(5 * kSecondUs + 900000);
     CHECK(statistics.frame_rate_hz == 0);
     statistics.roll(6 * kSecondUs + 10);
@@ -47,6 +52,50 @@ TEST_CASE("adsb receiver: the frame rate is the last whole second, and a silent 
     statistics.roll(8 * kSecondUs);
     CHECK(statistics.frame_rate_hz == 0);
     CHECK(statistics.frames == 3);
+}
+
+TEST_CASE("adsb receiver: every frame read is counted by format, two bits off are repaired") {
+    AdsbReceiverStatistics statistics;
+    adsb::Squitter squitter = adsb::squitter(0x4840D6, 5, 4);
+    adsb::seal(squitter.bytes);
+    CHECK(statistics.admit(squitter.bytes, -60, true, 0) == adsb::Screened::Squitter);
+    adsb::Squitter one_bit = squitter;
+    one_bit.bytes[7] ^= 0x10;
+    CHECK(statistics.admit(one_bit.bytes, 0, false, 0) == adsb::Screened::Repaired);
+    CHECK(std::equal(std::begin(one_bit.bytes), std::end(one_bit.bytes), squitter.bytes));
+    adsb::Squitter two_bits = squitter;
+    two_bits.bytes[7] ^= 0x30;
+    CHECK(statistics.admit(two_bits.bytes, 0, false, 0) == adsb::Screened::Repaired);
+    adsb::Squitter three_bits = squitter;
+    three_bits.bytes[7] ^= 0x70;
+    CHECK(statistics.admit(three_bits.bytes, 0, false, 0) == adsb::Screened::Parity);
+    adsb::Squitter noise{};
+    noise.bytes[0] = 9 << 3;
+    CHECK(statistics.admit(noise.bytes, 0, false, 0) == adsb::Screened::Format);
+
+    CHECK(statistics.frames == 5);
+    CHECK(statistics.formats[17] == 4);
+    CHECK(statistics.formats[9] == 1);
+    CHECK(statistics.squitters == 1);
+    CHECK(statistics.one_bit_errors == 1);
+    CHECK(statistics.two_bit_errors == 1);
+    CHECK(statistics.parity_refused == 1);
+    CHECK(statistics.format_refused == 1);
+}
+
+TEST_CASE("adsb receiver: the FIFO, queue and drain peaks are the last whole second's") {
+    AdsbReceiverStatistics statistics;
+    statistics.drained(3, 10, 400, 5 * kSecondUs + 1);
+    statistics.drained(7, 2, 900, 5 * kSecondUs + 500000);
+    statistics.roll(5 * kSecondUs + 900000);
+    CHECK(statistics.fifo_peak_frames == 0);
+    statistics.roll(6 * kSecondUs + 10);
+    CHECK(statistics.fifo_peak_frames == 7);
+    CHECK(statistics.queue_peak_frames == 10);
+    CHECK(statistics.worst_drain_us == 900);
+    statistics.roll(8 * kSecondUs);
+    CHECK(statistics.fifo_peak_frames == 0);
+    CHECK(statistics.worst_drain_us == 0);
 }
 
 // 100 aircraft at DO-260B's average of 6.2 squitters a second, over 100 ms, is 62 frames, and the

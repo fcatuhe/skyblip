@@ -24,10 +24,14 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     static constexpr size_t kFifoBytes = 256;
     static constexpr uint8_t kCommandOk = 0x02;
     static constexpr uint8_t kCommandData = 0x03;
+    static constexpr uint8_t kResetSourceAnalog = 0x01;
     static constexpr uint8_t kResetSourcePin = 0x02;
+    static constexpr uint8_t kFifoHigh = 0x04;
     static constexpr uint8_t kFifoFull = 0x08;
     static constexpr uint8_t kFifoOverflow = 0x10;
     static constexpr uint32_t kSleepableHoldUs = 1000;
+    // INFO: fc 27nov26 Semtech's lr20xx_workarounds.c: the part's own OOK threshold at 3076 kHz
+    static constexpr int16_t kDefaultThresholdDbm = -106;
 
     void set(int pin, bool level) override {
         if (pin != reset_pin) return;
@@ -115,12 +119,29 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                 }
             }
             if (fifo.size() == kFifoBytes) rx_fifo_flags |= kFifoFull;
+            if (rx_high_threshold != 0 && fifo.size() >= rx_high_threshold)
+                rx_fifo_flags |= kFifoHigh;
+            if ((rx_fifo_flags & rx_fifo_irq_enable) != 0) irq |= parts::lr2021::kIrqRxFifo;
             last_length = payload_bytes;
+            ook_packets++;
             rssi_high_raw = static_cast<uint16_t>(-2 * rssi_dbm);
             irq |= parts::lr2021::kIrqRxDone;
             return true;
         }
         return false;
+    }
+
+    // INFO: fc 26nov26 DS 6.7.1: a brown-out resets the part as power-on does, and says so in Stat
+    void brown_out() {
+        power_on_reset();
+        reset_source_ = kResetSourceAnalog;
+    }
+
+    uint8_t reset_source() const { return reset_source_; }
+
+    // INFO: fc 26nov26 bytes of a frame the part began and never counted, as a flood can leave
+    void strand(size_t bytes, uint8_t value = 0xA5) {
+        for (size_t i = 0; i < bytes && fifo.size() < kFifoBytes; i++) fifo.push_back(value);
     }
 
     // INFO: fc 11nov26 a frame that lands after the given command, so a test can interleave the air
@@ -210,8 +231,12 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     std::map<uint32_t, uint32_t> masks;
     std::deque<uint8_t> fifo;
     uint8_t rx_fifo_flags{0};
+    uint8_t rx_fifo_irq_enable{0};
+    uint16_t rx_high_threshold{0};
     uint16_t last_length{0};
     uint16_t rssi_high_raw{0};
+    uint16_t ook_packets{0};
+    uint16_t noise_raw{240};
     std::vector<uint16_t> commands_seen;
     std::vector<uint8_t> refused;
     Fault fault{Fault::None};
@@ -281,6 +306,9 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
         registers.clear();
         fifo.clear();
         rx_fifo_flags = 0;
+        rx_fifo_irq_enable = 0;
+        rx_high_threshold = 0;
+        ook_packets = 0;
         response_pending_ = false;
         command_status_ = kCommandOk;
         reset_source_ = kResetSourcePin;
@@ -288,6 +316,17 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
 
     void respond(std::initializer_list<uint8_t> bytes) {
         response_.assign(bytes.begin(), bytes.end());
+        response_pending_ = true;
+    }
+
+    // INFO: fc 26nov26 DS 6.2.3: words from the address on, most significant byte first
+    void respond_words(uint32_t address, uint8_t words) {
+        response_.clear();
+        for (uint8_t i = 0; i < words; i++) {
+            const uint32_t word = reg(address + 4u * i);
+            for (int shift = 24; shift >= 0; shift -= 8)
+                response_.push_back(static_cast<uint8_t>(word >> shift));
+        }
         response_pending_ = true;
     }
 
@@ -311,6 +350,12 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
         switch (opcode) {
             case chip::kNop:
             case chip::kReadRadioRxFifo: break;
+            case chip::kGetStatus: reset_source_ = 0; break;
+            case chip::kReadRegMem32:
+                respond_words((static_cast<uint32_t>(args[0]) << 16) |
+                                  (static_cast<uint32_t>(args[1]) << 8) | args[2],
+                              args[3]);
+                break;
             case chip::kGetVersion: respond({version_major, version_minor}); break;
             case chip::kGetErrors: respond({high(errors), low(errors)}); break;
             case chip::kClearErrors: errors = 0; break;
@@ -372,6 +417,13 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                 pulse_shape = args[4];
                 rx_bandwidth = args[5];
                 depth = args[6];
+                registers[parts::lr2021::kOokThresholdRegister] =
+                    (reg(parts::lr2021::kOokThresholdRegister) &
+                     ~parts::lr2021::kOokThresholdMask) |
+                    ((static_cast<uint32_t>(kDefaultThresholdDbm +
+                                            parts::lr2021::kOokThresholdOffsetDb)
+                      << parts::lr2021::kOokThresholdShift) &
+                     parts::lr2021::kOokThresholdMask);
                 break;
             case chip::kSetOokPacketParams:
                 if (packet_type != chip::kPacketTypeOok) {
@@ -426,11 +478,21 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                          low(static_cast<uint32_t>(fifo.size()))});
                 break;
             case chip::kGetRxPktLength: respond({high(last_length), low(last_length)}); break;
+            case chip::kGetRssiInst:
+                respond({low(noise_raw >> 1), static_cast<uint8_t>((noise_raw & 0x01) << 7)});
+                break;
+            case chip::kGetOokRxStats:
+                respond({high(ook_packets), low(ook_packets), 0, 0, 0, 0});
+                break;
             case chip::kGetOokPacketStatus:
                 respond({high(last_length), low(last_length), 0, low(rssi_high_raw >> 1),
                          low(rssi_high_raw & 0x01), 0});
                 break;
             case chip::kClearRxFifo: fifo.clear(); break;
+            case chip::kConfigFifoIrq:
+                rx_fifo_irq_enable = args[0];
+                rx_high_threshold = be16(args + 2);
+                break;
             case chip::kGetAndClearFifoIrqFlags:
                 respond({rx_fifo_flags, 0});
                 rx_fifo_flags = 0;

@@ -61,18 +61,29 @@ class Spi : public io::Spi {
         gpio_pin_configure_dt(&cs_, GPIO_OUTPUT_INACTIVE);
     }
 
+    // INFO: fc 27nov26 EasyDMA reads RAM only, so zeros sent in place of a null tx live in RAM
     void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
-        static uint8_t zeros[64] = {0};
-        const uint8_t* transmitted = tx ? tx : zeros;
-        struct spi_buf tx_buffer{const_cast<uint8_t*>(transmitted), bytes};
-        struct spi_buf rx_buffer{rx, bytes};
-        struct spi_buf_set tx_buffers{&tx_buffer, 1};
-        struct spi_buf_set rx_buffers{&rx_buffer, 1};
-        spi_transceive(spi_, &config_, &tx_buffers, rx ? &rx_buffers : nullptr);
+        static uint8_t zeros[256] = {0};
+        if (tx != nullptr) {
+            transceive(tx, rx, bytes);
+            return;
+        }
+        for (size_t done = 0; done < bytes; done += sizeof(zeros)) {
+            const size_t chunk = bytes - done < sizeof(zeros) ? bytes - done : sizeof(zeros);
+            transceive(zeros, rx != nullptr ? rx + done : nullptr, chunk);
+        }
     }
     void select(bool on) override { gpio_pin_set_dt(&cs_, on ? 1 : 0); }
 
    private:
+    void transceive(const uint8_t* tx, uint8_t* rx, size_t bytes) {
+        struct spi_buf tx_buffer{const_cast<uint8_t*>(tx), bytes};
+        struct spi_buf rx_buffer{rx, bytes};
+        struct spi_buf_set tx_buffers{&tx_buffer, 1};
+        struct spi_buf_set rx_buffers{&rx_buffer, 1};
+        spi_transceive(spi_, &config_, &tx_buffers, rx != nullptr ? &rx_buffers : nullptr);
+    }
+
     const struct device* spi_;
     struct spi_config config_;
     struct gpio_dt_spec cs_;

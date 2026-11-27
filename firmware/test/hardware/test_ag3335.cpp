@@ -235,6 +235,31 @@ TEST_CASE("ag3335: a GGA without field 11 falls back on the default separation a
     CHECK(gnss.solution().geoid_separation_mm == gnss::kDefaultGeoidSeparationMm);
 }
 
+TEST_CASE("ag3335: satellites in view are asked for while wanted, and forgotten once not") {
+    models::Ag3335 chip;
+    chip.fix_valid = false;
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
+    gnss.request_satellites_in_view(true);
+    run(gnss, chip, 0, 30000);
+    REQUIRE(gnss.configured());
+    CHECK(chip.sentence_on(models::Ag3335::kGsv));
+    CHECK(gnss.sky().count() == chip.satellites_in_view);
+
+    gnss.request_satellites_in_view(false);
+    run(gnss, chip, 30010, 33000);
+    CHECK_FALSE(chip.sentence_on(models::Ag3335::kGsv));
+    CHECK(gnss.sky().count() == 0);
+}
+
+TEST_CASE("ag3335: a configured receiver sends no GSV unless asked") {
+    models::Ag3335 chip;
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
+    run(gnss, chip, 0, 30000);
+    REQUIRE(gnss.configured());
+    CHECK_FALSE(chip.sentence_on(models::Ag3335::kGsv));
+    CHECK(gnss.sky().count() == 0);
+}
+
 TEST_CASE("ag3335: a receiver with no fix publishes none, and still counts its sentences") {
     models::Ag3335 chip;
     chip.fix_valid = false;

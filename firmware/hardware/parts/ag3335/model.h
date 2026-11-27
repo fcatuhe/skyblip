@@ -34,6 +34,7 @@ class Ag3335 : public io::Uart, public GnssTruth {
 
     bool fix_valid{true};
     uint8_t satellites{14};
+    uint8_t satellites_in_view{22};
     uint16_t hdop_e2{70};
     uint16_t vdop_e2{110};
     uint16_t pdop_e2{130};
@@ -203,6 +204,7 @@ class Ag3335 : public io::Uart, public GnssTruth {
     void emit_gll();
     void emit_gsa();
     void emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t used);
+    void emit_gsv();
     void emit_rmc();
     void emit_vtg();
     void emit_zda();

@@ -69,18 +69,19 @@ TEST_CASE("lr2021: an overflowed FIFO is counted, cleared and re-armed before an
     CHECK(read(radio).event.type == Lr2021EventType::None);
 }
 
-// The RxDone of a frame already drained arrives on its own, with nothing behind it in the FIFO.
-TEST_CASE("lr2021: a frame drained ahead of its own RxDone is no drop, and no clear") {
+// A frame that lands after the first count is in the level and not in the count it was read with.
+TEST_CASE("lr2021: a frame landing during a snapshot waits for the next, with no drop or clear") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     hear(part, kFirst);
-    part.arrive_after(chip::kGetAndClearIrqStatus, [&] { hear(part, kSecond); });
+    part.arrive_after(chip::kGetOokRxStats, [&] { hear(part, kSecond); });
     CHECK(read(radio).address == kFirst);
     CHECK(read(radio).address == kSecond);
 
-    part.arrive_after(chip::kGetRxFifoLevel, [&] { hear(part, kThird); });
-    CHECK(read(radio).event.type == Lr2021EventType::None);
+    hear(part, kThird);
+    part.arrive_after(chip::kGetRxFifoLevel, [&] { hear(part, kFirst); });
     CHECK(read(radio).address == kThird);
+    CHECK(read(radio).address == kFirst);
     CHECK(read(radio).event.type == Lr2021EventType::None);
     CHECK(radio.fifo_drops() == 0);
     CHECK(part.count(chip::kClearRxFifo) == 0);
@@ -101,7 +102,7 @@ TEST_CASE("lr2021: a level that may belong to a frame outside the snapshot is no
     CHECK(second.event.rssi_dbm == -50);
 }
 
-TEST_CASE("lr2021: a frame landing inside the snapshot leaves no frame with a borrowed level") {
+TEST_CASE("lr2021: a frame landing inside the snapshot lends no level, and gets its own next") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     hear(part, kFirst, -80);
@@ -111,7 +112,8 @@ TEST_CASE("lr2021: a frame landing inside the snapshot leaves no frame with a bo
     CHECK(first.address == kFirst);
     CHECK(second.address == kSecond);
     CHECK_FALSE(first.event.rssi_valid);
-    CHECK_FALSE(second.event.rssi_valid);
+    CHECK(second.event.rssi_valid);
+    CHECK(second.event.rssi_dbm == -50);
 }
 
 TEST_CASE("lr2021: a BUSY fault at shutdown is recovered by a reset before the sleep") {
@@ -176,7 +178,7 @@ TEST_CASE(
     models::Lr2021 clockless;
     clockless.calibration_errors = chip::kErrorHfXoscStart;
     Lr2021 radio = lr2021_for(clockless);
-    REQUIRE(radio.begin(chip::kDetectionThresholdDbm) == Status::Down);
+    REQUIRE(radio.begin() == Status::Down);
     radio.park();
     CHECK(clockless.mode == models::Lr2021::Mode::Sleep);
     CHECK_FALSE(clockless.in_reset);
@@ -184,7 +186,7 @@ TEST_CASE(
     models::Lr2021 stuck;
     stuck.busy_stuck = true;
     Lr2021 silent = lr2021_for(stuck);
-    REQUIRE(silent.begin(chip::kDetectionThresholdDbm) == Status::Timeout);
+    REQUIRE(silent.begin() == Status::Timeout);
     silent.park();
     CHECK(stuck.in_reset);
     CHECK_FALSE(stuck.listening_for_adsb());
