@@ -98,7 +98,6 @@ void ConfigService::forget_holder() {
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     upload_window_open_ = false;
-    status_push_due_ = false;
 }
 
 namespace {

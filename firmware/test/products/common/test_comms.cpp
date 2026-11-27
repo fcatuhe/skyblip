@@ -239,6 +239,34 @@ TEST_CASE("comms: link down cancels a pending change") {
     CHECK(config.pending() == Pending::None);
 }
 
+// A status push is a broadcast, so the holder leaving still owes it to the page that stays.
+TEST_CASE("comms: the holder leaving keeps a refused status push owed to the phone still there") {
+    platform::host::Link link;
+    link.raise_link(1);
+    link.raise_link(2);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Airborne);
+    config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
+    config.on_link_up(events::LinkUp{2, link.payload_bytes(), link.connection(2)});
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
+    REQUIRE(config.claim_holder() == 1);
+
+    link.force_status(Status::WouldBlock, false);
+    config.set_flight_state(flight::FlightState::Ground);
+    REQUIRE(config.status_push_due());
+
+    const uint32_t holder_connection = link.connection(1);
+    link.drop_link(1);
+    config.on_link_down(events::LinkDown{1, holder_connection});
+    link.force_status(Status::Ok);
+    link.clear();
+    config.tick(10);
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link_text(link.last().bytes).find("\"command\":\"status\"") != std::string::npos);
+}
+
 // G1: the wire, not the gauge or the cutoff rule - core/power decided percent,
 // charging and the level, comms only carries them to the tablet.
 
