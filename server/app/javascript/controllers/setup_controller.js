@@ -20,12 +20,13 @@ const INSTALLED_KEY = "skyblip.setup.installed.v1"
 const SETUP_NOTICES = ["setup_notices", "notices"]
 const ACTIVATING = { asking: "words.asking_server", registering: "words.registering", unlocking: "words.registering" }
 const PRODUCT_WORDS = { go: "Go", bravo: "Bravo" }
+const RECONNECT = new Set(["cancelled", "refused_on_device", "claimed", "small_mtu"])
 const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: ["aircraft_type", "callsign", "aircraft_address"], bravo: ["aircraft_address"] }
 
 // INFO: fc 17nov26 one page from Meshtastic to a unit ready to fly: USB, Bluetooth, then the aircraft (skyblip/README.md, The installer)
 export default class extends Controller {
   static targets = ["title", "steps", "panel", "install", "driveText", "byHand", "chooseDrive", "writingText", "connectText", "connect", "connectHint",
-                    "finishText", "pressBravo", "retry", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
+                    "finishText", "pressBravo", "retry", "reconnect", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
                     "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers",
                     "linux", "bluetoothFirst", "phoneAhead", "handoff", "handoffCode", "handoffText", "another", "copyLink", "byHandLink"]
   static values = { devices: String, setup: String, partner: String, challenges: String, registrations: String, installed: String, tag: String, handoff: String }
@@ -101,6 +102,26 @@ export default class extends Controller {
   retry() {
     this.onboarding = null
     this.#onboard(this.unit)
+  }
+
+  async reconnect() {
+    const unit = this.unit
+    this.#stage({ stage: "activating", failure: null })
+    if (unit.linked) {
+      const dropped = new Promise(resolve => {
+        const stop = this.fleet.listen(() => {
+          if (!unit.linked) resolve(stop())
+        })
+      })
+      unit.disconnect()
+      await dropped
+    }
+    try {
+      await this.fleet.connect(unit.slug)
+    } catch (error) {
+      return this.#stage({ stage: "activating", failure: { key: "failed", detail: error.message } })
+    }
+    this.retry()
   }
 
   edited() {
@@ -326,7 +347,8 @@ export default class extends Controller {
       : ACTIVATING[activator.state.phase] ? say(ACTIVATING[activator.state.phase]) : say("setup.activating", { name: `Go ${tagText(unit.tag) ?? ""}`.trim() })
     if (this.glass) confirming ? this.glass.show({ title: "ACTIVATE", prompt: "register", product: "Go" }) : this.glass.hide()
     this.pressBravoTarget.hidden = stage !== "pairing" || this.onboarding.step !== "press_bravo"
-    this.retryTarget.hidden = !failure
+    this.retryTarget.hidden = !failure || RECONNECT.has(failure.key)
+    this.reconnectTarget.hidden = !RECONNECT.has(failure?.key)
     this.#show("finish", { notice: failure, scopes: ["activation_notices", "notices"] })
   }
 
