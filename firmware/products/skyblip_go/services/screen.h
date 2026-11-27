@@ -39,6 +39,8 @@ class ScreenService : public runtime::Service {
    public:
     static constexpr uint32_t kRenderPeriodMs = 1000;
     static constexpr uint32_t kPresentFloorMs = 1000;
+    // INFO: fc 27nov26 a new page's pixels still settle for seconds after its partial
+    static constexpr uint32_t kRedriveAfterChangeMs = 10000;
     // INFO: fc 03oct26 after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000
     static constexpr uint32_t kLockedRedrawWindowStartMs = 600;
     static constexpr uint32_t kLockedRedrawWindowEndMs = 800;
@@ -260,6 +262,7 @@ class ScreenService : public runtime::Service {
     uint32_t render_us_{0};
     uint32_t present_us_{0};
     uint32_t last_present_ms_{0};
+    std::optional<uint32_t> redrive_owed_since_ms_{};
     traffic::Level last_alarm_undismissed_{traffic::Level::None};
     bool alarm_flash_{false};
     bool dirty_{true};

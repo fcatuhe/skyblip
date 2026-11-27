@@ -36,7 +36,8 @@ TEST_CASE("product: a pad tap switches page, and no swap costs the full waveform
     CHECK(rig.product.screen().mode() == go::Mode::Page);
 }
 
-// Every page is drawn and compared once the first fix settles, and only a frame that differs shows.
+// Every page is drawn and compared once the first fix settles and its redrive is done, and only a
+// frame that differs shows.
 TEST_CASE("product: a still world leaves every picture on the walk alone") {
     for (int page_index = 0; page_index < go::kWalkedPages; page_index++) {
         const go::Page page = static_cast<go::Page>(page_index);
@@ -46,13 +47,35 @@ TEST_CASE("product: a still world leaves every picture on the walk alone") {
         rig.platform.chips().imu.set_acceleration(1000, 0, 0);
         rig.seconds(gnss::kFirstFixSettleMs / 1000, 0, 300);
         rig.show(page);
-        rig.seconds(5, 0, 300);
+        rig.seconds(go::ScreenService::kRedriveAfterChangeMs / 1000 + 5, 0, 300);
         REQUIRE(rig.product.screen().page() == page);
 
         const uint32_t presented = rig.state().duty.panel_partial_refreshes;
         rig.seconds(60, 0, 300);
         CHECK(rig.state().duty.panel_partial_refreshes == presented);
     }
+}
+
+// A new page's pixels still settle for seconds after its partial, so the glass is driven once more.
+TEST_CASE("product: a page change drives every pixel again once, 10 s later, on a still page") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.platform.chips().imu.set_acceleration(1000, 0, 0);
+    rig.seconds(gnss::kFirstFixSettleMs / 1000, 0, 300);
+    rig.show(go::Page::SixPack);
+    rig.seconds(1, 0, 300);
+    const uint32_t shown = rig.state().duty.panel_partial_refreshes;
+
+    rig.seconds(go::ScreenService::kRedriveAfterChangeMs / 1000 - 2, 0, 300);
+    CHECK(rig.state().duty.panel_partial_refreshes == shown);
+    rig.seconds(4, 0, 300);
+    CHECK(rig.state().duty.panel_partial_refreshes == shown + 1);
+    const models::Ssd1681& chip = rig.platform.chips().epd;
+    for (size_t i = 0; i < chip.ram.size(); i++)
+        REQUIRE(chip.ram_previous[i] == static_cast<uint8_t>(~chip.ram[i]));
+
+    rig.seconds(60, 0, 300);
+    CHECK(rig.state().duty.panel_partial_refreshes == shown + 1);
 }
 
 // A ball swinging every 200 ms would be five refreshes a second if the glass followed it.

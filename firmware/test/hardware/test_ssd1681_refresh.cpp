@@ -470,3 +470,21 @@ TEST_CASE("ssd1681: a wipe restarts the count to the next re-ink") {
 
     present_without_reink(driver, chip, kPeriod, kPeriod - 1, now_ms + 1000);
 }
+
+// A page change leaves pixels settling for seconds, so the screen asks for a re-ink 10 s later.
+TEST_CASE(
+    "ssd1681: a redrive drives every pixel at once and restarts the count to the next re-ink") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    uint32_t now_ms = start_on_a_full(driver);
+
+    now_ms = present_without_reink(driver, chip, 1, 3, now_ms);
+    driver.present(radar_frame(3), ports::Refresh::Redrive, now_ms);
+    CHECK_FALSE(chip.last_full);
+    CHECK(previous_is_the_inverse_of_new(chip));
+    CHECK(std::memcmp(chip.framebuffer().data(), radar_frame(3).data(),
+                      parts::Ssd1681Glass::kBytes) == 0);
+    CHECK(driver.ready(now_ms + parts::Ssd1681::kReadyAfterPartialMs));
+
+    present_without_reink(driver, chip, 4, kPeriod - 1, now_ms + 1000);
+}

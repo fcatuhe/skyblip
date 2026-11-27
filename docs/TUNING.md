@@ -358,6 +358,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kKeyToDoneUs` | `uint64_t{timing::kKeyToDoneMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
+| `kRedriveAfterChangeMs` | 10000 (10 s) | milliseconds | - | a new page's pixels still settle for seconds after its partial |
 | `kLockedRedrawWindowStartMs` | 600 | milliseconds | Window | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
 | `kLockedRedrawWindowEndMs` | 800 | milliseconds | Window | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
@@ -437,4 +438,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-292 constants over 26 folders.
+293 constants over 26 folders.

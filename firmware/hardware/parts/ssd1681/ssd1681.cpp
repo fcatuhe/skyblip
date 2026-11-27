@@ -81,7 +81,8 @@ void Ssd1681::present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t no
     set_window(0, 0, kGlassWidth - 1, kGlassHeight - 1);
     command(kBorderWaveform);
     data(full ? kBorderFollowLut1 : kBorderVcom);
-    const bool reink = !full && ++partials_since_reink_ >= kReinkPeriodPartials;
+    const bool reink = !full && (mode == ports::Refresh::Redrive ||
+                                 ++partials_since_reink_ >= kReinkPeriodPartials);
     if (full) {
         // INFO: fc 09mar26 GxEPD2 writes the new frame into both banks before a full refresh
         stage(canvas.data());

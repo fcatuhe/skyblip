@@ -16,7 +16,7 @@ TEST_CASE("screen policy: a panel too hot to drive is left unrefreshed, with its
 // skyBlip stays on for the whole flight, so nothing but the pilot's switch may sleep the panel.
 TEST_CASE("screen policy: a screen nobody changes is left awake, unrefreshed, rails down") {
     ScreenRig rig;
-    rig.run_seconds(3);
+    rig.run_seconds(go::ScreenService::kRedriveAfterChangeMs / 1000 + 3);
     const int before = rig.chip.present_count;
     const int sleeps = rig.chip.deep_sleeps;
 
@@ -158,7 +158,7 @@ TEST_CASE("screen policy: below freezing every refresh is still a partial one") 
 
 TEST_CASE("screen policy: a cold panel with a static frame is still never re-presented") {
     ScreenRig rig;
-    rig.run_seconds(3);
+    rig.run_seconds(go::ScreenService::kRedriveAfterChangeMs / 1000 + 3);
     const int before = rig.chip.present_count;
 
     rig.die_temperature(-100);
