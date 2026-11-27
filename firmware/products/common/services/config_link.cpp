@@ -123,6 +123,7 @@ void ConfigLinkService::publish_link() {
 }
 
 void ConfigLinkService::publish_upload_verdict() {
+    context_.roles.dfu.publish_approved_version(config_.approved_version());
     context_.roles.dfu.publish_upload_allowed(config_.upload_allowed());
 }
 

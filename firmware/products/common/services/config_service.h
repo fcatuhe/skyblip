@@ -107,6 +107,7 @@ class ConfigService {
 
     // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window the pilot opened
     bool upload_allowed() const { return upload_window_open_ && !install_held_; }
+    const ports::ImageVersion& approved_version() const { return approved_version_; }
     // INFO: fc 13nov26 in flight the glass keeps the radar while an upload runs on behind it
     bool receiving_firmware() const { return upload_allowed() && !in_flight(); }
     bool updating() const { return upload_window_open_; }
@@ -322,6 +323,8 @@ class ConfigService {
     bool refused_on_device_{false};
     bool settings_dirty_{false};
     bool upload_window_open_{false};
+    // INFO: fc 26nov26 the channel holds one reply, so the deadline's answer waits until it is free
+    bool window_closed_owed_{false};
     // INFO: fc 13nov26 an image that lands in flight installs on the ground, since a swap goes dark
     bool install_held_{false};
     uint32_t upload_window_opened_ms_{0};
