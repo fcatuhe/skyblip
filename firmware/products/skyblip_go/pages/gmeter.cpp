@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "protocols/common/geometry.h"
 
 namespace skyblip::go {
@@ -46,26 +47,18 @@ constexpr int16_t kLevelFlightMg = flight::kLevelFlightMg;
 
 int32_t tenths(int32_t load_mg) { return wire::divide_rounded(load_mg, kMilliPerTenth); }
 
-int format_g(char* out, int32_t load_mg) {
+void format_g(char* out, int32_t load_mg) {
     const int32_t value = tenths(load_mg);
-    const int written = format_signed(out, value, 1, 1, value != 0);
-    out[written] = 0;
-    return written;
+    out[format_signed(out, value, 1, 1, value != 0)] = 0;
 }
 
-int format_named_g(char* out, int32_t load_mg, char positive, char negative) {
+void format_named_g(char* out, int32_t load_mg, char positive, char negative) {
     const int32_t value = tenths(load_mg);
     int written = 0;
     if (value != 0) out[written++] = value < 0 ? negative : positive;
     written +=
         format_unsigned(out + written, static_cast<uint32_t>(value < 0 ? -value : value), 1, 1);
     out[written] = 0;
-    return written;
-}
-
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length,
-                   int scale = 1) {
-    canvas.draw_text(x_end - length * kCellWidth * scale, y, text, true, scale);
 }
 
 void centred(ui::Canvas& canvas, int centre_x, int y, const char* text, int length) {
@@ -74,15 +67,15 @@ void centred(ui::Canvas& canvas, int centre_x, int y, const char* text, int leng
 
 void value_at(ui::Canvas& canvas, int x_end, int y, int32_t load_mg, int scale = 1) {
     char buffer[8];
-    const int written = format_g(buffer, load_mg);
-    right_aligned(canvas, x_end, y, buffer, written, scale);
+    format_g(buffer, load_mg);
+    right_aligned(canvas, x_end, y, buffer, scale);
 }
 
 void named_at(ui::Canvas& canvas, int x_end, int y, int32_t load_mg, char positive, char negative,
               int scale = 1) {
     char buffer[12];
-    const int written = format_named_g(buffer, load_mg, positive, negative);
-    right_aligned(canvas, x_end, y, buffer, written, scale);
+    format_named_g(buffer, load_mg, positive, negative);
+    right_aligned(canvas, x_end, y, buffer, scale);
 }
 
 int thrown_down_y(int32_t load_mg) {

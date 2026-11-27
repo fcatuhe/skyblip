@@ -1,8 +1,10 @@
 #include "core/identity/key_slots.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "core/util/sha256.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::identity {
 
@@ -18,16 +20,9 @@ size_t at(int slot, int word) {
 }
 
 Sha256 labelled(const char* label) {
-    size_t label_bytes = 0;
-    while (label[label_bytes] != 0) label_bytes++;
     Sha256 sha;
-    sha.update(reinterpret_cast<const uint8_t*>(label), label_bytes);
+    sha.update(reinterpret_cast<const uint8_t*>(label), std::strlen(label));
     return sha;
-}
-
-uint32_t word_at(const uint8_t* bytes) {
-    return static_cast<uint32_t>(bytes[0]) | (static_cast<uint32_t>(bytes[1]) << 8) |
-           (static_cast<uint32_t>(bytes[2]) << 16) | (static_cast<uint32_t>(bytes[3]) << 24);
 }
 
 KeySlots::Slot slot_in(const KeySlots::Words& words, int slot) {
@@ -39,9 +34,7 @@ KeySlots::Slot slot_in(const KeySlots::Words& words, int slot) {
 KeySlots::Material material_in(const KeySlots::Slot& slot) {
     KeySlots::Material material{};
     for (int i = 0; i < kTagWord; i++)
-        for (size_t byte = 0; byte < 4; byte++)
-            material[4 * static_cast<size_t>(i) + byte] =
-                static_cast<uint8_t>(slot[i] >> (8 * byte));
+        wire::put_uint32(material.data() + 4 * static_cast<size_t>(i), slot[i]);
     return material;
 }
 
@@ -83,11 +76,11 @@ std::optional<int> KeySlots::next_blank(const Words& words) {
 KeySlots::Slot KeySlots::slot_of(const Material& material, const DeviceId& device_id) {
     Slot slot{};
     for (int i = 0; i < kTagWord; i++)
-        slot[i] = word_at(material.data() + 4 * static_cast<size_t>(i));
+        slot[i] = wire::get_uint32(material.data() + 4 * static_cast<size_t>(i));
     Sha256 tag = labelled(kTagLabel);
     tag.update(device_id.data(), device_id.size());
     tag.update(material.data(), material.size());
-    slot[kTagWord] = word_at(tag.finish().data());
+    slot[kTagWord] = wire::get_uint32(tag.finish().data());
     return slot;
 }
 

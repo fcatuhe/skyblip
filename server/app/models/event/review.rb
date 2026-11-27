@@ -9,10 +9,10 @@ class Event::Review
   JOURNEY = %w[
     device.connected device.read device.task_ended device.installed device.noticed
     bluetooth.chooser_closed bluetooth.chooser_failed activation.stepped activation.noticed
-    installer.port_chosen installer.drive_chosen installer.wrote installer.finished installer.noticed
+    installer.port_chosen installer.drive_chosen installer.wrote installer.verified installer.finished installer.noticed
   ].freeze
   SETUP_STEPS = { port_chosen: "installer.port_chosen", drive_chosen: "installer.drive_chosen", wrote: "installer.wrote",
-    finished: "installer.finished" }.freeze
+    verified: "installer.verified", finished: "installer.finished" }.freeze
 
   attr_reader :since, :till
 

@@ -54,6 +54,7 @@ struct Desk {
     identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
     identity::Nonce nonce{5, 4, 3, 2, 1};
+    uint32_t connection{kFirstConnection};
 
     Desk() {
         link.declare_payload_bytes(495);
@@ -67,7 +68,9 @@ struct Desk {
 
     std::string say(const std::string& json) {
         const size_t before = link.sent.size();
-        config.on_rx(config_frame(json.c_str()));
+        events::RxFrame frame = config_frame(json.c_str());
+        frame.connection = connection;
+        config.on_rx(frame);
         return link.sent.size() == before ? std::string() : link_text(link.last().bytes);
     }
 
@@ -95,7 +98,7 @@ struct Desk {
     }
 
     void reconnect() {
-        config.on_link_down(events::LinkDown{1});
+        config.on_link_down(events::LinkDown{1, kFirstConnection});
         config.on_link_up(events::LinkUp{1, 495, kFirstConnection});
     }
 
@@ -169,6 +172,22 @@ TEST_CASE("trusted browsers: trust ends with the link that proved it") {
 
     desk.say(kSet);
     CHECK(desk.config.pending() == common::Pending::Set);
+}
+
+// Silicon reuses a session id, so the next phone can prove its key before the old Down is read.
+TEST_CASE(
+    "trusted browsers: a Down for the last connection on a reused session id keeps the new one's "
+    "trust") {
+    Desk desk;
+    desk.enroll(kBrowserSeed);
+    desk.link.drop_link(1);
+    desk.link.raise_link(1);
+    desk.connection = desk.link.connection(1);
+    REQUIRE(desk.connect_as(kBrowserSeed) == kTrusted);
+
+    desk.config.on_link_down(events::LinkDown{1, kFirstConnection});
+    CHECK(desk.say(kSet) == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
+    CHECK(desk.config.pending() == common::Pending::None);
 }
 
 TEST_CASE("trusted browsers: a proof needs a live nonce, spends it, and must verify") {
