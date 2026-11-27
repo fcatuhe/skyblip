@@ -201,7 +201,7 @@ TEST_CASE("pair: the Go's verdict reaches the session that asked, and nobody onc
     CHECK(desk.link.sent.size() == before + 1);
 
     desk.pair(kBravoTag);
-    desk.config.on_link_down(events::LinkDown{1});
+    desk.config.on_link_down(events::LinkDown{1, kFirstConnection});
     desk.link.drop_link(1);
     const size_t dropped = desk.link.sent.size();
     desk.config.pairing_ended(link::Reason::NoAnswer);

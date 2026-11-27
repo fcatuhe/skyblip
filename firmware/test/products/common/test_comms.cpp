@@ -234,7 +234,7 @@ TEST_CASE("comms: link down cancels a pending change") {
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":\"visual\"}"));
     CHECK(config.pending() == Pending::Set);
-    config.on_link_down(events::LinkDown{1});
+    config.on_link_down(events::LinkDown{1, kFirstConnection});
     CHECK(config.pending() == Pending::None);
 }
 

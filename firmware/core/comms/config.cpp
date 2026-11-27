@@ -26,13 +26,13 @@ void ConfigChannel::connect(uint16_t session_id) {
     connected_sessions_[connected_count_++] = session_id;
 }
 
-bool ConfigChannel::disconnect(uint16_t session_id) {
+bool ConfigChannel::disconnect(const events::Peer& peer) {
     for (int i = 0; i < connected_count_; i++) {
-        if (connected_sessions_[i] != session_id) continue;
+        if (connected_sessions_[i] != peer.session_id) continue;
         connected_sessions_[i] = connected_sessions_[--connected_count_];
         break;
     }
-    if (!claim_.holds(session_id)) return false;
+    if (!claim_.holds(peer)) return false;
     claim_.release();
     drop_replies();
     return true;

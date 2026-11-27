@@ -17,8 +17,8 @@ TEST_CASE("link claim: the first session to ask holds it, and the next one is re
 
     CHECK_FALSE(claim.grant(Peer{9, 2}));
     CHECK(claim.holder() == 7);
-    CHECK(claim.holds(7));
-    CHECK_FALSE(claim.holds(9));
+    CHECK(claim.holds(Peer{7, 1}));
+    CHECK_FALSE(claim.holds(Peer{9, 2}));
 
     // The holder asking again is the same app sending its next command.
     CHECK(claim.grant(Peer{7, 1}));
@@ -34,14 +34,11 @@ TEST_CASE("link claim: the same session id on another connection is not the hold
     CHECK(claim.peer() == Peer{1, 1});
 }
 
-TEST_CASE("link claim: only the holder can release it") {
+TEST_CASE("link claim: a released claim goes to the next peer that asks") {
     LinkClaim claim;
     REQUIRE(claim.grant(Peer{1, 1}));
 
-    claim.release(2);
-    CHECK(claim.holds(1));
-
-    claim.release(1);
+    claim.release();
     CHECK_FALSE(claim.held());
     CHECK(claim.grant(Peer{2, 2}));
 }

@@ -75,10 +75,11 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
 // INFO: fc 18sep26 only the holder's disconnect cancels, so another app leaving answers no prompt
 void ConfigService::on_link_down(const events::LinkDown& event) {
     diagnostics_.link_drop_reason = event.reason;
-    if (identity_ != nullptr) identity_->forget(event.session_id);
-    browsers_.forget(event.session_id);
-    if (pairing_peer_ && pairing_peer_->session_id == event.session_id) pairing_peer_.reset();
-    if (!channel_.disconnect(event.session_id)) return;
+    const events::Peer peer{event.session_id, event.connection};
+    if (identity_ != nullptr) identity_->forget(peer);
+    browsers_.forget(peer);
+    if (pairing_peer_ == peer) pairing_peer_.reset();
+    if (!channel_.disconnect(peer)) return;
     refused_on_device_ = false;
     pending_ = Pending::None;
     pending_set_bytes_ = 0;

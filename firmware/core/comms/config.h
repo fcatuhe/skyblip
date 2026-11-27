@@ -32,7 +32,7 @@ class ConfigChannel {
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
     void connect(uint16_t session_id);
-    bool disconnect(uint16_t session_id);
+    bool disconnect(const events::Peer& peer);
     bool link_up() const { return connected_count_ > 0; }
     bool live(const events::Peer& peer) const {
         return link_.connection(peer.session_id) == peer.connection;
