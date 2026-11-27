@@ -387,6 +387,19 @@ TEST_CASE("transmit cycle: a takeoff gives up no turn when every burst went out"
     }
 }
 
+// The radio closes a second on every pass, so a takeoff can arrive after the second's first pass.
+TEST_CASE("transmit cycle: a takeoff later in a second makes its unsent position a turn given up") {
+    Transmitter transmitter = transmitter_for(1);
+    const uint32_t c = kMinuteStartS + transmitter.cycle_start();
+    CHECK(transmitter.give_up(c, false, true) == 0);
+    transmitter.sent(c, c * 1000, Payload::Position);
+    for (uint32_t utc_s = c + 1; utc_s < c + 5; utc_s++)
+        CHECK(transmitter.give_up(utc_s, false, true) == 0);
+    CHECK(transmitter.give_up(c + 5, false, true) == 0);
+    CHECK(transmitter.give_up(c + 5, true, true) == 0);
+    CHECK(transmitter.give_up(c + 6, true, true) == 1);
+}
+
 // Positions at +0 and +9 never go out: the first is counted when +9 opens, the second at +20.
 TEST_CASE("transmit cycle: a turn that never went out is given up and counted at the next turn") {
     Transmitter transmitter = transmitter_for(1);
