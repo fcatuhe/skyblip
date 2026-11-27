@@ -41,8 +41,8 @@ class PendingSx1262 : public models::Sx1262 {
 PendingSx1262 chip;
 parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
 platform::zephyr::Clock uptime;
-bus::RfQueue events;
-platform::zephyr::Rf rf(radio, uptime, events);
+bus::RfQueue reported;
+platform::zephyr::Rf rf(radio, uptime, reported);
 const uint8_t burst[24] = {0};
 
 }  // namespace
@@ -72,4 +72,12 @@ ZTEST(rf_executor, test_a_park_during_staging_keys_no_burst) {
 
     zassert_true(rf.parked(), "the radio thread never parked");
     zassert_false(chip.saw_command(parts::sx1262::kSetTx), "a burst keyed after the park");
+    int missed = 0;
+    for (events::RfEvent event{}; reported.pop(event);) {
+        zassert_equal(event.type, events::RfEventType::Missed);
+        zassert_equal(event.tx_at_us, plan.tx_at_us);
+        zassert_equal(event.keyed_at_us, 0u);
+        missed++;
+    }
+    zassert_equal(missed, 1, "the burst was not reported Missed once");
 }
