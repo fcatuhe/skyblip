@@ -88,6 +88,54 @@ store::SectorHeader flights_label(uint32_t sequence) {
     return header;
 }
 
+// Reads a three-sector flight over a link that takes two frames, then holds the next.
+void start_flight_read(StoreRig& rig) {
+    const uint32_t slots = rig.pool.slots_per_sector();
+    rig.flights.begin_session(kFlightSession);
+    for (uint32_t i = 0; i < slots * 2; i++)
+        write_flight_record(rig.flights, kFlightSession + i, false);
+    write_flight_record(rig.flights, kFlightSession + slots * 2, true);
+    rig.flights.end_session();
+    rig.flights.rebuild_index();
+    rig.link.clear();
+    rig.link.serve();
+    rig.link.hold_after(2);
+
+    comms::LogRequest request{};
+    request.command = comms::LogCommand::Read;
+    request.store = store::SectorOwner::Flights;
+    request.peer = events::Peer{rig.link.session_id(), rig.link.connection(rig.link.session_id())};
+    request.session = kFlightSession;
+    request.count = comms::kMaxLogReadChunks;
+    request.understood = true;
+    rig.flights.serve(request);
+    REQUIRE(rig.flights.reading());
+    REQUIRE(rig.pool.holding());
+}
+
+void deliver_read(StoreRig& rig) {
+    while (rig.flights.reading()) {
+        rig.link.serve();
+        REQUIRE(is_ok(rig.pool.deliver_held(0)));
+        rig.flights.continue_read();
+    }
+    rig.link.serve();
+    REQUIRE(is_ok(rig.pool.deliver_held(0)));
+}
+
+int erased_records_sent(const StoreRig& rig) {
+    int erased = 0;
+    for (const auto& frame : rig.link.sent) {
+        if (field(link_text(frame.bytes), "command") != "chunk") continue;
+        uint8_t raw[comms::kLogChunkRawBytes];
+        const int bytes = chunk_records(frame.bytes, raw, sizeof(raw));
+        REQUIRE(bytes >= 0);
+        for (int at = 0; at < bytes; at += static_cast<int>(common::kStoreRecordBytes))
+            if (flight::log_slot_erased(raw + at, common::kStoreRecordBytes)) erased++;
+    }
+    return erased;
+}
+
 }  // namespace
 
 // A flight whose opening sector was recycled under it is a suffix, and must never list as a flight.
@@ -280,47 +328,27 @@ TEST_CASE("record store: a read the erase-all overtakes stops busy, before any e
     platform::host::FlashRegion flash{12};
     StoreRig rig{flash};
     rig.open();
-    const uint32_t slots = rig.pool.slots_per_sector();
-    rig.flights.begin_session(kFlightSession);
-    for (uint32_t i = 0; i < slots * 2; i++)
-        write_flight_record(rig.flights, kFlightSession + i, false);
-    write_flight_record(rig.flights, kFlightSession + slots * 2, true);
-    rig.flights.end_session();
-    rig.flights.rebuild_index();
-    rig.link.clear();
-    rig.link.serve();
-    rig.link.hold_after(2);
-
-    comms::LogRequest request{};
-    request.command = comms::LogCommand::Read;
-    request.store = store::SectorOwner::Flights;
-    request.peer = events::Peer{rig.link.session_id(), rig.link.connection(rig.link.session_id())};
-    request.session = kFlightSession;
-    request.count = comms::kMaxLogReadChunks;
-    request.understood = true;
-    rig.flights.serve(request);
-    REQUIRE(rig.flights.reading());
+    start_flight_read(rig);
     rig.flights.begin_erase();
     rig.flights.step_erase(0);
     REQUIRE(rig.flights.erasing());
-    while (rig.flights.reading()) {
-        rig.link.serve();
-        REQUIRE(is_ok(rig.pool.deliver_held(0)));
-        rig.flights.continue_read();
-    }
-    rig.link.serve();
-    REQUIRE(is_ok(rig.pool.deliver_held(0)));
+    deliver_read(rig);
 
-    int erased = 0;
-    for (const auto& frame : rig.link.sent) {
-        if (field(link_text(frame.bytes), "command") != "chunk") continue;
-        uint8_t raw[comms::kLogChunkRawBytes];
-        const int bytes = chunk_records(frame.bytes, raw, sizeof(raw));
-        REQUIRE(bytes >= 0);
-        for (int at = 0; at < bytes; at += static_cast<int>(common::kStoreRecordBytes))
-            if (flight::log_slot_erased(raw + at, common::kStoreRecordBytes)) erased++;
-    }
-    CHECK(erased == 0);
+    CHECK(erased_records_sent(rig) == 0);
+    CHECK(field(link_text(rig.link.sent.back().bytes), "reason") == "busy");
+}
+
+// A diagnostics-heavy partition leaves few flights sectors, and the erase ends in one pass.
+TEST_CASE("record store: a read held at the link until the erase-all ends still stops busy") {
+    platform::host::FlashRegion flash{12};
+    StoreRig rig{flash};
+    rig.open();
+    start_flight_read(rig);
+    rig.flights.begin_erase();
+    while (rig.flights.erasing()) rig.flights.step_erase(0);
+    deliver_read(rig);
+
+    CHECK(erased_records_sent(rig) == 0);
     CHECK(field(link_text(rig.link.sent.back().bytes), "reason") == "busy");
 }
 

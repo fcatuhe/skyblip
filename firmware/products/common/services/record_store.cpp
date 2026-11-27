@@ -208,6 +208,7 @@ void RecordStore::begin_erase() {
     if (!available_) return;
     erasing_ = true;
     erase_next_ = 0;
+    reading_.overtaken = reading_.active;
 }
 
 bool RecordStore::erasable(uint32_t sector) const {
@@ -336,7 +337,7 @@ void RecordStore::answer_ended(const events::Peer& peer, uint32_t session_id, ui
 void RecordStore::continue_read() {
     while (reading_.active && !pool_.holding()) {
         const events::Peer peer = reading_.peer;
-        if (erasing_) {
+        if (reading_.overtaken) {
             reading_.active = false;
             acknowledge(peer, false, link::Reason::Busy);
             return;

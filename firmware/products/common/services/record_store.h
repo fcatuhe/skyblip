@@ -86,6 +86,7 @@ class RecordStore {
         uint32_t session{0};
         comms::LogWindow window{};
         int next{0};
+        bool overtaken{false};
     };
 
     void recover();
