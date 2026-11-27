@@ -27,6 +27,8 @@
   .setup-step { display: grid; gap: var(--space-m); }
   .setup-step .note { margin: 0; font-size: var(--text-s); color: var(--ink-muted); }
   .setup-step .note[hidden] { display: none; }
+  .setup-step turbo-frame { display: contents; }
+  .setup-step > turbo-frame .field { grid-template-columns: minmax(0, 1fr); border: 0; padding: 0; }
 
   .setup-linux {
     display: grid;

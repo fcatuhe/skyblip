@@ -3,6 +3,7 @@
 #include "core/model/aircraft.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 #include "protocols/common/geometry.h"
 
@@ -16,24 +17,14 @@ constexpr int kFigureUnitGap = 1;
 constexpr int kRelativeHundredsCeiling = 99;
 constexpr int32_t kDistanceCeilingE1 = 999;
 
-int length(const char* text) {
-    int count = 0;
-    while (text[count]) count++;
-    return count;
-}
-
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int scale) {
-    canvas.draw_text(x_end - length(text) * kCellWidth * scale, y, text, true, scale);
-}
-
 void figure(ui::Canvas& canvas, int x_end, int y, const char* value, const char* unit) {
     int x = x_end;
     if (unit[0] != 0) {
-        x -= length(unit) * kCellWidth;
+        x -= text_cells(unit) * kCellWidth;
         canvas.draw_text(x, y + kCharacterHeight * (kNearbyScale - 1), unit, true, 1);
         x -= kFigureUnitGap;
     }
-    canvas.draw_text(x - length(value) * kNearbyCellWidth, y, value, true, kNearbyScale);
+    canvas.draw_text(x - text_cells(value) * kNearbyCellWidth, y, value, true, kNearbyScale);
 }
 
 void battery(ui::Canvas& canvas, int y, std::optional<uint8_t> percent, bool charging) {
@@ -110,14 +101,14 @@ void draw_units(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
 }
 
 void banner(ui::Canvas& canvas, int y, const char* text) {
-    canvas.draw_text((kGlassWidth - length(text) * kNearbyCellWidth) / 2, y, text, true,
+    canvas.draw_text((kGlassWidth - text_cells(text) * kNearbyCellWidth) / 2, y, text, true,
                      kNearbyScale);
 }
 
 void draw_head(ui::Canvas& canvas, int y) {
     canvas.draw_text(kNearbyIdX, y, "SRC ID", true, 1);
-    right_aligned(canvas, kNearbyDistanceEnd, y, "DIST", 1);
-    right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, "ALT", 1);
+    right_aligned(canvas, kNearbyDistanceEnd, y, "DIST");
+    right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, "ALT");
     canvas.horizontal_line(kNearbyIdX, y + kRuleDrop, kNearbyRelativeAltitudeEnd - kNearbyIdX,
                            true);
 }

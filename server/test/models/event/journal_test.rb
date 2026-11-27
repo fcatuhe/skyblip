@@ -95,6 +95,20 @@ class Event::JournalTest < ActiveSupport::TestCase
     assert_equal [ [ "0.2.0+950", "read" ] ], unit.firmwares.pluck(:version, :source)
   end
 
+  # The events commit before the hearing is queued, so a post that failed in between answers 500 and its browser posts it again.
+  test "a unit's read is heard when its entry arrives again after its hearing was lost" do
+    read = entry("device.read", properties: { product: "bravo", variant: "standard", version: "0.2.0+950", release: true,
+      device_id: "0a0b0c0d0e0f1011", bluetooth_tag: 0x1234 })
+    journal = Event::Journal.new(browser: BROWSER, entries: [ read ])
+
+    journal.record
+    clear_enqueued_jobs
+    perform_enqueued_jobs { journal.record }
+
+    assert_equal 1, Event.where(name: "device.read").count
+    assert_equal "bravo-1234", Unit.find_by!(device_id: "0a0b0c0d0e0f1011").slug
+  end
+
   # A JSON number has no size, and the firmware's counters and the browser's all fit in a JavaScript number.
   test "a number larger than a counter can hold is dropped" do
     huge = 10**400
