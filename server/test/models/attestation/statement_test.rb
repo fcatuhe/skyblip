@@ -17,7 +17,7 @@ class Attestation::StatementTest < ActiveSupport::TestCase
 
   # An admin revokes a key believed leaked while a statement it signed is being checked.
   test "a key revoked while its statement is checked lands before or after the attestation, never between" do
-    racing, paused, landed, held = Queue.new, Queue.new, [], false
+    racing, paused, landed, held = Queue.new, Queue.new, [], nil
 
     admin = Thread.new do
       racing.pop
@@ -35,8 +35,8 @@ class Attestation::StatementTest < ActiveSupport::TestCase
           landed << :revoked
         elsif Thread.current != admin && payload[:sql].start_with?(%(INSERT INTO "unit_firmwares"))
           landed << :attested
-        elsif Thread.current != admin && !held && payload[:sql].start_with?(%(SELECT "unit_keys"))
-          held = true
+        elsif Thread.current != admin && held.nil? && payload[:sql].start_with?(%(SELECT "unit_keys"))
+          held = ActiveRecord::Base.lease_connection.transaction_open?
           racing << :go
           paused.pop
         end
@@ -48,6 +48,7 @@ class Attestation::StatementTest < ActiveSupport::TestCase
       admin.join
     end
 
+    assert held, "the statement read the key outside the transaction that records the firmware"
     assert @key.reload.revoked?
     assert_equal [ :attested, :revoked ], landed
   end
