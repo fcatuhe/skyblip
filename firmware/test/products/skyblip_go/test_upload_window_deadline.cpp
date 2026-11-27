@@ -40,3 +40,30 @@ TEST_CASE("product: an upload that finishes as its window expires is answered wi
         rig, before,
         "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"window_closed\"}"));
 }
+
+// The channel holds one reply for a slow link, and a second one while it waits was dropped as Full.
+TEST_CASE("product: a window that expires behind a held reply still answers window_closed") {
+    Rig rig;
+    stage_versions(rig);
+    REQUIRE(rig.setup() == Status::Ok);
+    open_upload_window(rig);
+    pass(rig);
+    rig.run_for(10u * 60u * 1000u - 500u);
+    REQUIRE(config(rig).upload_allowed());
+    const uint16_t session = rig.platform.link().session_id();
+    const size_t before = rig.platform.link().sent.size();
+    rig.platform.link().hold_session(session, true);
+    rig.send("{\"command\":\"status\"}");
+    pass(rig);
+    REQUIRE(config(rig).replying());
+
+    while (config(rig).upload_allowed()) pass(rig);
+    REQUIRE(config(rig).replying());
+    rig.platform.dfu().finished_upload = true;
+    rig.platform.link().hold_session(session, false);
+    rig.run_for(5000);
+    CHECK(rig.platform.dfu().triggered == 0);
+    CHECK(sent_since(
+        rig, before,
+        "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"window_closed\"}"));
+}

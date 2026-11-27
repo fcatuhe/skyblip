@@ -43,6 +43,10 @@ void ConfigService::tick(uint32_t now_ms) {
     if (upload_window_open_ && !install_held_ &&
         now_ms - upload_window_opened_ms_ >= kUploadWindowMs) {
         upload_window_open_ = false;
+        window_closed_owed_ = true;
+    }
+    if (window_closed_owed_ && !channel_.replying()) {
+        window_closed_owed_ = false;
         refuse(link::Reason::WindowClosed);
     }
     if (install_held_ && !in_flight() && pending_ == Pending::None) install_received_image();
@@ -86,6 +90,7 @@ void ConfigService::on_link_down(const events::LinkDown& event) {
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     upload_window_open_ = false;
+    window_closed_owed_ = false;
     status_push_due_ = false;
 }
 
