@@ -173,7 +173,8 @@ TEST_CASE("bravo pairing: a farewell the central refuses once is written again, 
     CHECK_FALSE(pair.peer().paired());
 }
 
-TEST_CASE("bravo pairing: a farewell the central always refuses is retried, and the Go leaves on time") {
+TEST_CASE(
+    "bravo pairing: a farewell the central always refuses is retried, and the Go leaves on time") {
     PairedProducts pair;
     pair.pair_and_store();
     pair.go.show(go::Page::Bravo);
