@@ -114,22 +114,25 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
-  test "a pilot who asked for development builds chooses one before the drive, the usual one already chosen" do
+  # The cassette holds v0.8.1 and the development builds GitHub listed on Nov 27, with only dev-2763's Bravo .uf2 downloaded.
+  test "a pilot who asked for development builds installs the one chosen, the latest release chosen until then" do
     in_range
     plugged_in a_meshtastic_bravo
-    with_installers do
+    with_installers "github/development_installers" do
       visit "/briefing/preferences"
       check "Offer development builds"
       assert_link "See every build on GitHub."
 
       visit "/briefing/setup"
       click_button "Install"
-      assert_select "Version", selected: "skyBlip dev 0.1.0+1860", options: [ "skyBlip dev 0.1.0+1860", "skyBlip dev 0.1.0+1858", "skyBlip dev 0.1.0+1854" ]
+      assert_select "Version", selected: "v0.8.1", with_options: [ "skyBlip dev 0.8.1+2763", "skyBlip dev 0.8.1+2786 (feat-bravo-receiver-health)" ]
+      select "skyBlip dev 0.8.1+2763", from: "Version"
       screen "27-bravo-choose-build"
 
       click_button "Choose the drive"
       assert_text "Choose skyBlip Bravo 5C1D in the list."
-      assert_equal "0.1.0+1860", journaled("installer.wrote").payload["version"]
+      assert_equal "0.8.1+2763", page.evaluate_script("fakeUsb.build")
+      assert_equal "0.8.1+2763", journaled("installer.wrote").payload["version"]
     end
   end
 
