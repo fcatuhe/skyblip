@@ -664,7 +664,7 @@ export class Updater {
   }
 
   #closed() {
-    const { phase } = this.#state;
+    const { phase, task } = this.#state;
     const leaving = this.#leaving;
     this.#device = null;
     this.#windowOpen = false;
@@ -681,7 +681,9 @@ export class Updater {
     this.#smp.close(new LinkLost());
     this.#trust.close();
     this.#attestation?.close();
-    if (EXPECTED_DROP.has(phase)) {
+    // INFO: fc 27nov26 the unit can restart into its install before its verdict on the last chunk reaches the page
+    const awaitingVerdict = phase === 'asking' && task === 'install';
+    if (EXPECTED_DROP.has(phase) || awaitingVerdict) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
       this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
