@@ -1,46 +1,28 @@
 require "test_helper"
 
 class Briefing::PreferencesControllerTest < ActionDispatch::IntegrationTest
-  test "the settings offer each language in its own words, the current one chosen" do
+  test "the settings switch the language with the site's switcher, every language at the same address" do
     get briefing_preferences_path
 
     assert_response :success
-    assert_select "input[type=radio][name='preferences[locale]'][value=en][checked]"
-    assert_select "label[lang=fr]", text: "Français"
+    assert_select ".preferences-language .locale-switcher[data-controller=locale] summary", text: "EN"
+    assert_select ".locale-switcher [aria-current=true]", text: "English"
+    assert_select ".locale-switcher a[href='/briefing/preferences'][hreflang=fr][data-locale-locale-param=fr]", text: "Français"
     assert_select "main script, main style, main [style], main [onclick]", count: 0
   end
 
-  test "choosing a language keeps it for the whole app, at the same addresses" do
-    patch briefing_preferences_path, params: { preferences: { locale: "fr" } }
-
-    assert_redirected_to briefing_preferences_path
-    assert_equal "fr", cookies[:locale]
-
-    get briefing_root_path
-    assert_select "html[lang=fr]"
-    assert_select "h1", text: "Votre skyBlip"
-  end
-
-  test "development builds stay off until asked for, and the language stays as it was" do
-    cookies[:locale] = "fr"
+  test "development builds stay off until asked for" do
     get briefing_preferences_path
     assert_select "input[type=checkbox][name='preferences[development_builds]']:not([checked])"
     assert_select "a[href$='/releases']", count: 0
 
     patch briefing_preferences_path, params: { preferences: { development_builds: "1" } }
 
+    assert_redirected_to briefing_preferences_path
     assert_equal "true", cookies[:development_builds]
-    assert_equal "fr", cookies[:locale]
     follow_redirect!
     assert_select "input[type=checkbox][name='preferences[development_builds]'][checked]"
     assert_select "a[href='#{Rails.configuration.x.repository_url}/releases']"
-  end
-
-  test "a language the app does not speak is refused" do
-    patch briefing_preferences_path, params: { preferences: { locale: "nl" } }
-
-    assert_response :unprocessable_entity
-    assert_nil cookies[:locale]
   end
 
   test "before any choice the app speaks the browser's language, and a choice wins over it" do
