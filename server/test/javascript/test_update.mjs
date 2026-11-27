@@ -350,6 +350,25 @@ test('a link that drops mid-upload says so', async () => {
   assert.equal(state.notice.key, 'link_lost');
 });
 
+// The unit can restart into its install before its verdict reaches the page, and a lost link then hides an install.
+test('a link that drops once the last chunk is in waits for the device to come back, and says nothing was lost', async () => {
+  const { device, updater, until } = await chosen({ returnEveryMs: 0 });
+  device.installLanded = () => {};
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'asking' && state.task === 'install');
+  device.running = '0.2.0.15';
+  device.drop(0);
+  const rebooting = await until(state => state.phase !== 'asking');
+  assert.equal(rebooting.phase, 'rebooting');
+  assert.equal(rebooting.notice, null);
+  const back = await until(state => state.phase === 'ready' && state.running);
+  assert.equal(back.running, '0.2.0+15');
+  assert.equal(back.task, null, 'the install no longer stands, so the page is idle for what waits on it');
+  updater.disconnect();
+});
+
 test('a disconnect asked for is not reported as a lost link', async () => {
   const { updater, until } = await connected();
   updater.disconnect();
