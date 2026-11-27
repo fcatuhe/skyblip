@@ -12,6 +12,7 @@ struct AdsbFrame {
     uint64_t at_us;
     int8_t rssi_dbm;
     bool rssi_valid;
+    bool repaired;
     std::array<uint8_t, adsb::kFrameBytes> bytes;
 };
 

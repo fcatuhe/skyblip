@@ -23,6 +23,20 @@ skyBlip Bravo is a Seeed SenseCAP MeshTracker X1 that receives 1090 MHz ADS-B fu
 
 Bravo runs no `TrafficService`: 1090 MHz is its only source, so `AdsbService` owns `state.traffic`. It drains `bus::AdsbQueue`, which the radio thread fills, decodes each frame with `adsb::receive`, and folds DF17 messages into `adsb::Assembly`. Each folded observation goes to `common::AdsbCapture::record` before the table, because a capture asks about every aircraft heard and a full table keeps only the nearest. Callsigns go to `state.callsigns`, where `$PFLAA` and the Go both read them. `age_out` runs on the assembly every pass, as `protocols/adsb/README.md` requires.
 
+A pass decodes at most `kFramesPerPassCeiling` frames, `events::kAdsbLoadFrames`, a drain window's design load, and comes back on the next pass while the queue holds more. The radio thread refills the queue while the loop drains it, so before the ceiling a flood of noise kept one pass decoding: on bravo-d582, 1000 to 1500 frames a second held a pass up to 561 ms and the loop fell to 7 passes a second. A flood now costs frames, counted in the queue's drops, and never the loop.
+
+## The detection threshold
+
+1090ES has only a four-pulse preamble and no sync word, so the LR2021's detector fires on every pulse train that fits the preamble: Mode A/C replies, aircraft DME, other pulsed signals in the band, and noise. The detection threshold is the LR2021's own, -106 dBm, and Bravo makes each false alarm cheap instead of trying to keep it out. Once a junk frame cost the receiver thread about 25 us, -106 decoded as many squitters as #293's -110 dBm, or more, and five times fewer junk frames indoors (`../../hardware/parts/lr2021/README.md`, The detection threshold).
+
+The bravo-d582 captures of #550 settle it. Outdoors the quietest noise readings barely moved (-101 against -102 dBm indoors) while the loudest rose from -95 to -77 dBm: the flood was strong pulses, not a raised floor. A regulator that raised the threshold to -92 dBm left 40 to 150 junk frames a second and decoded about one position every two seconds, because the real aircraft there arrived weaker than -92 dBm, while at -109 to -103 dBm the same flood still gave 2 to 9 positions a second. ADSBee 1090 found the same (`PantsForBirds/adsbee` #356): a trigger set high loses valid frames, and the best one sits near the floor.
+
+What made the flood harmful was its cost. Woken for each frame, the receiver thread spent about 500 us a frame on SPI snapshots, and as a cooperative thread it never yielded while frames kept coming, so at 1500 frames a second it held the CPU and the loop, the link and the GNSS UART starved. Paced at 5 ms, it still took 63 to 76% of the CPU outdoors, and the queue to the decoder lost up to 260 frames a second. So Bravo receives in two stages. The receiver thread wakes every 20 ms, or when the FIFO reaches 11 frames, reads every whole frame in one transfer, and screens out what the decoder would refuse: a format no decoder reads, or a DF11 or DF17 whose parity fails. A DF17 one or two bits from sound is repaired instead, and the decoder keeps it only for an aircraft it already holds. The decoder in the loop does the full work on what passes, Mode S replies included (`../../hardware/parts/lr2021/README.md`, The receiver thread and The screen). The chip cannot screen in the thread's place: an OOK receive takes one sync word and one pair of one-byte address values (DS 16.3.4, 16.3.5), and the downlink formats transponders send share no prefix, so a screen at the chip would drop every Mode S reply.
+
+The LR2021 runs at a fixed gain, step 13, instead of its AGC, as ADSBee 1421 does on the same part (`../../hardware/parts/lr2021/README.md`, The gain).
+
+`reception.impossible_formats` still counts the frames in the 12 downlink formats no transponder sends, DF1 to DF3, DF6 to DF10 and DF12 to DF15. They are junk by definition, and times 32/12 they estimate every false alarm.
+
 ## The GNSS rate
 
 Bravo asks its AG3335 for one solution a second, `kSolutionRate` in `product.h`, because it transmits nothing and no ADS-L clause dates its position to a quarter second. Its flight log, its EFB sentences and its ADS-B gate read one position a second, as on the Go. The AG3335 driver solves only at that rate, and `common::solution_rate_serves` refuses at compile time a product that asks for more (`../../hardware/parts/ag3335/README.md`).
@@ -167,6 +181,14 @@ Bravo keys no transmitter, so flash waits only for the 1090 MHz queue, which the
 
 Bravo has no glass, so a page or `scripts/blip.py capture` arms a capture over the link with the `capture` command, which stands as a prompt like every other. The press arms `diagnostics::Recorder`, and `CaptureService` drains it as on the Go, ADS-B records included (`../skyblip_go/README.md`, Which capture is armed).
 
+A `Full` capture also writes a `Receiver`, a `Framing` and a `Reception` record each second from `AdsbService` (`../../core/diagnostics/README.md`, The receiver and reception records). They follow a frame from the LR2021's own status to the traffic table, so an outage on an EFB can be traced to the part, the driver, the decoder or the position Bravo places traffic against.
+
+To catch an outage that comes and goes:
+
+1. Arm a `Full` capture, `blip.py capture full`, and note the UTC time of each outage seen on the EFB.
+2. Stop it within the stretch the capture keeps, about 2 hours with no traffic and about 37 minutes with ten aircraft (`../../core/diagnostics/README.md`, The three profiles), because the ring recycles its oldest sector.
+3. Fetch it, `blip.py fetch --log diagnostics --all --out run.ndjson`, and read it with `scripts/reception_check.py run.ndjson`.
+
 ## Mode S transponders
 
 `Transponders` (`transponders.h`) holds up to `kMaxTransponders` Mode S transponders. A reply overlays its address on its parity, so noise reads as an address too (`../../protocols/adsb/README.md`, Mode S: replies with no position). A transponder is admitted only when heard in clear, in a DF17 or in a DF11 whose parity is zero, and a reply counts only from an address already held. A transponder silent for `kTransponderForgetMs`, 30 s, is freed.
@@ -181,9 +203,9 @@ The `adsb` group of the status dump follows a frame from the antenna to the tabl
 |---|---|
 | `frames` | the LR2021 heard a preamble, decided the 112 bits behind it, and handed them up |
 | `dropped` | was lost before the decoder |
-| `formats` | each frame decoded, by the downlink format its first five bits name |
-| `crc` | a DF17 or DF11 that failed its parity, which nothing repairs |
-| `unsupported` | a format or a DF17 message the decoder does not read |
+| `formats` | each frame read, by the downlink format its first five bits name, counted by the receiver thread before its screen |
+| `crc` | a DF17 or DF11 that failed its parity, most of them refused by the receiver thread. A DF17 one or two bits off is repaired instead and not counted here |
+| `unsupported` | a format the receiver thread refused, or a DF17 message the decoder does not read |
 | `unmatched` | a Mode S reply from an address not heard in clear first |
 | `folded` | was folded into an aircraft by `adsb::Assembly` |
 | `aircraft` | not a frame: the aircraft the assembly holds now |

@@ -1,5 +1,6 @@
 #include "protocols/adsb/message.h"
 
+#include <array>
 #include <cstring>
 #include <initializer_list>
 
@@ -247,6 +248,61 @@ wire::Status reply(const uint8_t* frame, Message& out, bool altitude) {
     return wire::Status::Ok;
 }
 
+// INFO: fc 27nov26 DO-260B 2.2.4.3.4.7.3.a never corrects the DF field, so it is left out
+constexpr uint8_t kFirstCorrectableBit = 6;
+constexpr size_t kCorrectableBits = kFrameBytes * 8u - (kFirstCorrectableBit - 1u);
+
+constexpr std::array<uint32_t, kCorrectableBits> one_bit_syndromes() {
+    std::array<uint32_t, kCorrectableBits> syndromes{};
+    for (size_t i = 0; i < kCorrectableBits; i++) {
+        uint8_t error[kFrameBytes]{};
+        const size_t index = kFirstCorrectableBit - 1u + i;
+        error[index >> 3] = static_cast<uint8_t>(0x80u >> (index & 7u));
+        syndromes[i] = wire::crc24_check(error, kFrameBytes);
+    }
+    return syndromes;
+}
+
+struct Syndrome {
+    uint32_t value;
+    uint8_t bit;
+};
+
+// INFO: fc 27nov26 sorted at compile time, so a two-bit search is 107 binary searches, about 10 us
+constexpr std::array<Syndrome, kCorrectableBits> sorted_syndromes() {
+    const std::array<uint32_t, kCorrectableBits> values = one_bit_syndromes();
+    std::array<Syndrome, kCorrectableBits> sorted{};
+    for (size_t i = 0; i < kCorrectableBits; i++) {
+        size_t at = i;
+        while (at > 0 && sorted[at - 1].value > values[i]) {
+            sorted[at] = sorted[at - 1];
+            at--;
+        }
+        sorted[at] = {values[i], static_cast<uint8_t>(kFirstCorrectableBit - 1u + i)};
+    }
+    return sorted;
+}
+
+constexpr std::array<Syndrome, kCorrectableBits> kSyndromes = sorted_syndromes();
+
+const Syndrome* find_syndrome(uint32_t value) {
+    size_t low = 0;
+    size_t high = kCorrectableBits;
+    while (low < high) {
+        const size_t middle = (low + high) / 2;
+        if (kSyndromes[middle].value < value) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    return low < kCorrectableBits && kSyndromes[low].value == value ? &kSyndromes[low] : nullptr;
+}
+
+void flip(uint8_t* frame, uint8_t index) {
+    frame[index >> 3] = static_cast<uint8_t>(frame[index >> 3] ^ (0x80u >> (index & 7u)));
+}
+
 }
 
 wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception reception, Message& out) {
@@ -266,6 +322,44 @@ wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception recepti
         case kCommBIdentityReply: return reply(frame, out, false);
         default: return wire::Status::Unsupported;
     }
+}
+
+Screened screen(const uint8_t* frame) {
+    switch (bits(frame, 1, 5)) {
+        case kExtendedSquitter:
+            return wire::crc24_check(frame, kFrameBytes) == 0 ? Screened::Squitter
+                                                              : Screened::Parity;
+        case kAllCallReply:
+            return wire::crc24_check(frame, kShortFrameBytes) <= kInterrogatorCodeCeiling
+                       ? Screened::AllCall
+                       : Screened::Parity;
+        case kShortAirAir:
+        case kAltitudeReply:
+        case kIdentityReply:
+        case kLongAirAir:
+        case kCommBAltitudeReply:
+        case kCommBIdentityReply: return Screened::Reply;
+        default: return Screened::Format;
+    }
+}
+
+// INFO: fc 27nov26 parity is linear: flipped bits in a sound frame leave the XOR of their syndromes
+uint8_t repair_bits(uint8_t* frame) {
+    if (bits(frame, 1, 5) != kExtendedSquitter) return 0;
+    const uint32_t syndrome = wire::crc24_check(frame, kFrameBytes);
+    if (syndrome == 0) return 0;
+    if (const Syndrome* one = find_syndrome(syndrome)) {
+        flip(frame, one->bit);
+        return 1;
+    }
+    for (const Syndrome& first : kSyndromes) {
+        const Syndrome* second = find_syndrome(syndrome ^ first.value);
+        if (second == nullptr) continue;
+        flip(frame, first.bit);
+        flip(frame, second->bit);
+        return 2;
+    }
+    return 0;
 }
 
 }

@@ -166,4 +166,123 @@ Record record_of(const Duty& value, const Instant& at) {
     return record;
 }
 
+Record record_of(const Reception& value, const Instant& at) {
+    Record record = framed(Type::Reception, at);
+    wire::put_uint16(record.payload + reception_at::kCrc, static_cast<uint16_t>(value.crc));
+    wire::put_uint16(record.payload + reception_at::kUnsupported,
+                     static_cast<uint16_t>(value.unsupported));
+    wire::put_uint16(record.payload + reception_at::kFolded, static_cast<uint16_t>(value.folded));
+    wire::put_uint16(record.payload + reception_at::kPositions,
+                     static_cast<uint16_t>(value.positions));
+    wire::put_uint16(record.payload + reception_at::kCaptureRefused,
+                     static_cast<uint16_t>(value.capture_refused));
+    record.payload[reception_at::kAircraft] = clamped<uint8_t>(value.aircraft);
+    record.payload[reception_at::kTracked] = clamped<uint8_t>(value.tracked);
+    record.payload[reception_at::kReference] = static_cast<uint8_t>(value.reference);
+    record.payload[reception_at::kFramingResyncs] = static_cast<uint8_t>(value.framing_resyncs);
+    wire::put_uint16(record.payload + reception_at::kImpossibleFormats,
+                     static_cast<uint16_t>(value.impossible_formats));
+    set_flag(record.flags, kReceptionFlagFixValid, value.fix_valid);
+    return record;
+}
+
+Framing framing_of(const ports::AdsbReceiverStatistics& statistics) {
+    Framing value{};
+    value.overflow_drops = statistics.overflow_drops;
+    value.resync_drops = statistics.resync_drops;
+    value.queue_drops = statistics.queue_drops;
+    value.in_flight = statistics.in_flight;
+    value.split_counts = statistics.split_counts;
+    value.drain_busy_ms = static_cast<uint32_t>(statistics.drain_busy_us / 1000);
+    value.drains = statistics.drains;
+    value.stranded_resyncs = statistics.stranded_resyncs;
+    value.short_resyncs = statistics.short_resyncs;
+    return value;
+}
+
+Record record_of(const Framing& value, const Instant& at) {
+    Record record = framed(Type::Framing, at);
+    wire::put_uint16(record.payload + framing_at::kOverflowDrops,
+                     static_cast<uint16_t>(value.overflow_drops));
+    wire::put_uint16(record.payload + framing_at::kResyncDrops,
+                     static_cast<uint16_t>(value.resync_drops));
+    wire::put_uint16(record.payload + framing_at::kQueueDrops,
+                     static_cast<uint16_t>(value.queue_drops));
+    wire::put_uint16(record.payload + framing_at::kInFlight,
+                     static_cast<uint16_t>(value.in_flight));
+    wire::put_uint16(record.payload + framing_at::kSplitCounts,
+                     static_cast<uint16_t>(value.split_counts));
+    wire::put_uint16(record.payload + framing_at::kDrainBusyMs,
+                     static_cast<uint16_t>(value.drain_busy_ms));
+    wire::put_uint16(record.payload + framing_at::kDrains, static_cast<uint16_t>(value.drains));
+    record.payload[framing_at::kStrandedResyncs] = static_cast<uint8_t>(value.stranded_resyncs);
+    record.payload[framing_at::kShortResyncs] = static_cast<uint8_t>(value.short_resyncs);
+    return record;
+}
+
+Screening screening_of(const ports::AdsbReceiverStatistics& statistics, uint32_t unmatched) {
+    Screening value{};
+    value.squitters = statistics.squitters;
+    value.all_calls = statistics.all_calls;
+    value.replies = statistics.replies;
+    value.parity_refused = statistics.parity_refused;
+    value.one_bit_errors = statistics.one_bit_errors;
+    value.unmatched = unmatched;
+    value.two_bit_errors = statistics.two_bit_errors;
+    value.fifo_peak_frames = statistics.fifo_peak_frames;
+    value.queue_peak_frames = statistics.queue_peak_frames;
+    return value;
+}
+
+Record record_of(const Screening& value, const Instant& at) {
+    Record record = framed(Type::Screening, at);
+    wire::put_uint16(record.payload + screening_at::kSquitters,
+                     static_cast<uint16_t>(value.squitters));
+    wire::put_uint16(record.payload + screening_at::kAllCalls,
+                     static_cast<uint16_t>(value.all_calls));
+    wire::put_uint16(record.payload + screening_at::kReplies, static_cast<uint16_t>(value.replies));
+    wire::put_uint16(record.payload + screening_at::kParityRefused,
+                     static_cast<uint16_t>(value.parity_refused));
+    wire::put_uint16(record.payload + screening_at::kOneBitErrors,
+                     static_cast<uint16_t>(value.one_bit_errors));
+    wire::put_uint16(record.payload + screening_at::kUnmatched,
+                     static_cast<uint16_t>(value.unmatched));
+    wire::put_uint16(record.payload + screening_at::kTwoBitErrors,
+                     static_cast<uint16_t>(value.two_bit_errors));
+    record.payload[screening_at::kFifoPeakFrames] = clamped<uint8_t>(value.fifo_peak_frames);
+    record.payload[screening_at::kQueuePeakFrames] = clamped<uint8_t>(value.queue_peak_frames);
+    return record;
+}
+
+Drain drain_of(const ports::AdsbReceiverStatistics& statistics, uint32_t repaired,
+               uint32_t repairs_refused) {
+    Drain value{};
+    value.irq_wakes = statistics.irq_wakes;
+    value.empty_wakes = statistics.empty_wakes;
+    value.poll_ms = static_cast<uint32_t>(statistics.poll_us / 1000);
+    value.worst_drain_us = statistics.worst_drain_us;
+    value.busy_wait_ms = static_cast<uint32_t>(statistics.busy_wait_us / 1000);
+    value.transactions = statistics.transactions;
+    value.repaired = repaired;
+    value.repairs_refused = repairs_refused;
+    return value;
+}
+
+Record record_of(const Drain& value, const Instant& at) {
+    Record record = framed(Type::Drain, at);
+    wire::put_uint16(record.payload + drain_at::kIrqWakes, static_cast<uint16_t>(value.irq_wakes));
+    wire::put_uint16(record.payload + drain_at::kEmptyWakes,
+                     static_cast<uint16_t>(value.empty_wakes));
+    wire::put_uint16(record.payload + drain_at::kPollMs, static_cast<uint16_t>(value.poll_ms));
+    wire::put_uint16(record.payload + drain_at::kWorstDrainUs, clamp_uint16(value.worst_drain_us));
+    wire::put_uint16(record.payload + drain_at::kBusyWaitMs,
+                     static_cast<uint16_t>(value.busy_wait_ms));
+    wire::put_uint16(record.payload + drain_at::kTransactions,
+                     static_cast<uint16_t>(value.transactions));
+    wire::put_uint16(record.payload + drain_at::kRepaired, static_cast<uint16_t>(value.repaired));
+    wire::put_uint16(record.payload + drain_at::kRepairsRefused,
+                     static_cast<uint16_t>(value.repairs_refused));
+    return record;
+}
+
 }  // namespace skyblip::diagnostics

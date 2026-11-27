@@ -199,6 +199,18 @@ TEST_CASE("dfu: a chunk with no first chunk before it is refused") {
     CHECK_FALSE(check.admits(384, go.data() + 384, 64));
 }
 
+// img_mgmt keeps the upload it was taking when it refuses a first chunk, and resumes it later.
+TEST_CASE("dfu: a refused first chunk leaves the interrupted upload to resume") {
+    ProductCheck check;
+    const std::vector<uint8_t> go = image(kGo);
+    REQUIRE(check.begin(go.data(), 64, go.size(), kGo));
+    REQUIRE(check.admits(64, go.data() + 64, 64));
+    const std::vector<uint8_t> unmarked = image(kGo, false);
+    REQUIRE_FALSE(check.begin(unmarked.data(), 64, unmarked.size(), kGo));
+    for (size_t offset = 128; offset < go.size(); offset += 64)
+        CHECK(check.admits(offset, go.data() + offset, std::min(size_t{64}, go.size() - offset)));
+}
+
 TEST_CASE("dfu: a refusal holds until a new upload starts at offset 0") {
     ProductCheck check;
     const std::vector<uint8_t> bravo = image(kBravo);

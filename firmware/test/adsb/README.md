@@ -16,9 +16,9 @@ A clause the firmware does not meet is written as the clause requires and skippe
 
 - **Fields read and not reported.** The surveillance status, the intent change flag, every integrity and accuracy figure but GVA, the capability class, the operational mode, the length and width code, the track/heading bit and the HRD.
 - **Messages not decoded.** TYPE 28, the emergency/priority status, and TYPE 29, the target state and status.
-- **DF18.** The LR2021 driver hands up only frames whose first four bits are `1000`, DF16 and DF17, so Bravo hears no TIS-B and no ADS-R.
-- **The radio.** The LR2021's OOK threshold is fixed at -110 dBm, so there is no DMTL (2.2.4.3.3, 2.2.4.3.4.1 to 2.2.4.3.4.3). The part reports no pulse edges (2.2.4.3.4.7.1).
-- **Error correction.** The LR2021 hands up no doubtful bit, so the decoder applies none of the correction 2.2.4.5 names for class A0 and cannot refuse a run of doubtful bits (2.2.4.3.4.7.3). #373 measures what a one-bit repair would save.
+- **DF18.** The decoder refuses it, and the receiver thread's screen drops it before the queue, so Bravo hears no TIS-B and no ADS-R.
+- **The radio.** The LR2021's OOK threshold is the part's own fixed -106 dBm, so there is no DMTL (2.2.4.3.3, 2.2.4.3.4.1 to 2.2.4.3.4.3). The part reports no pulse edges (2.2.4.3.4.7.1).
+- **Error correction.** The LR2021 hands up no doubtful bit, so Bravo applies only a one- or two-bit repair of a DF17 by its syndrome, never in the DF field, kept for an aircraft already held (2.2.4.3.4.7.3.a). It cannot refuse a run of doubtful bits (2.2.4.3.4.7.3) or apply the rest of the correction 2.2.4.5 names for class A0.
 - **Movement codes 2 to 8.** `kMovementBands` follows Doc 9871's 0.125 kt steps, which differ from Table 2-18 by less than 0.13 kt.
 - **Reports.** Nothing is estimated (2.2.8.1.4.1, 2.2.8.1.17, 2.2.8.1.18). A T 1 position keeps the instant it was received, not its 0.2 s UTC epoch. The `Track` does not carry the call sign. A surface message with a valid movement and no valid heading reports no ground speed.
 - **Track lifetimes.** The traffic table forgets a target after 6 missed reports, 6 s airborne and 60 s on the ground (`core/traffic/lease.h`), against 25 +-5 s and 200 +-5 s (2.2.10.4.1.3, 2.2.10.4.2.3). The owner keeps them for now.

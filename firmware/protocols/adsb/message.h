@@ -126,6 +126,13 @@ struct Message {
 
 wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception reception, Message& out);
 
+enum class Screened : uint8_t { Squitter, AllCall, Reply, Repaired, Format, Parity };
+
+// INFO: fc 27nov26 receive()'s own refusals, cheap enough for a radio thread to run first
+Screened screen(const uint8_t* frame);
+constexpr bool kept(Screened screened) { return screened < Screened::Format; }
+uint8_t repair_bits(uint8_t* frame);
+
 }
 
 #endif

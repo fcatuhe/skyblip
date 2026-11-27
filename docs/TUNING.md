@@ -302,6 +302,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the cadence of Power and Loop, so an outage lines up with them |
 | `kHealthPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json health: once a second whatever the traffic |
 | `kAcceptanceWindowMs` | 60000 (1 min) | milliseconds | Window | unverified: a page turns from Bravo to the Go through the browser's chooser |
 | `kCallMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | unverified (#194): three claim periods, so one lost claim keeps the call |
@@ -439,4 +440,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-294 constants over 26 folders.
+295 constants over 26 folders.

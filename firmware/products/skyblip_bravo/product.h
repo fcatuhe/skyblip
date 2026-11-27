@@ -174,7 +174,7 @@ class Product {
         kProductName, bravo::bluetooth_name, dfu::Product::Bravo};
     common::OwnshipService ownship_{context_, aircraft_category_};
     GateReference gate_{};
-    AdsbService adsb_{context_, adsb_frames_, settings_.aircraft_address, gate_};
+    AdsbService adsb_{context_, adsb_frames_, board_.receiver(), settings_.aircraft_address, gate_};
     // INFO: fc 19nov26 Bravo has no glass, so its lamp also shows a prompt, a pairing and a phone
     common::AlarmService alarm_{
         context_, common::AlarmSettings{settings_.alarm, settings_.go_alarm, settings_.peer.pinned},

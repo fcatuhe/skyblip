@@ -354,6 +354,92 @@ inline bool read(const Record& record, Duty& out) {
     return true;
 }
 
+inline bool read(const Record& record, Receiver& out) {
+    if (record.type != Type::Receiver) return false;
+    out = Receiver{};
+    out.frames = wire::get_uint16(record.payload + receiver_at::kFrames);
+    out.part_packets = wire::get_uint16(record.payload + receiver_at::kPartPackets);
+    out.part_errors = wire::get_uint16(record.payload + receiver_at::kPartErrors);
+    out.gain_step = record.payload[receiver_at::kGainStep];
+    out.rearms = record.payload[receiver_at::kRearms];
+    out.resets = record.payload[receiver_at::kResets];
+    out.part_resets = record.payload[receiver_at::kPartResets];
+    out.command_errors = record.payload[receiver_at::kCommandErrors];
+    out.missed_edges = record.payload[receiver_at::kMissedEdges];
+    out.noise_dbm = get_int8(record.payload + receiver_at::kNoiseDbm);
+    out.threshold_dbm = get_int8(record.payload + receiver_at::kThresholdDbm);
+    out.part_mode = static_cast<ports::ReceiverMode>(record.payload[receiver_at::kPartMode]);
+    out.part_reset = static_cast<ports::ReceiverReset>(record.payload[receiver_at::kPartReset]);
+    out.listening = record.flagged(kReceiverFlagListening);
+    out.irq_armed = record.flagged(kReceiverFlagIrqArmed);
+    out.probed = record.flagged(kReceiverFlagProbed);
+    out.interrupt_pending = record.flagged(kReceiverFlagInterruptPending);
+    out.front_end_kept = record.flagged(kReceiverFlagFrontEndKept);
+    out.boosted = (record.flags & kReceiverFlagBoosted) != 0;
+    return true;
+}
+
+inline bool read(const Record& record, Reception& out) {
+    if (record.type != Type::Reception) return false;
+    out = Reception{};
+    out.crc = wire::get_uint16(record.payload + reception_at::kCrc);
+    out.unsupported = wire::get_uint16(record.payload + reception_at::kUnsupported);
+    out.folded = wire::get_uint16(record.payload + reception_at::kFolded);
+    out.positions = wire::get_uint16(record.payload + reception_at::kPositions);
+    out.capture_refused = wire::get_uint16(record.payload + reception_at::kCaptureRefused);
+    out.aircraft = record.payload[reception_at::kAircraft];
+    out.tracked = record.payload[reception_at::kTracked];
+    out.reference = static_cast<comms::ExportReference>(record.payload[reception_at::kReference]);
+    out.framing_resyncs = record.payload[reception_at::kFramingResyncs];
+    out.impossible_formats = wire::get_uint16(record.payload + reception_at::kImpossibleFormats);
+    out.fix_valid = record.flagged(kReceptionFlagFixValid);
+    return true;
+}
+
+inline bool read(const Record& record, Framing& out) {
+    if (record.type != Type::Framing) return false;
+    out = Framing{};
+    out.overflow_drops = wire::get_uint16(record.payload + framing_at::kOverflowDrops);
+    out.resync_drops = wire::get_uint16(record.payload + framing_at::kResyncDrops);
+    out.queue_drops = wire::get_uint16(record.payload + framing_at::kQueueDrops);
+    out.in_flight = wire::get_uint16(record.payload + framing_at::kInFlight);
+    out.split_counts = wire::get_uint16(record.payload + framing_at::kSplitCounts);
+    out.drain_busy_ms = wire::get_uint16(record.payload + framing_at::kDrainBusyMs);
+    out.drains = wire::get_uint16(record.payload + framing_at::kDrains);
+    out.stranded_resyncs = record.payload[framing_at::kStrandedResyncs];
+    out.short_resyncs = record.payload[framing_at::kShortResyncs];
+    return true;
+}
+
+inline bool read(const Record& record, Screening& out) {
+    if (record.type != Type::Screening) return false;
+    out = Screening{};
+    out.squitters = wire::get_uint16(record.payload + screening_at::kSquitters);
+    out.all_calls = wire::get_uint16(record.payload + screening_at::kAllCalls);
+    out.replies = wire::get_uint16(record.payload + screening_at::kReplies);
+    out.parity_refused = wire::get_uint16(record.payload + screening_at::kParityRefused);
+    out.one_bit_errors = wire::get_uint16(record.payload + screening_at::kOneBitErrors);
+    out.unmatched = wire::get_uint16(record.payload + screening_at::kUnmatched);
+    out.two_bit_errors = wire::get_uint16(record.payload + screening_at::kTwoBitErrors);
+    out.fifo_peak_frames = record.payload[screening_at::kFifoPeakFrames];
+    out.queue_peak_frames = record.payload[screening_at::kQueuePeakFrames];
+    return true;
+}
+
+inline bool read(const Record& record, Drain& out) {
+    if (record.type != Type::Drain) return false;
+    out = Drain{};
+    out.irq_wakes = wire::get_uint16(record.payload + drain_at::kIrqWakes);
+    out.empty_wakes = wire::get_uint16(record.payload + drain_at::kEmptyWakes);
+    out.poll_ms = wire::get_uint16(record.payload + drain_at::kPollMs);
+    out.worst_drain_us = wire::get_uint16(record.payload + drain_at::kWorstDrainUs);
+    out.busy_wait_ms = wire::get_uint16(record.payload + drain_at::kBusyWaitMs);
+    out.transactions = wire::get_uint16(record.payload + drain_at::kTransactions);
+    out.repaired = wire::get_uint16(record.payload + drain_at::kRepaired);
+    out.repairs_refused = wire::get_uint16(record.payload + drain_at::kRepairsRefused);
+    return true;
+}
+
 }  // namespace skyblip::diagnostics
 
 #endif

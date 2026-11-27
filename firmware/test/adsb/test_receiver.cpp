@@ -33,7 +33,7 @@ bool framed(const AdsbAir& air) {
 TEST_CASE("DO-260B 2.2.4: Bravo's receiver listens on 1090 MHz at two chips a microsecond" *
           doctest::test_suite("main")) {
     models::Lr2021 part;
-    REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    REQUIRE(lr2021_for(part).begin() == Status::Ok);
     CHECK(part.frequency_hz == 1090000000);
     CHECK(part.bitrate_bps == 2000000);
     CHECK(part.payload_bytes == adsb::kFrameBytes);
@@ -53,8 +53,8 @@ TEST_CASE("DO-260B 2.2.4.3.1: a message in band is accepted and handed up") {
 // TODO: fc 17nov26 the LR2021 has a fixed OOK threshold, until a DMTL is built on its RSSI
 TEST_CASE("DO-260B 2.2.4.3.3: a single receiver sets a dynamic minimum trigger level" *
           doctest::skip()) {
-    CHECK(chip::kDetectionThresholdDbm == -110);
-    FAIL("not implemented: the OOK detection threshold is fixed at -110 dBm, with no DMTL");
+    CHECK(models::Lr2021::kDefaultThresholdDbm == -106);
+    FAIL("not implemented: the OOK detection threshold is the part's own, with no DMTL");
 }
 
 TEST_CASE("DO-260B 2.2.4.3.4: a message is framed by its preamble and its first four bits") {

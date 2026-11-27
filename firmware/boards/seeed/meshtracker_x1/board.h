@@ -119,6 +119,8 @@ class MeshtrackerX1 {
         platform_.annunciator().service(now_ms);
 
         if (ports::has(capabilities_, ports::Capability::Gnss)) {
+            // INFO: fc 26nov26 the satellites in view tell a blind sky from a slow first fix
+            gnss_.request_satellites_in_view(!state.own.fix_valid);
             gnss_.service(now_ms);
             if (gnss_.poll(now_ms)) {
                 bus_.gnss.push(gnss_.solution());
