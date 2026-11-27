@@ -31,6 +31,34 @@ class OAuth::AuthorizationsControllerTest < ActionDispatch::IntegrationTest
     assert_empty OAuth::Grant.all
   end
 
+  # The demotion commits after the request checked the role, while the consent is being approved.
+  test "an admin demoted while approving is refused, and nothing is granted" do
+    admin = users(:francois)
+    sign_in_as admin
+
+    once_the_client_is_read { User.find(admin.id).update!(role: :user) }
+
+    assert_response :bad_request
+    assert_select "p", text: /Only an admin who is signed in can connect an agent/
+    assert admin.reload.user?
+    assert_empty OAuth::Grant.all
+  end
+
+  # A new password ends every other session, so a stolen session racing the owner's change connects nothing.
+  test "a session ended by a new password while approving is refused, and nothing is granted" do
+    admin = users(:francois)
+    owners = admin.sessions.create!
+    sign_in_as admin
+
+    once_the_client_is_read do
+      Current.set(session: owners) { User.find(admin.id).update!(password: "a-brand-new-password") }
+    end
+
+    assert_response :bad_request
+    assert_equal [ owners ], admin.sessions.reload
+    assert_empty OAuth::Grant.all
+  end
+
   test "approving sends the code back to the agent with the state and skyBlip as the issuer" do
     answer = approve(client_id: CLAUDE_CODE)
 
@@ -117,4 +145,20 @@ class OAuth::AuthorizationsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "invalid_scope", Rack::Utils.parse_query(URI(response.location).query)["error"]
   end
+
+  private
+    def once_the_client_is_read(&change)
+      changed = false
+      change_once = ->(*, payload) do
+        if !changed && payload[:sql].include?(%(FROM "oauth_clients"))
+          changed = true
+          change.call
+        end
+      end
+
+      ActiveSupport::Notifications.subscribed(change_once, "sql.active_record") do
+        vcr("oauth/claude.ai") { post oauth_authorization_path, params: consent_query(client_id: CLAUDE_CODE) }
+      end
+      assert changed
+    end
 end

@@ -161,6 +161,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     ConfigService config(link, store);
     make_worst_case(config);
 
+    link.clear();
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
@@ -270,6 +271,7 @@ struct UpdateBench {
         held.holding = dfu::HubImage::Held;
         for (uint8_t& byte : held.digest) byte = 0xAB;
         config.set_hub_image(held);
+        link.clear();
         config.on_rx(config_frame("{\"command\":\"update\"}"));
     }
 };
@@ -447,6 +449,7 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
+    link.clear();
 
     // Out of buffers for one pass - an upload sharing the connection will do
     // that. The push is the one frame nobody asked for, so nobody will ask
@@ -475,6 +478,7 @@ TEST_CASE("comms: a status push no central subscribed to is neither counted nor 
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
+    link.clear();
 
     link.subscribe(events::Endpoint::Config, false);
     config.set_battery_state(full_battery(), power::PowerLevel::Normal);
@@ -497,6 +501,7 @@ TEST_CASE("comms: a status push no central subscribed to waits without counting 
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
+    link.clear();
 
     link.force_status(Status::WouldBlock, false);
     config.set_battery_state(full_battery(), power::PowerLevel::Normal);
@@ -589,12 +594,12 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
 
 TEST_CASE("comms: a reply the link refused goes out once the central is served, not dropped") {
     platform::host::Link link;
-    link.raise_link(1);
-    link.hold_after(1);
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
+    link.raise_link(1);
+    link.hold_after(1);
     config.on_rx(config_frame("{\"command\":\"get\"}"));
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
@@ -612,12 +617,12 @@ TEST_CASE("comms: a reply the link refused goes out once the central is served, 
 
 TEST_CASE("comms: a central that never takes its reply loses it, counted, and frees the service") {
     platform::host::Link link;
-    link.raise_link(1);
-    link.hold_after(1);
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
+    link.raise_link(1);
+    link.hold_after(1);
     config.on_rx(config_frame("{\"command\":\"get\"}"));
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     config.resume_replies(ports::kReplyWaitCeilingMs - 1);

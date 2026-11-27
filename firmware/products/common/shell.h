@@ -92,6 +92,8 @@ class Shell {
             parked_off_cable_ = true;
         drive_shutdown(now_ms);
         if (shutdown_.going_down()) {
+            // INFO: fc 26nov26 the park stops the link's tick, so a held reply goes out here
+            product_.config_link_.config().resume_replies(now_ms);
             product_.settle_glass(now_ms);
             await_radio_park(now_ms, ready_but_for_radio());
         }
@@ -215,6 +217,8 @@ class Shell {
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;
+        // INFO: fc 26nov26 the MCUmgr thread reads the gate until the reboot, and no pass closes it
+        product_.roles_.dfu.publish_upload_allowed(false);
         product_.park_radio();
         if (power::ends_switched_off(shutdown_.reason(), recovery_powers_off()))
             product_.alarm_.sign_off(now_ms);

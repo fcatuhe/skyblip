@@ -52,11 +52,12 @@ test('an entry waits in the outbox until the server takes it, across a reload', 
   assert.equal(timers.length, 1, 'it tries again later');
 
   online = true;
-  const { journal: reloaded } = journal({ shelf, send, ids: 10 });
+  const { journal: reloaded } = journal({ shelf, send, ids: 10, at: '2026-11-16T08:00:00Z' });
   assert.equal(await reloaded.flush(), true);
   assert.equal(reloaded.pending, 0);
-  const [{ browser, entries: [entry] }] = sent;
+  const [{ browser, sent_at, entries: [entry] }] = sent;
   assert.equal(browser, offline.browser);
+  assert.equal(sent_at, '2026-11-16T08:00:00.000Z', 'the clock as it posts, which the server compares with its own');
   assert.deepEqual(entry, {
     id: '00000000-0000-4000-8000-000000000002', name: 'device.noticed', at: '2026-11-14T10:00:00.000Z', seq: 1,
     page: '00000000-0000-4000-8000-000000000001', path: '/briefing/devices/go-00012a', device: 'go-00012a', properties: { key: 'link_lost' },
@@ -79,13 +80,42 @@ test('a send that throws keeps the entries for the next try', async () => {
   assert.equal(failing.pending, 1);
 });
 
+// A browser refuses a keepalive fetch over 64 KB, and the server answers 413 to a larger post.
+function keepalive(batches) {
+  return async batch => {
+    if (new TextEncoder().encode(JSON.stringify(batch)).length > 64 * 1024) throw new TypeError('Failed to fetch');
+    batches.push(batch);
+    return true;
+  };
+}
+
+test('a batch stops short of what a keepalive fetch carries, so large entries still go', async () => {
+  const batches = [];
+  const { journal: diagnosing } = journal({ send: keepalive(batches) });
+  for (let index = 0; index < 50; index++) diagnosing.record('device.diagnosed', { dump: { link: { note: 'é'.repeat(1_500) } } }, { device: 'go-00012a' });
+  assert.equal(await diagnosing.flush(), true);
+  assert.equal(diagnosing.pending, 0);
+  assert.ok(batches.length > 1);
+  assert.equal(batches.flatMap(batch => batch.entries).length, 50);
+});
+
+test('an entry too large to send alone is dropped, so the entries after it still go', async () => {
+  const batches = [];
+  const { journal: failing } = journal({ send: keepalive(batches) });
+  failing.record('browser.failed', { kind: 'error', message: 'x'.repeat(70_000) });
+  failing.record('device.connected', { connect_ms: 800 }, { device: 'go-00012a' });
+  assert.equal(await failing.flush(), true);
+  assert.equal(failing.pending, 0);
+  assert.deepEqual(batches.flatMap(batch => batch.entries).map(entry => entry.name), ['device.connected']);
+});
+
 test('the transport posts the journal with the browser and the page token, and drops one the server will never take', async () => {
   const calls = [];
   const answer = status => async (url, options) => {
     calls.push({ url, options });
     return { ok: status < 300, status };
   };
-  const batch = { browser: '01AZ018Z', entries: [] };
+  const batch = { browser: '01AZ018Z', sent_at: '2026-11-14T10:00:00.000Z', entries: [] };
   assert.equal(await httpTransport({ url: '/events', token: 'csrf', fetch: answer(204) })(batch), true);
   assert.equal(await httpTransport({ url: '/events', fetch: answer(400) })(batch), true);
   assert.equal(await httpTransport({ url: '/events', fetch: answer(422) })(batch), false);
@@ -95,6 +125,7 @@ test('the transport posts the journal with the browser and the page token, and d
   assert.equal(options.keepalive, true);
   assert.equal(options.headers['X-CSRF-Token'], 'csrf');
   assert.equal(options.headers['X-Briefing-Browser'], '01AZ018Z');
+  assert.deepEqual(JSON.parse(options.body), batch);
 });
 
 test('a browser is told by its family, major version and system, never its whole user agent', () => {
