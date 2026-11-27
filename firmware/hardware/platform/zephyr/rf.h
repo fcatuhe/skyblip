@@ -280,7 +280,8 @@ class Rf : public ports::Rf {
         staged_at_us_ = clock_.microseconds();
         while (clock_.microseconds() < burst.at_us) k_busy_wait(1);
         const uint64_t now_us = clock_.microseconds();
-        if (burst.key_expired(now_us)) return miss_unkeyed(index, fault);
+        // INFO: fc 27nov26 staging pends this thread on the SPI, so a park may land before the key
+        if (abort_ || burst.key_expired(now_us)) return miss_unkeyed(index, fault);
         if (!burst.forced && !within_dead_time(assessment, now_us + kTxStartupAllowanceUs)) {
             fault = radio_.start_receive() != Status::Ok;
             if (fault) return miss_unkeyed(index, fault);

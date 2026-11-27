@@ -124,6 +124,7 @@ class Link : public ports::Link {
     }
 
     int phones() const override { return sessions_.phones(); }
+    int centrals() const override { return sessions_.count(); }
 
     // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()
     void hold_after(int frames) { notification_share_ = frames; }
@@ -147,6 +148,11 @@ class Link : public ports::Link {
     }
 
     const Frame& last() const { return sent.back(); }
+    std::string last_to(uint16_t session_id) const {
+        for (auto it = sent.rbegin(); it != sent.rend(); ++it)
+            if (it->session == session_id) return it->bytes;
+        return std::string();
+    }
     bool last_on(events::Endpoint endpoint) const {
         return !sent.empty() && sent.back().endpoint == endpoint;
     }

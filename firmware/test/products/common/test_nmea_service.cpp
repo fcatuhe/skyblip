@@ -426,6 +426,7 @@ struct ServiceRig {
         state.own.utc_valid = true;
         state.own.latitude_1e7 = 485000000;
         state.own.longitude_1e7 = 85000000;
+        link.raise_link(1);
         config.on_link_up(
             events::LinkUp{1, platform::host::Link::kDefaultPayloadBytes, link.connection(1)});
         REQUIRE(nmea.setup() == Status::Ok);
