@@ -430,7 +430,7 @@ es:
       in_flight: "El dispositivo está en vuelo. Nada ha cambiado. Guarda después de aterrizar."
       low_power: "La batería está demasiado baja para guardar ajustes. Cárgala primero."
       expired: "No se ha pulsado el botón en treinta segundos. Nada ha cambiado."
-      timeout: "El dispositivo no ha indicado si ha guardado. Los ajustes mostrados son los que tiene ahora."
+      timeout: "El dispositivo no ha indicado si ha guardado. Comprueba los ajustes que devuelve antes de volver a guardar."
       cancelled: "El dispositivo ha rechazado la solicitud. Nada ha cambiado."
       refused_on_device: "El dispositivo ha rechazado la solicitud. Nada ha cambiado."
       prompt_pending: "El dispositivo ya tiene una solicitud pendiente. Respóndela o espera treinta segundos."
