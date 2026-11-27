@@ -1,6 +1,5 @@
 #include "protocols/adsb/message.h"
 
-#include <algorithm>
 #include <array>
 #include <cstring>
 #include <initializer_list>
@@ -311,12 +310,13 @@ bool repair_one_bit(uint8_t* frame) {
     if (bits(frame, 1, 5) != kExtendedSquitter) return false;
     const uint32_t syndrome = wire::crc24_check(frame, kFrameBytes);
     if (syndrome == 0) return false;
-    const auto* const found = std::find(kOneBitSyndromes.begin(), kOneBitSyndromes.end(), syndrome);
-    if (found == kOneBitSyndromes.end()) return false;
-    const size_t index =
-        kFirstCorrectableBit - 1u + static_cast<size_t>(found - kOneBitSyndromes.begin());
-    frame[index >> 3] = static_cast<uint8_t>(frame[index >> 3] ^ (0x80u >> (index & 7u)));
-    return true;
+    for (size_t i = 0; i < kCorrectableBits; i++) {
+        if (kOneBitSyndromes[i] != syndrome) continue;
+        const size_t index = kFirstCorrectableBit - 1u + i;
+        frame[index >> 3] = static_cast<uint8_t>(frame[index >> 3] ^ (0x80u >> (index & 7u)));
+        return true;
+    }
+    return false;
 }
 
 }
