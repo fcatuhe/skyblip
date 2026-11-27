@@ -40,8 +40,8 @@ class Event::Journal
   def record
     rows = @entries.filter_map { row_of(it) }
     if rows.any?
-      fresh = Event.insert_all(rows, unique_by: :uuid, returning: :uuid).rows.flatten
-      Unit.hear_later(fresh, ip_address: @ip_address)
+      Event.insert_all(rows, unique_by: :uuid)
+      Unit.hear_later(rows.pluck(:uuid), ip_address: @ip_address)
     end
     rows.size
   end
