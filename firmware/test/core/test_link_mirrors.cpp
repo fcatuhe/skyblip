@@ -214,6 +214,14 @@ constexpr bool on_the_wire(comms::BravoState value) {
     return false;
 }
 
+constexpr bool on_the_wire(comms::UtcSource value) {
+    switch (value) {
+        case comms::UtcSource::Own:
+            return true;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(gnss::Stage value) {
     switch (value) {
         case gnss::Stage::Silent:
@@ -438,6 +446,9 @@ static_assert(code(comms::BravoState::LinkDown) == 3, "bravo link_down");
 static_assert(code(comms::BravoState::ReceiverDown) == 4, "bravo receiver_down");
 static_assert(code(comms::BravoState::NoUtc) == 5, "bravo no_utc");
 static_assert(on_the_wire(comms::BravoState::Waiting), "bravo");
+
+static_assert(code(comms::UtcSource::Own) == 0, "utc_source own");
+static_assert(on_the_wire(comms::UtcSource::Own), "utc_source");
 
 static_assert(code(gnss::Stage::Silent) == 0, "gnss_stage silent");
 static_assert(code(gnss::Stage::Blind) == 1, "gnss_stage blind");

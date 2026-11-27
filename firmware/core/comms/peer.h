@@ -60,6 +60,8 @@ Result<PeerClaim> read_peer_claim(ConstByteSpan frame);
 
 enum class ExportReference : uint8_t { None = 0, Go = 1, Own = 2 };
 
+enum class UtcSource : uint8_t { Own = 0 };
+
 // INFO: fc 12nov26 schemas/link.v1.json, observation: a callsign of at most eight characters
 constexpr int kPeerCallsignBytes = 9;
 // INFO: fc 15nov26 schemas/link.v1.json, health: a version of at most 13 characters, 9.99.99+99999
@@ -102,6 +104,7 @@ struct PeerHealth {
     std::optional<uint32_t> dismissed_announcement{};
     std::optional<gnss::Stage> gnss_stage{};
     std::optional<uint8_t> satellites{};
+    std::optional<UtcSource> utc_source{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);

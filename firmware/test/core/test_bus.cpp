@@ -129,12 +129,19 @@ TEST_CASE("bus: past the PPS holdover the traffic a silent receiver heard is kep
 
 TEST_CASE("bus: past the PPS holdover a receiver that still talks names the second") {
     bus::State state = silent_since_last_edge();
-    state.own.utc_s = kLastS + 119;
-    CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 119);
-
-    state.own.utc_s = kLastS + 118;
-    CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 120);
-
     state.own.utc_s = kLastS + 121;
+    state.clock.solution_utc_s = kLastS + 121;
+    state.clock.solution_opened_ms = 1000 + 120'400;
     CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 121);
+    CHECK(traffic_s_at(state, 1000 + 121'400) == kLastS + 122);
+}
+
+TEST_CASE("bus: with no edge the traffic clock counts on from the last solution") {
+    bus::State state;
+    state.own.utc_valid = true;
+    state.own.utc_s = kLastS;
+    state.clock.solution_utc_s = kLastS;
+    state.clock.solution_opened_ms = 5'000;
+    CHECK(state.traffic_now_s(5'999) == kLastS);
+    CHECK(state.traffic_now_s(65'000) == kLastS + 60);
 }

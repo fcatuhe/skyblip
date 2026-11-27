@@ -2348,6 +2348,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "satellites",
           "number": 23,
           "type": "unsigned"
+        },
+        {
+          "name": "utc_source",
+          "number": 24,
+          "type": "enum",
+          "enum": "utc_source"
         }
       ]
     },
@@ -3608,6 +3614,19 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "no_utc",
           "code": 5,
           "mirrors": "NoUtc"
+        }
+      ]
+    },
+    "utc_source": {
+      "mirrors": {
+        "type": "comms::UtcSource",
+        "header": "core/comms/peer.h"
+      },
+      "values": [
+        {
+          "name": "own",
+          "code": 0,
+          "mirrors": "Own"
         }
       ]
     },

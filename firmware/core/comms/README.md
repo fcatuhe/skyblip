@@ -154,9 +154,9 @@ The Go dates the frame through its UTC second's edge, the PPS edge `timing::Cloc
 |---|---|
 | `Unpaired` | the Go holds no pin |
 | `Waiting` | paired, not live, its receiver listening, and not yet counted on: no `health` younger than `kHealthMaxAgeMs`, or one that says `utc_valid` false (#193) |
-| `Live` | a `health` younger than `kHealthMaxAgeMs` whose `listening` and `utc_valid` are both true |
+| `Live` | a `health` younger than `kHealthMaxAgeMs` whose `listening` and `utc_valid` are both true, unless it carries no `utc_source` and its `gnss_stage` is `silent` |
 | `ReceiverDown` | that `health` says `listening` false |
-| `NoUtc` | that `health` says `utc_valid` false while the Go counts on its Bravo, so Bravo exports nothing (#192) |
+| `NoUtc` | that `health` says `utc_valid` false while the Go counts on its Bravo, so Bravo exports nothing (#192), or comes from a Bravo built before `utc_source` whose receiver is silent, whose second stopped with it |
 | `LinkDown` | no `health` younger than `kHealthMaxAgeMs` while the Go counts on its Bravo |
 
 `kHealthMaxAgeMs` is three `health` periods, so one lost notification is no loss. The Go counts on its Bravo once the pinned Bravo has said `utc_valid` true since the Go booted or paired, or once the Go has rolled, `state.flight.rolling`, after `kBootSettleMs` from boot. Before that a Bravo coming up reads `Waiting`, which plays no tone, so switching a Tango on in the hangar is silent, and from the taxi on a Bravo that is not live reads lost, so a pilot hears it before takeoff. `kBootSettleMs` gives a Go switched on rolling, or rebooted in flight, time to connect. `BravoService::counted_on()` lives in RAM, and unpairing drops it with the pin. `ReceiverDown` is lost from the first `health` that says so, because a receiver that stopped listening does not recover by itself. Bravo plays the Go's calls whatever the Go reads of it.

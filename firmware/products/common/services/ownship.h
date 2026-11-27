@@ -61,6 +61,8 @@ class OwnshipService : public runtime::Service {
     };
     Dated solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms);
     bool opens_second(const gnss::GnssSolution& solution);
+    void keep_solution_second(const gnss::GnssSolution& solution);
+    void withdraw_stale_utc(uint32_t now_ms);
     void publish_solution_phase(uint32_t now_ms);
     void anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms);
     bool relabels(int32_t off_ms, bool fixed);
@@ -91,6 +93,7 @@ class OwnshipService : public runtime::Service {
     gnss::Acquisition acquisition_{};
     model::Ownship second_{};
     uint32_t opened_s_{0};
+    uint16_t solution_utc_ms_{0};
     // INFO: fc 22nov26 how far the last timely fixed whole second named its edge off, 0 when on it
     int32_t label_step_ms_{0};
     // INFO: fc 22nov26 the part's stamps stepped back since a whole second last named its own edge

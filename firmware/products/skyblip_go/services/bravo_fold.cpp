@@ -14,7 +14,7 @@ uint32_t seconds_later_ms(uint32_t edge_ms, uint32_t at_s, uint32_t edge_s) {
 // INFO: fc 12nov26 forwarding is never evidence: nothing here reads when the frame arrived
 void BravoService::fold(const comms::PeerObservation& peer, uint32_t now_ms) {
     if (!paired(settings_) || link_ != BravoLink::Up) return;
-    const std::optional<uint32_t> edge_ms = second_edge_ms(peer.at.at_s);
+    const std::optional<uint32_t> edge_ms = second_edge_ms(peer.at.at_s, now_ms);
     if (!edge_ms) {
         unplaced_++;
         log(BravoVerdict::Unplaced, &peer, now_ms);
@@ -56,13 +56,16 @@ void BravoService::log(BravoVerdict verdict, const comms::PeerObservation* peer,
 }
 
 // INFO: fc 12nov26 the PPS edge a UTC second was anchored to, else the fix that named it
-std::optional<uint32_t> BravoService::second_edge_ms(uint32_t at_s) const {
+// | 27nov26 or the second a silent receiver last named, as traffic_now_s counts it
+std::optional<uint32_t> BravoService::second_edge_ms(uint32_t at_s, uint32_t now_ms) const {
     const timing::ClockState& clock = context_.state.clock;
     const model::Ownship& own = context_.state.own;
     if (clock.pps_locked && clock.utc_s != 0)
         return seconds_later_ms(static_cast<uint32_t>(clock.utc_edge_us / 1000), at_s, clock.utc_s);
-    if (own.utc_valid) return seconds_later_ms(own.fix_at_ms - own.utc_ms, at_s, own.utc_s);
-    return std::nullopt;
+    if (!own.utc_valid) return std::nullopt;
+    const std::optional<timing::UtcReference> reference = timing::utc_reference(clock, now_ms);
+    if (reference) return seconds_later_ms(reference->opened_ms, at_s, reference->utc_s);
+    return seconds_later_ms(own.fix_at_ms - own.utc_ms, at_s, own.utc_s);
 }
 
 }  // namespace skyblip::go

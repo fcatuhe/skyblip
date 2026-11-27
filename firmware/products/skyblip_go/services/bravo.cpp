@@ -339,10 +339,16 @@ comms::BravoState BravoService::state_now() const {
     if (!paired(settings_)) return comms::BravoState::Unpaired;
     if (health_heard_) {
         if (!health_.listening) return comms::BravoState::ReceiverDown;
-        if (health_.utc_valid) return comms::BravoState::Live;
+        if (dates_its_traffic(health_)) return comms::BravoState::Live;
         return counted_on() ? comms::BravoState::NoUtc : comms::BravoState::Waiting;
     }
     return counted_on() ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
+}
+
+// INFO: fc 27nov26 a Bravo built before utc_source stops its second when its receiver falls silent
+bool BravoService::dates_its_traffic(const comms::PeerHealth& health) {
+    if (!health.utc_valid) return false;
+    return health.utc_source || health.gnss_stage != gnss::Stage::Silent;
 }
 
 // INFO: fc 11nov26 another protocol is never pinned, and a pinned Bravo on one waits for a boot

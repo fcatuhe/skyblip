@@ -378,12 +378,12 @@
     },
     {
       "command": "health", "code": 27, "endpoint": "peer", "sender": "unit",
-      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo places its exports against, the call a press of Bravo's button dismissed, the transponder it takes for the aircraft's own, and what Bravo runs, holds and hears, its own GNSS receiver included, which a Go shows for a unit that has no glass. Bravo sends it at once when its button dismisses a call. 85 bytes at its widest. Keys 7 to 10 are retired (#179) and never reused: key 7 was alarm_granted, from when a Go+ took the alarm and Bravo kept silent.",
+      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo places its exports against, the call a press of Bravo's button dismissed, the transponder it takes for the aircraft's own, and what Bravo runs, holds and hears, its own GNSS receiver included, which a Go shows for a unit that has no glass. Bravo sends it at once when its button dismisses a call. 88 bytes at its widest. Keys 7 to 10 are retired (#179) and never reused: key 7 was alarm_granted, from when a Go+ took the alarm and Bravo kept silent.",
       "keys": [
         {"name": "protocol_version", "number": 1, "type": "unsigned", "required": true, "description": "The version of the peer frames Bravo speaks: 2, observation, health and peer_claim as this registry gives them. It moves when a peer key changes meaning, not when one is added. 2 is the Go grading for both units: version 1 had the Go+ take the alarm and Bravo keep silent, and a Go and a Bravo on different versions never pair"},
         {"name": "boot_epoch", "number": 2, "type": "unsigned", "required": true, "description": "Bravo's boot epoch, the one its observations carry"},
         {"name": "listening", "number": 3, "type": "boolean", "required": true, "description": "Bravo's 1090 MHz receiver is armed. False before it is and after a fault takes it down, so the Go can tell a deaf receiver from a lost link (#193)"},
-        {"name": "utc_valid", "number": 4, "type": "boolean", "required": true, "description": "Bravo holds UTC from its own receiver. Without it Bravo sends no observation, and exports nothing to an EFB either (#192)"},
+        {"name": "utc_valid", "number": 4, "type": "boolean", "required": true, "description": "Bravo holds a UTC second to date its observations on, as utc_source says where it comes from. Without it Bravo sends no observation, and exports nothing to an EFB either (#192)"},
         {"name": "last_sequence", "number": 5, "type": "unsigned", "description": "The sequence of the last observation Bravo sent in this boot_epoch. Absent before the first"},
         {"name": "aircraft_address_set", "number": 6, "type": "boolean", "required": true, "description": "Bravo's aircraft-address setting holds an address, so the aircraft's own transponder is not traffic even when the Go sends no aircraft_address (#184)"},
         {"name": "export_reference", "number": 11, "type": "enum", "enum": "export_reference", "required": true, "description": "The position Bravo places its exports against, to the Go and to an EFB (#192): go, the Go's from a fresh peer_claim, own, Bravo's own valid fix, or none, so Bravo exports nothing. Bravo reports the reference it would use, whatever utc_valid says, and exports only while this is not none and utc_valid is true"},
@@ -398,7 +398,8 @@
         {"name": "frame_rate_hz", "number": 20, "type": "unsigned", "description": "1090 MHz frames Bravo's receiver handed up over the last whole second, as diagnostics' frame_rate_hz. Absent while the receiver is not armed. A receiver that listens and hears nothing reads 0, which a sky with no transponder in range gives too"},
         {"name": "dismissed_announcement", "number": 21, "type": "unsigned", "description": "The announcement, as the pinned Go's peer_claim numbered it, that a press of Bravo's button dismissed on this connection. Sent to the pinned Go only, and absent before the first such press. The Go dismisses its alarm as its long touch does while this equals its own announcement, so a press never dismisses a call Bravo had not played yet"},
         {"name": "gnss_stage", "number": 22, "type": "enum", "enum": "gnss_stage", "description": "How far Bravo's own GNSS receiver has got, as gnss::Stage names it (firmware/core/gnss/README.md): silent once it has said nothing for kSentenceMaxAgeMs, blind while solutions arrive with no usable date, solving once a date is decoded, and fixed once a solution passed FixValidity. The Go's nearby page reads it as it reads its own receiver, GPS OFF, MOVE OUT or FINDS FIX. Absent from a Bravo built before it, which a Go reads as no reading"},
-        {"name": "satellites", "number": 23, "type": "unsigned", "description": "The satellites Bravo's own fix used, as GGA counts them and model::Ownship::satellites holds them, 0 to 255. Present only while gnss_stage is fixed, because a receiver counts the satellites in its solution and has none before. A Go refuses the frame for satellites past 255, or with gnss_stage absent or not fixed"}
+        {"name": "satellites", "number": 23, "type": "unsigned", "description": "The satellites Bravo's own fix used, as GGA counts them and model::Ownship::satellites holds them, 0 to 255. Present only while gnss_stage is fixed, because a receiver counts the satellites in its solution and has none before. A Go refuses the frame for satellites past 255, or with gnss_stage absent or not fixed"},
+        {"name": "utc_source", "number": 24, "type": "enum", "enum": "utc_source", "description": "Where the UTC second Bravo dates its observations on comes from, present while utc_valid is true: own, Bravo's own receiver, its edge or its last solution counted on Bravo's uptime clock while the receiver is silent, for at most timing::kUtcReferenceMaxAgeMs. Absent from a Bravo built before it, whose second stops at the last solution once its receiver falls silent, so a Go reads such a Bravo with gnss_stage silent as without UTC"}
       ]
     },
     {
@@ -750,6 +751,12 @@
         {"name": "link_down", "code": 3, "mirrors": "LinkDown"},
         {"name": "receiver_down", "code": 4, "mirrors": "ReceiverDown"},
         {"name": "no_utc", "code": 5, "mirrors": "NoUtc"}
+      ]
+    },
+    "utc_source": {
+      "mirrors": {"type": "comms::UtcSource", "header": "core/comms/peer.h"},
+      "values": [
+        {"name": "own", "code": 0, "mirrors": "Own"}
       ]
     },
     "gnss_stage": {

@@ -8,6 +8,7 @@ namespace skyblip::timing {
 namespace {
 constexpr uint64_t kSecondUs = 1000000;
 constexpr uint64_t kHalfSecondUs = 500000;
+constexpr uint32_t kSecondMs = 1000;
 
 struct Dwell {
     SlotState retune;
@@ -51,6 +52,26 @@ void take_edge(ClockState& clock, uint64_t edge_us, uint64_t now_us) {
     const bool edged = clock.pps_locked || edge_us != 0;
     clock.since_edge_ms = edged ? static_cast<uint32_t>(since_edge_us(edge_us, now_us) / 1000) : 0;
     carry_utc_to_edge(clock, edge_us);
+}
+
+std::optional<UtcReference> utc_reference(const ClockState& clock, uint32_t now_ms) {
+    std::optional<UtcReference> edge{};
+    if (clock.utc_s != 0 && clock.utc_edge_us != 0)
+        edge = UtcReference{clock.utc_s, static_cast<uint32_t>(clock.utc_edge_us / 1000)};
+    if (clock.solution_utc_s == 0) return edge;
+    const UtcReference solution{clock.solution_utc_s, clock.solution_opened_ms};
+    if (!edge || reference_age_ms(solution, now_ms) + kSecondMs <= reference_age_ms(*edge, now_ms))
+        return solution;
+    return edge;
+}
+
+uint32_t reference_age_ms(const UtcReference& reference, uint32_t now_ms) {
+    const int32_t age_ms = static_cast<int32_t>(now_ms - reference.opened_ms);
+    return age_ms > 0 ? static_cast<uint32_t>(age_ms) : 0;
+}
+
+uint32_t carried_utc_s(const UtcReference& reference, uint32_t now_ms) {
+    return reference.utc_s + reference_age_ms(reference, now_ms) / kSecondMs;
 }
 
 bool in_pps_holdover(const ClockState& clock) {

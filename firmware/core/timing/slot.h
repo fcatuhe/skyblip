@@ -61,6 +61,8 @@ static_assert(switched(kUplinkWindowMs, kWindowAMs) && switched(kWindowAMs, kWin
               "every switch between two windows is the same one");
 
 constexpr uint32_t kPpsHoldoverMs = 60000;
+// INFO: fc 27nov26 a 250 ppm uptime crystal, five times Zephyr's 50 ppm, drifts 500 ms by then
+constexpr uint32_t kUtcReferenceMaxAgeMs = 2000000;
 // INFO: fc 20nov26 a pulse reads locked this long past its last edge, so one missed edge keeps it
 constexpr uint32_t kPpsLockTailMs = 3000;
 // INFO: fc 22nov26 C.5: an edge times the bursts planned from it until window B's dwell closes
@@ -89,7 +91,24 @@ struct ClockState {
     uint64_t utc_edge_us{0};
     // INFO: fc 18nov26 the anchor came from a fix inside its quarter, so positions trust it
     bool utc_anchor_fixed{false};
+    // INFO: fc 27nov26 the last solution's second and the uptime it opened at, a silent part's too
+    uint32_t solution_utc_s{0};
+    uint32_t solution_opened_ms{0};
 };
+
+// INFO: fc 27nov26 a UTC second and the uptime millisecond it opened at
+struct UtcReference {
+    uint32_t utc_s{0};
+    uint32_t opened_ms{0};
+};
+
+// INFO: fc 27nov26 the exact edge, unless the last solution is a second younger, else none
+std::optional<UtcReference> utc_reference(const ClockState& clock, uint32_t now_ms);
+
+uint32_t reference_age_ms(const UtcReference& reference, uint32_t now_ms);
+
+// INFO: fc 27nov26 the UTC second now, counted on the uptime clock from the reference
+uint32_t carried_utc_s(const UtcReference& reference, uint32_t now_ms);
 
 void carry_utc_to_edge(ClockState& clock, uint64_t edge_us);
 

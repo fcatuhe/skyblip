@@ -84,7 +84,11 @@ At 2 Hz, on 868.2 MHz, the instants between 490 ms and the `.500` arrival, about
 
 ## The second a burst is dated by
 
-`ClockState::utc_s` is the UTC second that opened at `utc_edge_us`, carried forward on every latched edge by `carry_utc_to_edge()`. The receiver names a second hundreds of milliseconds into it, so `own.utc_s` lags the edge until then. Whatever dates a burst against the edge, such as `radio::stamp_of` and the decoders, reads `bus::State::traffic_now_s()` instead. Past the holdover it takes `own.utc_s` while that second keeps up with the one counted from the held edge. A silent receiver keeps its last second as valid, so the held edge counts on and the traffic table still ages what it heard.
+`ClockState::utc_s` is the UTC second that opened at `utc_edge_us`, carried forward on every latched edge by `carry_utc_to_edge()`. The receiver names a second hundreds of milliseconds into it, so `own.utc_s` lags the edge until then. Whatever dates a burst against the edge, such as `radio::stamp_of` and the decoders, reads `bus::State::traffic_now_s()` instead. Past the holdover, or with no pulse at all, it counts the second on the uptime clock from a `timing::UtcReference`: the last anchored edge, or the second the last solution named and the uptime it opened at (`ClockState::solution_utc_s` and `solution_opened_ms`), whichever is younger by a second or more, the edge on a tie since it is exact. A receiver that falls silent leaves its UTC valid, so the second keeps counting and the traffic table still ages what it heard. A withdrawal repeats the last solution and leaves its second where it opened.
+
+## How long a silent receiver's second holds
+
+The uptime clock runs on the board's 32.768 kHz crystal, which Zephyr budgets at 50 ppm. `kUtcReferenceMaxAgeMs`, 2000 s, is how long a clock five times worse, 250 ppm, takes to drift half a second, the most a second can be off before it names its neighbour. Past it `OwnshipService` withdraws `own.utc_valid` and `clock.utc_valid` and forgets both references, so the traffic clock falls back to uptime, the NMEA stream stops naming a time, and a Bravo tells its Go it has no UTC. The next solution dates the clock again.
 
 ## What the channel measurement is for
 

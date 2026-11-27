@@ -221,6 +221,7 @@ void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t
     health.aircraft_address_set = settings_.aircraft_address != kAircraftAddressUnset;
     health.listening = receiver_.listening();
     health.utc_valid = utc_valid;
+    if (utc_valid) health.utc_source = comms::UtcSource::Own;
     health.last_sequence_valid = observed_;
     health.last_sequence = sequence_ - 1;
     health.export_reference = choice.reference;

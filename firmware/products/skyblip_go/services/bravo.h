@@ -105,8 +105,9 @@ class BravoService : public runtime::Service {
     void take_health(ConstByteSpan bytes, uint32_t now_ms);
     void fold(const comms::PeerObservation& peer, uint32_t now_ms);
     void log(BravoVerdict verdict, const comms::PeerObservation* peer, uint32_t now_ms);
-    std::optional<uint32_t> second_edge_ms(uint32_t at_s) const;
+    std::optional<uint32_t> second_edge_ms(uint32_t at_s, uint32_t now_ms) const;
     comms::BravoState state_now() const;
+    static bool dates_its_traffic(const comms::PeerHealth& health);
     void came_up(uint16_t payload_bytes, uint32_t now_ms);
     void went_down();
     void hear(const events::CentralEvent& event, uint32_t now_ms);

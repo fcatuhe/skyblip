@@ -492,6 +492,7 @@ enum : uint32_t {
     kDismissedAnnouncement = 21,
     kGnssStage = 22,
     kSatellites = 23,
+    kUtcSource = 24,
 };
 }
 
