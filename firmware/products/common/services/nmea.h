@@ -68,6 +68,7 @@ class NmeaService : public runtime::Service {
     void run_pass(uint32_t now_ms);
     void emit_status(uint32_t now_ms);
     void emit_ownship();
+    const model::Ownship* unsent_solution() const;
     void emit_altitude();
     void emit_vario_and_battery();
     void emit_targets(uint32_t now_ms);
@@ -92,12 +93,16 @@ class NmeaService : public runtime::Service {
     uint32_t landed_at_ms_{0};
     uint32_t passed_second_s_{0};
     uint32_t held_since_ms_{0};
+    uint32_t sent_second_s_{0};
+    uint32_t sent_utc_s_{0};
     uint32_t link_drops_{0};
     int payload_{ports::kMinimumLinkPayloadBytes};
+    uint16_t sent_utc_ms_{0};
     // INFO: fc 20nov26 advances only past a target that went out, so a pass a link cut short
     // resends its tail first
     int cursor_{0};
     bool passed_once_{false};
+    bool sent_solution_{false};
     bool held_{false};
     bool enabled_{false};
 };

@@ -2,6 +2,7 @@
 
 #include "core/units/units.h"
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/bravo_corner.h"
 #include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
 #include "products/skyblip_go/pages/radar_traffic.h"
@@ -176,18 +177,6 @@ const char* ground_word(const RadarSnapshot& snapshot) {
     return snapshot.taxiing ? "TAXI" : "GROUND";
 }
 
-int format_cell(char* out, std::optional<uint8_t> percent) {
-    int written = format_string(out, "BAT ");
-    if (percent) {
-        written += format_unsigned(out + written, *percent);
-        written += format_string(out + written, "%");
-    } else {
-        written += format_string(out + written, "LOW");
-    }
-    out[written] = 0;
-    return written;
-}
-
 const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     if (!snapshot.battery_low) return nullptr;
     format_cell(out, snapshot.battery_percent);
@@ -210,8 +199,10 @@ int format_off_in(char* out, uint8_t minutes) {
 
 // INFO: fc 17nov26 the ring speaks for the Go alone, its first two words standing in this order
 RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
-    const char* state = snapshot.fix_valid ? ground_word(snapshot) : "NO FIX";
-    const char* stage = snapshot.fix_valid ? nullptr : gnss::stage_name(snapshot.stage);
+    const bool own_fix = snapshot.fix_valid && !snapshot.bravo_fix;
+    const char* state = own_fix ? ground_word(snapshot) : "NO FIX";
+    const char* lost = snapshot.bravo_fix ? "BRAVO GPS" : gnss::stage_name(snapshot.stage);
+    const char* stage = own_fix ? nullptr : lost;
     if (snapshot.off_in_min) {
         format_off_in(cell_buffer, *snapshot.off_in_min);
         return {"OFF IN", cell_buffer, /*split=*/true};
@@ -220,43 +211,8 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     return {state, stage};
 }
 
-// INFO: fc 17nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
-const char* bravo_reason(const RadarSnapshot& snapshot, char* cell_buffer) {
-    switch (snapshot.bravo) {
-        case comms::BravoState::Waiting: return snapshot.bravo_heard ? "MOVE OUT" : "NO LINK";
-        case comms::BravoState::LinkDown: return "NO LINK";
-        case comms::BravoState::NoUtc: return "MOVE OUT";
-        case comms::BravoState::ReceiverDown: return "RX DOWN";
-        case comms::BravoState::Live:
-            if (!snapshot.bravo_battery_low) return nullptr;
-            format_cell(cell_buffer, snapshot.bravo_battery_percent);
-            return cell_buffer;
-        case comms::BravoState::Unpaired: break;
-    }
-    return nullptr;
-}
-
-Box bravo_corner(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
-    if (snapshot.bravo == comms::BravoState::Unpaired) return {};
-    char cell_buffer[12];
-    const char* reason = bravo_reason(snapshot, cell_buffer);
-    if (!reason) return {};
-    const int name_width = text_width("BRAVO", 1), reason_width = text_width(reason, 1);
-    const int width = name_width > reason_width ? name_width : reason_width;
-    const int right = kGlassWidth - kMargin;
-    const int reason_y = kMargin + kCharacterHeight + kStackGap;
-    const Box box = padded(right - width, kMargin, width, reason_y + kCharacterHeight - kMargin);
-    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
-    canvas.draw_text(right - name_width, kMargin, "BRAVO", true, 1);
-    canvas.draw_text(right - reason_width, reason_y, reason, true, 1);
-    return box;
-}
-
-// INFO: fc 17nov26 reversed after the plot, so traffic over a lost Bravo's corner stays readable
-void reverse(ui::Canvas& canvas, const Box& box) {
-    for (int y = box.y; y < box.y + box.height; y++)
-        for (int x = box.x; x < box.x + box.width; x++)
-            canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
+BravoCorner bravo_corner(const RadarSnapshot& snapshot) {
+    return {snapshot.bravo, snapshot.bravo_battery_low, snapshot.bravo_battery_percent};
 }
 
 Box word_box(const char* word, int y, int scale) {
@@ -280,7 +236,7 @@ void bravo_live_mark(ui::Canvas& canvas, int right, int bottom) {
 
 void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     char text[4];
-    if (snapshot.fix_valid && snapshot.receiver_listening)
+    if (snapshot.receiver_listening || comms::relaying(snapshot.bravo))
         text[format_unsigned(text, static_cast<uint32_t>(snapshot.heard_count))] = 0;
     else
         text[format_string(text, "-")] = 0;
@@ -291,7 +247,7 @@ void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     const bool shortened = snapshot.plot == RadarPlot::ToScale && text[1];
     const char* word = shortened ? "TFC" : "TRAFFIC";
     canvas.draw_text(x - kUnitGap - text_width(word, 1), kFooterY, word, true, 1);
-    if (snapshot.bravo == comms::BravoState::Live) {
+    if (comms::relaying(snapshot.bravo)) {
         // INFO: fc 18nov26 a B over TFC would cross the TO SCALE ring, so it stands over the digits
         if (shortened)
             bravo_live_mark(canvas, kGlassWidth - kMargin, y - kStackGap);
@@ -447,7 +403,7 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     flight_word(canvas, snapshot);
     range_label(canvas, snapshot);
     traffic_count(canvas, snapshot);
-    const Box corner = bravo_corner(canvas, snapshot);
+    const CornerPatch corner = draw_bravo_corner(canvas, bravo_corner(snapshot));
 
     Box readings[4] = {range_box(snapshot), clock_box(snapshot)};
     int reading_count = 2;
@@ -491,7 +447,9 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
         plot_rim(canvas, snapshot, track_angle16,
                  {label.x, label.y, label.x + label.width - 1, label.y + label.height - 1});
     }
-    if (comms::lost(snapshot.bravo)) reverse(canvas, corner);
+    // INFO: fc 17nov26 reversed after the plot, so traffic over a lost Bravo's corner stays
+    // readable
+    if (comms::lost(snapshot.bravo)) reverse_bravo_corner(canvas, corner);
 }
 
 }  // namespace skyblip::go

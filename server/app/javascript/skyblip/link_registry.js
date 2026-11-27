@@ -2348,6 +2348,42 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "satellites",
           "number": 23,
           "type": "unsigned"
+        },
+        {
+          "name": "utc_source",
+          "number": 24,
+          "type": "enum",
+          "enum": "utc_source"
+        },
+        {
+          "name": "latitude_1e7",
+          "number": 25,
+          "type": "integer"
+        },
+        {
+          "name": "longitude_1e7",
+          "number": 26,
+          "type": "integer"
+        },
+        {
+          "name": "position_age_ms",
+          "number": 27,
+          "type": "unsigned"
+        },
+        {
+          "name": "altitude_m",
+          "number": 28,
+          "type": "integer"
+        },
+        {
+          "name": "speed_q",
+          "number": 29,
+          "type": "unsigned"
+        },
+        {
+          "name": "track_c9",
+          "number": 30,
+          "type": "unsigned"
         }
       ]
     },
@@ -3608,6 +3644,49 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "no_utc",
           "code": 5,
           "mirrors": "NoUtc"
+        },
+        {
+          "name": "gps_off",
+          "code": 6,
+          "mirrors": "GpsOff"
+        },
+        {
+          "name": "waiting_gps_off",
+          "code": 7,
+          "mirrors": "WaitingGpsOff"
+        },
+        {
+          "name": "waiting_utc",
+          "code": 8,
+          "mirrors": "WaitingUtc"
+        },
+        {
+          "name": "finds_fix",
+          "code": 9,
+          "mirrors": "FindsFix"
+        },
+        {
+          "name": "cell_low",
+          "code": 10,
+          "mirrors": "CellLow"
+        }
+      ]
+    },
+    "utc_source": {
+      "mirrors": {
+        "type": "comms::UtcSource",
+        "header": "core/comms/peer.h"
+      },
+      "values": [
+        {
+          "name": "own",
+          "code": 0,
+          "mirrors": "Own"
+        },
+        {
+          "name": "go",
+          "code": 1,
+          "mirrors": "Go"
         }
       ]
     },

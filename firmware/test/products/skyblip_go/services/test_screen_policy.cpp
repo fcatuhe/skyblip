@@ -2,14 +2,16 @@
 #include "core/events/input.h"
 #include "test/support/screen_rig.h"
 
-TEST_CASE("screen policy: a static frame is never re-presented") {
+TEST_CASE("screen policy: a static frame is re-presented once, as its redrive, and never again") {
     ScreenRig rig;
     rig.run_seconds(3);
     CHECK(rig.chip.present_count == 2);  // the boot black, then the page
     CHECK_FALSE(rig.chip.last_full);
 
     rig.run_seconds(30);  // nothing on screen changes
-    CHECK(rig.chip.present_count == 2);
+    CHECK(rig.chip.present_count == 3);
+    rig.run_seconds(60);
+    CHECK(rig.chip.present_count == 3);
 }
 
 TEST_CASE("screen policy: a minute of changing frames costs partials and no full") {

@@ -28,6 +28,7 @@ enum class EventKind : uint8_t {
     ExpectAlarmMinimum,
     ExpectTrafficMinimum,
     BravoLink,
+    Utc,
 };
 
 struct AdsbOut {

@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "core/dfu/update.h"
+#include "core/units/units.h"
 
 namespace skyblip::bravo {
 
@@ -47,9 +48,9 @@ void PeerService::tick(uint32_t now_ms) {
     if (alarm_.dismissed_announcement() != dismissed_told_) health_owed_ = true;
 
     const GateChoice choice = gate_.choose(context_.state.own, now_ms);
-    const bool utc_valid = context_.instant(now_ms).utc_dated;
-    send_health(choice, utc_valid, now_ms);
-    send_observations(choice, utc_valid, now_ms);
+    const std::optional<comms::UtcSource> source = context_.state.utc_source(now_ms);
+    send_health(choice, source, now_ms);
+    send_observations(choice, source.has_value(), now_ms);
 }
 
 uint32_t PeerService::due_in_ms(uint32_t now_ms) const {
@@ -107,7 +108,7 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         case Heard::Pinned:
         case Heard::Committed:
             go->claimed_pin = true;
-            gate_.hear(claim.value(), context_.instant(now_ms), now_ms);
+            hear_claim(claim.value(), now_ms);
             adopt_aircraft_address(claim.value().aircraft_address);
             follow(go->address, claim.value(), now_ms);
             break;
@@ -123,6 +124,17 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
             break;
         case Heard::Awaited: break;
     }
+}
+
+// INFO: fc 27nov26 a claim times its transit only against Bravo's own UTC, and lends its second
+void PeerService::hear_claim(const comms::PeerClaim& claim, uint32_t now_ms) {
+    diagnostics::Instant at = context_.instant(now_ms);
+    at.utc_dated = context_.state.utc_source(now_ms) == comms::UtcSource::Own;
+    gate_.hear(claim, at, now_ms);
+    if (!claim.utc_valid) return;
+    timing::ClockState& clock = context_.state.clock;
+    clock.claimed_utc_s = claim.at_s;
+    clock.claimed_opened_ms = now_ms - (claim.phase_valid ? claim.into_ms : 0u);
 }
 
 // INFO: fc 15nov26 a press must not hand Bravo back to a replaced Go while the new one is here
@@ -199,7 +211,7 @@ void PeerService::keep_pin() {
 }
 
 // INFO: fc 15nov26 Bravo has no glass, so its Go shows what it runs, holds and hears
-void PeerService::describe_self(comms::PeerHealth& health) const {
+void PeerService::describe_self(comms::PeerHealth& health, uint32_t now_ms) const {
     ports::ImageVersion running{};
     if (context_.roles.dfu.running_version(running))
         dfu::format_version(running, health.firmware, sizeof(health.firmware));
@@ -211,21 +223,43 @@ void PeerService::describe_self(comms::PeerHealth& health) const {
     health.gnss_stage = context_.state.gnss.stage;
     if (context_.state.gnss.stage == gnss::Stage::Fixed)
         health.satellites = context_.state.own.satellites;
+    health.position = position_of(context_.state.own, now_ms);
+}
+
+// INFO: fc 27nov26 a fix older than its key can say is no position for the Go to plot around
+std::optional<comms::BravoPosition> PeerService::position_of(const model::Ownship& own,
+                                                             uint32_t now_ms) {
+    const uint32_t age_ms = now_ms - own.fix_at_ms;
+    if (!own.fix_valid || age_ms > UINT16_MAX) return std::nullopt;
+    comms::BravoPosition position{};
+    position.latitude_1e7 = own.latitude_1e7;
+    position.longitude_1e7 = own.longitude_1e7;
+    position.age_ms = static_cast<uint16_t>(age_ms);
+    const int32_t altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value;
+    if (own.altitude_hae_valid && altitude_m >= INT16_MIN && altitude_m <= INT16_MAX)
+        position.altitude_m = static_cast<int16_t>(altitude_m);
+    if (own.speed_valid && own.track_valid) {
+        position.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
+        position.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).value;
+    }
+    return position;
 }
 
 // INFO: fc 11nov26 every Go hears whether Bravo holds its pin, so a Go holding one alone drops it
-void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t now_ms) {
+void PeerService::send_health(const GateChoice& choice, std::optional<comms::UtcSource> source,
+                              uint32_t now_ms) {
     if (!health_owed_ && now_ms - health_sent_ms_ < kHealthPeriodMs) return;
     comms::PeerHealth health{};
     health.boot_epoch = boot_epoch_;
     health.aircraft_address_set = settings_.aircraft_address != kAircraftAddressUnset;
     health.listening = receiver_.listening();
-    health.utc_valid = utc_valid;
+    health.utc_valid = source.has_value();
+    health.utc_source = source;
     health.last_sequence_valid = observed_;
     health.last_sequence = sequence_ - 1;
     health.export_reference = choice.reference;
     health.own_transponder = own_transponder_.heard();
-    describe_self(health);
+    describe_self(health, now_ms);
     dismissed_told_ = alarm_.dismissed_announcement();
     bool blocked = false;
     for (const Go& go : gos_) {

@@ -118,7 +118,8 @@ FLIGHT_STATE = ENUMS["flight_state"]
 POWER_LEVEL = ENUMS["power_level"]
 CHARGE = ENUMS["charge"]
 # INFO: fc 12nov26 comms::BravoState, the link registry's bravo enum with unpaired as its 0
-BRAVO = ("unpaired", "waiting", "live", "link_down", "receiver_down", "no_utc")
+BRAVO = ("unpaired", "waiting", "live", "link_down", "receiver_down", "no_utc", "gps_off",
+         "waiting_gps_off", "waiting_utc", "finds_fix", "cell_low")
 READERS = {"u8": uint8, "i8": int8, "u16": uint16, "i16": int16, "u24": uint24, "u32": uint32,
            "i32": int32}
 

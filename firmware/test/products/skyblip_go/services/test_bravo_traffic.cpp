@@ -46,15 +46,6 @@ std::vector<flight::LogEvent> bravo_records(Rig& rig) {
     return out;
 }
 
-std::string last_status(Rig& rig) {
-    const auto& sent = rig.platform.link().sent;
-    for (auto it = sent.rbegin(); it != sent.rend(); ++it)
-        if (it->endpoint == events::Endpoint::Config &&
-            link_text(it->bytes).rfind("{\"command\":\"status\"", 0) == 0)
-            return link_text(it->bytes);
-    return std::string();
-}
-
 // INFO: fc 18nov26 a figure ends at its column and its unit stands on the figure's baseline
 bool unit_reads(const ui::Canvas& glass, int x_end, int y, const char* value, const char* unit) {
     const int unit_x = x_end - static_cast<int>(std::strlen(unit)) * ui::kCellWidth;
@@ -235,7 +226,7 @@ TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are lost, and 
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
     CHECK(reads_in(flight.glass(), "BRAVO 3F2A", 0, go::kSelfTestFirstRowY, go::kGlassWidth,
                    go::kGlassHeight));
-    CHECK(reads_in(flight.glass(), "NO UTC", 0, go::kSelfTestFirstRowY, go::kGlassWidth,
+    CHECK(reads_in(flight.glass(), "MOVE OUT", 0, go::kSelfTestFirstRowY, go::kGlassWidth,
                    go::kGlassHeight));
 }
 
@@ -315,7 +306,7 @@ TEST_CASE(
     flight.tango.pair();
     flight.tango.run_for(3000);
     REQUIRE(flight.tango.service().link() == go::BravoLink::Up);
-    CHECK(flight.state().bravo == comms::BravoState::Waiting);
+    CHECK(flight.state().bravo == comms::BravoState::WaitingUtc);
     CHECK(flight.tones.empty());
 }
 

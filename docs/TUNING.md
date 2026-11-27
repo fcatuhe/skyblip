@@ -198,6 +198,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kGroundEmitEndMs` | `kUplinkWindowMs.end_ms - kCompletionAllowanceMs` | milliseconds | - | a completion deadline, not a start deadline |
 | `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
 | `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kUtcReferenceMaxAgeMs` | 2000000 (33.3333 min) | milliseconds | MaxAge | a 250 ppm uptime crystal, five times Zephyr's 50 ppm, drifts 500 ms by then |
 | `kPpsLockTailMs` | 3000 (3 s) | milliseconds | - | a pulse reads locked this long past its last edge, so one missed edge keeps it |
 | `kPpsEdgeMaxAgeMs` | `static_cast<uint32_t>(dwell_of(kWindowBMs).end_ms)` | milliseconds | MaxAge | C.5: an edge times the bursts planned from it until window B's dwell closes |
 | `kRetuneUs` | 30 | microseconds | - | [README](../firmware/core/timing/README.md) argues it |
@@ -359,6 +360,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kKeyToDoneUs` | `uint64_t{timing::kKeyToDoneMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
+| `kRedriveAfterChangeMs` | 10000 (10 s) | milliseconds | - | a new page's pixels still settle for seconds after its partial |
 | `kLockedRedrawWindowStartMs` | 600 | milliseconds | Window | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
 | `kLockedRedrawWindowEndMs` | 800 | milliseconds | Window | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
@@ -438,4 +440,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-293 constants over 26 folders.
+295 constants over 26 folders.

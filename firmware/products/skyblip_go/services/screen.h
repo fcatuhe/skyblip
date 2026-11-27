@@ -17,6 +17,7 @@
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/pages/bravo.h"
+#include "products/skyblip_go/pages/bravo_corner.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/gmeter.h"
 #include "products/skyblip_go/pages/menu.h"
@@ -39,6 +40,8 @@ class ScreenService : public runtime::Service {
    public:
     static constexpr uint32_t kRenderPeriodMs = 1000;
     static constexpr uint32_t kPresentFloorMs = 1000;
+    // INFO: fc 27nov26 a new page's pixels still settle for seconds after its partial
+    static constexpr uint32_t kRedriveAfterChangeMs = 10000;
     // INFO: fc 03oct26 after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000
     static constexpr uint32_t kLockedRedrawWindowStartMs = 600;
     static constexpr uint32_t kLockedRedrawWindowEndMs = 800;
@@ -133,6 +136,7 @@ class ScreenService : public runtime::Service {
     NearbyGo nearby_go() const;
     const SelfTestPart* self_test_now();
     NearbyBravo nearby_bravo() const;
+    BravoCorner bravo_corner() const;
     void enter_menu(uint32_t now_ms);
     void leave_menu();
     void page_forward(uint32_t now_ms);
@@ -200,9 +204,11 @@ class ScreenService : public runtime::Service {
 
     void flash_alarm();
 
+    // INFO: fc 27nov26 the radio arms its dwells with an address, PPS or not
+    // (core/timing/README.md)
     bool receiver_listening() const {
         return ports::has(context_.roles.capabilities, ports::Capability::Rf) &&
-               context_.state.clock.pps_locked;
+               context_.state.activation.address().has_value();
     }
 
     bool taxiing() const {
@@ -216,9 +222,7 @@ class ScreenService : public runtime::Service {
         if (!context_.state.power.cable_off_in_ms) return std::nullopt;
         return power::off_in_min(*context_.state.power.cable_off_in_ms);
     }
-    const comms::PeerHealth* bravo_health_live() const {
-        return context_.state.bravo == comms::BravoState::Live ? bravo_.health() : nullptr;
-    }
+    std::optional<model::Ownship> plotted_own() const;
 
     Settings& settings_;
     common::ConfigService& config_;
@@ -260,6 +264,7 @@ class ScreenService : public runtime::Service {
     uint32_t render_us_{0};
     uint32_t present_us_{0};
     uint32_t last_present_ms_{0};
+    std::optional<uint32_t> redrive_owed_since_ms_{};
     traffic::Level last_alarm_undismissed_{traffic::Level::None};
     bool alarm_flash_{false};
     bool dirty_{true};

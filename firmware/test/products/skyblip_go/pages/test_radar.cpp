@@ -270,8 +270,8 @@ TEST_CASE(
     CHECK(reads_in(near, "0", 170, 170, 200, 200, 3));
 }
 
-// An empty sky and a radio that is not listening yet look the same on the plot.
-TEST_CASE("radar page: a radio not yet listening counts no aircraft, it dashes") {
+// An empty sky and a radio that is not listening look the same on the plot.
+TEST_CASE("radar page: with nothing to fill the table the count dashes, and a fix plays no part") {
     RadarSnapshot deaf = flying(0);
     deaf.receiver_listening = false;
     const Glass canvas = radar(deaf);
@@ -280,9 +280,13 @@ TEST_CASE("radar page: a radio not yet listening counts no aircraft, it dashes")
     CHECK_FALSE(reads_in(canvas, "0", 170, 170, 200, 200, 3));
     CHECK(reads_in(canvas, "TRAFFIC", 120, 175, 190, 200));
 
+    RadarSnapshot relayed = deaf;
+    relayed.bravo = skyblip::comms::BravoState::Live;
+    CHECK(reads_in(radar(relayed), "0", 170, 170, 200, 200, 3));
+
     RadarSnapshot no_position = flying(0);
     no_position.fix_valid = false;
-    CHECK(reads_in(radar(no_position), "-", 170, 170, 200, 200, 3));
+    CHECK(reads_in(radar(no_position), "0", 170, 170, 200, 200, 3));
 
     CHECK(reads_in(radar(flying(0)), "0", 170, 170, 200, 200, 3));
 }

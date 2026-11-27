@@ -35,6 +35,8 @@ struct RadarTarget {
 
 struct RadarSnapshot {
     bool fix_valid{false};
+    // INFO: fc 27nov26 the fix is a live Bravo's, so the plot stands and the alarm is off
+    bool bravo_fix{false};
     gnss::Stage stage{gnss::Stage::Silent};
     go::Units units{go::Units::Nautical};
     int range_step{kDefaultRangeStep};
@@ -56,7 +58,6 @@ struct RadarSnapshot {
     bool battery_low{false};
     std::optional<uint8_t> off_in_min{};
     comms::BravoState bravo{comms::BravoState::Unpaired};
-    bool bravo_heard{false};
     bool bravo_battery_low{false};
     std::optional<uint8_t> bravo_battery_percent{};
 };

@@ -29,7 +29,8 @@ updated_on: "2026-11-25"
 
 <section id="alarm" class="band">
   <h2 class="section-title">L&rsquo;écran vous indique où regarder</h2>
-  <p>Quand une alerte se déclenche, une partie de l&rsquo;écran du Go clignote du côté du trafic. Si le Go perd la liaison avec Bravo, il affiche <strong>BRAVO / NO LINK</strong> en haut à droite du radar. Le Go garde le trafic ADS-L et FLARM. Bravo continue de recevoir et de signaler le trafic ADS-B de son côté. Pour couper une alerte, agissez alors sur le boîtier qui la signale.</p>
+  <p>Quand une alerte se déclenche, une partie de l&rsquo;écran du Go clignote du côté du trafic. Si le Go perd la liaison avec Bravo, il affiche <strong>BRAVO / NO LINK</strong> en haut à droite de l&rsquo;écran. Le Go garde le trafic ADS-L et FLARM. Bravo continue de recevoir et de signaler le trafic ADS-B de son côté. Pour couper une alerte, agissez alors sur le boîtier qui la signale.</p>
+  <p>Si le Go perd sa propre position GPS alors que Bravo en a une, le radar et la liste Nearby continuent d&rsquo;afficher le trafic autour de la position de Bravo, et le radar affiche <strong>NO FIX / BRAVO GPS</strong>. Le Go ne donne aucune alerte et n&rsquo;émet rien tant que sa propre position n&rsquo;est pas revenue.</p>
   <p>Le Tango est une aide non certifiée à la veille visuelle. Continuez de regarder dehors, même si l&rsquo;écran est vide.</p>
 </section>
 
@@ -59,7 +60,7 @@ updated_on: "2026-11-25"
     </details>
     <details>
       <summary>Puis-je emporter un Tango d&rsquo;un avion à l&rsquo;autre ?</summary>
-      <p>Oui, les deux boîtiers tiennent dans un sac de vol. Si l&rsquo;avion a un transpondeur, réglez son adresse OACI avant le vol, pour que votre ADS-L et son ADS-B désignent le même aéronef. Au sol, transpondeur sur ALT, le Go propose l&rsquo;adresse qu&rsquo;entend Bravo.</p>
+      <p>Oui, les deux boîtiers tiennent dans un sac de vol. Bravo n&rsquo;y a pas besoin de ses propres satellites : tant que le Go a l&rsquo;heure GPS, Bravo prend l&rsquo;heure du Go et continue de lui envoyer le trafic ADS-B. Si l&rsquo;avion a un transpondeur, réglez son adresse OACI avant le vol, pour que votre ADS-L et son ADS-B désignent le même aéronef. Au sol, transpondeur sur ALT, le Go propose l&rsquo;adresse qu&rsquo;entend Bravo.</p>
     </details>
     <details>
       <summary>Faut-il encore un téléphone ?</summary>

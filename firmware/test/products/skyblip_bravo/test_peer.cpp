@@ -30,6 +30,7 @@ struct GoPosition {
     int32_t pressure_altitude_mm{BravoRig::kOwnAltitudeMm};
     uint32_t pressure_altitude_age_ms{100};
     uint32_t written_s_ago{0};
+    bool dated{true};
 };
 
 struct Served {
@@ -68,8 +69,9 @@ struct Served {
                            uint32_t aircraft_address = 0) const {
         std::string json = "{\"command\":\"peer_claim\",\"boot_epoch\":7";
         if (position != nullptr) {
-            json += ",\"at_s\":" + std::to_string(utc_s() - position->written_s_ago) +
-                    ",\"latitude_1e7\":" + std::to_string(position->latitude_1e7) +
+            if (position->dated)
+                json += ",\"at_s\":" + std::to_string(utc_s() - position->written_s_ago);
+            json += ",\"latitude_1e7\":" + std::to_string(position->latitude_1e7) +
                     ",\"longitude_1e7\":" + std::to_string(position->longitude_1e7) +
                     ",\"position_age_ms\":" + std::to_string(position->position_age_ms) +
                     ",\"altitude_hae_mm\":" + std::to_string(BravoRig::kOwnAltitudeMm) +
@@ -212,9 +214,10 @@ TEST_CASE("bravo peer: without a fix but with UTC, Bravo takes its Go's fresh po
     CHECK(served.rig.count_of("$PFLAA") == 0);
 }
 
-TEST_CASE("bravo peer: without UTC Bravo says so and exports nothing, even with a fresh Go") {
+TEST_CASE("bravo peer: without UTC of its own or its Go's Bravo says so and exports nothing") {
     Served served;
-    const GoPosition here{};
+    GoPosition here{};
+    here.dated = false;
     for (int i = 0; i < 3; i++) {
         served.rig.blind_fix();
         served.claim(&here);

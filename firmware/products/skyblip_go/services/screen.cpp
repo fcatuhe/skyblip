@@ -332,14 +332,21 @@ void ScreenService::tick(uint32_t now_ms) {
     const uint32_t frame_crc = crc32(framebuffer_.data(), Glass::kBytes);
     const bool changed =
         !presented_once_ || change_ == Change::Wiped || frame_crc != presented_crc_;
-    if (!changed) return;
+    const bool redrive =
+        redrive_owed_since_ms_ && now_ms - *redrive_owed_since_ms_ >= kRedriveAfterChangeMs;
+    if (!changed && !redrive) return;
 
+    const ports::Refresh mode = redrive ? ports::Refresh::Redrive : ports::Refresh::Partial;
     const uint64_t present_began_us = context_.roles.clock.microseconds();
-    context_.roles.display.present(framebuffer_, ports::Refresh::Partial, now_ms);
+    context_.roles.display.present(framebuffer_, mode, now_ms);
     panel_waiting_ = true;
     present_us_ = microseconds_since(present_began_us);
-    count_refresh(ports::Refresh::Partial);
+    count_refresh(mode);
     presented_crc_ = frame_crc;
+    if (change_ == Change::Wiped)
+        redrive_owed_since_ms_ = now_ms;
+    else if (redrive)
+        redrive_owed_since_ms_.reset();
     note_presented(now_ms);
     flash_alarm();
 }
@@ -393,6 +400,7 @@ ScreenService::Thermal ScreenService::thermal() const {
 }
 
 void ScreenService::wipe_glass(uint32_t now_ms) {
+    redrive_owed_since_ms_.reset();
     paint_black(now_ms);
     note_presented(now_ms);
     prompt_on_glass_ = false;

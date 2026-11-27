@@ -1,6 +1,10 @@
 #include "core/timing/transmit_gate.h"
 
 namespace skyblip::timing {
+namespace {
+// INFO: fc 27nov26 the radar and nearby already say a missing fix or UTC in words
+bool marked(NoTx reason) { return reason != NoTx::Fix && reason != NoTx::Utc; }
+}  // namespace
 
 void TransmitGate::judge(const Requirements& met, uint32_t now_ms) {
     met_ = met;
@@ -12,7 +16,10 @@ void TransmitGate::judge(const Requirements& met, uint32_t now_ms) {
         if (!met_since_ms_) met_since_ms_ = now_ms;
     } else {
         met_since_ms_.reset();
-        if (!unmet_since_ms_) unmet_since_ms_ = now_ms;
+        if (!marked(unmet_))
+            unmet_since_ms_.reset();
+        else if (!unmet_since_ms_)
+            unmet_since_ms_ = now_ms;
     }
     shown_ = shown_now(now_ms);
 }
@@ -21,6 +28,7 @@ void TransmitGate::judge(const Requirements& met, uint32_t now_ms) {
 NoTx TransmitGate::shown_now(uint32_t now_ms) const {
     if (unmet_ == NoTx::None)
         return met_since_ms_ && now_ms - *met_since_ms_ >= kNoTxHoldMs ? NoTx::None : shown_;
+    if (!marked(unmet_)) return NoTx::None;
     if (shown_ != NoTx::None) return unmet_;
     const bool held = unmet_since_ms_ && now_ms - *unmet_since_ms_ >= kNoTxHoldMs;
     return held && judged(now_ms) ? unmet_ : NoTx::None;

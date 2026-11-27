@@ -240,8 +240,19 @@ inline constexpr Value kBravoValues[] = {
     {"link_down", 3},
     {"receiver_down", 4},
     {"no_utc", 5},
+    {"gps_off", 6},
+    {"waiting_gps_off", 7},
+    {"waiting_utc", 8},
+    {"finds_fix", 9},
+    {"cell_low", 10},
 };
-inline constexpr Enumeration kBravo{kBravoValues, 5};
+inline constexpr Enumeration kBravo{kBravoValues, 10};
+
+inline constexpr Value kUtcSourceValues[] = {
+    {"own", 0},
+    {"go", 1},
+};
+inline constexpr Enumeration kUtcSource{kUtcSourceValues, 2};
 
 inline constexpr Value kGnssStageValues[] = {
     {"silent", 0},
@@ -714,6 +725,13 @@ inline constexpr Key kHealthKeys[] = {
     {"dismissed_announcement", 21, Type::Unsigned, nullptr, 0, false},
     {"gnss_stage", 22, Type::Enum, &kGnssStage, 0, false},
     {"satellites", 23, Type::Unsigned, nullptr, 0, false},
+    {"utc_source", 24, Type::Enum, &kUtcSource, 0, false},
+    {"latitude_1e7", 25, Type::Integer, nullptr, 0, false},
+    {"longitude_1e7", 26, Type::Integer, nullptr, 0, false},
+    {"position_age_ms", 27, Type::Unsigned, nullptr, 0, false},
+    {"altitude_m", 28, Type::Integer, nullptr, 0, false},
+    {"speed_q", 29, Type::Unsigned, nullptr, 0, false},
+    {"track_c9", 30, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kPeerClaimKeys[] = {
@@ -849,7 +867,7 @@ inline constexpr Frame kFrames[] = {
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
-    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 20},
+    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 27},
     {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 17},
     {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
     {"browser_challenge", 30, events::Endpoint::Config, Sender::Both, kBrowserChallengeKeys, 2},

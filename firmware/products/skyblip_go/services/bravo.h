@@ -93,6 +93,7 @@ class BravoService : public runtime::Service {
     }
     // INFO: fc 15nov26 the last health from the pinned Bravo while fresh, nullptr once it ages out
     const comms::PeerHealth* health() const { return health_heard_ ? &health_ : nullptr; }
+    uint32_t health_heard_ms() const { return health_heard_ms_; }
     // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
     bool take_forgotten_notice();
     // INFO: fc 15nov26 true once when the Go asks its Bravo again, for the glass
@@ -105,8 +106,9 @@ class BravoService : public runtime::Service {
     void take_health(ConstByteSpan bytes, uint32_t now_ms);
     void fold(const comms::PeerObservation& peer, uint32_t now_ms);
     void log(BravoVerdict verdict, const comms::PeerObservation* peer, uint32_t now_ms);
-    std::optional<uint32_t> second_edge_ms(uint32_t at_s) const;
+    std::optional<uint32_t> second_edge_ms(uint32_t at_s, uint32_t now_ms) const;
     comms::BravoState state_now() const;
+    static bool dates_its_traffic(const comms::PeerHealth& health);
     void came_up(uint16_t payload_bytes, uint32_t now_ms);
     void went_down();
     void hear(const events::CentralEvent& event, uint32_t now_ms);

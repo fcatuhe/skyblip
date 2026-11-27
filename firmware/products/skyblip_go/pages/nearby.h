@@ -19,16 +19,13 @@ struct NearbyGo {
     bool charging{false};
     gnss::Stage stage{gnss::Stage::Silent};
     uint8_t satellites{0};
-    bool transmitting{false};
     int traffic{0};
 };
 
 struct NearbyBravo {
     comms::BravoState state{comms::BravoState::Unpaired};
-    bool heard{false};
     std::optional<uint8_t> battery_percent{};
     bool charging{false};
-    std::optional<gnss::Stage> stage{};
     std::optional<uint8_t> satellites{};
     int traffic{0};
 };
@@ -37,6 +34,7 @@ struct NearbySnapshot {
     NearbyGo go{};
     NearbyBravo bravo{};
     bool fix_valid{false};
+    bool bravo_fix{false};
     go::Units units{go::Units::Nautical};
     int row_count{0};
     const traffic::RangeRow* rows{nullptr};

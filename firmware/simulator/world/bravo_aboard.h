@@ -23,6 +23,9 @@ class BravoAboard {
 
     void set_fix(bool on) { bravo_.gnss().fix_valid = on; }
     bool fix() const { return bravo_.gnss().fix_valid; }
+    // INFO: fc 27nov26 a receiver with no almanac dates itself 1980 and sends no pulse
+    void set_utc(bool on);
+    bool utc() const { return utc_; }
     // INFO: fc 14nov26 out of range or switched off: the link drops at once and no connect takes it
     void set_link(bool up);
     bool link_up() const { return link_up_; }
@@ -37,6 +40,7 @@ class BravoAboard {
 
     // INFO: fc 14nov26 the Go holds session 1 on Bravo's link, so a phone takes the next one
     static constexpr uint16_t kCompanionSession = 2;
+    static constexpr const char* kNoAlmanacDate = "010180";
 
     World<platform::host::Platform>& world_;
     platform::host::MeshtrackerX1& bravo_;
@@ -46,6 +50,7 @@ class BravoAboard {
     uint32_t start_ms_{0};
     bool started_{false};
     bool link_up_{true};
+    bool utc_{true};
 };
 
 }  // namespace skyblip::simulator

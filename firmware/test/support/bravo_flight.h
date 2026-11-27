@@ -122,6 +122,15 @@ struct Flight {
     uint32_t tone_commands_{0};
 };
 
+inline std::string last_status(Rig& rig) {
+    const auto& sent = rig.platform.link().sent;
+    for (auto it = sent.rbegin(); it != sent.rend(); ++it)
+        if (it->endpoint == events::Endpoint::Config &&
+            link_text(it->bytes).rfind("{\"command\":\"status\"", 0) == 0)
+            return link_text(it->bytes);
+    return std::string();
+}
+
 inline std::vector<BravoStub::Recorded> named_target_every_second(uint32_t from, uint32_t to) {
     std::vector<BravoStub::Recorded> recording;
     for (uint32_t second = from; second < to; second++)

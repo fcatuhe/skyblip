@@ -59,6 +59,7 @@ bool event_from(const json::Reader& reader, ScenarioEvent& out) {
         {"expect_alarm_minimum", EventKind::ExpectAlarmMinimum},
         {"expect_traffic_minimum", EventKind::ExpectTrafficMinimum},
         {"bravo_link", EventKind::BravoLink},
+        {"utc", EventKind::Utc},
     };
     out.at_ms = static_cast<uint32_t>(integer_or(reader, "at_ms", 0));
     for (const Named& named : kKeys) {
@@ -105,11 +106,13 @@ bool unit_from(const json::Reader& reader, ScenarioEvent& event) {
 }
 
 // INFO: fc 14nov26 only a paired scenario has a Bravo aboard, and it takes its fix and its phone
+// | 27nov26 and its UTC, which the Go's world never drops
 bool fits(const ScenarioEvent& event, Product product) {
     const bool paired = product == Product::Paired;
     if (event.kind == EventKind::BravoLink) return paired;
-    if (!event.on_bravo) return true;
-    return paired && (event.kind == EventKind::Fix || event.kind == EventKind::Companion);
+    if (!event.on_bravo) return event.kind != EventKind::Utc;
+    return paired && (event.kind == EventKind::Fix || event.kind == EventKind::Companion ||
+                      event.kind == EventKind::Utc);
 }
 
 Product product_from(const std::string& name) {

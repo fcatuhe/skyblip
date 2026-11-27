@@ -80,6 +80,7 @@ class PeerService : public runtime::Service {
     void forget_gone();
     void accept(uint32_t now_ms);
     void ask(Go& go, uint32_t now_ms);
+    void hear_claim(const comms::PeerClaim& claim, uint32_t now_ms);
     bool pinned_go_connected() const;
     void follow(const events::BluetoothAddress& go, const comms::PeerClaim& claim, uint32_t now_ms);
     void expire_call(uint32_t now_ms);
@@ -88,8 +89,11 @@ class PeerService : public runtime::Service {
     Go* go_of(const events::RxFrame& frame, bool& new_connection);
     void keep_pin();
     void adopt_aircraft_address(uint32_t aircraft_address);
-    void describe_self(comms::PeerHealth& health) const;
-    void send_health(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
+    void describe_self(comms::PeerHealth& health, uint32_t now_ms) const;
+    static std::optional<comms::BravoPosition> position_of(const model::Ownship& own,
+                                                           uint32_t now_ms);
+    void send_health(const GateChoice& choice, std::optional<comms::UtcSource> source,
+                     uint32_t now_ms);
     void send_observations(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
     void serve(int slot, const traffic::Target& target,
                std::array<bool, ObservationPacer::kRecipients>& blocked, uint32_t now_ms);

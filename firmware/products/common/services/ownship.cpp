@@ -32,6 +32,7 @@ void OwnshipService::tick(uint32_t now_ms) {
     if (own.climb_valid && now_ms - own.climb_at_ms > kClimbMaxAgeMs) withdraw_climb();
     gnss::GnssSolution solution{};
     while (context_.bus.gnss.pop(solution)) apply_solution(solution, now_ms);
+    withdraw_stale_utc(now_ms);
 
     events::BarometerSample sample{};
     while (context_.bus.barometer.pop(sample)) apply_barometer(sample, now_ms);
@@ -114,6 +115,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.aircraft_category = settings_.aircraft_type;
 
     context_.state.clock.utc_valid = solution.utc_valid;
+    keep_solution_second(solution);
     // INFO: fc 18nov26 a withdrawal on any quarter withdraws the whole second the EFB and log read
     if (!own.fix_valid) context_.state.own_second.fix_valid = false;
     if (!own.utc_valid) context_.state.own_second.utc_valid = false;
@@ -137,6 +139,31 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
         record_gnss(solution, now_ms);
         record_flight(now_ms);
     }
+}
+
+// INFO: fc 27nov26 a withdrawal repeats the last solution, which must not move the second it opened
+void OwnshipService::keep_solution_second(const gnss::GnssSolution& solution) {
+    timing::ClockState& clock = context_.state.clock;
+    if (!solution.utc_valid) return;
+    if (solution.utc_s == clock.solution_utc_s && solution.utc_ms == solution_utc_ms_) return;
+    clock.solution_utc_s = solution.utc_s;
+    clock.solution_opened_ms = context_.state.own.fix_at_ms - solution.utc_ms;
+    solution_utc_ms_ = solution.utc_ms;
+}
+
+// INFO: fc 27nov26 a second carried on uptime past kUtcReferenceMaxAgeMs may name its neighbour
+void OwnshipService::withdraw_stale_utc(uint32_t now_ms) {
+    timing::ClockState& clock = context_.state.clock;
+    if (!context_.state.own.utc_valid) return;
+    const std::optional<timing::UtcReference> reference = timing::utc_reference(clock, now_ms);
+    if (!reference || timing::reference_age_ms(*reference, now_ms) <= timing::kUtcReferenceMaxAgeMs)
+        return;
+    context_.state.own.utc_valid = false;
+    context_.state.own_second.utc_valid = false;
+    clock.utc_valid = false;
+    clock.utc_s = 0;
+    clock.utc_anchor_fixed = false;
+    clock.solution_utc_s = 0;
 }
 
 // INFO: fc 18nov26 the first solution of each UTC second is its whole second, on .000 or not

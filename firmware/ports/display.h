@@ -9,8 +9,9 @@ class Canvas;
 
 namespace skyblip::ports {
 
-// INFO: fc 12sep26 the two the controller has: SSD1681 display mode 1 and mode 2 (0x22 bit 3)
-enum class Refresh : uint8_t { Full, Partial };
+// INFO: fc 12sep26 the two the controller has: SSD1681 display mode 1 and mode 2 (0x22 bit 3) |
+// 27nov26 Redrive is mode 2 driving every pixel
+enum class Refresh : uint8_t { Full, Partial, Redrive };
 
 class Display {
    public:

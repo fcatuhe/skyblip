@@ -1,5 +1,6 @@
 // The EFB's own-ship sentences at 2 Hz: the whole second they report, and its withdrawal.
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -12,7 +13,7 @@
 using namespace skyblip;
 
 // The pinned case: a fix withdrawn at .500 left the EFB reading the last .000 as a valid fix.
-TEST_CASE("nmea: a fix withdrawn at .500 stops the EFB's GPRMC at once") {
+TEST_CASE("nmea: a fix withdrawn at .500 takes the position off the EFB's GPRMC at once") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link();
@@ -26,8 +27,12 @@ TEST_CASE("nmea: a fix withdrawn at .500 stops the EFB's GPRMC at once") {
     deliver(rig, Solution{4, 500, 25000, kFeedLatencyMs, false}, updates);
     rig.platform.link().clear();
     rig.run(4900, 8000);
-    CHECK(count_of(rig, "$GPRMC") == 0);
-    CHECK(count_of(rig, "$GPGGA") == 0);
+    REQUIRE(count_of(rig, "$GPRMC") > 0);
+    for (const std::string& sentence : sentences(rig)) {
+        CAPTURE(sentence);
+        if (sentence.rfind("$GPRMC", 0) == 0) CHECK(fields(sentence)[2] == "V");
+        if (sentence.rfind("$GPGGA", 0) == 0) CHECK(fields(sentence)[6] == "0");
+    }
 }
 
 // The pinned case: a 1 s cadence of its own held the whole second 300 ms after it landed.
@@ -108,4 +113,61 @@ TEST_CASE("nmea: a run of lost whole seconds keeps the tablet's passes a second 
         CHECK(heartbeats_ms[i] - heartbeats_ms[i - 1] <=
               common::NmeaService::kMovingTargetRedrawPeriodMs +
                   common::NmeaService::kPassDeferralCeilingMs);
+}
+
+// Two passes must never send the tablet one second twice, so a lost whole second is not resent.
+TEST_CASE("nmea: each GPRMC the EFB reads names a second it has not read before") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.raise_link();
+    uint32_t updates = 0;
+    std::vector<uint32_t> heartbeats_ms;
+    for (uint32_t second = 1; second <= 5; second++)
+        for (uint32_t half = 0; half < 2; half++) {
+            solve(rig, second, half, 25000, updates);
+            tick_through(rig, second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs + 10,
+                         heartbeats_ms);
+        }
+    for (uint32_t second = 6; second <= 9; second++) {
+        tick_through(rig, second * 1000 + kFeedLatencyMs, heartbeats_ms);
+        solve(rig, second, 1, 25000, updates);
+        tick_through(rig, second * 1000 + kHalfSecondFeedMs + kFeedLatencyMs + 10, heartbeats_ms);
+    }
+    std::map<std::string, int> sent_per_time;
+    for (const std::string& sentence : sentences(rig))
+        if (sentence.rfind("$GPRMC", 0) == 0) sent_per_time[fields(sentence)[1]]++;
+    REQUIRE(sent_per_time.size() >= 4);
+    for (const auto& [time, count] : sent_per_time) {
+        CAPTURE(time);
+        CHECK(count == 1);
+    }
+}
+
+// An EFB with no clock of its own learns the time as soon as the Go does, and no position.
+TEST_CASE("nmea: a Go with UTC and no fix tells the EFB each second once, with no position" *
+          doctest::test_suite("main")) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.raise_link();
+    uint32_t updates = 0;
+    std::vector<uint32_t> heartbeats_ms;
+    for (uint32_t second = 1; second <= 5; second++)
+        for (uint32_t half = 0; half < 2; half++) {
+            deliver(rig, Solution{second, half * kHalfSecondFeedMs, 0, kFeedLatencyMs, false},
+                    updates);
+            tick_through(rig, second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs + 10,
+                         heartbeats_ms);
+        }
+    std::vector<std::string> times;
+    for (const std::string& sentence : sentences(rig)) {
+        CAPTURE(sentence);
+        if (sentence.rfind("$GPRMC", 0) == 0) {
+            CHECK(fields(sentence)[2] == "V");
+            CHECK(fields(sentence)[3].empty());
+            times.push_back(fields(sentence)[1]);
+        }
+        if (sentence.rfind("$GPGGA", 0) == 0) CHECK(fields(sentence)[6] == "0");
+        if (sentence.rfind("$PFLAU", 0) == 0) CHECK(fields(sentence)[3] == "0");
+    }
+    CHECK(times == std::vector<std::string>{"000001", "000002", "000003", "000004", "000005"});
 }

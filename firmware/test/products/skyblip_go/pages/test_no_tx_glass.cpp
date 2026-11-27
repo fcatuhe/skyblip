@@ -209,7 +209,8 @@ TEST_CASE("no tx glass: the status page names what the Go waits on beside TX OFF
     CHECK(reads_in(simulator.panel(), "TX OFF PPS", 100, 0, go::kGlassWidth, go::kGlassHeight));
 }
 
-TEST_CASE("no tx glass: nearby's Go row reads its figures, and TX OFF once the gate closes") {
+// The NO TX mark names a transmit fault, so nearby's row keeps saying what the radio holds.
+TEST_CASE("no tx glass: nearby's Go row reads its figures, and keeps them once the gate closes") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
@@ -224,8 +225,9 @@ TEST_CASE("no tx glass: nearby's Go row reads its figures, and TX OFF once the g
     simulator.world().set_pps_locked(false);
     run_on(simulator, now_ms + 2005, timing::kPpsEdgeMaxAgeMs + 2000);
     REQUIRE_FALSE(simulator.product().state().transmit.transmits());
-    CHECK(reads_in(simulator.panel(), "TX OFF", 0, go::kNearbyUnitY, go::kGlassWidth, row_bottom,
-                   go::kNearbyScale));
+    CHECK_FALSE(reads_in(simulator.panel(), "TX OFF", 0, go::kNearbyUnitY, go::kGlassWidth,
+                         row_bottom, go::kNearbyScale));
+    CHECK(reads_in(simulator.panel(), "TFC", 0, go::kNearbyUnitY, go::kGlassWidth, row_bottom));
 }
 
 // Solutions landing 600 ms late date no position, and the glass said nothing of the held ones.
@@ -245,24 +247,12 @@ TEST_CASE(
     CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypeStatus) > 0);
 }
 
-// The gate stays open on held positions, so the rows that say TX read the held ones as off.
-TEST_CASE("no tx glass: held positions read TX OFF HELD on status, and TX OFF on nearby's Go row") {
-    simulator::Simulator simulator;
-    REQUIRE(simulator.setup() == Status::Ok);
-    hold_every_position(simulator);
-    uint32_t now_ms = past_settling(simulator);
-    run_on(simulator, now_ms, 10000);
-    REQUIRE(simulator.product().state().transmit.unmet() == timing::NoTx::Held);
-    now_ms = tap(simulator, now_ms + 10005);
-    REQUIRE(simulator.product().screen().page() == go::Page::Nearby);
-    run_on(simulator, now_ms, 2000);
-    CHECK(reads_in(simulator.panel(), "TX OFF", 0, go::kNearbyUnitY, go::kGlassWidth,
-                   go::kNearbyUnitY + go::kNearbyLineHeight, go::kNearbyScale));
-
+// The gate stays open on held positions, so the row that says TX reads the held ones as off.
+TEST_CASE("no tx glass: held positions read TX OFF HELD on status") {
     simulator::Simulator status;
     REQUIRE(status.setup() == Status::Ok);
     hold_every_position(status);
-    now_ms = past_settling(status);
+    uint32_t now_ms = past_settling(status);
     run_on(status, now_ms, 10000);
     open_from_nearby(status, now_ms + 10005, go::MenuRow::Status);
     REQUIRE(status.product().screen().page() == go::Page::Status);

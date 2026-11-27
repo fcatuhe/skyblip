@@ -29,7 +29,8 @@ updated_on: "2026-11-25"
 
 <section id="alarm" class="band">
   <h2 class="section-title">La pantalla te indica dónde mirar</h2>
-  <p>Cuando se activa una alerta, un sector de la pantalla del Go parpadea del lado del tráfico. Si el Go pierde la conexión con Bravo, muestra <strong>BRAVO / NO LINK</strong> en la parte superior derecha del radar. El Go sigue mostrando tráfico ADS-L y FLARM. Bravo sigue recibiendo tráfico ADS-B y avisando por su cuenta. Para silenciar una alerta, usa el dispositivo que la está dando.</p>
+  <p>Cuando se activa una alerta, un sector de la pantalla del Go parpadea del lado del tráfico. Si el Go pierde la conexión con Bravo, muestra <strong>BRAVO / NO LINK</strong> en la parte superior derecha de la pantalla. El Go sigue mostrando tráfico ADS-L y FLARM. Bravo sigue recibiendo tráfico ADS-B y avisando por su cuenta. Para silenciar una alerta, usa el dispositivo que la está dando.</p>
+  <p>Si el Go pierde su propia posición GPS mientras Bravo tiene una, el radar y la lista Nearby siguen mostrando el tráfico alrededor de la posición de Bravo, y el radar muestra <strong>NO FIX / BRAVO GPS</strong>. El Go no da alertas ni transmite nada hasta que vuelve su propia posición.</p>
   <p>Tango es una ayuda no certificada para la vigilancia visual. Sigue mirando al exterior aunque no aparezca nada en la pantalla.</p>
 </section>
 
@@ -59,7 +60,7 @@ updated_on: "2026-11-25"
     </details>
     <details>
       <summary>¿Puedo llevar un Tango de un avión a otro?</summary>
-      <p>Sí, los dos dispositivos caben en una bolsa de vuelo. Si el avión tiene transpondedor, configura su dirección OACI antes de volar, para que tu ADS-L y su ADS-B identifiquen a la misma aeronave. En tierra, con el transpondedor en ALT, el Go te propone la dirección que oye Bravo.</p>
+      <p>Sí, los dos dispositivos caben en una bolsa de vuelo. Bravo no necesita satélites propios ahí: mientras el Go tiene la hora GPS, Bravo toma la hora del Go y le sigue enviando el tráfico ADS-B. Si el avión tiene transpondedor, configura su dirección OACI antes de volar, para que tu ADS-L y su ADS-B identifiquen a la misma aeronave. En tierra, con el transpondedor en ALT, el Go te propone la dirección que oye Bravo.</p>
     </details>
     <details>
       <summary>¿Sigo necesitando un móvil?</summary>

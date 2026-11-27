@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "core/comms/peer.h"
+#include "core/power/cutoff.h"
 #include "core/util/format.h"
 #include "ports/capabilities.h"
 
@@ -316,7 +317,7 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
 
 // INFO: fc 14nov26 on the ground only, as the AIRCRAFT menu proposes it: aloft a wingman is as loud
 std::optional<comms::OwnTransponderHeard> BravoService::own_transponder_on_ground() const {
-    const bool on_ground = context_.state.bravo == comms::BravoState::Live &&
+    const bool on_ground = comms::dated(context_.state.bravo) &&
                            context_.state.flight.confirmed_state == flight::FlightState::Ground;
     return on_ground ? own_transponder() : std::nullopt;
 }
@@ -336,13 +337,23 @@ bus::AircraftTransponder BravoService::aircraft_transponder() const {
 
 // INFO: fc 12nov26 health alone says lost, never quiet traffic: an empty sky is a healthy one
 comms::BravoState BravoService::state_now() const {
-    if (!paired(settings_)) return comms::BravoState::Unpaired;
-    if (health_heard_) {
-        if (!health_.listening) return comms::BravoState::ReceiverDown;
-        if (health_.utc_valid) return comms::BravoState::Live;
-        return counted_on() ? comms::BravoState::NoUtc : comms::BravoState::Waiting;
-    }
-    return counted_on() ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
+    using comms::BravoState;
+    if (!paired(settings_)) return BravoState::Unpaired;
+    if (!health_heard_) return counted_on() ? BravoState::LinkDown : BravoState::Waiting;
+    if (!health_.listening) return BravoState::ReceiverDown;
+    const bool dated = dates_its_traffic(health_);
+    const bool placed = health_.export_reference != comms::ExportReference::None;
+    if (health_.gnss_stage == gnss::Stage::Silent && !(dated && placed))
+        return counted_on() ? BravoState::GpsOff : BravoState::WaitingGpsOff;
+    if (!dated) return counted_on() ? BravoState::NoUtc : BravoState::WaitingUtc;
+    if (!placed) return BravoState::FindsFix;
+    return power::needs_charge(health_.power_level) ? BravoState::CellLow : BravoState::Live;
+}
+
+// INFO: fc 27nov26 a Bravo built before utc_source stops its second when its receiver falls silent
+bool BravoService::dates_its_traffic(const comms::PeerHealth& health) {
+    if (!health.utc_valid) return false;
+    return health.utc_source || health.gnss_stage != gnss::Stage::Silent;
 }
 
 // INFO: fc 11nov26 another protocol is never pinned, and a pinned Bravo on one waits for a boot

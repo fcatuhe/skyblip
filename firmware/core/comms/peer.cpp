@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "core/comms/peer_health.h"
 #include "core/flight/state.h"
 #include "core/protocol/callsign.h"
 #include "core/settings/address.h"
@@ -371,6 +372,9 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
                             *health.dismissed_announcement);
     if (health.gnss_stage) writer.add_code(link::health_key::kGnssStage, *health.gnss_stage);
     if (health.satellites) writer.add_unsigned(link::health_key::kSatellites, *health.satellites);
+    if (health.utc_valid && health.utc_source)
+        writer.add_code(link::health_key::kUtcSource, *health.utc_source);
+    if (health.position) write_bravo_position(writer, *health.position);
     return writer.finish();
 }
 
@@ -446,8 +450,10 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     const Result<bool> aircraft_address_set =
         reader.read_boolean(link::health_key::kAircraftAddressSet);
     const Result<bool> paired = reader.read_boolean(link::health_key::kPaired);
+    const Result<uint32_t> reference = reader.read_unsigned(link::health_key::kExportReference);
     if (!epoch.ok() || !listening.ok() || !utc_valid.ok() || !aircraft_address_set.ok() ||
-        !paired.ok())
+        !paired.ok() || !reference.ok() ||
+        reference.value() > static_cast<uint32_t>(ExportReference::Own))
         return Status::Invalid;
     PeerHealth health{};
     health.boot_epoch = epoch.value();
@@ -455,8 +461,10 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     health.utc_valid = utc_valid.value();
     health.aircraft_address_set = aircraft_address_set.value();
     health.paired = paired.value();
+    health.export_reference = static_cast<ExportReference>(reference.value());
     if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health) ||
-        !read_bravo_gnss(reader, health))
+        !read_bravo_gnss(reader, health) || !read_utc_source(reader, health) ||
+        !read_bravo_position(reader, health))
         return Status::Invalid;
     uint32_t dismissed = 0;
     bool present = false;

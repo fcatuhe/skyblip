@@ -7,6 +7,7 @@ void BravoAboard::load(const Scenario& scenario) {
     next_event_ = 0;
     started_ = false;
     set_fix(true);
+    set_utc(true);
     set_link(true);
     follow_own_ship();
 }
@@ -25,6 +26,12 @@ void BravoAboard::step(uint32_t now_ms) {
     link_.pump();
 }
 
+void BravoAboard::set_utc(bool on) {
+    utc_ = on;
+    bravo_.pps().set_locked(on);
+    follow_own_ship();
+}
+
 void BravoAboard::set_link(bool up) {
     link_up_ = up;
     link_.set_in_range(up);
@@ -35,6 +42,7 @@ void BravoAboard::set_link(bool up) {
 void BravoAboard::follow_own_ship() {
     models::GnssTruth& truth = bravo_.gnss();
     truth = world_.gnss();
+    if (!utc_) truth.date = kNoAlmanacDate;
 }
 
 void BravoAboard::apply_events(uint32_t now_ms) {
@@ -46,6 +54,7 @@ void BravoAboard::apply_events(uint32_t now_ms) {
         if (event.kind == EventKind::BravoLink) set_link(on);
         if (!event.on_bravo) continue;
         if (event.kind == EventKind::Fix) set_fix(on);
+        if (event.kind == EventKind::Utc) set_utc(on);
         if (event.kind == EventKind::Companion && on) connect_companion();
         if (event.kind == EventKind::Companion && !on) disconnect_companion();
     }

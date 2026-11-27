@@ -60,6 +60,8 @@ Result<PeerClaim> read_peer_claim(ConstByteSpan frame);
 
 enum class ExportReference : uint8_t { None = 0, Go = 1, Own = 2 };
 
+enum class UtcSource : uint8_t { Own = 0, Go = 1 };
+
 // INFO: fc 12nov26 schemas/link.v1.json, observation: a callsign of at most eight characters
 constexpr int kPeerCallsignBytes = 9;
 // INFO: fc 15nov26 schemas/link.v1.json, health: a version of at most 13 characters, 9.99.99+99999
@@ -84,6 +86,16 @@ inline std::optional<uint32_t> address_of(const std::optional<OwnTransponderHear
     return heard ? std::optional<uint32_t>(heard->address) : std::nullopt;
 }
 
+// INFO: fc 27nov26 Bravo's own fix, which a Go with none plots around and never transmits
+struct BravoPosition {
+    int32_t latitude_1e7{0};
+    int32_t longitude_1e7{0};
+    uint16_t age_ms{0};
+    std::optional<int16_t> altitude_m{};
+    std::optional<uint16_t> speed_q{};
+    uint16_t track_c9{0};
+};
+
 struct PeerHealth {
     uint32_t boot_epoch{0};
     bool listening{false};
@@ -102,6 +114,8 @@ struct PeerHealth {
     std::optional<uint32_t> dismissed_announcement{};
     std::optional<gnss::Stage> gnss_stage{};
     std::optional<uint8_t> satellites{};
+    std::optional<UtcSource> utc_source{};
+    std::optional<BravoPosition> position{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);
@@ -128,19 +142,36 @@ struct PeerObservation {
 };
 
 // INFO: fc 12nov26 what a paired Go makes of its Bravo's health, the status frame's bravo
+// | 27nov26 one code for each word the glass says
 enum class BravoState : uint8_t {
     Unpaired = 0,
     Waiting = 1,
     Live = 2,
     LinkDown = 3,
     ReceiverDown = 4,
-    NoUtc = 5
+    NoUtc = 5,
+    GpsOff = 6,
+    WaitingGpsOff = 7,
+    WaitingUtc = 8,
+    FindsFix = 9,
+    CellLow = 10
 };
 
 constexpr bool lost(BravoState state) {
     return state == BravoState::LinkDown || state == BravoState::ReceiverDown ||
-           state == BravoState::NoUtc;
+           state == BravoState::NoUtc || state == BravoState::GpsOff;
 }
+
+constexpr bool waiting(BravoState state) {
+    return state == BravoState::Waiting || state == BravoState::WaitingGpsOff ||
+           state == BravoState::WaitingUtc;
+}
+
+constexpr bool relaying(BravoState state) {
+    return state == BravoState::Live || state == BravoState::CellLow;
+}
+
+constexpr bool dated(BravoState state) { return relaying(state) || state == BravoState::FindsFix; }
 
 Result<link::Command> peer_command(ConstByteSpan frame);
 // INFO: fc 11nov26 Invalid without protocol_version, Unsupported for one this build does not speak

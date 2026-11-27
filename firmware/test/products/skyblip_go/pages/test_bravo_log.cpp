@@ -69,7 +69,7 @@ TEST_CASE("bravo log page: an unpaired Go or a lost Bravo says so, and draws no 
 
     BravoLogSnapshot lost;
     lost.state = comms::BravoState::LinkDown;
-    CHECK(reads_in(page(lost), "LINK DOWN", 100, 0, 200, 12));
+    CHECK(reads_in(page(lost), "NO LINK", 100, 0, 200, 12));
     CHECK_FALSE(reads_in(page(lost), "FW", 0, 0, 200, 40));
 }
 

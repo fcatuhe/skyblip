@@ -9,6 +9,7 @@
 #include "core/timing/transmit.h"
 #include "core/traffic/range.h"
 #include "core/units/units.h"
+#include "products/skyblip_go/pages/bravo_corner.h"
 #include "products/skyblip_go/pages/bravo_log.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/no_tx.h"
@@ -35,6 +36,18 @@ int traffic_outside_formation(const traffic::TrafficTable& table) {
         if (target && target->used && !target->in_formation) count++;
     }
     return count;
+}
+
+// INFO: fc 27nov26 the radar draws its own under the plot, and these three already name the Bravo
+bool carries_bravo_corner(Page page) {
+    return page != Page::Radar && page != Page::Nearby && page != Page::BravoLog &&
+           page != Page::Bravo;
+}
+
+// INFO: fc 27nov26 the six-pack's speed and altitude stand under its corners, so the marks keep
+// to one line
+MarkLines marks_lines(Page page) {
+    return page == Page::SixPack ? MarkLines::WordOnly : MarkLines::WordAndReason;
 }
 }  // namespace
 
@@ -126,19 +139,21 @@ void ScreenService::render(uint32_t now_ms) {
     framebuffer_.clear(/*white=*/true);
 
     const model::Ownship& own = context_.state.own;
+    const std::optional<model::Ownship> plotted = plotted_own();
     const go::Settings& settings = settings_;
 
     switch (page_) {
         case Page::Radar: {
             RadarSnapshot snapshot;
-            snapshot.fix_valid = own.fix_valid;
+            snapshot.fix_valid = plotted.has_value();
+            snapshot.bravo_fix = plotted && !own.fix_valid;
             snapshot.stage = context_.state.gnss.stage;
             snapshot.units = settings.units;
             snapshot.range_step = settings.range_step;
             snapshot.plot = settings.plot;
             snapshot.heard_count = traffic_outside_formation(context_.state.traffic);
-            snapshot.track_cdeg = own.track_cdeg;
-            snapshot.speed_mm_s = own.speed_mm_s;
+            snapshot.track_cdeg = plotted.value_or(own).track_cdeg;
+            snapshot.speed_mm_s = plotted.value_or(own).speed_mm_s;
             snapshot.turn_cdps = context_.state.indicated.turn_cdps;
             snapshot.flight_seconds = context_.state.flight.seconds;
             snapshot.flight_time_valid = context_.state.flight.time_valid;
@@ -150,19 +165,17 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.battery_low = battery_low();
             snapshot.off_in_min = off_in_min();
-            snapshot.bravo = context_.state.bravo;
-            snapshot.bravo_heard = bravo_.health() != nullptr;
-            if (const comms::PeerHealth* health = bravo_health_live()) {
-                snapshot.bravo_battery_low = power::needs_charge(health->power_level);
-                snapshot.bravo_battery_percent = health->battery_percent;
-            }
+            const BravoCorner corner = bravo_corner();
+            snapshot.bravo = corner.state;
+            snapshot.bravo_battery_low = corner.cell_low;
+            snapshot.bravo_battery_percent = corner.cell_percent;
             int count = 0;
-            if (own.fix_valid) {
-                const model::Ownship own_now = flight::carried_to(own, now_ms);
+            if (plotted) {
+                const model::Ownship own_now = flight::carried_to(*plotted, now_ms);
                 traffic::RangeRow ranked[kMaxRadarTargets];
                 const int ranked_count =
                     traffic::rank_by_relevance(context_.state.traffic, context_.state.callsigns,
-                                               own, ranked, kMaxRadarTargets);
+                                               *plotted, ranked, kMaxRadarTargets);
                 for (int i = 0; i < ranked_count; i++) {
                     const traffic::Target* target = context_.state.traffic.at(ranked[i].slot);
                     const model::AircraftObservation observation =
@@ -240,10 +253,12 @@ void ScreenService::render(uint32_t now_ms) {
             NearbySnapshot snapshot;
             snapshot.go = nearby_go();
             snapshot.bravo = nearby_bravo();
-            snapshot.fix_valid = own.fix_valid;
+            snapshot.fix_valid = plotted.has_value();
+            snapshot.bravo_fix = plotted && !own.fix_valid;
             snapshot.units = settings.units;
-            snapshot.row_count = traffic::rank_by_relevance(
-                context_.state.traffic, context_.state.callsigns, own, nearby_rows_, kNearbyRows);
+            snapshot.row_count =
+                traffic::rank_by_relevance(context_.state.traffic, context_.state.callsigns,
+                                           plotted.value_or(own), nearby_rows_, kNearbyRows);
             snapshot.rows = nearby_rows_;
             draw_nearby(framebuffer_, snapshot);
             break;
@@ -359,7 +374,9 @@ void ScreenService::render(uint32_t now_ms) {
             break;
         }
     }
-    draw_no_tx(framebuffer_, context_.state.transmit.shown());
+    const MarkLines marks = marks_lines(page_);
+    if (carries_bravo_corner(page_)) draw_bravo_corner_over(framebuffer_, bravo_corner(), marks);
+    draw_no_tx(framebuffer_, context_.state.transmit.shown(), marks);
 }
 
 // INFO: fc 19nov26 the parts are boot's, each with how it works now and whether it stops the burst
@@ -375,8 +392,7 @@ const SelfTestPart* ScreenService::self_test_now() {
             row.no_tx = shown == timing::NoTx::Radio;
         } else if (kSelfTestParts[i].capability == ports::Capability::Gnss) {
             row.now = receiver_word(gate.met(), context_.roles.gnss.health());
-            row.no_tx = shown == timing::NoTx::Gnss || shown == timing::NoTx::Fix ||
-                        shown == timing::NoTx::Utc || shown == timing::NoTx::Pps;
+            row.no_tx = shown == timing::NoTx::Gnss || shown == timing::NoTx::Pps;
         }
     }
     return self_test_rows_;
@@ -390,21 +406,27 @@ NearbyGo ScreenService::nearby_go() const {
     go.charging = context_.state.power.battery.charging;
     go.stage = context_.state.gnss.stage;
     go.satellites = own.satellites;
-    go.transmitting = context_.state.transmit.on_air();
     go.traffic = table.count() - table.count_of(model::Source::Adsb);
     return go;
+}
+
+BravoCorner ScreenService::bravo_corner() const {
+    BravoCorner corner;
+    corner.state = context_.state.bravo;
+    if (const comms::PeerHealth* health = bravo_.health()) {
+        corner.cell_low = power::needs_charge(health->power_level);
+        corner.cell_percent = health->battery_percent;
+    }
+    return corner;
 }
 
 NearbyBravo ScreenService::nearby_bravo() const {
     NearbyBravo bravo;
     bravo.state = context_.state.bravo;
     bravo.traffic = context_.state.traffic.count_of(model::Source::Adsb);
-    const comms::PeerHealth* health = bravo_.health();
-    bravo.heard = health != nullptr;
-    if (health != nullptr) {
+    if (const comms::PeerHealth* health = bravo_.health()) {
         bravo.battery_percent = health->battery_percent;
         bravo.charging = health->charging;
-        bravo.stage = health->gnss_stage;
         bravo.satellites = health->satellites;
     }
     return bravo;
