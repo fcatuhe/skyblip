@@ -157,6 +157,21 @@ export class Unit {
     return this.updater.connect();
   }
 
+  async reconnect() {
+    await new Promise(resolve => {
+      const finish = () => {
+        if (!this.linked) {
+          stop();
+          resolve();
+        }
+      };
+      const stop = this.#fleet.listen(finish);
+      this.disconnect();
+      finish();
+    });
+    return this.connect();
+  }
+
   disconnect() {
     this.#updater?.disconnect();
   }

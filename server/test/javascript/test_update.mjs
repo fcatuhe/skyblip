@@ -250,7 +250,7 @@ test('a refusal on the glass reads as cancelled', async () => {
   assert.equal((await until(settled)).notice.key, 'cancelled');
 });
 
-for (const reason of ['not_approved', 'nothing_staged', 'low_power', 'in_flight']) {
+for (const reason of ['not_approved', 'nothing_staged', 'low_power', 'in_flight', 'window_closed']) {
   test(`an upload the device will not install as ${reason} is said, and the next install asks again`, async () => {
     const { device, updater, until } = await chosen();
     device.refuseInstall = reason;
@@ -273,6 +273,40 @@ test('an image other than the one the glass named is not installed', async () =>
   device.approved = '0.3.0+1';
   device.press();
   assert.equal((await until(settled)).notice.key, 'not_approved');
+});
+
+test('a window the glass opened for one version is not used to send another', async () => {
+  const { device, updater, until } = await chosen();
+  device.refuseUpload = 10;
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'flash');
+  device.refuseUpload = null;
+  await updater.choose(signedImage({ major: 0, minor: 3, revision: 0, build: 1 }, IMAGE_BYTES), 'skyblip_go-0.3.0+1.signed.bin');
+  updater.install();
+  const asked = await until(state => asking('dfu')(state) || settled(state));
+  assert.equal(asked.phase, 'confirming', `the page went on to ${asked.notice?.key} without asking`);
+  assert.equal(asked.asked.version, '0.3.0+1');
+});
+
+test('a question for another version that expires leaves no window for the first one', async () => {
+  const { device, updater, until } = await chosen();
+  device.refuseUpload = 10;
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'flash');
+  device.refuseUpload = null;
+  await updater.choose(signedImage({ major: 0, minor: 3, revision: 0, build: 1 }, IMAGE_BYTES), 'skyblip_go-0.3.0+1.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.expire();
+  assert.equal((await until(settled)).notice.key, 'expired');
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'skyblip_go-0.2.0+15.signed.bin');
+  updater.install();
+  const asked = await until(state => asking('dfu')(state) || settled(state));
+  assert.equal(asked.phase, 'confirming', `the page went on to ${asked.notice?.key} without asking`);
 });
 
 test('a cancel on the device during the upload reads as cancelled, not as a closed window', async () => {
@@ -314,6 +348,25 @@ test('a link that drops mid-upload says so', async () => {
   device.press();
   const state = await until(state => state.phase === 'offline');
   assert.equal(state.notice.key, 'link_lost');
+});
+
+// The unit can restart into its install before its verdict reaches the page, and a lost link then hides an install.
+test('a link that drops once the last chunk is in waits for the device to come back, and says nothing was lost', async () => {
+  const { device, updater, until } = await chosen({ returnEveryMs: 0 });
+  device.installLanded = () => {};
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'asking' && state.task === 'install');
+  device.running = '0.2.0.15';
+  device.drop(0);
+  const rebooting = await until(state => state.phase !== 'asking');
+  assert.equal(rebooting.phase, 'rebooting');
+  assert.equal(rebooting.notice, null);
+  const back = await until(state => state.phase === 'ready' && state.running);
+  assert.equal(back.running, '0.2.0+15');
+  assert.equal(back.task, null, 'the install no longer stands, so the page is idle for what waits on it');
+  updater.disconnect();
 });
 
 test('a disconnect asked for is not reported as a lost link', async () => {
