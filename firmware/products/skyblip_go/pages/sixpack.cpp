@@ -6,6 +6,7 @@
 #include "core/units/units.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 #include "protocols/common/geometry.h"
 #include "ui/widgets/skyship.h"
@@ -86,9 +87,7 @@ int title_y(int row) {
 }
 
 void centred_text(ui::Canvas& canvas, int centre_x, int y, const char* text, int scale = 1) {
-    int count = 0;
-    while (text[count]) count++;
-    canvas.draw_text(centre_x - (count * kCellWidth * scale) / 2, y, text, true, scale);
+    canvas.draw_text(centre_x - (text_cells(text) * kCellWidth * scale) / 2, y, text, true, scale);
 }
 
 void value_text(ui::Canvas& canvas, int centre_x, int row, const char* text) {
