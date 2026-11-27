@@ -83,7 +83,6 @@ void ConfigService::on_link_down(const events::LinkDown& event) {
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     upload_window_open_ = false;
-    status_push_due_ = false;
 }
 
 namespace {
