@@ -122,7 +122,6 @@ class MeshtrackerX1 {
             gnss_.service(now_ms);
             if (gnss_.poll(now_ms)) {
                 bus_.gnss.push(gnss_.solution());
-                state.gnss.sky = gnss_.sky();
                 state.gnss.reject = gnss_.last_reject();
                 state.gnss.rejected = gnss_.rejected();
             }

@@ -219,7 +219,6 @@ TEST_CASE(
     CHECK(fix.satellites == chip.satellites);
     CHECK(fix.vdop_e2 == chip.vdop_e2);
     CHECK(fix.fix_mode == gnss::kFixMode3D);
-    CHECK(gnss.sky().in_use_of(gnss::System::Gps) > 0);
     CHECK(gnss.last_reject() == gnss::FixReject::None);
 }
 

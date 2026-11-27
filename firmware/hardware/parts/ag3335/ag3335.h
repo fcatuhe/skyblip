@@ -123,8 +123,6 @@ class Ag3335 : public ports::Gnss {
 
     void request_restart(ports::Restart kind) override;
 
-    const gnss::SkyView& sky() const { return parser_.sky(); }
-
     uint32_t sentences() const { return parser_.solution().sentences; }
 
    private:

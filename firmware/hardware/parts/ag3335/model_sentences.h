@@ -123,6 +123,7 @@ inline void Ag3335::emit_burst() {
     if (due(kGga)) emit_gga();
     if (due(kGll)) emit_gll();
     if (due(kGsa)) emit_gsa();
+    if (due(kGsv)) emit_gsv();
     if (due(kRmc)) emit_rmc();
     if (due(kVtg)) emit_vtg();
     if (due(kZda)) emit_zda();
@@ -228,6 +229,34 @@ inline void Ag3335::emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t us
     line[written++] = ',';
     written += format_unsigned(line + written, system_id, 1);
     finish(line, written);
+}
+
+// INFO: fc 26nov26 GPS alone, four satellites a sentence, ending on signal 1, L1 C/A, SIM65M §2.2.4
+inline void Ag3335::emit_gsv() {
+    const int sentences = (gps_in_view + 3) / 4;
+    uint8_t at = 0;
+    for (int number = 1; number <= sentences; number++) {
+        char line[128];
+        int written = format_string(line, "$GPGSV,");
+        written += format_unsigned(line + written, static_cast<uint32_t>(sentences), 1);
+        line[written++] = ',';
+        written += format_unsigned(line + written, static_cast<uint32_t>(number), 1);
+        line[written++] = ',';
+        written += format_unsigned(line + written, gps_in_view, 2);
+        for (int slot = 0; slot < 4 && at < gps_in_view; slot++, at++) {
+            line[written++] = ',';
+            written += format_unsigned(line + written, static_cast<uint32_t>(1 + at), 2);
+            line[written++] = ',';
+            written +=
+                format_unsigned(line + written, static_cast<uint32_t>(15 + (at * 7) % 70), 2);
+            line[written++] = ',';
+            written += format_unsigned(line + written, static_cast<uint32_t>((at * 47) % 360), 3);
+            line[written++] = ',';
+            written += format_unsigned(line + written, static_cast<uint32_t>(40 - at), 2);
+        }
+        written += format_string(line + written, ",1");
+        finish(line, written);
+    }
 }
 
 // INFO: fc 11nov26 NMEA 4.10 RMC ends in mode and navigational status, SIM65M §2.2.5

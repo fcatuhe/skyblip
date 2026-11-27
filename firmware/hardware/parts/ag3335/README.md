@@ -83,7 +83,7 @@ A receiver with no fix sends a 37-byte GGA (Meshtastic issue #4626). `core/gnss`
 
 ## The model
 
-`models::Ag3335` acknowledges `$PAIR` commands as the guide does and answers `$PAIR021`. It emits the sentences its rates ask for in the logged order, on the `GN` talker in NMEA 4.10, with the no-fix forms Meshtastic issue #4626 logged. Its factory state is all seven sentences once a second, as that issue reports. It flies the same `GnssTruth` as the L76K's model (`../gnss_truth.h`). It does not emit GSV, pulse a PPS, sleep or model a cold start, because nothing on Bravo reads them yet.
+`models::Ag3335` acknowledges `$PAIR` commands as the guide does and answers `$PAIR021`. It emits the sentences its rates ask for in the logged order, on the `GN` talker in NMEA 4.10, with the no-fix forms Meshtastic issue #4626 logged. Its factory state is all seven sentences once a second, as that issue reports. It flies the same `GnssTruth` as the L76K's model (`../gnss_truth.h`). Its GSV is one `GP` set on signal 1, which nothing on Bravo reads. It does not pulse a PPS, sleep or model a cold start, because nothing on Bravo reads them yet.
 
 ## What the bench checks (#169)
 
