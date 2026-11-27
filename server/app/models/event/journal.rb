@@ -8,6 +8,8 @@ class Event::Journal
   # INFO: fc 20nov26 a JSON number has no size, and every counter the firmware or the browser sends fits in a JavaScript number
   NUMBERS = -(2**53 - 1)..(2**53 - 1)
   OLDEST = 30.days
+  # INFO: fc 27nov26 a post takes seconds on a poor network, so only a clock off by more than that is moved, and a timeline keeps its order
+  CLOCK_TOLERANCE = 1.minute
 
   WORDS = %w[navigation control kind error controller filter phase product running track image imu settings trust flight power_level
              key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language
@@ -26,9 +28,10 @@ class Event::Journal
 
   attr_reader :browser
 
-  def initialize(browser:, entries:, user: nil, request_id: nil, ip_address: nil)
+  def initialize(browser:, entries:, sent_at: nil, user: nil, request_id: nil, ip_address: nil)
     @browser = browser.to_s[BROWSER]
     @entries = Array(entries).first(ENTRIES)
+    @skew = skew_of(sent_at)
     @user = user
     @request_id = request_id
     @ip_address = ip_address
@@ -111,9 +114,17 @@ class Event::Journal
     def path_of(url) = (url[PATH, 1]&.first(300) if url.is_a?(String))
 
     def occurred_at(at)
-      Time.iso8601(at.to_s).clamp(OLDEST.ago, Time.current)
+      (Time.iso8601(at.to_s) + @skew).clamp(OLDEST.ago, Time.current)
     rescue ArgumentError
       Time.current
+    end
+
+    # INFO: fc 27nov26 an entry's time is the browser's clock, so the gap between its clock and ours when it posts moves every entry onto ours
+    def skew_of(sent_at)
+      skew = Time.current - Time.iso8601(sent_at.to_s)
+      skew.abs > CLOCK_TOLERANCE ? skew : 0
+    rescue ArgumentError
+      0
     end
 
     # INFO: fc 14nov26 the same failure differs by the numbers in its message and by the digest of the asset it came from
