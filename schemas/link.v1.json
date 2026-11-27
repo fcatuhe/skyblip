@@ -313,7 +313,7 @@
         {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "The store this reply is about: diagnostics on every diagnostics reply, absent for flights, so two fetches on one link never misfile a chunk"},
         {"name": "index", "number": 2, "type": "unsigned", "required": true, "description": "The entry this is, from 0"},
         {"name": "of", "number": 3, "type": "unsigned", "required": true, "description": "How many entries the index holds"},
-        {"name": "session", "number": 4, "type": "unsigned", "required": true, "description": "The session's id, its opening UTC second: its name, and the base every one of its records is timed against"},
+        {"name": "session", "number": 4, "type": "unsigned", "required": true, "description": "The session's id, its opening UTC second: its name, and the base every one of its records is timed against. A diagnostics session dates its own records, and before the first fix it is named by its second since boot. Either second moves on to the first one no other diagnostics session the store holds has, so two sessions never share a name"},
         {"name": "records", "number": 5, "type": "unsigned", "required": true, "description": "Records the session holds, indexed from first"},
         {"name": "closed", "number": 6, "type": "boolean", "required": true, "description": "The session was closed. False means the log stops where the power did, unless recording says the unit is still writing it, and a reader says so rather than present a cut flight as whole"},
         {"name": "truncated", "number": 7, "type": "boolean", "required": true, "description": "The session opened in a sector the ring recycled since, so what is left is a suffix, not the whole run"},

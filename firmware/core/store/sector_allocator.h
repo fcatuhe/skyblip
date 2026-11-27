@@ -72,6 +72,7 @@ class SectorAllocator {
     uint32_t owned(SectorOwner owner) const;
     SectorOwner owner_of(uint32_t sector) const;
     uint32_t session_of(uint32_t sector) const;
+    bool owns_session(SectorOwner owner, uint32_t session_id) const;
     bool session_start(uint32_t sector) const;
     uint32_t lost_sectors(SectorOwner owner) const;
     uint32_t recycled_sectors(SectorOwner owner, uint32_t session_id) const;
@@ -107,7 +108,6 @@ class SectorAllocator {
     void take(uint32_t sector, SectorOwner owner, uint32_t session_id, bool session_start);
     void note_taken(uint32_t sector);
     void note_recycled(SectorOwner owner, uint32_t session_id);
-    bool owns_session(SectorOwner owner, uint32_t session_id) const;
     uint32_t matching_up_to(const Match& match, uint32_t sequence) const;
     bool lowest_above(const Match& match, uint32_t above, uint32_t& sector,
                       uint32_t& sequence) const;
