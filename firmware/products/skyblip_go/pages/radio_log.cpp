@@ -1,6 +1,7 @@
 #include "products/skyblip_go/pages/radio_log.h"
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/frame.h"
 
 namespace skyblip::go {
 
@@ -23,10 +24,6 @@ constexpr int kAddressX = column_x(22);
 constexpr int kRightEnd = column_x(32);
 
 constexpr int kPpsX = column_x(9);
-
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
-    canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
-}
 
 const char* own_burst_word(const radio::Entry& entry) {
     if (entry.callsign) return "CALLSIGN";
@@ -96,7 +93,7 @@ void draw_title(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     written += format_string(text + written, " NOISE ");
     written += format_unsigned(text + written, snapshot.rx_noise);
     text[written] = 0;
-    right_aligned(canvas, kRightEnd, kTitleY, text, written);
+    right_aligned(canvas, kRightEnd, kTitleY, text);
 }
 
 int format_pps(char* out, const GnssReception& gnss) {
@@ -133,7 +130,7 @@ void draw_gnss(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     written = format_string(text, "BAND ");
     written += format_signed(text + written, snapshot.noise_dbm, 1, 0, true);
     text[written] = 0;
-    right_aligned(canvas, kRightEnd, kGnssY, text, written);
+    right_aligned(canvas, kRightEnd, kGnssY, text);
 }
 
 void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
@@ -172,7 +169,7 @@ void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
     if (!entry.rssi_valid) return;
     written = format_signed(text, entry.rssi_dbm, 1, 0, true);
     text[written] = 0;
-    right_aligned(canvas, kRightEnd, y, text, written);
+    right_aligned(canvas, kRightEnd, y, text);
 }
 
 }  // namespace

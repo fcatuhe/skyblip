@@ -5,10 +5,12 @@
 
 namespace skyblip::parts {
 
+// INFO: fc 26nov26 a part stuck outside RX counts no silence, so a BUSY timeout owes it a reset
 Status Sx1262::wait_busy_low(uint32_t max_spins) {
     for (uint32_t i = 0; i < max_spins; i++) {
         if (!gpio_.get(busy_pin_)) return Status::Ok;
     }
+    if (brought_up_) reinitialisation_owed_ = true;
     return Status::Timeout;
 }
 
@@ -311,6 +313,8 @@ Status Sx1262::configure_radio(const RadioConfig& config) {
     if (hops_to(config)) return retune(config, was);
     if (was != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok) return Status::Timeout;
     config_ = config;
+    // INFO: fc 27nov26 a write that times out may be lost, so nothing is held until one succeeds
+    tuned_ = false;
     uint8_t packet_type = 0x00;
     command(sx1262::kSetPacketType, &packet_type, 1);
     write_frequency(config);
@@ -331,8 +335,10 @@ Status Sx1262::configure_radio(const RadioConfig& config) {
 Status Sx1262::retune(const RadioConfig& config, RadioMode was) {
     if (was != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok) return Status::Timeout;
     config_ = config;
+    tuned_ = false;
     write_frequency(config);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
+    tuned_ = true;
     if (was == RadioMode::Rx) return start_receive();
     return Status::Ok;
 }
