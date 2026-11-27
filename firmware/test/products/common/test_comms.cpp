@@ -257,8 +257,9 @@ TEST_CASE("comms: the holder leaving keeps a refused status push owed to the pho
     config.set_flight_state(flight::FlightState::Ground);
     REQUIRE(config.status_push_due());
 
+    const uint32_t holder_connection = link.connection(1);
     link.drop_link(1);
-    config.on_link_down(events::LinkDown{1});
+    config.on_link_down(events::LinkDown{1, holder_connection});
     link.force_status(Status::Ok);
     link.clear();
     config.tick(10);
