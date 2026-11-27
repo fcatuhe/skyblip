@@ -109,28 +109,38 @@ TEST_CASE("transmit gate: nothing the sky decides is shown before the first fix 
     CHECK(gate.shown() == NoTx::Pps);
 }
 
-TEST_CASE("transmit gate: a fix lost in flight stops the burst at once and shows 10 s later" *
+// The radar and nearby already say a lost fix or a missing UTC in words, so the mark is the unit's.
+TEST_CASE("transmit gate: a fix lost in flight stops the burst at once and never shows" *
           doctest::test_suite("main")) {
     TransmitGate gate;
     judge_between(gate, all_met(), 0, 60000);
     REQUIRE(gate.transmits());
 
     const Requirements lost = without(&Requirements::fix);
-    gate.judge(lost, 60050);
+    judge_between(gate, lost, 60050, 120000);
     CHECK_FALSE(gate.transmits());
+    CHECK(gate.unmet() == NoTx::Fix);
     CHECK(gate.shown() == NoTx::None);
-    judge_between(gate, lost, 60100, 60050 + TransmitGate::kNoTxHoldMs - 50);
-    CHECK(gate.shown() == NoTx::None);
-    gate.judge(lost, 60050 + TransmitGate::kNoTxHoldMs);
-    CHECK(gate.shown() == NoTx::Fix);
 
-    gate.judge(all_met(), 80000);
-    CHECK(gate.transmits());
-    CHECK(gate.shown() == NoTx::Fix);
-    judge_between(gate, all_met(), 80050, 80000 + TransmitGate::kNoTxHoldMs - 50);
-    CHECK(gate.shown() == NoTx::Fix);
-    gate.judge(all_met(), 80000 + TransmitGate::kNoTxHoldMs);
+    judge_between(gate, without(&Requirements::utc), 120050, 180000);
+    CHECK(gate.unmet() == NoTx::Utc);
     CHECK(gate.shown() == NoTx::None);
+}
+
+TEST_CASE("transmit gate: a lost fix clears a unit's mark, and its return starts a new hold") {
+    TransmitGate gate;
+    judge_between(gate, all_met(), 0, 60000);
+    judge_between(gate, without(&Requirements::pps), 60050, 70050);
+    REQUIRE(gate.shown() == NoTx::Pps);
+
+    judge_between(gate, without(&Requirements::fix), 70100, 100000);
+    CHECK(gate.shown() == NoTx::None);
+
+    const Requirements unpulsed = without(&Requirements::pps);
+    judge_between(gate, unpulsed, 100050, 100050 + TransmitGate::kNoTxHoldMs - 50);
+    CHECK(gate.shown() == NoTx::None);
+    gate.judge(unpulsed, 100050 + TransmitGate::kNoTxHoldMs);
+    CHECK(gate.shown() == NoTx::Pps);
 }
 
 // A requirement that fails and holds again in turn would otherwise redraw the mark every 10 s.
@@ -142,9 +152,9 @@ TEST_CASE("transmit gate: a mark stays through a short recovery, and names the n
     judge_between(gate, all_met(), 70100, 75000);
     CHECK(gate.transmits());
     CHECK(gate.shown() == NoTx::Pps);
-    gate.judge(without(&Requirements::fix), 75050);
+    gate.judge(without(&Requirements::radio), 75050);
     CHECK_FALSE(gate.transmits());
-    CHECK(gate.shown() == NoTx::Fix);
+    CHECK(gate.shown() == NoTx::Radio);
 }
 
 TEST_CASE("transmit gate: a gap shorter than the hold never shows, and a new gap starts afresh") {
@@ -162,8 +172,8 @@ TEST_CASE("transmit gate: a failure that changes reason keeps its hold and names
     TransmitGate gate;
     judge_between(gate, all_met(), 0, 60000);
     judge_between(gate, without(&Requirements::pps), 60050, 65000);
-    judge_between(gate, without(&Requirements::fix), 65050, 70050);
-    CHECK(gate.shown() == NoTx::Fix);
+    judge_between(gate, without(&Requirements::positions), 65050, 70050);
+    CHECK(gate.shown() == NoTx::Held);
 }
 
 // The gate stays open on held positions, so the bursts resume the moment a fix dates them again.

@@ -375,8 +375,7 @@ const SelfTestPart* ScreenService::self_test_now() {
             row.no_tx = shown == timing::NoTx::Radio;
         } else if (kSelfTestParts[i].capability == ports::Capability::Gnss) {
             row.now = receiver_word(gate.met(), context_.roles.gnss.health());
-            row.no_tx = shown == timing::NoTx::Gnss || shown == timing::NoTx::Fix ||
-                        shown == timing::NoTx::Utc || shown == timing::NoTx::Pps;
+            row.no_tx = shown == timing::NoTx::Gnss || shown == timing::NoTx::Pps;
         }
     }
     return self_test_rows_;
