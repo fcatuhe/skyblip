@@ -17,6 +17,10 @@ de:
       language: Sprache
       support_code: Supportcode
       support_code_hint: "Geben Sie diesen Code an, wenn Sie Hilfe brauchen. Damit sehen wir, was zwischen diesem Browser und Ihren Geräten passiert ist: Verbindungen, Ablehnungen, Installationen und Fehler. Ihre Eingaben sind darin nicht enthalten."
+      software: "Software"
+      development_builds: "Entwicklungsversionen anbieten"
+      development_builds_hint: "Die Einrichtung listet sie unter der neuesten Version, die ausgewählt bleibt. Sie sind ungetestet und dienen zum Testen von skyBlip."
+      every_build: "Alle Versionen auf GitHub ansehen."
     devices:
       attention: Handlungsbedarf
       paired: Mit diesem Go gekoppelt
@@ -178,6 +182,7 @@ de:
         go: "Go: Drücken Sie zweimal kurz hintereinander RESET. Das ist die obere Taste links."
         bravo: "Bravo: Ziehen Sie das Kabel ab. Halten Sie die Taste gedrückt und schließen Sie das Kabel wieder an. Lassen Sie los, wenn die LED über der Taste weiß leuchtet."
       choose_drive: Laufwerk auswählen
+      version: "Version"
       downloading: "skyBlip für %{name} wird heruntergeladen."
       writing: "skyBlip %{version} wird auf %{name} installiert."
       keep_plugged: Lassen Sie das Gerät angeschlossen. Das dauert einige Sekunden.

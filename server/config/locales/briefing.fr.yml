@@ -17,6 +17,10 @@ fr:
       language: "Langue"
       support_code: "Code d\u2019assistance"
       support_code_hint: "Donnez ce code quand vous demandez de l\u2019aide. Il nous permet de lire ce qui s\u2019est passé entre ce navigateur et vos appareils\u00a0: connexions, refus, installations et erreurs. Il ne contient rien de ce que vous avez saisi."
+      software: "Logiciel"
+      development_builds: "Proposer les versions de développement"
+      development_builds_hint: "L\u2019installation les liste sous la dernière version, qui reste choisie. Elles ne sont pas testées\u00a0: elles servent à tester skyBlip."
+      every_build: "Voir toutes les versions sur GitHub."
     devices:
       attention: "Demande votre attention"
       paired: "Appairé avec ce Go"
@@ -178,6 +182,7 @@ fr:
         go: "Go\u00a0: appuyez deux fois rapidement sur RESET, le bouton du haut sur son côté gauche."
         bravo: "Bravo\u00a0: débranchez-le, maintenez son bouton, rebranchez-le et relâchez quand le voyant au-dessus du bouton devient blanc."
       choose_drive: "Choisir la clé"
+      version: "Version"
       downloading: "Téléchargement de skyBlip pour %{name}."
       writing: "Installation de skyBlip %{version} sur %{name}."
       keep_plugged: "Laissez-le branché. Cela prend quelques secondes."

@@ -13,6 +13,20 @@
         </div>
       <% end %>
     </fieldset>
+
+    <fieldset class="unit-fields">
+      <legend><%= t("briefing.preferences.software") %></legend>
+      <div class="field field--check">
+        <%= form.label :development_builds, t("briefing.preferences.development_builds") %>
+        <%= form.check_box :development_builds, aria: { describedby: "development-builds-hint" } %>
+        <p class="field-hint" id="development-builds-hint">
+          <%= t("briefing.preferences.development_builds_hint") %>
+          <% if @preferences.development_builds %>
+            <%= link_to t("briefing.preferences.every_build"), "#{Rails.configuration.x.repository_url}/releases" %>
+          <% end %>
+        </p>
+      </div>
+    </fieldset>
   <% end %>
 
   <section class="preferences-support" aria-labelledby="support-code-title">

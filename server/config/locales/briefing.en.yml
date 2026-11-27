@@ -17,6 +17,10 @@ en:
       language: Language
       support_code: Support code
       support_code_hint: "When you ask for help, give this code. It lets us read what happened between this browser and your devices: connections, refusals, installs and errors. It holds nothing you typed."
+      software: "Software"
+      development_builds: "Offer development builds"
+      development_builds_hint: "Setup lists them under the latest release, which stays chosen. They are untested, for testing skyBlip."
+      every_build: "See every build on GitHub."
     devices:
       attention: Needs attention
       paired: Paired with this Go
@@ -178,6 +182,7 @@ en:
         go: "Go: press RESET twice, quickly. It is the upper button on its left side."
         bravo: "Bravo: unplug it, hold its button, plug it back in, and release once the LED above the button turns white."
       choose_drive: Choose the drive
+      version: "Version"
       downloading: "Downloading skyBlip for %{name}."
       writing: "Installing skyBlip %{version} on %{name}."
       keep_plugged: Keep it plugged in. This takes a few seconds.

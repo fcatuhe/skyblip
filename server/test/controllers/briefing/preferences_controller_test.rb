@@ -21,6 +21,21 @@ class Briefing::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: "Votre skyBlip"
   end
 
+  test "development builds stay off until asked for, and the language stays as it was" do
+    cookies[:locale] = "fr"
+    get briefing_preferences_path
+    assert_select "input[type=checkbox][name='preferences[development_builds]']:not([checked])"
+    assert_select "a[href$='/releases']", count: 0
+
+    patch briefing_preferences_path, params: { preferences: { development_builds: "1" } }
+
+    assert_equal "true", cookies[:development_builds]
+    assert_equal "fr", cookies[:locale]
+    follow_redirect!
+    assert_select "input[type=checkbox][name='preferences[development_builds]'][checked]"
+    assert_select "a[href='#{Rails.configuration.x.repository_url}/releases']"
+  end
+
   test "a language the app does not speak is refused" do
     patch briefing_preferences_path, params: { preferences: { locale: "nl" } }
 

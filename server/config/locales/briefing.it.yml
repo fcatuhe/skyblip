@@ -17,6 +17,10 @@ it:
       language: Lingua
       support_code: Codice di assistenza
       support_code_hint: "Quando chiedi aiuto, comunica questo codice. Ci permette di leggere cosa è successo tra questo browser e i tuoi dispositivi: connessioni, rifiuti, installazioni ed errori. Non contiene nulla di ciò che hai digitato."
+      software: "Software"
+      development_builds: "Proponi le versioni di sviluppo"
+      development_builds_hint: "L'installazione le elenca sotto l'ultima versione, che resta scelta. Non sono collaudate: servono a provare skyBlip."
+      every_build: "Vedi tutte le versioni su GitHub."
     devices:
       attention: Richiede attenzione
       paired: Abbinato a questo Go
@@ -178,6 +182,7 @@ it:
         go: "Go: premi RESET due volte, rapidamente. È il pulsante superiore sul lato sinistro."
         bravo: "Bravo: scollegalo, tieni premuto il pulsante, ricollegalo e rilascia quando il LED sopra il pulsante diventa bianco."
       choose_drive: Scegli l'unità
+      version: "Versione"
       downloading: "Scaricamento di skyBlip per %{name}."
       writing: "Installazione di skyBlip %{version} su %{name}."
       keep_plugged: Lascialo collegato. Ci vogliono pochi secondi.

@@ -1,13 +1,15 @@
 class Briefing::PreferencesController < Briefing::ApplicationController
   def show
-    @preferences = Briefing::Preferences.new(locale: I18n.locale)
+    @preferences = preferences
   end
 
   def update
-    @preferences = Briefing::Preferences.new(preferences_params)
+    @preferences = preferences
+    @preferences.assign_attributes(preferences_params)
 
     if @preferences.valid?
       cookies.permanent[:locale] = { value: @preferences.locale, same_site: :lax }
+      cookies.permanent[:development_builds] = { value: @preferences.development_builds, same_site: :lax }
       redirect_to briefing_preferences_path
     else
       render :show, status: :unprocessable_entity
@@ -16,6 +18,6 @@ class Briefing::PreferencesController < Briefing::ApplicationController
 
   private
     def preferences_params
-      params.expect(preferences: [ :locale ])
+      params.expect(preferences: [ :locale, :development_builds ])
     end
 end

@@ -3,6 +3,7 @@ class Briefing::Preferences
   include ActiveModel::Attributes
 
   attribute :locale, :string
+  attribute :development_builds, :boolean
 
   validates :locale, inclusion: { in: -> { locales } }
 

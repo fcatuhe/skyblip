@@ -58,6 +58,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Bravo 5C1D restarted as a USB drive named X1."
+      assert_no_select "Version"
       screen "20-bravo-choose-drive"
 
       click_button "Choose the drive"
@@ -79,6 +80,25 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       assert_selector ".device-figure--bravo svg[role=img]", text: /Button\s+LED\s+USB-C/
       assert_selector "table .lamp--white"
       screen "23-bravo-first-steps"
+    end
+  end
+
+  test "a pilot who asked for development builds chooses one before the drive, the usual one already chosen" do
+    in_range
+    plugged_in a_meshtastic_bravo
+    with_installers do
+      visit "/briefing/preferences"
+      check "Offer development builds"
+      assert_link "See every build on GitHub."
+
+      visit "/briefing/setup"
+      click_button "Install"
+      assert_select "Version", selected: "skyBlip dev 0.1.0+1860", options: [ "skyBlip dev 0.1.0+1860", "skyBlip dev 0.1.0+1858", "skyBlip dev 0.1.0+1854" ]
+      screen "24-bravo-choose-build"
+
+      click_button "Choose the drive"
+      assert_text "Choose skyBlip Bravo 5C1D in the list."
+      assert_equal "0.1.0+1860", journaled("installer.wrote").payload["version"]
     end
   end
 
