@@ -69,13 +69,14 @@ class Release
   end
 
   # INFO: fc 17nov26 a unit installed over USB gets what a pilot should fly: the newest stable release, else the newest main build
-  def self.installers(releases = published)
+  def self.installers(releases = published, development: false)
     newest_first = releases.sort_by(&:committed_at).reverse
     %w[go bravo].index_with do |product|
       holding = newest_first.select { |release| release.installer_file(product) }
-      release = holding.find(&:stable?) || holding.find(&:main_development?)
-      [ release, release.installer_file(product) ] if release
-    end.compact
+      usual = holding.find(&:stable?) || holding.find(&:main_development?)
+      choices = development ? [ usual, *holding.select(&:development?) ].compact.uniq : [ usual ].compact
+      choices.map { |release| [ release, release.installer_file(product) ] }
+    end.compact_blank
   end
 
   def self.simulator(releases = all)

@@ -287,9 +287,11 @@ struct State {
     // INFO: fc 20nov26 one time base: mixing GNSS and boot seconds ages every target out
     uint32_t traffic_now_s(uint32_t now_ms) const {
         // INFO: fc 19nov26 a second with no edge yet, locked or held, counts on from the last edge
-        if (timing::pps_anchored(clock) && clock.utc_s != 0)
-            return clock.utc_s + clock.since_edge_ms / 1000;
-        return own.utc_valid ? own.utc_s : now_ms / 1000;
+        const uint32_t counted_s = clock.utc_s + clock.since_edge_ms / 1000;
+        if (timing::pps_anchored(clock) && clock.utc_s != 0) return counted_s;
+        if (!own.utc_valid) return now_ms / 1000;
+        // INFO: fc 26nov26 a silent receiver keeps its last second, so the held edge counts on
+        return clock.utc_s != 0 && own.utc_s + 1 < counted_s ? counted_s : own.utc_s;
     }
 };
 
