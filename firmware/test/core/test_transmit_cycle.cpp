@@ -369,6 +369,24 @@ TEST_CASE("transmit cycle: a missed name is retried in the tail 2 s on") {
     }
 }
 
+// The ground second before a takeoff owed no position, whichever second of the cycle it is.
+TEST_CASE("transmit cycle: a takeoff gives up no turn when every burst went out") {
+    for (uint32_t takeoff = 1; takeoff <= Transmitter::kCycleS; takeoff++) {
+        CAPTURE(takeoff);
+        Transmitter transmitter = transmitter_for(1);
+        const uint32_t c = kMinuteStartS + transmitter.cycle_start();
+        uint32_t given_up = 0;
+        for (uint32_t utc_s = c; utc_s < c + takeoff + 4; utc_s++) {
+            const bool airborne = utc_s >= c + takeoff;
+            given_up += transmitter.give_up(utc_s, airborne, true);
+            for (const Payload payload : {Payload::Position, Payload::Status, Payload::Callsign})
+                if (transmitter.turn(payload, utc_s, airborne))
+                    transmitter.sent(utc_s, utc_s * 1000, payload);
+        }
+        CHECK(given_up == 0);
+    }
+}
+
 // Positions at +0 and +9 never go out: the first is counted when +9 opens, the second at +20.
 TEST_CASE("transmit cycle: a turn that never went out is given up and counted at the next turn") {
     Transmitter transmitter = transmitter_for(1);

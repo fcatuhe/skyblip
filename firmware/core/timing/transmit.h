@@ -111,6 +111,8 @@ class Transmitter {
     uint32_t last_utc_s_[kPayloads]{};
     bool ever_sent_[kPayloads]{};
     uint32_t closed_s_{0};
+    // INFO: fc 27nov26 closed_s_'s flight state, so a takeoff judges the second before it as ground
+    bool closed_airborne_{false};
     // INFO: fc 13nov26 the first second this transmitter acted in: no turn before it is retried
     uint32_t first_s_{0};
     bool started_{false};
