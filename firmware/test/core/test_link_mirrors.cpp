@@ -131,6 +131,16 @@ constexpr bool on_the_wire(ports::GnssConfigStage value) {
     return false;
 }
 
+constexpr bool on_the_wire(ports::GnssBand value) {
+    switch (value) {
+        case ports::GnssBand::Unknown:
+        case ports::GnssBand::L1:
+        case ports::GnssBand::L1L5:
+            return true;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(gnss::FixReject value) {
     switch (value) {
         case gnss::FixReject::None:
@@ -392,6 +402,11 @@ static_assert(code(ports::GnssConfigStage::Degraded) == 8, "gnss_config degraded
 static_assert(code(ports::GnssConfigStage::Probing) == 9, "gnss_config probing");
 static_assert(code(ports::GnssConfigStage::Resetting) == 10, "gnss_config resetting");
 static_assert(on_the_wire(ports::GnssConfigStage::Idle), "gnss_config");
+
+static_assert(code(ports::GnssBand::Unknown) == 0, "gnss_band unknown");
+static_assert(code(ports::GnssBand::L1) == 1, "gnss_band l1");
+static_assert(code(ports::GnssBand::L1L5) == 2, "gnss_band l1_l5");
+static_assert(on_the_wire(ports::GnssBand::Unknown), "gnss_band");
 
 static_assert(code(gnss::FixReject::None) == 0, "reject none");
 static_assert(code(gnss::FixReject::NoSolution) == 1, "reject no_solution");

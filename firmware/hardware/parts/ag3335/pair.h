@@ -19,7 +19,7 @@ uint16_t pair_command_id(const char* sentence);
 
 class PairReader {
    public:
-    enum class Heard : uint8_t { Nothing, Ack, Setting };
+    enum class Heard : uint8_t { Nothing, Ack, Setting, DualBand };
 
     Heard feed(char character);
 
@@ -28,6 +28,9 @@ class PairReader {
 
     const char* firmware_version() const { return firmware_version_; }
     bool identified() const { return firmware_version_[0] != 0; }
+    // INFO: fc 26nov26 S for a single-band build, D for L1 and L5, SIM65M §2.3.11
+    char frequency() const { return frequency_; }
+    bool dual_band_on() const { return dual_band_on_; }
 
    private:
     // INFO: fc 11nov26 SIM65M §2.3.12 prints a 153-byte $PAIR021 with both L5 fields empty
@@ -37,10 +40,13 @@ class PairReader {
     Heard parse(int bytes);
     Heard parse_ack(const char* fields);
     Heard parse_setting(const char* fields);
+    Heard parse_dual_band(const char* fields);
 
     char line_[kLineBytes]{};
     int line_bytes_{0};
     char firmware_version_[kVersionBytes]{};
+    char frequency_{0};
+    bool dual_band_on_{false};
     uint16_t ack_command_{0};
     PairResult ack_result_{PairResult::Success};
 };

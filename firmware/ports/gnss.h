@@ -11,6 +11,8 @@ enum class Restart : uint8_t { Hot, Warm, Cold, Factory };
 
 enum class SolutionRate : uint8_t { Second, Half };
 
+enum class GnssBand : uint8_t { Unknown = 0, L1 = 1, L1L5 = 2 };
+
 enum class GnssConfigStage : uint8_t {
     Idle = 0,
     Restarting = 1,

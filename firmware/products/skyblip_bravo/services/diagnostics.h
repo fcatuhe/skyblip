@@ -16,6 +16,8 @@ struct AdsbDiagnostics {
     template <class Product>
     static void collect(Product& product, comms::Diagnostics& snapshot, uint32_t now_ms) {
         snapshot.gnss_baud = parts::Ag3335::kBaudRate;
+        snapshot.gnss_band = product.board().gnss().band();
+        snapshot.gnss_band_valid = true;
         snapshot.adsb_fitted = ports::has(product.capabilities(), ports::Capability::AdsbReceiver);
         snapshot.adsb = product.board().receiver().statistics();
         snapshot.adsb_crc = product.adsb().crc();

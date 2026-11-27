@@ -12,6 +12,10 @@ namespace skyblip::models {
 inline parts::PairResult Ag3335::apply(uint16_t id, const char* arguments) {
     switch (id) {
         case 21: return parts::PairResult::Success;
+        case 2: switch_power(true); return parts::PairResult::Success;
+        case 3: switch_power(false); return parts::PairResult::Success;
+        case 104: return set_dual_band(arguments);
+        case 105: return band_switch ? parts::PairResult::Success : parts::PairResult::Unsupported;
         case 382: sleep_locked = argument(arguments, 0) == 1; return parts::PairResult::Success;
         case 66: apply_constellations(arguments); return parts::PairResult::Success;
         case 100:
@@ -43,6 +47,25 @@ inline parts::PairResult Ag3335::apply(uint16_t id, const char* arguments) {
         case 7: restart(id - 4); return parts::PairResult::Success;
         default: return parts::PairResult::Unsupported;
     }
+}
+
+// INFO: fc 26nov26 LC29H V1.4 §2.4.2-3 asks more than two seconds between two power switches
+inline void Ag3335::switch_power(bool on) {
+    if (last_tick_ms_ - power_switched_ms_ <= kPowerSwitchSpacingMs) power_switches_too_soon++;
+    power_switches++;
+    power_switched_ms_ = last_tick_ms_;
+    gnss_on = on;
+}
+
+// INFO: fc 26nov26 LC29H V1.4 §2.4.29 takes the band only with the GNSS system off
+inline parts::PairResult Ag3335::set_dual_band(const char* arguments) {
+    if (!band_switch) return parts::PairResult::Unsupported;
+    if (gnss_on) {
+        band_set_while_on++;
+        return parts::PairResult::Success;
+    }
+    dual_band = argument(arguments, 0) == 1;
+    return parts::PairResult::Success;
 }
 
 // INFO: fc 11nov26 GPS, GLONASS, Galileo, BeiDou, QZSS and NavIC, SIM65M §2.3.36
@@ -101,6 +124,14 @@ inline void Ag3335::acknowledge(uint16_t id, parts::PairResult result) {
     written += format_unsigned(line + written, static_cast<uint32_t>(result), 1);
     finish(line, written);
     if (id == 21 && result == parts::PairResult::Success) emit_setting();
+    if (id == 105 && result == parts::PairResult::Success) emit_dual_band();
+}
+
+inline void Ag3335::emit_dual_band() {
+    char line[32];
+    int written = format_string(line, "$PAIR105,");
+    line[written++] = dual_band ? '1' : '0';
+    finish(line, written);
 }
 
 // INFO: fc 11nov26 the fields after the frequency are not modelled, since nothing reads them
