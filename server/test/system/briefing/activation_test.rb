@@ -68,7 +68,13 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing/activate"
       click_button "Find the new Go"
-      assert_selector ".unit-message", text: "is using the smallest Bluetooth packet"
+      assert_selector ".unit-message", text: "Bluetooth link cannot carry"
+      assert_no_button "Continue on an Android phone"
+      click_button "Reconnect"
+      click_button "Continue on an Android phone"
+      assert_selector "img[src='/briefing/setup/handoff?installed=go&tag=3f2a']"
+      assert_equal false, page.evaluate_script("#{unit("3F2A skyBlip")}.connected")
+      screen "35-activate-phone-handoff"
       assert_nil Unit.find_by(device_id: vectors["device_id"])
     end
   end

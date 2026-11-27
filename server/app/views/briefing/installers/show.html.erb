@@ -2,8 +2,15 @@
   <% if @unavailable %>
     <p class="note" role="status" data-installers-unavailable><%= t("briefing.setup.images_unavailable") %></p>
   <% else %>
-    <% @installers.each do |product, (release, file)| %>
-      <%= link_to file, release_asset_path(release.tag, file), hidden: true, data: { installer: product, version: version_name(release) } %>
+    <% @installers.each do |product, choices| %>
+      <div class="field" data-installer="<%= product %>" hidden>
+        <label for="installer-<%= product %>"><%= t("briefing.setup.version") %></label>
+        <select id="installer-<%= product %>">
+          <% choices.each do |release, file| %>
+            <option value="<%= release_asset_path(release.tag, file) %>" data-version="<%= version_name(release) %>"><%= release.name %></option>
+          <% end %>
+        </select>
+      </div>
     <% end %>
   <% end %>
 <% end %>

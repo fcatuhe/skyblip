@@ -137,9 +137,10 @@ TEST_CASE("sector pool: only the first sector of a session is labelled as its st
 }
 
 // Rotation is the design; a rotation nobody counted is the defect.
-TEST_CASE("sector pool: a ring recycling under its own frontier counts what the session lost") {
+TEST_CASE("sector pool: a ring recycling under the open session counts what the session lost") {
     Pool pool;
     REQUIRE(pool.configure(3, 0));
+    pool.open_session(SectorOwner::Diagnostics, kSomeSession);
     fill(pool, SectorOwner::Diagnostics, 3);
     CHECK(pool.lost_sectors(SectorOwner::Diagnostics) == 0);
 
@@ -153,6 +154,7 @@ TEST_CASE("sector pool: a ring recycling under its own frontier counts what the 
     Pool other;
     REQUIRE(other.configure(2, 0));
     claimed_sector(other, SectorOwner::Diagnostics, 1);
+    other.open_session(SectorOwner::Diagnostics, 2);
     claimed_sector(other, SectorOwner::Diagnostics, 2);
     CHECK(other.claim(SectorOwner::Diagnostics, 2).granted);
     CHECK(other.lost_sectors(SectorOwner::Diagnostics) == 0);
@@ -183,6 +185,7 @@ TEST_CASE("sector pool: flights eating a live capture sector is the capture's lo
     Pool pool;
     REQUIRE(pool.configure(3, 0));
     claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
+    pool.open_session(SectorOwner::Diagnostics, kSomeSession);
     fill(pool, SectorOwner::Diagnostics, 2);
 
     CHECK(pool.claim(SectorOwner::Flights, kBaseUtcS).granted);

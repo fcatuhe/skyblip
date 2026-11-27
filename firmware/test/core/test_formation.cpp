@@ -450,3 +450,37 @@ TEST_CASE("formation: a joiner closing on us is traffic after two fixes of it" *
     CHECK(tracker.observe(own, target_at(own, 0, -280, 0, 50, 90, now_ms), {}, now_ms).state ==
           State::None);
 }
+
+// A far aircraft took a slot before its range was checked, and evicted a parting member to get one.
+TEST_CASE("formation: an aircraft outside the band takes no place from a parting member") {
+    Tracker tracker;
+    uint32_t now_ms = fly_on_station(tracker);
+    REQUIRE(tracker.members() == 1);
+
+    const auto hear = [&](uint32_t address, int north_m, int east_m) {
+        const model::Ownship own = flying(40, 90, now_ms);
+        model::AircraftObservation observation =
+            target_at(own, north_m, east_m, 10, 40, 90, now_ms);
+        observation.address = address;
+        return tracker.observe(own, observation, {}, now_ms).state;
+    };
+    const auto hear_neighbours = [&] {
+        for (int i = 0; i < kMaxTrackedTargets - 1; i++)
+            hear(0x100 + static_cast<uint32_t>(i), 300, -300 + 80 * i);
+    };
+
+    for (const int east_m : {-400, -600}) {
+        now_ms += 1000;
+        hear(0x424242, -60, east_m);
+        hear_neighbours();
+    }
+    REQUIRE(hear(0x424242, -60, -600) == State::Parting);
+
+    now_ms += 1000;
+    hear(0x424242, -60, -700);
+    hear_neighbours();
+    hear(0x999999, 2500, 0);
+
+    now_ms += 1000;
+    CHECK(hear(0x424242, -60, -800) == State::Parting);
+}

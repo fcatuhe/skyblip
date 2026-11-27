@@ -51,6 +51,9 @@ class Link {
 
     // INFO: fc 12nov26 the centrals connected now, less the paired peer's kept connection
     virtual int phones() const = 0;
+
+    // INFO: fc 27nov26 every central connected now, the paired peer's included
+    virtual int centrals() const = 0;
 };
 
 }

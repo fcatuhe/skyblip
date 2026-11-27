@@ -36,7 +36,9 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     config_.set_bravo_state(context_.state.bravo);
     config_.set_own_transponder(context_.state.own_transponder);
     config_.set_no_tx(context_.state.transmit.shown());
-    config_.set_capture(context_.state.capture.available, context_.diagnostics.armed());
+    // INFO: fc 26nov26 a stopped capture drains until its End is written, so a new one waits
+    config_.set_capture(context_.state.capture.available,
+                        context_.diagnostics.armed() || context_.state.capture.armed);
 
     config_.resume_replies(now_ms);
     events::RxFrame frame{};
@@ -123,6 +125,7 @@ void ConfigLinkService::publish_link() {
 }
 
 void ConfigLinkService::publish_upload_verdict() {
+    context_.roles.dfu.publish_approved_version(config_.approved_version());
     context_.roles.dfu.publish_upload_allowed(config_.upload_allowed());
 }
 
@@ -189,10 +192,12 @@ void ConfigLinkService::drain_link_events(uint32_t now_ms) {
                 events::LinkUp{event.session_id, event.payload_bytes, event.connection});
             record_link(diagnostics::LinkAction::Up, event.session_id, 0, now_ms);
         } else {
-            config_.on_link_down(events::LinkDown{event.session_id, event.reason});
+            config_.on_link_down(
+                events::LinkDown{event.session_id, event.connection, event.reason});
             record_link_down(event, now_ms);
         }
     }
+    config_.release_departed_holder();
 }
 
 // INFO: fc 20nov26 taken at once and never held, so a stream of changes leaves as one write

@@ -24,6 +24,7 @@ class CableWatch {
     bool gone(uint32_t now_ms, bool external_power, bool kept_on);
     std::optional<uint32_t> off_in_ms(uint32_t now_ms) const;
     void arm() { seen_ = true; }
+    void drop_hold() { gone_since_ms_.reset(); }
 
    private:
     std::optional<uint32_t> gone_since_ms_{};

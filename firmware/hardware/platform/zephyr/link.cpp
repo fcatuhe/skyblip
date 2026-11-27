@@ -199,6 +199,13 @@ int Link::phones() const {
     return phones;
 }
 
+int Link::centrals() const {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    const int centrals = g_sessions.count();
+    k_spin_unlock(&g_lock, key);
+    return centrals;
+}
+
 uint16_t Link::payload_bytes() const {
     uint16_t smallest = 0;
     for (size_t i = 0; i < ARRAY_SIZE(g_connections); i++) {

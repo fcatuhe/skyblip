@@ -42,6 +42,11 @@ class Central : public ports::Central {
             writes_refused++;
             return up_ ? Status::OutOfRange : Status::Down;
         }
+        if (writes_to_block > 0) {
+            writes_to_block--;
+            writes_blocked++;
+            return Status::WouldBlock;
+        }
         writes.emplace_back(reinterpret_cast<const char*>(bytes.data()), bytes.size());
         return Status::Ok;
     }
@@ -100,6 +105,9 @@ class Central : public ports::Central {
     int scans{0};
     int connects{0};
     int writes_refused{0};
+    // INFO: fc 26nov26 the next writes answer WouldBlock, as Zephyr's do while one is in flight
+    int writes_to_block{0};
+    int writes_blocked{0};
 
    private:
     void raise(const events::CentralEvent& event) {
