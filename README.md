@@ -82,6 +82,7 @@ skyBlip stands on a decade of open work by the free-flight community. Thanks to 
 - **Paweł Jałocha**: the ADS-L reference implementation and [nrf52-ogn-tracker](https://github.com/pjalocha/nrf52-ogn-tracker)
 - **Linar Yusupov**: [SoftRF](https://github.com/lyusupov/SoftRF)
 - **Moshe Braner**: the [SoftRF fork](https://github.com/moshe-braner/SoftRF)
+- **John McNelly**, Pants for Birds: [ADSBee](https://github.com/PantsForBirds/adsbee), the open-source ADS-B receiver
 
 ## License
 
