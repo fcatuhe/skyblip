@@ -1,0 +1,77 @@
+---
+title: "Soaring with skyBlip Go: what you see and when it warns"
+nav_title: Soaring with Go
+description: "A skyBlip Go set to paraglider shows traffic and broadcasts every second below takeoff speed, but it gives no traffic alarm while it reads on ground."
+published_on: "2026-11-27"
+parent: blog
+updated_on: "2026-11-27"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 27 November 2026</p>
+  <h1>Soaring with skyBlip Go: what you see and when it warns</h1>
+  <p class="lede">If you launch with a skyBlip Go set to paraglider and never reach 12&nbsp;m/s over the ground, the Go shows nearby traffic and broadcasts your position every second. It gives no traffic alarm because it still thinks you are on the ground.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Tony Taylor&rsquo;s question</h2>
+  <h3>The radar still shows traffic when the Go thinks you are on the ground.</h3>
+  <p><a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">Tony Taylor wrote in SoftRF_community</a> that he flies cross-country with Moshe Braner&rsquo;s SoftRF fork on a T-Echo. When he loses sight of another paraglider, the direction and distance on the radar help him find it again. The Go shows direction and distance too, even when the screen says <span class="mono">GROUND</span>.</p>
+  <p>Tony pointed out that paragliders can have very little ground speed. A tight turn in a thermal, a column of rising air, can take about 12&nbsp;s. Averaged over the turn, the wing&rsquo;s motion can look almost stationary. He asked for a forced flight mode. Telling the Go you are airborne would let it warn. [placeholder: what François decides to build, and when. Leave this placeholder in the text.]</p>
+</section>
+
+<section>
+  <h2 class="kicker">Flight state and radio</h2>
+  <h3>The Go can report your position at the full rate without declaring takeoff.</h3>
+  <p>The <%= link_to_page "gps", label: "Go uses ground speed alone to decide whether you are flying", anchor: "flight" %>. It declares flight at 12.0&nbsp;m/s or more. It declares landing after 10&nbsp;s under 8.0&nbsp;m/s, or as soon as you slow below 1.0&nbsp;m/s. The 10&nbsp;s hold is longer than a glider typically spends below 8&nbsp;m/s in a thermal turn. Neither altitude nor climb rate decides takeoff. We tried using climb measured by the barometer, but gusts and sudden pressure changes caused false takeoffs in the hangar queue.</p>
+  <p>François explained in the thread that he chose those thresholds for taxi and flight in light aircraft and microlights. He asked soaring pilots what would suit them.</p>
+  <p>Paragliders, hang gliders, paramotors and balloons can fly with almost no ground speed. For those aircraft types, the Go uses ADS-L, the radio standard for its position broadcasts, to report <em>Undefined</em> instead of <em>On ground</em>. ADS-L sends a position every second in that state rather than once every 10&nbsp;s. Other aircraft with ADS-L receivers can still get your position each second. The Go&rsquo;s alarms still use its own ground state. The flight log follows a separate rule for these aircraft: it opens when you move and closes after two minutes standing still.</p>
+  <p>We asked EASA, the European Union Aviation Safety Agency, <%= link_to_page "ads-l/questions", label: "whether this is the intended use of Undefined", anchor: "sb-q8" %> in question SB-Q8. Any change to give gliders and microlights the same radio behavior will wait for the answer.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Flight paths in a turn</h2>
+  <h3>The radar line follows the turn but does not account for wind.</h3>
+  <p>The radar draws a line from each aircraft to where it would be in a minute if it kept the same ground speed and turn rate. We use the Open Glider Network tracker&rsquo;s model, which keeps a turning aircraft on its arc instead of drawing a straight line along its last track. ADS-L does not send turn rate, so the Go estimates it from the aircraft&rsquo;s recent track.</p>
+  <p><a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">Moshe Braner pointed out</a> that a circle through the air is not a circle over the ground when the wind carries it downwind. The difference grows as the aircraft slows or the wind strengthens. He cited earlier FLARM research. His SoftRF fork uses GPS positions from a turn to estimate the wind and uses that estimate to predict collisions. Wind is harder to estimate for powered aircraft because they rarely circle. Moshe suggested that manual wind entry might help.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Contributions from pilots and developers</h2>
+  <h3>The soaring discipline is where circling and wind can inform alarms.</h3>
+  <p>We call the code for a kind of flying a <em>discipline</em>. The aircraft type you set selects the soaring discipline for gliders, hang gliders and paragliders. The code is in place, but it does not raise any alarms yet.</p>
+  <p>A discipline can raise a traffic advisory when the base firmware would stay quiet, but it cannot override the ground rule. The alarm code keeps the higher level, and automated checks keep disciplines from changing what goes on air. Changes that lower an alarm or alter an ADS-L transmission stay with the maintainer.</p>
+  <p>The <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/disciplines/README.md">disciplines README</a> maps the features in Moshe&rsquo;s fork to skyBlip. Collision prediction for circling aircraft and wind estimation during a turn belong in the soaring discipline. Formation detection already prevents an alarm between a tug and its glider. Winch mode, relaying aircraft that land away from their airfield and adding radio protocols change what goes on air, so they belong outside the discipline.</p>
+  <p><a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/EXTENDING.md">Send contributions as pull requests under the MIT license</a>. The maintainer reviews and merges each one. Bring tests and a flight scenario that runs in the <%= link_to_page "skyblip-go", label: "browser simulator" %> so we can try it on the ground before we try it in the field.</p>
+  <p>If you fly a glider, hang glider or paraglider, <a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">tell us in the SoftRF_community thread</a> when the Go should read airborne and when you would want it to warn.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>SoftRF_community</strong> &middot; <a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">skyBlip: an open ADS-L platform with room for soaring</a>.
+      <span class="support">Tony Taylor on slow flight, Moshe Braner on wind and François on the thresholds.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot; <a href="https://github.com/fcatuhe/skyblip">source code</a>, <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/flight/README.md">flight README</a>, <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/traffic/alarm.cpp">traffic alarm</a> and <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/disciplines/README.md">disciplines README</a>.
+      <span class="support">Flight state, logging, the radar line and the rules for adding an advisory.</span>
+    </li>
+    <li>
+      <strong>Moshe Braner</strong> &middot; <a href="https://github.com/moshe-braner/SoftRF">SoftRF fork</a>.
+      <span class="support">Wind estimation from GPS fixes and collision prediction for circling aircraft.</span>
+    </li>
+    <li>
+      <strong>EASA</strong> &middot; <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, Issue 2, G.1.2 and G.1.16.
+      <span class="support">Flight state and transmission rate.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
