@@ -35,6 +35,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
                       2ULL * kFloodFramesPerSecond * kFallbackSweepPeriodMs,
                   "with no IRQ edge, the FIFO holds twice a flood's frames for one sweep");
     static constexpr uint64_t kProbePeriodUs = 1000000;
+    static constexpr int64_t kGainMinuteMs = 60000;
+    static constexpr uint8_t kFixedGainStep = 13;
 
     AdsbReceiver(parts::Lr2021& radio, ports::Clock& clock, const struct gpio_dt_spec& irq,
                  bus::AdsbQueue& out,
@@ -132,6 +134,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
             // INFO: fc 27nov26 a sweep finding the FIFO past its IRQ level means an edge was lost
             if (!edge && irq_wakes_ && drained >= parts::lr2021::kFifoHighFrames) missed_edges_++;
             health();
+            alternate_gain();
             probe();
             const uint64_t spent_us = k_cyc_to_us_floor64(k_cycle_get_32() - started);
             drain_busy_us_ += spent_us;
@@ -168,6 +171,12 @@ class AdsbReceiver : public ports::AdsbReceiver {
         health_checked_us_ += static_cast<uint64_t>(elapsed_ms) * 1000;
         if (radio_.service(elapsed_ms, runtime::kRadioRxSilenceCeilingMs))
             irq_wakes_ = irq_wakes_ && arm_irq();
+    }
+
+    // TODO: fc 27nov26 a bench-only A/B of the AGC against step 13, removed once a walk picks one
+    void alternate_gain() {
+        const uint8_t wanted = (k_uptime_get() / kGainMinuteMs) % 2 == 0 ? kFixedGainStep : 0;
+        if (radio_.gain_step() != wanted) (void)radio_.set_gain_step(wanted);
     }
 
     void probe() {
