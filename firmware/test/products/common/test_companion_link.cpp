@@ -42,13 +42,10 @@ std::string last_frame_on(Rig& rig, events::Endpoint endpoint) {
 // THE GUARD. If the product's link path can never raise a LinkUp, this fails.
 //
 // It drives the platform's link model, not the service: raise_link() is the same
-// comms::LinkSession that Zephyr's connected() callback drives on silicon, and
-// the event has to travel platform -> board::poll -> bus.link_events -> the config
-// service's one drain before link_up() can be true. Delete any link in that chain
-// - the callback, the board's while-pop, the service's drain - and this case goes
-// red. It would have caught the original bug because it cannot be written at all
-// against a platform with no way to raise a connection, which is exactly what the
-// tree had: the only way to make the service believe in a link was to call it.
+// comms::LinkSession that Zephyr's connected() callback drives on silicon. It would have caught the
+// original bug because it cannot be written at all against a platform with no way to raise a
+// connection, which is exactly what the tree had: the only way to make the service believe in a
+// link was to call it.
 TEST_CASE("companion link: the product raises LinkUp through its own platform, not by hand") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -72,6 +69,7 @@ TEST_CASE("companion link: the product raises LinkUp through its own platform, n
     CHECK_FALSE(rig.platform.link().up());
     rig.run(rig.now_ms, rig.now_ms + 100);
     CHECK_FALSE(rig.link_up());
+    CHECK_FALSE(rig.product.config_link().config().claim().held());
 }
 
 // G1, end to end and on the wire: the launch gate says the state of charge

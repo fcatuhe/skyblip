@@ -33,8 +33,12 @@ export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploadin
 const RETURN_WITHIN_MS = 120_000;
 const BOOT_SECONDS_WRAP = 2 ** 32 / 1000;
 export const RETURN_EVERY_MS = 3_000;
+// INFO: fc 27nov26 a Go's pairing takes up to 50 s, scanning, connecting and waiting for the Bravo, longer than a prompt stands
+export const VERDICT_WITHIN_MS = 60_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
+const AWAITING_VERDICT = new Set(['asking', 'confirming']);
+const SELF_TIMED_TASKS = new Set(['fetch', 'browsers']);
 const NOTED_TASKS = new Set(['set', 'capture', 'pair']);
 const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
@@ -177,7 +181,7 @@ export class Updater {
   #dumpAsked = false;
   #dumpPending = false;
   #identityPending = false;
-  #windowOpen = false;
+  #windowVersion = null;
   #leaving = false;
   #choice = 0;
   #opening = null;
@@ -185,6 +189,7 @@ export class Updater {
   #returnEveryMs;
   #returnWithinMs;
   #returnTimer = null;
+  #verdictTimer = null;
   #trust;
   #attestation;
   #state = {
@@ -349,8 +354,10 @@ export class Updater {
     const refusal = this.#refusal();
     if (refusal) return this.#set({ notice: { key: refusal } });
     this.#set({ notice: null });
-    if (this.#windowOpen) return this.#upload();
-    return this.#ask('dfu', { version: versionText(this.#version) });
+    const version = versionText(this.#version);
+    if (this.#windowVersion === version) return this.#upload();
+    this.#windowVersion = null;
+    return this.#ask('dfu', { version });
   }
 
   recover() {
@@ -553,7 +560,7 @@ export class Updater {
     if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
     if (reply.acknowledge && task === 'pair' && reply.reason === 'paired') return this.#paired();
     if (reply.acknowledge && reply.reason === task) return this.#granted(task);
-    if (task === 'install') this.#windowOpen = false;
+    if (task === 'install') this.#windowVersion = null;
     const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
     this.#set({ phase: 'ready', task: null, refusedOnDevice, notice: this.#noticeDuring(task, { key: reply.reason || 'refused' }) });
     if (task === 'install' && LANDING_REFUSALS.has(reply.reason)) return this.#send({ command: 'install_report' });
@@ -574,10 +581,10 @@ export class Updater {
     if (task === 'pair') return this.#pairing();
     if (task === 'dfu') {
       this.#trust.confirmed();
-      this.#windowOpen = true;
+      this.#windowVersion = this.#state.asked.version;
       return this.#upload();
     }
-    this.#windowOpen = false;
+    this.#windowVersion = null;
     return this.#set({ phase: task === 'install' ? 'installing' : 'recovering', task: null });
   }
 
@@ -608,7 +615,7 @@ export class Updater {
       await this.#measureWrites();
       await this.#sendImage(total);
     } catch (error) {
-      if (error instanceof SmpError && error.rc === RC.accessDenied) this.#windowOpen = false;
+      if (error instanceof SmpError && error.rc === RC.accessDenied) this.#windowVersion = null;
       if (this.#state.phase === 'uploading') this.#fail(error);
       return;
     }
@@ -665,10 +672,10 @@ export class Updater {
   }
 
   #closed() {
-    const { phase } = this.#state;
+    const { phase, task } = this.#state;
     const leaving = this.#leaving;
     this.#device = null;
-    this.#windowOpen = false;
+    this.#windowVersion = null;
     this.#running = null;
     this.#packetBytes = null;
     this.#writeBytes = GATT_WRITE_BYTES;
@@ -682,9 +689,11 @@ export class Updater {
     this.#smp.close(new LinkLost());
     this.#trust.close();
     this.#attestation?.close();
-    if (EXPECTED_DROP.has(phase)) {
+    // INFO: fc 27nov26 the unit can restart into its install before its verdict on the last chunk reaches the page
+    const awaitingVerdict = phase === 'asking' && task === 'install';
+    if (EXPECTED_DROP.has(phase) || awaitingVerdict) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
+      this.#set({ phase: next, task: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
@@ -699,6 +708,20 @@ export class Updater {
   #set(patch) {
     const state = { ...this.#state, ...patch };
     this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state), motionSensorWithoutFirmware: motionSensorWithoutFirmwareOf(state) };
+    if ('phase' in patch) this.#awaitVerdict();
     this.#onChange(this.#state);
+  }
+
+  #awaitVerdict() {
+    clearTimeout(this.#verdictTimer);
+    const { phase, task } = this.#state;
+    const awaiting = AWAITING_VERDICT.has(phase) && !SELF_TIMED_TASKS.has(task);
+    this.#verdictTimer = awaiting ? setTimeout(() => this.#unanswered(task), VERDICT_WITHIN_MS) : null;
+  }
+
+  #unanswered(task) {
+    if (task === 'install') this.#windowVersion = null;
+    this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'timeout' }) });
+    return this.#send({ command: 'get' });
   }
 }
