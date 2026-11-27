@@ -212,6 +212,8 @@ class Shell {
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;
+        // INFO: fc 26nov26 the MCUmgr thread reads the gate until the reboot, and no pass closes it
+        product_.roles_.dfu.publish_upload_allowed(false);
         product_.park_radio();
         if (power::ends_switched_off(shutdown_.reason(), recovery_powers_off()))
             product_.alarm_.sign_off(now_ms);

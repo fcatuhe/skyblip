@@ -114,8 +114,8 @@ activation.stepped:
 activation.noticed:
   group: Activation
   from: browser
-  keys: [key, detail, phase]
-  says: The activation page showed a notice, the unit's refusal, the server's as `server_` and its error, or a Bluetooth failure, with the step it came at.
+  keys: [key, detail, phase, last_command]
+  says: The activation page showed a notice with the step it came at, and for `small_mtu` which command activation last sent.
   answers: Why activations fail, from the pilot's side, beside `activation.refused` from the server's.
 installer.stepped:
   group: Installer
@@ -145,19 +145,25 @@ installer.wrote:
   group: Installer
   from: browser
   keys: [product, version, trusted, write_ms, detail]
-  says: The release image was written to the drive, with the product, the version, whether it carried this browser's trust record, how long the write took, and the error the bootloader's restart raised as the last block landed, if any.
-  answers: How many units are installed over USB, and how many trust their browser from the start.
+  says: The browser reached the last block of a USB write, with the product, release version, trust record flag, duration and any error on the last block or close.
+  answers: How often the USB write reached its last block, before the browser checked whether the firmware booted.
+installer.verified:
+  group: Installer
+  from: browser
+  keys: [product, build]
+  says: The unit reported that it was running the exact build the browser sent over USB and that the image was confirmed.
+  answers: How many USB installs did the browser verify, regardless of whether the pilot saved aircraft settings?
 installer.noticed:
   group: Installer
   from: browser
   keys: [key, detail, phase]
-  says: The setup page showed a notice, a closed port chooser, a refused drive, a failed download or write, or a pairing that failed, by its key, with the browser's message and the step it came at.
+  says: The setup page showed a notice such as a closed port or drive picker, a failed write or verification, or a pairing failure, with the browser's message and the step when available.
   answers: Why setups fail, the list to work down so no pilot is stranded with a unit half installed.
 installer.handed_off:
   group: Installer
   from: browser
   keys: [product, cause]
-  says: The computer that installed a unit could not reach Bluetooth, and showed the code that opens the setup's Connect step on a phone, `cause` `adapter` for a computer without a Bluetooth adapter, `flag` for Chrome on Linux before its Web Bluetooth flag, `browser` for a browser without Web Bluetooth.
+  says: Briefing showed a code that opens setup on a phone. The cause is `adapter`, `flag`, `browser` or `small_mtu` after a reconnect did not give activation enough Bluetooth capacity.
   answers: How many setups have to move from the computer to a phone, and why.
 installer.resumed:
   group: Installer

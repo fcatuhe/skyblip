@@ -197,6 +197,38 @@ TEST_CASE("product: a take-off leaves the SMP hook's gate open once the window i
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
+// No pass runs once the unit parks, so a second central could overwrite slot 1 before the swap.
+TEST_CASE("product: the SMP hook's gate closes once an accepted upload parks the unit") {
+    Rig rig;
+    stage_versions(rig);
+    REQUIRE(rig.setup() == Status::Ok);
+    open_upload_window(rig);
+    pass(rig);
+    REQUIRE(rig.platform.dfu().upload_allowed_published);
+
+    land_upload(rig);
+    rig.run_for(200);
+    REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::Install);
+    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
+
+    rig.run(rig.now_ms, rig.now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
+    REQUIRE(rig.platform.dfu().triggered == 1);
+    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
+}
+
+TEST_CASE("product: a switch-off with the window open closes the SMP hook's gate") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    open_upload_window(rig);
+    pass(rig);
+    REQUIRE(rig.platform.dfu().upload_allowed_published);
+
+    rig.platform.board_gpio().button_down = true;
+    rig.run_for(power::kLongPressHoldMs + 200);
+    REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
+    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
+}
+
 TEST_CASE(
     "product: a press leaves the receiving page open, a tap of the pad closes it, nothing "
     "installs") {

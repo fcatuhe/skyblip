@@ -49,6 +49,7 @@ export class Activator {
   #device = null;
   #bluetoothDevice;
   #leaving = false;
+  #lastCommand = null;
   #serverNonce = null;
   #state = { phase: 'offline', device: null, address: null, read: false, notice: null };
 
@@ -96,6 +97,7 @@ export class Activator {
   // INFO: fc 10nov26 a write for a link that closed meanwhile belongs to no unit, and #closed has said why
   async #send(command, device = this.#device) {
     if (!device || device !== this.#device) return false;
+    this.#lastCommand = command.command;
     try {
       await device.sendConfig(command);
       return true;
@@ -115,7 +117,8 @@ export class Activator {
 
   #acked(reply) {
     const { phase } = this.#state;
-    if (reply.reason === 'claimed' || reply.reason === 'small_mtu') return this.#set({ phase: 'ready', notice: { key: reply.reason } });
+    if (reply.reason === 'small_mtu') return this.#set({ phase: 'ready', notice: { key: 'small_mtu', lastCommand: this.#lastCommand } });
+    if (reply.reason === 'claimed') return this.#set({ phase: 'ready', notice: { key: 'claimed' } });
     if (!BUSY.has(phase)) return;
     if (reply.pending && reply.reason === 'confirm_register') return this.#set({ phase: 'confirming' });
     if (reply.acknowledge && reply.reason === 'unlock' && phase === 'unlocking') return this.#unlocked();
