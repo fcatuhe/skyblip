@@ -173,6 +173,25 @@ TEST_CASE("bravo pairing: a farewell the central refuses once is written again, 
     CHECK_FALSE(pair.peer().paired());
 }
 
+TEST_CASE("bravo pairing: a farewell the central always refuses is retried, and the Go leaves on time") {
+    PairedProducts pair;
+    pair.pair_and_store();
+    pair.go.show(go::Page::Bravo);
+    pair.go.press();
+    REQUIRE(pair.go.product.screen().bravo_page().unpairing());
+    pair.go.platform.central().writes_to_block = 1000;
+    pair.go.press();
+
+    pair.run_for(go::BravoService::kFarewellCeilingMs - 200);
+    CHECK(pair.go.platform.central().writes_blocked > 1);
+    CHECK(pair.service().leaving());
+    CHECK(pair.go.platform.central().up());
+
+    pair.run_for(400);
+    CHECK_FALSE(pair.service().leaving());
+    CHECK_FALSE(pair.go.platform.central().up());
+}
+
 // A pilot who unpairs a Bravo is often replacing it, so the page lists the Bravos in range.
 TEST_CASE("bravo pairing: unpairing lists the Bravos in range, and the next press pairs one") {
     PairedProducts pair;
