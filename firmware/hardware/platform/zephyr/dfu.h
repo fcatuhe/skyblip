@@ -120,6 +120,9 @@ class Dfu : public ports::Dfu {
     }
 
     void publish_upload_allowed(bool allowed) override { UploadGate::publish(allowed); }
+    void publish_approved_version(const ports::ImageVersion& version) override {
+        UploadGate::publish_approved(version);
+    }
     bool upload_finished() override { return UploadGate::finished(); }
     void forget_upload() override { UploadGate::forget_finished(); }
 

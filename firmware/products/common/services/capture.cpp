@@ -63,7 +63,8 @@ void CaptureService::open(uint32_t now_ms) {
         stopped_ = bus::CaptureStop::NoStorage;
         return;
     }
-    session_id_ = context_.state.traffic_now_s(now_ms);
+    // INFO: fc 26nov26 with no fix the name is a boot second, which a later boot counts again
+    session_id_ = store_.unused_session_id(context_.state.traffic_now_s(now_ms));
     opened_ms_ = now_ms;
     steady_records_ = 0;
     steady_written_ms_ = now_ms;
@@ -123,6 +124,11 @@ bool CaptureService::write_end(uint32_t now_ms) {
 }
 
 void CaptureService::drain(uint32_t now_ms) {
+    // INFO: fc 27nov26 the refusal's Gap already counts the queue as lost, so only its End is owed
+    if (stopped_ == bus::CaptureStop::NoSectors) {
+        close(now_ms);
+        return;
+    }
     uint32_t written = 0;
     while (context_.diagnostics.queued() > 0 && written < kDrainCeilingRecords) {
         const uint32_t run = next_run(kDrainCeilingRecords - written);

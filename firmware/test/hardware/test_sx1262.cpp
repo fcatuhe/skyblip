@@ -191,6 +191,29 @@ TEST_CASE("sx1262: BUSY stuck high is surfaced as a fault, not a hang") {
     CHECK(event.type == RadioEventType::Fault);
 }
 
+// A command sent while BUSY is high is lost, so the model forgets the modem and the frequency.
+TEST_CASE("sx1262: a configuration that timed out in standby is written again on the next call") {
+    models::Sx1262 chip;
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    RadioConfig config{};
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
+    REQUIRE(radio.mode() == RadioMode::Standby);
+
+    SUBCASE("a new modem") { config.bitrate = 200000; }
+    SUBCASE("a new frequency on the same modem") { config.frequency_hz = 868400000; }
+
+    chip.busy_stuck = true;
+    REQUIRE(radio.configure_radio(config) == Status::Timeout);
+    chip.busy_stuck = false;
+    chip.frequency_hz = 0;
+    chip.bitrate = 0;
+
+    CHECK(radio.configure_radio(config) == Status::Ok);
+    CHECK((chip.frequency_hz + 500) / 1000 == (config.frequency_hz + 500) / 1000);
+    CHECK(chip.bitrate == config.bitrate);
+}
+
 TEST_CASE(
     "sx1262: health watchdog reinitialises after no-RX timeout (no-RX-in-N reinitialisation, "
     "tested)") {
@@ -212,6 +235,37 @@ TEST_CASE(
     uint8_t buffer[8];
     radio.poll(buffer, sizeof(buffer));
     CHECK_FALSE(radio.service(29000, 30000));
+}
+
+// RadioRope.tla, WedgeCured: a burst's PA current is the likeliest moment to wedge the part.
+TEST_CASE("sx1262: a part that wedges outside RX is reset by the no-RX rope") {
+    models::Sx1262 chip;
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
+    RadioConfig next_dwell{};
+    next_dwell.frequency_hz = 869525000;
+
+    SUBCASE("after a burst") {
+        REQUIRE(radio.start_receive() == Status::Ok);
+        const uint8_t frame[4] = {1, 2, 3, 4};
+        REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
+        chip.busy_stuck = true;
+        CHECK(radio.start_receive() == Status::Timeout);
+        CHECK(radio.configure_radio(next_dwell) == Status::Timeout);
+        CHECK(radio.mode() == RadioMode::Tx);
+    }
+    SUBCASE("in standby, while a dwell is set up") {
+        chip.busy_stuck = true;
+        CHECK(radio.configure_radio(next_dwell) == Status::Timeout);
+        CHECK(radio.mode() == RadioMode::Standby);
+    }
+
+    CHECK_FALSE(radio.service(29000, 30000));
+    chip.busy_stuck = false;
+    CHECK(radio.service(2000, 30000));
+    CHECK(radio.reinitialisations() == 1);
+    CHECK(radio.mode() == RadioMode::Rx);
 }
 
 TEST_CASE("sx1262: a reinitialisation that failed after the reset keys nothing until one succeeds" *

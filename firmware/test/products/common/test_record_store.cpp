@@ -7,6 +7,7 @@
 #include "doctest/doctest.h"
 #include "products/common/services/record_store.h"
 #include "test/support/log_record_write.h"
+#include "test/support/log_transfer.h"
 #include "test/support/store_rig.h"
 #include "test/support/timed_fix.h"
 
@@ -34,6 +35,34 @@ class BlindSectorFlash : public platform::host::FlashRegion {
 
    private:
     const uint32_t blind_;
+};
+
+// One sector of the partition refuses its next erase, or its next header write.
+class FaultySectorFlash : public platform::host::FlashRegion {
+   public:
+    FaultySectorFlash(uint32_t sectors, uint32_t faulty) : FlashRegion(sectors), faulty_(faulty) {}
+
+    Status erase_sector(uint32_t index) override {
+        if (index == faulty_ && refuse_erase) {
+            refuse_erase = false;
+            return Status::Down;
+        }
+        return FlashRegion::erase_sector(index);
+    }
+
+    Status write(uint32_t offset, const uint8_t* data, uint32_t bytes) override {
+        if (offset == faulty_ * kSectorBytes && refuse_header) {
+            refuse_header = false;
+            return Status::Down;
+        }
+        return FlashRegion::write(offset, data, bytes);
+    }
+
+    bool refuse_erase{false};
+    bool refuse_header{false};
+
+   private:
+    const uint32_t faulty_;
 };
 
 bool says(const std::string& reply, const char* key_value) {
@@ -85,6 +114,54 @@ store::SectorHeader flights_label(uint32_t sequence) {
     header.record_bytes = static_cast<uint8_t>(common::kStoreRecordBytes);
     header.session_start = true;
     return header;
+}
+
+// Reads a three-sector flight over a link that takes two frames, then holds the next.
+void start_flight_read(StoreRig& rig) {
+    const uint32_t slots = rig.pool.slots_per_sector();
+    rig.flights.begin_session(kFlightSession);
+    for (uint32_t i = 0; i < slots * 2; i++)
+        write_flight_record(rig.flights, kFlightSession + i, false);
+    write_flight_record(rig.flights, kFlightSession + slots * 2, true);
+    rig.flights.end_session();
+    rig.flights.rebuild_index();
+    rig.link.clear();
+    rig.link.serve();
+    rig.link.hold_after(2);
+
+    comms::LogRequest request{};
+    request.command = comms::LogCommand::Read;
+    request.store = store::SectorOwner::Flights;
+    request.peer = events::Peer{rig.link.session_id(), rig.link.connection(rig.link.session_id())};
+    request.session = kFlightSession;
+    request.count = comms::kMaxLogReadChunks;
+    request.understood = true;
+    rig.flights.serve(request);
+    REQUIRE(rig.flights.reading());
+    REQUIRE(rig.pool.holding());
+}
+
+void deliver_read(StoreRig& rig) {
+    while (rig.flights.reading()) {
+        rig.link.serve();
+        REQUIRE(is_ok(rig.pool.deliver_held(0)));
+        rig.flights.continue_read();
+    }
+    rig.link.serve();
+    REQUIRE(is_ok(rig.pool.deliver_held(0)));
+}
+
+int erased_records_sent(const StoreRig& rig) {
+    int erased = 0;
+    for (const auto& frame : rig.link.sent) {
+        if (field(link_text(frame.bytes), "command") != "chunk") continue;
+        uint8_t raw[comms::kLogChunkRawBytes];
+        const int bytes = chunk_records(frame.bytes, raw, sizeof(raw));
+        REQUIRE(bytes >= 0);
+        for (int at = 0; at < bytes; at += static_cast<int>(common::kStoreRecordBytes))
+            if (flight::log_slot_erased(raw + at, common::kStoreRecordBytes)) erased++;
+    }
+    return erased;
 }
 
 }  // namespace
@@ -139,6 +216,43 @@ TEST_CASE("record store: a capture that lost its first sector is listed truncate
 
     CHECK(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "\"truncated\":true"));
     CHECK(rig.pool.allocator().lost_sectors(store::SectorOwner::Diagnostics) > 0);
+}
+
+// The capture writes a Gap for every loss, so a sector of the last capture must not read as one.
+TEST_CASE("record store: a new capture is not charged for a sector recycled from the last one") {
+    platform::host::FlashRegion flash{3};
+    StoreRig rig{flash};
+    rig.open();
+
+    rig.capture.begin_session(kCaptureSession);
+    const uint32_t slots = rig.pool.slots_per_sector();
+    for (uint32_t i = 0; i < slots * 3; i++)
+        write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession + i);
+    rig.capture.end_session();
+
+    rig.capture.begin_session(kCaptureSession + 1);
+    CHECK(rig.capture.room_beyond_this_sector());
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
+    CHECK(rig.capture.take_lost_records() == 0);
+}
+
+// With no fix a later boot asks for the name of the capture it is about to recycle.
+TEST_CASE("record store: a capture asking for the last one's name is not charged for it") {
+    platform::host::FlashRegion flash{3};
+    StoreRig rig{flash};
+    rig.open();
+
+    rig.capture.begin_session(kCaptureSession);
+    const uint32_t slots = rig.pool.slots_per_sector();
+    for (uint32_t i = 0; i < slots * 3; i++)
+        write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession + i);
+    rig.capture.end_session();
+
+    const uint32_t named = rig.capture.unused_session_id(kCaptureSession);
+    rig.capture.begin_session(named);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
+    CHECK(named == kCaptureSession + 1);
+    CHECK(rig.capture.take_lost_records() == 0);
 }
 
 // No CRC on a diagnostics slot: without the end marker a torn tail reads as telemetry.
@@ -197,6 +311,29 @@ TEST_CASE("record store: a write the part refused is a fault the caller can retr
     CHECK(append_one(rig.capture) == common::Append::Fault);
     CHECK(rig.pool.faults() == faults + 1);
     CHECK(rig.capture.session_records() == 1);
+}
+
+// A claim the part refused once left its sector labeled for the session, read as a full sector.
+TEST_CASE("record store: a claim the part refused leaves no sector to the session") {
+    for (const bool header_refused : {false, true}) {
+        FaultySectorFlash flash{4, 0};
+        StoreRig rig{flash};
+        rig.open();
+        flash.refuse_erase = !header_refused;
+        flash.refuse_header = header_refused;
+
+        rig.capture.begin_session(kCaptureSession);
+        CHECK(append_one(rig.capture) == common::Append::Fault);
+        CHECK(rig.capture.sectors_owned() == 0);
+        CHECK(append_one(rig.capture) == common::Append::Ok);
+        rig.capture.end_session();
+        rig.capture.rebuild_index();
+
+        CHECK(rig.capture.sectors_owned() == 1);
+        const std::string listed = rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0);
+        CHECK(says(listed, "\"records\":1,"));
+        CHECK(says(listed, "\"truncated\":false"));
+    }
 }
 
 TEST_CASE("record store: a refused sector is not a fault, it is the end of the capture") {
@@ -272,6 +409,35 @@ TEST_CASE("record store: an erase-all leaves a quarantined sector alone") {
     uint8_t raw[store::kSectorHeaderBytes];
     REQUIRE(is_ok(flash.read(0, raw, sizeof(raw))));
     CHECK_FALSE(store::erased(raw, sizeof(raw)));
+}
+
+// The pilot confirmed the erase while the app was still downloading a flight.
+TEST_CASE("record store: a read the erase-all overtakes stops busy, before any erased record") {
+    platform::host::FlashRegion flash{12};
+    StoreRig rig{flash};
+    rig.open();
+    start_flight_read(rig);
+    rig.flights.begin_erase();
+    rig.flights.step_erase(0);
+    REQUIRE(rig.flights.erasing());
+    deliver_read(rig);
+
+    CHECK(erased_records_sent(rig) == 0);
+    CHECK(field(link_text(rig.link.sent.back().bytes), "reason") == "busy");
+}
+
+// A diagnostics-heavy partition leaves few flights sectors, and the erase ends in one pass.
+TEST_CASE("record store: a read held at the link until the erase-all ends still stops busy") {
+    platform::host::FlashRegion flash{12};
+    StoreRig rig{flash};
+    rig.open();
+    start_flight_read(rig);
+    rig.flights.begin_erase();
+    while (rig.flights.erasing()) rig.flights.step_erase(0);
+    deliver_read(rig);
+
+    CHECK(erased_records_sent(rig) == 0);
+    CHECK(field(link_text(rig.link.sent.back().bytes), "reason") == "busy");
 }
 
 // A service that ran long earlier in the pass left the store writing on a stale phase.

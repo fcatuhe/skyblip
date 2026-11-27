@@ -20,7 +20,7 @@ class BrowserLink {
     const TrustedBrowsers& trusted() const { return trusted_; }
 
     void open(const events::Peer& peer, const identity::Nonce& nonce) {
-        forget(peer_.session_id);
+        forget(peer_);
         peer_ = peer;
         nonce_ = nonce;
         nonce_live_ = true;
@@ -61,8 +61,8 @@ class BrowserLink {
         return true;
     }
 
-    void forget(uint16_t session_id) {
-        if (session_id != peer_.session_id) return;
+    void forget(const events::Peer& peer) {
+        if (peer != peer_) return;
         peer_ = events::Peer{0, 0};
         nonce_live_ = false;
         proven_ = false;

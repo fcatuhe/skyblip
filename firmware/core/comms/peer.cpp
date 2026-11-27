@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "core/flight/state.h"
+#include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/units/units.h"
 #include "core/util/cbor.h"
@@ -137,10 +138,18 @@ bool read_identity(const cbor::Reader& reader, model::AircraftObservation& out) 
     return true;
 }
 
+// INFO: fc 27nov26 security: a Bravo's name keeps to the set callsign_of holds the air to
+bool typeable(const char* callsign) {
+    for (; *callsign != 0; callsign++)
+        if (!protocol::is_callsign_character(*callsign)) return false;
+    return true;
+}
+
 bool read_callsign(const cbor::Reader& reader, PeerObservation& out) {
     const Status text =
         reader.read_text(link::observation_key::kCallsign, out.callsign, kPeerCallsignBytes);
     if (text != Status::Ok && text != Status::NotFound) return false;
+    if (!typeable(out.callsign)) return false;
     bool dated = false;
     if (!take(reader.read_unsigned(link::observation_key::kCallsignHeardS), out.callsign_heard_s,
               dated))
@@ -231,6 +240,7 @@ bool read_own_transponder(const cbor::Reader& reader, PeerHealth& health) {
     const Status text = reader.read_text(link::health_key::kOwnTransponderCallsign, heard.callsign,
                                          kPeerCallsignBytes);
     if (text != Status::Ok && text != Status::NotFound) return false;
+    if (!typeable(heard.callsign)) return false;
     const bool named = text == Status::Ok;
     if (!addressed) return !named && !categorised;
     if (heard.address == 0 || heard.address > settings::kAddressMask || category > UINT8_MAX)
