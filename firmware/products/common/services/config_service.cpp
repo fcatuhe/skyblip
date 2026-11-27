@@ -82,7 +82,8 @@ void ConfigService::on_link_down(const events::LinkDown& event) {
     refused_on_device_ = false;
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
-    upload_window_open_ = false;
+    // INFO: fc 27nov26 a held image is whole and approved, and a resend would start again from 0
+    if (!install_held_) upload_window_open_ = false;
     status_push_due_ = false;
 }
 
