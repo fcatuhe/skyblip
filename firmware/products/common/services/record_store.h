@@ -43,6 +43,7 @@ class RecordStore {
     void end_session() {
         writing_ = false;
         index_stale_ = true;
+        pool_.allocator().close_session(owner_);
     }
 
     // INFO: fc 20sep26 records the ring recycled under the session being written, once each

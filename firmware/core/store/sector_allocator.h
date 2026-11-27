@@ -60,6 +60,9 @@ class SectorAllocator {
     bool quarantined(uint32_t sector) const;
     uint32_t quarantined() const;
 
+    void open_session(SectorOwner owner, uint32_t session_id);
+    void close_session(SectorOwner owner);
+
     Claim claim(SectorOwner owner, uint32_t session_id);
     Claim prepare(SectorOwner owner);
     void note_erased(SectorOwner owner);
@@ -93,6 +96,11 @@ class SectorAllocator {
         uint32_t sectors{0};
     };
 
+    struct Writing {
+        uint32_t session_id{0};
+        bool open{false};
+    };
+
     struct Match {
         SectorOwner owner{SectorOwner::None};
         bool any_session{true};
@@ -117,6 +125,7 @@ class SectorAllocator {
     const SectorTable table_;
     uint32_t lost_sectors_[2]{};
     Recycled recycled_[2]{};
+    Writing writing_[2]{};
     Spare spares_[2]{};
     uint32_t sector_count_{0};
     uint32_t floor_sectors_{0};

@@ -21,7 +21,7 @@ The code is pure, host-tested and never touches flash. `SectorAllocator` decides
 
 The session-start bit tells a whole session from what is left once the ring recycles its first sector, which otherwise reads like a session that began later. The allocator sets it, as `Claim::session_start`, on a session's first claim only, under the CRC, so a session whose lowest-sequence sector lacks it is reported truncated in the `list` reply (`../../products/common/services/record_store.cpp`).
 
-`lost_sectors(owner)` counts every sector recycled from under the session that owner is writing, by either ring, at the moment the decision is made. The capture turns each loss into a `diagnostics::Gap` followed by a fresh `Boot` and `Config` (`../diagnostics/README.md`).
+`lost_sectors(owner)` counts every sector recycled from under the session that owner is writing, by either ring, at the moment the decision is made. The owner names that session with `open_session()` before its first claim and ends it with `close_session()`. Until that first claim the ring's frontier still belongs to the last session, so a sector of the last session never counts against the new one. The capture turns each loss into a `diagnostics::Gap` followed by a fresh `Boot` and `Config` (`../diagnostics/README.md`).
 
 `quarantine(sector)` removes a sector from the free list, from `owned()` and from an erase-all, because reclaiming a sector this build cannot read would erase evidence. The boot scan quarantines a read the part refused (counted apart, as a flash fault), a header with an unknown version or owner, and a header whose record size is not the one both rings write. Version 1 had no owner byte, and a v1 partition reads as free space.
 
