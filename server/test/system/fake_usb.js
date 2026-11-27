@@ -50,11 +50,17 @@
         createWritable: async () => {
           let written = new Uint8Array();
           return {
-            write: async bytes => (written = Uint8Array.from([...written, ...bytes])),
+            write: async bytes => {
+              const next = new Uint8Array(written.length + bytes.length);
+              next.set(written);
+              next.set(bytes, written.length);
+              written = next;
+            },
             abort: async () => {},
             close: async () => {
               drive.files.set(name, written);
-              drive.device.flash(written);
+              await drive.device.flash(written);
+              if (drive.device.cutOnClose) throw named('NotFoundError', 'A requested file or directory could not be found.');
             },
           };
         },
@@ -114,12 +120,14 @@
       }
     }
 
-    flash(bytes) {
+    async flash(bytes) {
       fakeUsb.drive = null;
       fakeUsb.flashed.push(bytes.length);
       const trusted = trustOf(bytes);
       fakeUsb.trusted = trusted;
-      later(() => fakeFleet.add({ ...this.unit, browsers: trusted ? [trusted] : [] }), this.flashDelayMs);
+      const [{ parseUf2, imageOf, LAYOUTS }, { versionText }] = await Promise.all([import('#skyblip/uf2'), import('#skyblip/image')]);
+      fakeUsb.build = versionText(imageOf(parseUf2(bytes).blocks, LAYOUTS[this.product]).version);
+      later(() => fakeFleet.add({ ...this.unit, running: this.bootedBuild ?? fakeUsb.build, browsers: trusted ? [trusted] : [] }), this.flashDelayMs);
     }
   }
 
@@ -150,7 +158,13 @@
     },
   });
   window.showDirectoryPicker = async () => {
-    if (!fakeUsb.drive) throw named('AbortError', 'The user aborted a request.');
+    if (fakeUsb.plugged?.closePicker) {
+      fakeUsb.plugged.closePicker = false;
+      throw named('AbortError', 'The user aborted a request.');
+    }
+    if (!fakeUsb.drive) {
+      throw named('AbortError', 'The user aborted a request.');
+    }
     return fakeUsb.drive;
   };
 })();

@@ -107,7 +107,7 @@ export class Journal {
       }
       let delivered;
       try {
-        delivered = await this.#send({ browser: this.browser, entries: batch });
+        delivered = await this.#send({ browser: this.browser, sent_at: this.#now().toISOString(), entries: batch });
       } catch (error) {
         console.warn('The journal could not be sent, it waits for the next try:', error.message);
         delivered = false;
@@ -200,13 +200,13 @@ function compact(properties) {
 }
 
 export function httpTransport({ url, token = null, fetch = globalThis.fetch }) {
-  return async ({ browser, entries }) => {
+  return async ({ browser, sent_at, entries }) => {
     const response = await fetch(url, {
       method: 'POST',
       keepalive: true,
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-Briefing-Browser': browser, ...(token ? { 'X-CSRF-Token': token } : {}) },
-      body: JSON.stringify({ browser, entries }),
+      body: JSON.stringify({ browser, sent_at, entries }),
     });
     // INFO: fc 14nov26 a 400 is a journal the server will never take, so it is dropped rather than sent forever
     return response.ok || response.status === 400;
