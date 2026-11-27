@@ -129,6 +129,12 @@ TEST_CASE("bus: past the PPS holdover the traffic a silent receiver heard is kep
 
 TEST_CASE("bus: past the PPS holdover a receiver that still talks names the second") {
     bus::State state = silent_since_last_edge();
-    state.own.utc_s = kLastS + 120;
+    state.own.utc_s = kLastS + 119;
+    CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 119);
+
+    state.own.utc_s = kLastS + 118;
     CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 120);
+
+    state.own.utc_s = kLastS + 121;
+    CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 121);
 }
