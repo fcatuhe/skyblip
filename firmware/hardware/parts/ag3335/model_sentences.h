@@ -113,6 +113,10 @@ inline void Ag3335::restart(int kind) {
 }
 
 inline void Ag3335::acknowledge(uint16_t id, parts::PairResult result) {
+    if (id == ack_lost_once) {
+        ack_lost_once = 0;
+        return;
+    }
     if (acks_to_drop > 0) {
         acks_to_drop--;
         return;

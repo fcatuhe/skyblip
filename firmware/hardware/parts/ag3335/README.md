@@ -48,7 +48,7 @@ The driver turns L5 on itself, and `Ag3335::band()` says what it got, the dump's
 - A build whose `$PAIR021` says `S` is single band. The driver asks nothing more and reads `l1`.
 - A `D` build is asked `$PAIR105` right after the sleep lock. The reply, `$PAIR105,1` or `$PAIR105,0`, closes the query, not its acknowledgement.
 - A switch found on reads `l1_l5`.
-- A switch found off is turned on as LC29H V1.4 §2.4.29 shows: `$PAIR003` powers the GNSS system off, `$PAIR104,1` turns dual band on, `$PAIR002` powers it on, and a second `$PAIR105` reads the result. §2.4.2-3 asks more than two seconds between two power switches, so the driver holds each one `kPowerSwitchHoldMs`, 2.5 s, after the last, counting boot as one. The cycle runs once per bring-up. A switch still off after it reads `l1`.
+- A switch found off is turned on as LC29H V1.4 §2.4.29 shows: `$PAIR003` powers the GNSS system off, `$PAIR104,1` turns dual band on, `$PAIR002` powers it on, and a second `$PAIR105` reads the result. §2.4.2-3 asks more than two seconds between two power switches, so the driver holds each one `kPowerSwitchHoldMs`, 2.5 s, after the last, counting boot as one. A switch sent again after a lost acknowledgement waits out the hold too, because the first send may have switched the power. The cycle runs once per bring-up. A switch still off after it reads `l1`.
 - A refused `$PAIR104` is skipped like any refused command: the receiver reads `DEGRADED`, and `$PAIR002` still powers it back on.
 - A `D` build that answers `$PAIR105` unsupported has no switch to read. The driver goes on, not degraded, and reads `unknown`, because only GSV's signal ids can then say whether L5 is tracked.
 

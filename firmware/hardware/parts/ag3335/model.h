@@ -42,6 +42,7 @@ class Ag3335 : public io::Uart, public GnssTruth {
 
     bool answers{true};
     uint32_t acks_to_drop{0};
+    uint16_t ack_lost_once{0};
     uint16_t unsupported_command{0};
     // INFO: fc 11nov26 result 1 means still processing and the final result follows, SIM65M §2.3.1
     uint16_t processing_command{0};

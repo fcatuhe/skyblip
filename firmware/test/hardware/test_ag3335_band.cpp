@@ -63,6 +63,21 @@ TEST_CASE("ag3335: a dual-band switch found off is turned on with the GNSS syste
 }
 
 TEST_CASE(
+    "ag3335: a power switch whose acknowledgement is lost is sent again only after the hold") {
+    models::Ag3335 chip;
+    chip.dual_band = false;
+    chip.ack_lost_once = 3;
+    parts::Ag3335 gnss(ports::SolutionRate::Second, chip);
+
+    run(gnss, chip, 0, kSwitchedBringUpMs + parts::Ag3335::kPowerSwitchHoldMs);
+
+    CHECK(gnss.configured());
+    CHECK(gnss.band() == ports::GnssBand::L1L5);
+    CHECK(chip.power_switches == 3);
+    CHECK(chip.power_switches_too_soon == 0);
+}
+
+TEST_CASE(
     "ag3335: a switch that stays off reads L1, powers the receiver back on and is not retried") {
     models::Ag3335 chip;
     chip.dual_band = false;

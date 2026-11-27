@@ -113,6 +113,8 @@ void Ag3335::send_command(uint32_t now_ms) {
     holding_ = power_switch(command) && now_ms - power_switched_ms_ < kPowerSwitchHoldMs;
     if (holding_) return;
     if (command == kDualBandQuery) band_answered_ = false;
+    // INFO: fc 26nov26 a retry whose first send lost only its ack switches the power again
+    if (power_switch(command)) power_switched_ms_ = now_ms;
     await(command, now_ms);
 }
 
