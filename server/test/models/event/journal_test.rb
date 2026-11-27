@@ -59,6 +59,16 @@ class Event::JournalTest < ActiveSupport::TestCase
     end
   end
 
+  test "an entry from a clock off by more than a minute is placed by the server's clock, and one off by less keeps its time" do
+    travel_to Time.utc(2026, 11, 14, 10) do
+      Event::Journal.new(browser: BROWSER, sent_at: "2026-11-14T09:00:00Z", entries: [ entry("device.connected", at: "2026-11-14T08:59:00Z") ]).record
+      Event::Journal.new(browser: BROWSER, sent_at: "2026-11-14T11:00:00Z", entries: [ entry("device.read", at: "2026-11-14T10:59:00Z") ]).record
+      Event::Journal.new(browser: BROWSER, sent_at: "2026-11-14T09:59:30Z", entries: [ entry("device.noticed", at: "2026-11-14T09:59:00Z") ]).record
+
+      assert_equal [ 1.minute.ago, 1.minute.ago, 1.minute.ago ], Event.order(:id).map(&:occurred_at)
+    end
+  end
+
   test "a script failure is fingerprinted by its kind, class, message and file, whatever its numbers and asset digest" do
     failure = ->(message, file) { entry("browser.failed", properties: { kind: "error", error: "TypeError", message:, file: }) }
     Event::Journal.new(browser: BROWSER, entries: [
