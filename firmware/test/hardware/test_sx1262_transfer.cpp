@@ -1,4 +1,5 @@
 // What the SX1262 driver does when the SPI bus reports a transfer that did not happen.
+#include "core/protocol/air.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
@@ -93,4 +94,29 @@ TEST_CASE("sx1262: a bring-up whose transfers fail is refused") {
     SUBCASE("after the link check, at the regulator") { chip.transfers_before_failure = 3; }
     CHECK(radio.begin() == Status::Down);
     CHECK(radio.configure_radio(RadioConfig{}) == Status::Down);
+}
+
+TEST_CASE("sx1262: a receive sync word that failed to go back in is written again by the next RX") {
+    models::Sx1262 chip;
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    config.tx_sync = protocol::kAdslTxSync;
+    config.tx_sync_bits = protocol::kAdslTxSyncBits;
+    config.tx_preamble_chips = protocol::kAdslTxPreambleChips;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
+    const uint8_t burst[2 + 2 * adsl::kFrameBytes] = {0xAA};
+    REQUIRE(radio.stage_tx(burst, sizeof(burst)) == Status::Ok);
+    REQUIRE(chip.sync_bits == protocol::kAdslTxSyncBits);
+
+    chip.transfers_before_failure = 0;
+    CHECK(radio.start_receive() == Status::Down);
+    chip.transfers_before_failure = -1;
+    REQUIRE(radio.start_receive() == Status::Ok);
+    CHECK(chip.sync_bits == protocol::kSharedSyncBits);
+    CHECK(chip.sync[0] == protocol::kSharedSync[0]);
+    CHECK(chip.sync[1] == protocol::kSharedSync[1]);
 }

@@ -305,11 +305,14 @@ Status Sx1262::configure_irq() {
 }
 
 Status Sx1262::configure_frame(const RadioConfig& config) {
-    tx_framing_ = false;
-    if (config.sync_bits == 0) return Status::Ok;
+    if (config.sync_bits == 0) {
+        tx_framing_ = false;
+        return Status::Ok;
+    }
     const Status status =
         write_register(sx1262::kSyncWordRegister, config.sync, (config.sync_bits + 7u) / 8u);
     if (status != Status::Ok) return status;
+    tx_framing_ = false;
     return write_packet_parameters(config.payload_bytes, sx1262::kPreambleChips, config.sync_bits);
 }
 
