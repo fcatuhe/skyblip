@@ -101,6 +101,7 @@ class RecordStore {
     Tail diagnostics_tail_of(uint32_t sector);
     bool erasable(uint32_t sector) const;
     Append claim_sector(uint32_t session_id);
+    Append abandon(uint32_t sector);
     uint32_t append_cost_ms(bool claim_wanted, uint32_t count) const;
     void answer_list(const comms::LogRequest& request);
     void answer_read(const comms::LogRequest& request);

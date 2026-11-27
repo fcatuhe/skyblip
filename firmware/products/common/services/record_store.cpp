@@ -114,7 +114,7 @@ Append RecordStore::claim_sector(uint32_t session_id) {
     const store::Claim claim = pool_.allocator().claim(owner_, session_id);
     spare_ready_ = false;
     if (!claim.granted) return Append::NoSector;
-    if (!claim.erased && !pool_.erase(claim.sector)) return Append::Fault;
+    if (!claim.erased && !pool_.erase(claim.sector)) return abandon(claim.sector);
     ring_.restore(claim.sector, 0);
 
     store::SectorHeader header{};
@@ -123,11 +123,16 @@ Append RecordStore::claim_sector(uint32_t session_id) {
     header.session_id = session_id;
     header.record_bytes = static_cast<uint8_t>(kStoreRecordBytes);
     header.session_start = claim.session_start;
-    if (!pool_.write_header(claim.sector, header)) return Append::Fault;
+    if (!pool_.write_header(claim.sector, header)) return abandon(claim.sector);
 
     claimed_ = true;
     claimed_session_ = session_id;
     return Append::Ok;
+}
+
+Append RecordStore::abandon(uint32_t sector) {
+    pool_.allocator().abandon(sector);
+    return Append::Fault;
 }
 
 // INFO: fc 20sep26 the claim waits for the first record: opening a session must not touch flash
