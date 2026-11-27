@@ -123,6 +123,11 @@ bool CaptureService::write_end(uint32_t now_ms) {
 }
 
 void CaptureService::drain(uint32_t now_ms) {
+    // INFO: fc 27nov26 the refusal's Gap already counts the queue as lost, so only its End is owed
+    if (stopped_ == bus::CaptureStop::NoSectors) {
+        close(now_ms);
+        return;
+    }
     uint32_t written = 0;
     while (context_.diagnostics.queued() > 0 && written < kDrainCeilingRecords) {
         const uint32_t run = next_run(kDrainCeilingRecords - written);
