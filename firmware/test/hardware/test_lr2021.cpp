@@ -34,7 +34,7 @@ AdsbAir identification(uint32_t address) { return adsb_air(adsb::squitter(addres
 TEST_CASE("lr2021: bring-up holds NRESET for 100 us and reads the version before anything else") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_for(part);
-    REQUIRE(radio.begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    REQUIRE(radio.begin() == Status::Ok);
     CHECK(part.reset_pulses == 1);
     CHECK(part.fault == models::Lr2021::Fault::None);
     CHECK(part.command_order(chip::kGetVersion) == 0);
@@ -53,7 +53,7 @@ TEST_CASE("lr2021: a part that does not answer version 1.24 is not an LR2021") {
     unsoldered.miso_dead = true;
     Lr2021 radio = lr2021_for(unsoldered);
     CHECK(radio.probe() == Status::Down);
-    CHECK(radio.begin(chip::kDetectionThresholdDbm) == Status::Down);
+    CHECK(radio.begin() == Status::Down);
 
     models::Lr2021 fitted;
     CHECK(lr2021_for(fitted).probe() == Status::Ok);
@@ -64,7 +64,7 @@ TEST_CASE("lr2021: BUSY that never falls after reset times out at the boot ceili
     models::Lr2021 part;
     part.busy_stuck = true;
     Lr2021 radio = lr2021_for(part);
-    CHECK(radio.begin(chip::kDetectionThresholdDbm) == Status::Timeout);
+    CHECK(radio.begin() == Status::Timeout);
     CHECK(part.elapsed_us >= chip::kBootBusyCeilingUs);
     CHECK(part.elapsed_us < chip::kBootBusyCeilingUs + 2 * chip::kBusySleepPollUs + 1000);
     CHECK(part.commands_seen.empty());
@@ -76,13 +76,13 @@ TEST_CASE("lr2021: a boot that takes its time is waited out, not refused") {
     part.boot_busy_us = 300000;
     part.calibrate_busy_us = 5000;
     Lr2021 radio = lr2021_for(part);
-    CHECK(radio.begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    CHECK(radio.begin() == Status::Ok);
     CHECK(part.fault == models::Lr2021::Fault::None);
 }
 
 TEST_CASE("lr2021: the TCXO is powered at 1.6 V from standby RC before the calibration") {
     models::Lr2021 part;
-    REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    REQUIRE(lr2021_for(part).begin() == Status::Ok);
     CHECK(part.tcxo_set);
     CHECK(part.tcxo_tune == 0x00);
     CHECK(part.tcxo_start_time == 32765);
@@ -98,7 +98,7 @@ TEST_CASE("lr2021: the TCXO is powered at 1.6 V from standby RC before the calib
 TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver, in the part's Manchester layout" *
           doctest::test_suite("main")) {
     models::Lr2021 part;
-    REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    REQUIRE(lr2021_for(part).begin() == Status::Ok);
     CHECK(part.packet_type == 0x0A);
     CHECK(part.bitrate_bps == 2000000);
     CHECK(part.pulse_shape == 0x00);
@@ -115,7 +115,7 @@ TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver, in the part's Ma
     CHECK(part.pattern_length == 16);
     CHECK(part.pattern_repeats == 0);
     CHECK(part.sfd == 0);
-    CHECK(part.agc_gain == 0);
+    CHECK(part.agc_gain == 13);
     CHECK(part.rx_path == 0x00);
     CHECK(part.calib_fe_word == 273);
     CHECK(part.calib_fe_bytes == 6);
@@ -133,12 +133,9 @@ TEST_CASE("lr2021: the detection pattern is the 8 us ADS-B preamble, first chip 
     CHECK(air == ((kAdsbPreambleAir[0] << 8) | kAdsbPreambleAir[1]));
 }
 
-// #293 found a threshold written before the frequency acting near -106 dBm, whatever it asked.
-TEST_CASE("lr2021: the threshold and the front end go in by masked write after the frequency") {
+TEST_CASE("lr2021: the front end goes in by masked write after the frequency") {
     models::Lr2021 part;
-    REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
-    CHECK(part.masks[0xF30E14] == 0x07F00000);
-    CHECK(part.reg(0xF30E14) == 0x05C00000);
+    REQUIRE(lr2021_for(part).begin() == Status::Ok);
     CHECK(part.masks[0xF30150] == 0x000000FF);
     CHECK(part.reg(0xF30150) == 0x18);
     CHECK(part.command_order(chip::kWriteRegMemMask32) >
@@ -148,27 +145,28 @@ TEST_CASE("lr2021: the threshold and the front end go in by masked write after t
     CHECK(part.command_order(chip::kSetRfFrequency) > part.command_order(chip::kCalibFe));
 }
 
-// RadioLib writes level + 64 where Semtech writes level + 74, so cb-tfc's +40 is -98 dBm here.
-TEST_CASE("lr2021: the default threshold is the -110 dBm #293 measured best, below cb-tfc's") {
-    const int cb_tfc_field = (64 + 40) & 0x7F;
-    CHECK(((chip::kDetectionThresholdDbm + chip::kOokThresholdOffsetDb) & 0x7F) < cb_tfc_field);
-    CHECK(chip::kDetectionThresholdDbm == -110);
-
+// Session 36 on bravo-d582: -106 dBm against -110 gave +1.05 +- 0.87 squitters a second.
+TEST_CASE("lr2021: the driver leaves the part its own detection threshold") {
     models::Lr2021 part;
-    REQUIRE(lr2021_for(part).begin(-100) == Status::Ok);
-    CHECK(part.reg(0xF30E14) == static_cast<uint32_t>(((-100 + 74) & 0x7F) << 20));
+    Lr2021 radio = lr2021_receiving(part);
+    CHECK(part.masks.count(chip::kOokThresholdRegister) == 0);
+    ports::ReceiverProbe probe{};
+    REQUIRE(radio.sample(probe) == Status::Ok);
+    CHECK(probe.threshold_dbm == -106);
 }
 
-TEST_CASE("lr2021: receive is continuous, with RxDone alone on the IRQ line" *
+TEST_CASE("lr2021: receive is continuous, with the FIFO's level alone on the IRQ line" *
           doctest::test_suite("main")) {
     models::Lr2021 part;
     Lr2021 radio = lr2021_for(part);
-    REQUIRE(radio.begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    REQUIRE(radio.begin() == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     CHECK(radio.mode() == Lr2021Mode::Receive);
     CHECK(part.mode == models::Lr2021::Mode::Receive);
     CHECK(part.rx_timeout == 0xFFFFFF);
-    CHECK(part.dio_irq_mask[8] == chip::kIrqRxDone);
+    CHECK(part.dio_irq_mask[8] == chip::kIrqRxFifo);
+    CHECK(part.rx_fifo_irq_enable == (chip::kFifoHigh | chip::kFifoOverflow));
+    CHECK(part.rx_high_threshold == 11 * adsb::kFrameBytes);
     CHECK(part.listening_for_adsb());
     CHECK(part.refused.empty());
 }
@@ -180,7 +178,6 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
     REQUIRE(radio.mode() == Lr2021Mode::Receive);
     const AdsbAir air = identification(kAddress);
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -61));
-    CHECK(radio.irq_asserted());
 
     uint8_t frame[adsb::kFrameBytes]{};
     const parts::Lr2021Event event = radio.poll(frame, sizeof(frame));
@@ -188,8 +185,33 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
     CHECK(event.rssi_valid);
     CHECK(event.rssi_dbm == -61);
     CHECK(address_in(frame) == kAddress);
-    CHECK_FALSE(radio.irq_asserted());
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+}
+
+// A quiet sky is swept on a timer, and only a FIFO filling toward its 18 frames wakes the host.
+TEST_CASE("lr2021: the IRQ line rises at the FIFO's eleventh frame, and a drain lowers it") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    const AdsbAir air = identification(kAddress);
+    for (int i = 0; i < 10; i++) REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
+    CHECK_FALSE(radio.irq_asserted());
+    REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
+    CHECK(radio.irq_asserted());
+
+    uint8_t frames[chip::kFifoFrames * adsb::kFrameBytes]{};
+    CHECK(radio.poll(frames, sizeof(frames)).frames == 11);
+    CHECK_FALSE(radio.irq_asserted());
+}
+
+// Session 13 measured 1.18 ms a wake, so a sweep with nothing new costs one read and no more.
+TEST_CASE("lr2021: a poll with no new frame reads the part's count and stops there") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    const size_t commands = part.commands_seen.size();
+    uint8_t frame[adsb::kFrameBytes]{};
+    CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+    REQUIRE(part.commands_seen.size() == commands + 1);
+    CHECK(part.commands_seen.back() == chip::kGetOokRxStats);
 }
 
 // With no sync word, every downlink format lands, and the decoder tells them apart.
@@ -246,6 +268,49 @@ TEST_CASE("lr2021: two frames read in one wake come out oldest first, the RSSI o
     CHECK(newer.rssi_dbm == -50);
     CHECK(address_in(frame) == kOtherAddress);
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+}
+
+// Session 10 on bravo-d582 cost 0.47 ms a frame with one FIFO read and a snapshot each.
+TEST_CASE("lr2021: a wake reads every frame its snapshot vouched for in one FIFO transfer") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    const uint32_t addresses[] = {kAddress, kOtherAddress, 0x3C6DD0};
+    for (const uint32_t address : addresses) {
+        const AdsbAir air = identification(address);
+        REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -50));
+    }
+    const int snapshots = part.count(chip::kGetRxFifoLevel);
+
+    uint8_t frames[chip::kFifoFrames * adsb::kFrameBytes]{};
+    const parts::Lr2021Event event = radio.poll(frames, sizeof(frames));
+    REQUIRE(event.type == Lr2021EventType::Frame);
+    CHECK(event.frames == 3);
+    CHECK(event.rssi_valid);
+    for (int i = 0; i < 3; i++)
+        CHECK(address_in(frames + static_cast<size_t>(i) * adsb::kFrameBytes) == addresses[i]);
+    CHECK(part.count(chip::kReadRadioRxFifo) == 1);
+    CHECK(part.count(chip::kGetRxFifoLevel) == snapshots + 1);
+    CHECK(part.fifo.empty());
+}
+
+TEST_CASE("lr2021: frames past the caller's room wait for the next poll, which takes no snapshot") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    for (const uint32_t address : {kAddress, kOtherAddress, 0x3C6DD0u}) {
+        const AdsbAir air = identification(address);
+        REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -50));
+    }
+    uint8_t frames[2 * adsb::kFrameBytes]{};
+    const parts::Lr2021Event first = radio.poll(frames, sizeof(frames));
+    REQUIRE(first.frames == 2);
+    CHECK_FALSE(first.rssi_valid);
+    const int snapshots = part.count(chip::kGetRxFifoLevel);
+
+    const parts::Lr2021Event rest = radio.poll(frames, sizeof(frames));
+    REQUIRE(rest.frames == 1);
+    CHECK(rest.rssi_valid);
+    CHECK(address_in(frames) == 0x3C6DD0);
+    CHECK(part.count(chip::kGetRxFifoLevel) == snapshots);
 }
 
 TEST_CASE("lr2021: chips with no preamble in them are not a frame" * doctest::test_suite("main")) {
@@ -322,7 +387,7 @@ TEST_CASE("lr2021: a command the part refuses is counted, not ignored") {
     models::Lr2021 part;
     part.fail_opcodes = {chip::kSetAgcGainManual};
     Lr2021 radio = lr2021_for(part);
-    REQUIRE(radio.begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    REQUIRE(radio.begin() == Status::Ok);
     CHECK(radio.command_errors() == 1);
 }
 
@@ -330,14 +395,14 @@ TEST_CASE("lr2021: a TCXO that never starts refuses the bring-up, a calibration 
     models::Lr2021 clockless;
     clockless.calibration_errors = chip::kErrorHfXoscStart;
     Lr2021 radio = lr2021_for(clockless);
-    CHECK(radio.begin(chip::kDetectionThresholdDbm) == Status::Down);
+    CHECK(radio.begin() == Status::Down);
     CHECK(radio.start_receive() == Status::Invalid);
 
     // 1090 MHz is past the LF path's 960 MHz, so an image calibration error is expected and logged.
     models::Lr2021 out_of_band;
     out_of_band.calibration_errors = 0x0080;
     Lr2021 receiving = lr2021_for(out_of_band);
-    CHECK(receiving.begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    CHECK(receiving.begin() == Status::Ok);
     CHECK(receiving.device_errors() == 0x0080);
 }
 
@@ -345,7 +410,7 @@ TEST_CASE("lr2021: errors left from boot are cleared before the TCXO is set") {
     models::Lr2021 part;
     part.boot_errors = chip::kErrorHfXoscStart;
     Lr2021 radio = lr2021_for(part);
-    CHECK(radio.begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    CHECK(radio.begin() == Status::Ok);
     CHECK(part.command_order(chip::kClearErrors) < part.command_order(chip::kSetTcxoMode));
     CHECK(radio.device_errors() == 0);
 }

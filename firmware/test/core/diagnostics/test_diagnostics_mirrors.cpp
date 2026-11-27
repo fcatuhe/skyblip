@@ -1,6 +1,7 @@
 // clang-format off
 #include <cstdint>
 
+#include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/events/input.h"
 #include "core/events/link.h"
@@ -16,6 +17,7 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
 #include "core/traffic/alarm.h"
+#include "ports/adsb_receiver.h"
 
 #pragma GCC diagnostic error "-Wswitch"
 
@@ -230,6 +232,41 @@ constexpr bool on_the_wire(traffic::Level value) {
     return false;
 }
 
+constexpr bool on_the_wire(ports::ReceiverMode value) {
+    switch (value) {
+        case ports::ReceiverMode::Sleep:
+        case ports::ReceiverMode::StandbyRc:
+        case ports::ReceiverMode::StandbyXosc:
+        case ports::ReceiverMode::Synthesis:
+        case ports::ReceiverMode::Receive:
+        case ports::ReceiverMode::Transmit:
+        case ports::ReceiverMode::Unknown:
+            return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(ports::ReceiverReset value) {
+    switch (value) {
+        case ports::ReceiverReset::None:
+        case ports::ReceiverReset::PowerOn:
+        case ports::ReceiverReset::Pin:
+        case ports::ReceiverReset::Unknown:
+            return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(comms::ExportReference value) {
+    switch (value) {
+        case comms::ExportReference::None:
+        case comms::ExportReference::Go:
+        case comms::ExportReference::Own:
+            return true;
+    }
+    return false;
+}
+
 static_assert(code(power::ResetReason::Unknown) == 0, "reset UNKNOWN");
 static_assert(code(power::ResetReason::PowerOn) == 1, "reset POWER ON");
 static_assert(code(power::ResetReason::Pin) == 2, "reset RESET PIN");
@@ -347,6 +384,26 @@ static_assert(on_the_wire(power::DurableWrite::Settings), "write_kind");
 static_assert(code(traffic::Level::None) == 0, "alarm_level none");
 static_assert(code(traffic::Level::Advisory) == 1, "alarm_level advisory");
 static_assert(on_the_wire(traffic::Level::None), "alarm_level");
+
+static_assert(code(ports::ReceiverMode::Sleep) == 0, "receiver_mode sleep");
+static_assert(code(ports::ReceiverMode::StandbyRc) == 1, "receiver_mode standby_rc");
+static_assert(code(ports::ReceiverMode::StandbyXosc) == 2, "receiver_mode standby_xosc");
+static_assert(code(ports::ReceiverMode::Synthesis) == 3, "receiver_mode synthesis");
+static_assert(code(ports::ReceiverMode::Receive) == 4, "receiver_mode receive");
+static_assert(code(ports::ReceiverMode::Transmit) == 5, "receiver_mode transmit");
+static_assert(code(ports::ReceiverMode::Unknown) == 6, "receiver_mode unknown");
+static_assert(on_the_wire(ports::ReceiverMode::Sleep), "receiver_mode");
+
+static_assert(code(ports::ReceiverReset::None) == 0, "receiver_reset none");
+static_assert(code(ports::ReceiverReset::PowerOn) == 1, "receiver_reset power_on");
+static_assert(code(ports::ReceiverReset::Pin) == 2, "receiver_reset pin");
+static_assert(code(ports::ReceiverReset::Unknown) == 3, "receiver_reset unknown");
+static_assert(on_the_wire(ports::ReceiverReset::None), "receiver_reset");
+
+static_assert(code(comms::ExportReference::None) == 0, "export_reference none");
+static_assert(code(comms::ExportReference::Go) == 1, "export_reference go");
+static_assert(code(comms::ExportReference::Own) == 2, "export_reference own");
+static_assert(on_the_wire(comms::ExportReference::None), "export_reference");
 
 }
 }

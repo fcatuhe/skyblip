@@ -48,6 +48,8 @@ The sequence, in order:
 
 **PPS.** The guide gives no default pulse, so the driver sets one. Type 1 pulses after the first fix (§2.3.141, LC29H V1.4 §2.4.48). Types 2 and 3 stop with the fix, and type 4 pulses before the first fix too. Neither document says what type 1 does when the fix drops: we expect it to keep pulsing on the receiver's clock, unverified until the bench covers the antenna. The 100 ms width matches the L76K's. `timing` latches the rising edge, and an edge is still not a fix.
 
+**Satellites in view.** Once the sequence ends, the driver sends `$PAIR062,3,1`, GSV every solution, while the board asks for it, and `$PAIR062,3,0` once it no longer does, forgetting the set. Bravo asks while it has no fix, so a capture tells a sky the antenna cannot see from a slow first fix: on bravo-d582 a first fix took 10 minutes and `satellites_in_view` read 0. GSV comes before RMC, so it delays the solution, which costs nothing without a fix, since Bravo exports nothing then. The commands go unacknowledged, as a restart does, and the sentences arriving or stopping say whether the receiver took them.
+
 **What the sequence leaves out.**
 
 - No `$PAIR513` save to flash (§2.3.103): the driver sends the sequence on every boot, and VRTC keeps the backup domain powered between boots.
@@ -83,7 +85,7 @@ A receiver with no fix sends a 37-byte GGA (Meshtastic issue #4626). `core/gnss`
 
 ## The model
 
-`models::Ag3335` acknowledges `$PAIR` commands as the guide does and answers `$PAIR021`. It emits the sentences its rates ask for in the logged order, on the `GN` talker in NMEA 4.10, with the no-fix forms Meshtastic issue #4626 logged. Its factory state is all seven sentences once a second, as that issue reports. It flies the same `GnssTruth` as the L76K's model (`../gnss_truth.h`). It does not emit GSV, pulse a PPS, sleep or model a cold start, because nothing on Bravo reads them yet.
+`models::Ag3335` acknowledges `$PAIR` commands as the guide does and answers `$PAIR021`. It emits the sentences its rates ask for in the logged order, on the `GN` talker in NMEA 4.10, with the no-fix forms Meshtastic issue #4626 logged. Its factory state is all seven sentences once a second, as that issue reports. It flies the same `GnssTruth` as the L76K's model (`../gnss_truth.h`). Its GSV is one GPS set of `satellites_in_view`. It does not pulse a PPS, sleep or model a cold start, because nothing on Bravo reads them yet.
 
 ## What the bench checks (#169)
 

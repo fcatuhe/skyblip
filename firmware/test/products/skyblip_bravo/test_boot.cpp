@@ -88,6 +88,23 @@ TEST_CASE("bravo: the AG3335 model is configured and its fixes reach own-ship") 
     CHECK(rig.lamp() == indication::Condition::Alive);
 }
 
+// A capture tells a blind sky from a slow first fix only if the receiver says what it sees.
+TEST_CASE("bravo: the GNSS sends its satellites in view until the first fix, and not after") {
+    BravoRig rig;
+    rig.gnss_on_air = true;
+    rig.platform.gnss().fix_valid = false;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(30000);
+    REQUIRE(rig.product.board().gnss().configured());
+    CHECK(rig.platform.gnss().sentence_on(models::Ag3335::kGsv));
+    CHECK(rig.state().gnss.sky.count() == rig.platform.gnss().satellites_in_view);
+
+    rig.platform.gnss().fix_valid = true;
+    rig.run_for(5000);
+    REQUIRE(rig.state().own.fix_valid);
+    CHECK_FALSE(rig.platform.gnss().sentence_on(models::Ag3335::kGsv));
+}
+
 // An image MCUboot is trying must confirm itself on Bravo's hardware, or the next boot reverts it.
 TEST_CASE("bravo: a new image confirms itself once the receiver is up and the GNSS answers") {
     BravoRig rig;
