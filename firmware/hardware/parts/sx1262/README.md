@@ -6,6 +6,10 @@ The Go stages TX in STDBY_XOSC. It writes seven sync register bytes in one Write
 
 The model puts the preamble ahead of the sync and FIFO on transmit. The model can emit either alternating phase. Its sync matcher hears a peer with five repetitions after the driver restores receive, but the model does not implement the silicon preamble detector. An SDR capture still needs to confirm the transmit chip stream and the interval from the end of CCA to first RF energy. Minimum-preamble reception still needs a hardware test.
 
+## A failed transfer
+
+Every command, register access and buffer read returns the `Status` of its SPI transfers, and a sequence stops at the first that fails. A failed transfer is `Status::Down`. Once the part is brought up, it also owes a reinitialisation, which the no-RX rope in `service()` pays, as it pays one for a BUSY line that never fell. So `begin()` and `configure_radio()` refuse, `stage_tx()` leaves nothing for `key_tx()` to key, and `start_receive()` does not claim RX. `poll()` reports a `Fault` when the IRQ status, its clear or the payload could not be read, rather than act on bytes the part never sent, and a frame whose packet status could not be read carries no RSSI. `instant_rssi_dbm()` returns a `Result`, so a clear channel assessment whose level read failed calls the channel busy with no level (`platform/clear_channel.h`).
+
 ## Names
 
 The constants are spelled in full. Where the datasheet spells one differently, this is the pair.

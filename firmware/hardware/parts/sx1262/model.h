@@ -74,13 +74,19 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
             opcode_ = 0xFF;
         }
     }
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+    bool transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+        if (transfers_before_failure == 0) {
+            if (rx) std::fill_n(rx, bytes, uint8_t{0xFF});
+            return false;
+        }
+        if (transfers_before_failure > 0) transfers_before_failure--;
         for (size_t i = 0; i < bytes; i++) {
             uint8_t in = tx ? tx[i] : 0;
             uint8_t out = process(in);
             if (rx) rx[i] = miso_dead ? miso_level : out;
             sequence_++;
         }
+        return true;
     }
 
     static uint16_t deliver_after_sync(const uint8_t* chips, uint16_t chip_bytes,
@@ -174,6 +180,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     bool busy_stuck{false};
     bool miso_dead{false};
     uint8_t miso_level{0x00};
+    // INFO: fc 27nov26 negative never fails, else that many transfers pass and the rest fail
+    int transfers_before_failure{-1};
     bool sleeping{false};
     uint8_t sleep_config{0xFF};
     uint32_t wakes{0};

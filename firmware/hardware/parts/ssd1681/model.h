@@ -52,7 +52,13 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     void wait_at_least_us(uint32_t hold_us) override { elapsed_us += hold_us; }
 
     void select(bool) override {}
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+    bool transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+        if (transfers_before_failure == 0 && failures_before_recovery != 0) {
+            if (failures_before_recovery > 0) failures_before_recovery--;
+            if (rx) std::fill_n(rx, bytes, uint8_t{0xFF});
+            return false;
+        }
+        if (transfers_before_failure > 0) transfers_before_failure--;
         transfers++;
         for (size_t i = 0; i < bytes; i++) {
             uint8_t byte = tx ? tx[i] : 0;
@@ -93,6 +99,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
                 if (pending_opcode_ == kBorderWaveform) border = byte;
             }
         }
+        return true;
     }
 
     bool saw_command(uint8_t opcode) const {
@@ -131,6 +138,10 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     uint64_t elapsed_us{0};
     int present_count{0};
     int transfers{0};
+    // INFO: fc 27nov26 negative never fails, else that many transfers pass and the rest fail
+    int transfers_before_failure{-1};
+    // INFO: fc 27nov26 negative fails every transfer once failures start, else that many fail
+    int failures_before_recovery{-1};
     int deep_sleeps{0};
     int commands_while_busy{0};
     bool busy_stuck{false};

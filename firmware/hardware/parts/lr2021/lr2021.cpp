@@ -430,10 +430,8 @@ Status Lr2021::command(uint16_t opcode, const uint8_t* arguments, size_t bytes) 
     uint8_t rx[kFrameBytes] = {};
     put_be16(tx, opcode);
     if (bytes != 0) std::memcpy(tx + 2, arguments, bytes);
-    spi_.select(true);
-    transactions_++;
-    spi_.transfer(tx, rx, bytes + 2);
-    spi_.select(false);
+    const Status status = exchange(tx, rx, bytes + 2);
+    if (status != Status::Ok) return status;
     note_status(rx);
     last_opcode_ = opcode;
     return Status::Ok;
@@ -455,14 +453,23 @@ Status Lr2021::read(uint16_t opcode, const uint8_t* arguments, size_t argument_b
         reset_owed_ = true;
         return Status::Timeout;
     }
-    spi_.select(true);
-    transactions_++;
-    spi_.transfer(tx, rx, bytes + 2);
-    spi_.select(false);
+    const Status exchanged = exchange(tx, rx, bytes + 2);
+    if (exchanged != Status::Ok) return exchanged;
     note_status(rx);
     last_opcode_ = lr2021::kNop;
     std::memcpy(out, rx + 2, bytes);
     return Status::Ok;
+}
+
+// INFO: fc 27nov26 a frame the bus failed holds no status, and the part may have half of it
+Status Lr2021::exchange(const uint8_t* tx, uint8_t* rx, size_t bytes) {
+    spi_.select(true);
+    transactions_++;
+    const bool moved = spi_.transfer(tx, rx, bytes);
+    spi_.select(false);
+    if (moved) return Status::Ok;
+    reset_owed_ = true;
+    return Status::Down;
 }
 
 // INFO: fc 26nov26 DS 6.2.3: the address, then a count of one word, which comes back big-endian
@@ -524,9 +531,14 @@ Status Lr2021::read_frames(uint8_t* frames, uint8_t count, Lr2021Event& event) {
     put_be16(opcode, lr2021::kReadRadioRxFifo);
     spi_.select(true);
     transactions_++;
-    spi_.transfer(opcode, status, sizeof(opcode));
-    spi_.transfer(nullptr, frames, static_cast<size_t>(count) * lr2021::kFifoFrameBytes);
+    const bool moved =
+        spi_.transfer(opcode, status, sizeof(opcode)) &&
+        spi_.transfer(nullptr, frames, static_cast<size_t>(count) * lr2021::kFifoFrameBytes);
     spi_.select(false);
+    if (!moved) {
+        reset_owed_ = true;
+        return Status::Down;
+    }
     note_status(status);
     last_opcode_ = lr2021::kReadRadioRxFifo;
     event.rssi_valid = frames_waiting_ == count && newest_rssi_valid_;

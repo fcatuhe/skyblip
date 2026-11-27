@@ -235,6 +235,27 @@ TEST_CASE("rf: an executor that wakes past the dead time listens again before it
     }
 }
 
+TEST_CASE("rf: a channel level the bus failed to read keys nothing, and reports the burst busy") {
+    Executor executor;
+    REQUIRE(executor.rf.begin() == Status::Ok);
+    executor.chip.rssi_dbm = kQuietDbm;
+    REQUIRE(executor.rf.arm(executor.plan(450000, kInstantUs)) == Status::Ok);
+    executor.run_us(450000, kInstantUs - platform::kCcaLeadUs - 100);
+    REQUIRE(executor.busy_reports() == 0);
+
+    executor.chip.transfers_before_failure = 0;
+    executor.run_us(kInstantUs - platform::kCcaLeadUs, kInstantUs + 1000);
+    CHECK(executor.radio.mode() != parts::RadioMode::Tx);
+    int busy = 0;
+    events::RfEvent event{};
+    while (executor.events.pop(event)) {
+        if (event.type != events::RfEventType::Busy) continue;
+        busy++;
+        CHECK_FALSE(event.rssi_valid);
+    }
+    CHECK(busy == 1);
+}
+
 // The silence after a forced burst withdraws what it can: a burst under assessment is past that.
 TEST_CASE("rf: a burst whose assessment has begun can no longer be withdrawn, and keys") {
     Executor executor;

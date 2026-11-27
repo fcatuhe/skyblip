@@ -49,7 +49,8 @@ class Delay {
 class Spi {
    public:
     virtual ~Spi() = default;
-    virtual void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) = 0;
+    // INFO: fc 27nov26 false means the bytes did not move, so rx holds nothing the part sent
+    [[nodiscard]] virtual bool transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) = 0;
     virtual void select(bool on) = 0;
 };
 
