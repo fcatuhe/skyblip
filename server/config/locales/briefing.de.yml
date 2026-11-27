@@ -430,6 +430,7 @@ de:
       in_flight: Das Gerät ist im Flug. Nichts wurde geändert. Speichern Sie nach der Landung.
       low_power: Der Akkustand ist zu niedrig, um Einstellungen zu speichern. Laden Sie zuerst den Akku.
       expired: Innerhalb von dreißig Sekunden wurde keine Taste gedrückt. Nichts wurde geändert.
+      timeout: Das Gerät hat nicht gemeldet, ob es gespeichert hat. Angezeigt werden die Einstellungen, die es jetzt hat.
       cancelled: Am Gerät abgelehnt. Nichts wurde geändert.
       refused_on_device: Am Gerät abgelehnt. Nichts wurde geändert.
       prompt_pending: Das Gerät zeigt bereits eine Anfrage. Antworten Sie darauf oder warten Sie dreißig Sekunden.
