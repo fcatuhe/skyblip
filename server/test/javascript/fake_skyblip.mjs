@@ -158,6 +158,7 @@ export class FakeSkyblip {
     this.closeWindowAfterPackets = Infinity;
     this.dropAfterPackets = Infinity;
     this.held = new Uint8Array(0);
+    this.lostReplies = 0;
     this.listeners = [];
     this.trustedBrowsers = [];
     this.forgetSession();
@@ -262,6 +263,7 @@ export class FakeSkyblip {
     const frame = encodeFrame(fields);
     setImmediate(() => {
       if (!this.connected) return;
+      if (this.lostReplies > 0) return this.lostReplies--;
       if (frame.length <= this.mtu - ATT_HEADER_BYTES) return this.config.notify(frame);
       this.linkDrops++;
       if (!asked) return;

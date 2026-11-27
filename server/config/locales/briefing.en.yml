@@ -441,6 +441,7 @@ en:
       in_flight: The device is in flight. Nothing changed. Save once it has landed.
       low_power: The battery is too low to store settings. Charge it first.
       expired: Nobody pressed within thirty seconds. Nothing changed.
+      timeout: The device did not say whether it saved. Check the settings it reads back before you save again.
       cancelled: Refused on the device. Nothing changed.
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.

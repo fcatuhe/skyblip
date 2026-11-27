@@ -441,6 +441,7 @@ it:
       in_flight: Il dispositivo è in volo. Nulla è cambiato. Salva dopo l'atterraggio.
       low_power: La batteria è troppo scarica per memorizzare le impostazioni. Ricaricala prima.
       expired: Nessuno ha premuto entro trenta secondi. Nulla è cambiato.
+      timeout: Il dispositivo non ha comunicato se ha salvato. Controlla le impostazioni che rimanda prima di salvare di nuovo.
       cancelled: Rifiutato sul dispositivo. Nulla è cambiato.
       refused_on_device: Rifiutato sul dispositivo. Nulla è cambiato.
       prompt_pending: Il dispositivo sta già facendo una domanda. Rispondi o attendi trenta secondi.

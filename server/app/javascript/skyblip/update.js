@@ -33,8 +33,12 @@ export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploadin
 const RETURN_WITHIN_MS = 120_000;
 const BOOT_SECONDS_WRAP = 2 ** 32 / 1000;
 export const RETURN_EVERY_MS = 3_000;
+// INFO: fc 27nov26 a Go's pairing takes up to 50 s, scanning, connecting and waiting for the Bravo, longer than a prompt stands
+export const VERDICT_WITHIN_MS = 60_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
+const AWAITING_VERDICT = new Set(['asking', 'confirming']);
+const SELF_TIMED_TASKS = new Set(['fetch', 'browsers']);
 const NOTED_TASKS = new Set(['set', 'capture', 'pair']);
 const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
@@ -184,6 +188,7 @@ export class Updater {
   #returnEveryMs;
   #returnWithinMs;
   #returnTimer = null;
+  #verdictTimer = null;
   #trust;
   #attestation;
   #state = {
@@ -702,6 +707,20 @@ export class Updater {
   #set(patch) {
     const state = { ...this.#state, ...patch };
     this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state), motionSensorWithoutFirmware: motionSensorWithoutFirmwareOf(state) };
+    if ('phase' in patch) this.#awaitVerdict();
     this.#onChange(this.#state);
+  }
+
+  #awaitVerdict() {
+    clearTimeout(this.#verdictTimer);
+    const { phase, task } = this.#state;
+    const awaiting = AWAITING_VERDICT.has(phase) && !SELF_TIMED_TASKS.has(task);
+    this.#verdictTimer = awaiting ? setTimeout(() => this.#unanswered(task), VERDICT_WITHIN_MS) : null;
+  }
+
+  #unanswered(task) {
+    if (task === 'install') this.#windowVersion = null;
+    this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'timeout' }) });
+    return this.#send({ command: 'get' });
   }
 }

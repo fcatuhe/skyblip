@@ -441,6 +441,7 @@ fr:
       in_flight: "Votre aéronef est en vol. Rien n\u2019a changé. Enregistrez après atterrissage."
       low_power: "La batterie est trop faible pour enregistrer. Chargez-le d\u2019abord."
       expired: "Personne n\u2019a appuyé en trente secondes. Rien n\u2019a changé."
+      timeout: "L\u2019appareil n\u2019a pas dit s\u2019il a enregistré. Vérifiez les réglages qu\u2019il renvoie avant d\u2019enregistrer à nouveau."
       cancelled: "Refusé sur l\u2019appareil. Rien n\u2019a changé."
       refused_on_device: "Refusé sur l\u2019appareil. Rien n\u2019a changé."
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y ou attendez trente secondes."
