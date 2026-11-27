@@ -107,6 +107,7 @@ class ConfigService {
 
     // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window the pilot opened
     bool upload_allowed() const { return upload_window_open_ && !install_held_; }
+    const ports::ImageVersion& approved_version() const { return approved_version_; }
     // INFO: fc 13nov26 in flight the glass keeps the radar while an upload runs on behind it
     bool receiving_firmware() const { return upload_allowed() && !in_flight(); }
     bool updating() const { return upload_window_open_; }

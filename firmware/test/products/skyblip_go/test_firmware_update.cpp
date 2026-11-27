@@ -185,6 +185,17 @@ TEST_CASE("product: the SMP hook's gate opens on the pass after the window is co
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
+TEST_CASE("product: the SMP hook learns the version the glass approved, to refuse another early") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    open_upload_window(rig);
+    pass(rig);
+    REQUIRE(rig.platform.dfu().upload_allowed_published);
+
+    const ports::ImageVersion approved{0, 2, 0, 15};
+    CHECK(rig.platform.dfu().approved_version_published == approved);
+}
+
 TEST_CASE("product: a take-off leaves the SMP hook's gate open once the window is confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
