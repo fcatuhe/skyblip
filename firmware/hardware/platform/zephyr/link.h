@@ -27,6 +27,7 @@ class Link : public ports::Link {
     Status reserve_peer_connection_for(const events::BluetoothAddress& central) override;
     bool central_of(const events::Peer& peer, events::BluetoothAddress& out) const override;
     int phones() const override;
+    int centrals() const override;
 
     // INFO: fc 19nov26 before begin(): the callbacks push frames and link events onto this bus
     void deliver_to(bus::Bus& bus);

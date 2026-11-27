@@ -37,6 +37,8 @@ void SectorAllocator::reset() {
     lost_sectors_[1] = 0;
     recycled_[0] = Recycled{};
     recycled_[1] = Recycled{};
+    writing_[0] = Writing{};
+    writing_[1] = Writing{};
     sequence_ = 0;
     newest_ = 0;
     claimed_ = false;
@@ -53,6 +55,16 @@ void SectorAllocator::note_sector(uint32_t sector, const SectorHeader& header) {
         newest_ = sector;
     }
     claimed_ = true;
+}
+
+void SectorAllocator::open_session(SectorOwner owner, uint32_t session_id) {
+    if (owner == SectorOwner::None) return;
+    writing_[ring_of(owner)] = Writing{session_id, true};
+}
+
+void SectorAllocator::close_session(SectorOwner owner) {
+    if (owner == SectorOwner::None) return;
+    writing_[ring_of(owner)] = Writing{};
 }
 
 Claim SectorAllocator::claim(SectorOwner owner, uint32_t session_id) {
@@ -86,17 +98,15 @@ bool SectorAllocator::owns_session(SectorOwner owner, uint32_t session_id) const
     return false;
 }
 
-// INFO: fc 20sep26 counted where the loss is decided: the ring recycling under its own frontier
+// INFO: fc 26nov26 a loss is the open session's: before its first claim the frontier is the last's
 void SectorAllocator::note_taken(uint32_t sector) {
     const uint8_t code = code_of(sector);
     if (code == kFree || code == kQuarantined) return;
     const SectorOwner owner = static_cast<SectorOwner>(code);
     note_recycled(owner, table_.session_id[sector]);
-    uint32_t frontier_sector = 0;
-    uint32_t frontier_sequence = 0;
-    if (!frontier(owner, frontier_sector, frontier_sequence)) return;
-    if (table_.session_id[frontier_sector] != table_.session_id[sector]) return;
-    lost_sectors_[ring_of(owner)]++;
+    const Writing& writing = writing_[ring_of(owner)];
+    if (writing.open && writing.session_id == table_.session_id[sector])
+        lost_sectors_[ring_of(owner)]++;
 }
 
 // INFO: fc 17nov26 a ring gives up only its oldest sector, so one session per ring loses its front
@@ -147,6 +157,7 @@ void SectorAllocator::release(SectorOwner owner) {
     }
     spare_of(owner) = Spare{};
     recycled_[ring_of(owner)] = Recycled{};
+    writing_[ring_of(owner)] = Writing{};
 }
 
 void SectorAllocator::quarantine(uint32_t sector) {
@@ -258,6 +269,12 @@ bool SectorAllocator::session_sector(SectorOwner owner, uint32_t session_id, uin
         return true;
     }
     return false;
+}
+
+uint32_t SectorAllocator::unused_session_id(SectorOwner owner, uint32_t wanted) const {
+    uint32_t session_id = wanted;
+    while (owns_session(owner, session_id)) session_id++;
+    return session_id;
 }
 
 bool SectorAllocator::choose(SectorOwner owner, uint32_t& sector) const {

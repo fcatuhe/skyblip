@@ -3,6 +3,7 @@ import { Turbo } from "@hotwired/turbo-rails"
 import { Activator, httpServer } from "#skyblip/activation"
 import { bluetoothReadiness, joinFleet } from "#skyblip/fleet"
 import { sharedJournal } from "#skyblip/journal"
+import { tagText } from "#skyblip/tango"
 import { factsOf, shortName } from "controllers/briefing/facts"
 import { say, sayNotice } from "controllers/briefing/words"
 
@@ -10,8 +11,8 @@ const WORKING = { asking: "words.asking_server", registering: "words.registering
 const RECONNECT = new Set(["cancelled", "refused_on_device", "claimed", "small_mtu", "link_lost"])
 
 export default class extends Controller {
-  static targets = ["name", "facts", "hint", "message", "find", "activate", "reconnect", "kept"]
-  static values = { challenges: String, registrations: String, devices: String }
+  static targets = ["name", "facts", "hint", "message", "find", "activate", "reconnect", "kept", "usePhone", "handoff", "handoffCode"]
+  static values = { challenges: String, registrations: String, devices: String, handoff: String }
   static outlets = ["glass"]
 
   connect() {
@@ -49,15 +50,21 @@ export default class extends Controller {
   }
 
   async reconnect() {
+    this.handoffTarget.hidden = true
     const unit = this.candidate
+    if (this.#activator.state.notice?.key === "small_mtu" || unit.state?.notice?.key === "small_mtu") this.mtuRetry = unit
+    await unit.reconnect()
+  }
+
+  usePhone() {
+    const unit = this.candidate
+    const query = new URLSearchParams({ installed: "go" })
+    if (tagText(unit.tag)) query.set("tag", tagText(unit.tag).toLowerCase())
+    this.handoffCodeTarget.src = `${this.handoffValue}?${query}`
+    this.handoffTarget.hidden = false
     unit.disconnect()
-    await new Promise(resolve => {
-      const stop = this.fleet.listen(() => {
-        if (!unit.linked) resolve(stop())
-      })
-      if (!unit.linked) resolve(stop())
-    })
-    await this.fleet.connect(unit.slug)
+    sharedJournal().record("installer.handed_off", { product: "go", cause: "small_mtu" }, { device: unit.slug })
+    this.#render()
   }
 
   get #activator() {
@@ -75,14 +82,16 @@ export default class extends Controller {
     const state = activator?.state
     this.factsTarget.textContent = unit ? [...factsOf(unit), say("words.not_activated")].join(" · ") : ""
     this.nameTarget.textContent = unit && linked ? say("words.activate_unit", { name: shortName(unit) }) : this.nameTarget.dataset.title
-    this.hintTarget.hidden = linked
-    this.findTarget.hidden = linked || !bluetoothReadiness().ready
+    const usingPhone = !this.handoffTarget.hidden
+    this.hintTarget.hidden = linked || usingPhone
+    this.findTarget.hidden = linked || usingPhone || !bluetoothReadiness().ready
     this.findTarget.disabled = unit?.busy ?? false
     const ready = state?.phase === "ready" && state.read && !state.address
     const notice = state?.notice ?? this.failure ?? unit?.state?.notice
     this.activateTarget.hidden = !ready || RECONNECT.has(notice?.key)
     this.keptTarget.hidden = !ready
-    this.reconnectTarget.hidden = !(linked && RECONNECT.has(notice?.key))
+    this.reconnectTarget.hidden = !usingPhone && !(linked && RECONNECT.has(notice?.key))
+    this.usePhoneTarget.hidden = !(linked && notice?.key === "small_mtu" && this.mtuRetry === unit) || usingPhone
     this.#message(state, notice)
     this.#glass(unit, state)
   }

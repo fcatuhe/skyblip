@@ -25,6 +25,8 @@ constexpr size_t kChunkBytes = 64;
 constexpr uint8_t kGo = 0x11;
 constexpr uint8_t kBravo = 0x22;
 constexpr uint8_t kNoProduct = 0;
+constexpr ports::ImageVersion kApproved{0, 2, 0, 15};
+constexpr ports::ImageVersion kAnother{0, 3, 0, 1};
 
 struct Reply {
     bool answered{false};
@@ -134,10 +136,19 @@ struct Image {
 };
 
 // 32 bytes of header and 32 of body, then 24 of protected TLVs naming the product and 40 of hash.
-Image image(uint8_t product) {
+Image image(uint8_t product, const ports::ImageVersion& version = kApproved) {
     Image out;
     const uint8_t header[] = {0x3d, 0xb8, 0xf3, 0x96, 0, 0, 0, 0, 32, 0, 0, 0, 32};
     memcpy(out.bytes, header, sizeof(header));
+    const uint8_t version_bytes[] = {version.major,
+                                     version.minor,
+                                     static_cast<uint8_t>(version.revision),
+                                     static_cast<uint8_t>(version.revision >> 8),
+                                     static_cast<uint8_t>(version.build),
+                                     static_cast<uint8_t>(version.build >> 8),
+                                     static_cast<uint8_t>(version.build >> 16),
+                                     static_cast<uint8_t>(version.build >> 24)};
+    memcpy(out.bytes + 20, version_bytes, sizeof(version_bytes));
     uint8_t* at = out.bytes + 64;
     if (product != kNoProduct) {
         out.bytes[10] = 24;
@@ -160,8 +171,9 @@ void run_from_slot0(uint8_t product) {
     flash_area_close(area);
 }
 
-Reply upload_chunk(size_t offset, size_t bytes, uint8_t product = kGo) {
-    const Image uploaded = image(product);
+Reply upload_chunk(size_t offset, size_t bytes, uint8_t product = kGo,
+                   const ports::ImageVersion& version = kApproved) {
+    const Image uploaded = image(product, version);
     return send(dfu::SmpGroup::Image, dfu::kSmpImageUpload, dfu::SmpOperation::Write,
                 body([&](zcbor_state_t* encoder) {
                     bool ok =
@@ -190,6 +202,7 @@ void open_gate() { platform::zephyr::UploadGate::publish(true); }
 void before_each(void*) {
     platform::zephyr::UploadGate::publish(false);
     platform::zephyr::UploadGate::forget_finished();
+    platform::zephyr::UploadGate::publish_approved(kApproved);
     run_from_slot0(kGo);
 }
 
@@ -301,6 +314,14 @@ ZTEST(smp_gate, test_an_image_that_names_no_product_is_refused_at_its_first_chun
     open_gate();
     const Reply reply = upload_chunk(0, kChunkBytes, kNoProduct);
     zassert_true(refused_as_another_product(reply), "err %u", reply.image_error);
+}
+
+ZTEST(smp_gate,
+      test_an_image_of_another_version_than_the_glass_approved_is_refused_at_its_first_chunk) {
+    open_gate();
+    const Reply reply = upload_chunk(0, kChunkBytes, kGo, kAnother);
+    zassert_true(refused(reply), "rc %d", reply.result_code);
+    zassert_false(reply.offset_valid, "the chunk was written");
 }
 
 ZTEST(smp_gate, test_a_unit_running_an_image_that_names_no_product_takes_none) {

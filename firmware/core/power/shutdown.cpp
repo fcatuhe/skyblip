@@ -62,10 +62,11 @@ void ShutdownSequencer::tick(uint32_t now_ms, bool button_down, bool pad_down) {
             return;
 
         case ShutdownPhase::AwaitRelease:
-            if (release_.settled(now_ms, button_down)) enter(ShutdownPhase::Off, now_ms);
+            released_ = release_.settled(now_ms, button_down);
+            if (released_) enter(ShutdownPhase::Off, now_ms);
             return;
 
-        case ShutdownPhase::Off: return;
+        case ShutdownPhase::Off: released_ = release_.settled(now_ms, button_down); return;
     }
 }
 

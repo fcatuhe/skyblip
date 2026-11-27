@@ -14,25 +14,15 @@ static_assert(
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 }  // namespace
 
-bool ConfigChannel::connected(uint16_t session_id) const {
-    for (int i = 0; i < connected_count_; i++)
-        if (connected_sessions_[i] == session_id) return true;
-    return false;
+bool ConfigChannel::disconnect(const events::Peer& peer) {
+    if (!claim_.holds(peer)) return false;
+    claim_.release();
+    drop_replies();
+    return true;
 }
 
-void ConfigChannel::connect(uint16_t session_id) {
-    if (connected(session_id) || connected_count_ == static_cast<int>(LinkSessions::kMaxSessions))
-        return;
-    connected_sessions_[connected_count_++] = session_id;
-}
-
-bool ConfigChannel::disconnect(uint16_t session_id) {
-    for (int i = 0; i < connected_count_; i++) {
-        if (connected_sessions_[i] != session_id) continue;
-        connected_sessions_[i] = connected_sessions_[--connected_count_];
-        break;
-    }
-    if (!claim_.holds(session_id)) return false;
+bool ConfigChannel::release_departed_holder() {
+    if (!claim_.held() || live(claim_.peer())) return false;
     claim_.release();
     drop_replies();
     return true;
@@ -68,9 +58,12 @@ Status ConfigChannel::reply_to(const events::Peer& peer, const uint8_t* frame, i
 
 // INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
 Status ConfigChannel::deliver(const events::Peer& peer, const uint8_t* frame, int bytes) {
-    if (bytes <= 0 || bytes > payload_bytes_to(peer.session_id) || held_bytes_ > 0) {
+    // INFO: fc 26nov26 the holder's verdict goes past a frame waiting for another phone
+    const bool holders_turn = claim_.holds(peer) && !claim_.holds(held_for_);
+    const bool full = held_bytes_ > 0 && !holders_turn;
+    if (bytes <= 0 || bytes > payload_bytes_to(peer.session_id) || full) {
         link_drops_++;
-        return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
+        return full ? Status::Full : Status::OutOfRange;
     }
     const Status sent = link_.send_to(peer, events::Endpoint::Config,
                                       ConstByteSpan(frame, static_cast<size_t>(bytes)));
@@ -86,6 +79,7 @@ void ConfigChannel::hold(const events::Peer& peer, const uint8_t* frame, int byt
         link_drops_++;
         return;
     }
+    if (held_bytes_ > 0) link_drops_++;
     std::memcpy(held_frame_, frame, static_cast<size_t>(bytes));
     held_bytes_ = bytes;
     held_for_ = peer;

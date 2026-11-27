@@ -88,8 +88,12 @@ class Shell {
         // INFO: fc 13nov26 before drive_shutdown, so the sign starts after the park's flash work
         if (shutdown_.going_down()) finish_sign_off(now_ms);
         shutdown_.tick(now_ms, product_.platform_.button_down(), pad_down);
+        if (shutdown_.going_down() && !product_.platform_.external_power())
+            parked_off_cable_ = true;
         drive_shutdown(now_ms);
         if (shutdown_.going_down()) {
+            // INFO: fc 26nov26 the park stops the link's tick, so a held reply goes out here
+            product_.config_link_.config().resume_replies(now_ms);
             product_.settle_glass(now_ms);
             await_radio_park(now_ms, ready_but_for_radio());
         }
@@ -133,7 +137,10 @@ class Shell {
 
     // INFO: fc 26nov26 only VBUS rising wakes SYSTEM OFF, so a cable back during the park restarts
     bool cable_returned() const {
-        return shutdown_.reason() == power::ShutdownReason::CableGone &&
+        // INFO: fc 26nov26 CableGone trusts a stale battery sample, so the cable may be back
+        const bool cable_left =
+            parked_off_cable_ || shutdown_.reason() == power::ShutdownReason::CableGone;
+        return product_.power_switch() == power::Switch::Cable && !recovering() && cable_left &&
                product_.platform_.external_power();
     }
 
@@ -165,7 +172,10 @@ class Shell {
     void watch_cable(uint32_t now_ms) {
         std::optional<uint32_t>& off_in_ms = product_.state_.power.cable_off_in_ms;
         off_in_ms.reset();
-        if (product_.power_switch() != power::Switch::Cable) return;
+        if (product_.power_switch() != power::Switch::Cable) {
+            cable_.drop_hold();
+            return;
+        }
         const bool kept_on =
             product_.state_.flight.confirmed_state == flight::FlightState::Airborne ||
             product_.config_link_.config().updating();
@@ -210,6 +220,8 @@ class Shell {
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;
+        // INFO: fc 26nov26 the MCUmgr thread reads the gate until the reboot, and no pass closes it
+        product_.roles_.dfu.publish_upload_allowed(false);
         product_.park_radio();
         if (power::ends_switched_off(shutdown_.reason(), recovery_powers_off()))
             product_.alarm_.sign_off(now_ms);
@@ -266,6 +278,7 @@ class Shell {
     std::optional<ports::RecoveryPath> recovery_taken_{};
     std::optional<uint32_t> radio_waited_since_ms_{};
     bool flyable_{false};
+    bool parked_off_cable_{false};
 };
 
 }  // namespace skyblip::common

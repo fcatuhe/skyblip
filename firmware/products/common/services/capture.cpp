@@ -63,7 +63,8 @@ void CaptureService::open(uint32_t now_ms) {
         stopped_ = bus::CaptureStop::NoStorage;
         return;
     }
-    session_id_ = context_.state.traffic_now_s(now_ms);
+    // INFO: fc 26nov26 with no fix the name is a boot second, which a later boot counts again
+    session_id_ = store_.unused_session_id(context_.state.traffic_now_s(now_ms));
     opened_ms_ = now_ms;
     steady_records_ = 0;
     steady_written_ms_ = now_ms;

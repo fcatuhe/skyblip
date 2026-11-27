@@ -59,6 +59,16 @@ class Event::JournalTest < ActiveSupport::TestCase
     end
   end
 
+  test "an entry from a clock off by more than a minute is placed by the server's clock, and one off by less keeps its time" do
+    travel_to Time.utc(2026, 11, 14, 10) do
+      Event::Journal.new(browser: BROWSER, sent_at: "2026-11-14T09:00:00Z", entries: [ entry("device.connected", at: "2026-11-14T08:59:00Z") ]).record
+      Event::Journal.new(browser: BROWSER, sent_at: "2026-11-14T11:00:00Z", entries: [ entry("device.read", at: "2026-11-14T10:59:00Z") ]).record
+      Event::Journal.new(browser: BROWSER, sent_at: "2026-11-14T09:59:30Z", entries: [ entry("device.noticed", at: "2026-11-14T09:59:00Z") ]).record
+
+      assert_equal [ 1.minute.ago, 1.minute.ago, 1.minute.ago ], Event.order(:id).map(&:occurred_at)
+    end
+  end
+
   test "a script failure is fingerprinted by its kind, class, message and file, whatever its numbers and asset digest" do
     failure = ->(message, file) { entry("browser.failed", properties: { kind: "error", error: "TypeError", message:, file: }) }
     Event::Journal.new(browser: BROWSER, entries: [
@@ -83,6 +93,20 @@ class Event::JournalTest < ActiveSupport::TestCase
     unit = Unit.find_by!(device_id: "0a0b0c0d0e0f1011")
     assert_equal [ "bravo", "bravo-1234" ], [ unit.product, unit.slug ]
     assert_equal [ [ "0.2.0+950", "read" ] ], unit.firmwares.pluck(:version, :source)
+  end
+
+  # The events commit before the hearing is queued, so a post that failed in between answers 500 and its browser posts it again.
+  test "a unit's read is heard when its entry arrives again after its hearing was lost" do
+    read = entry("device.read", properties: { product: "bravo", variant: "standard", version: "0.2.0+950", release: true,
+      device_id: "0a0b0c0d0e0f1011", bluetooth_tag: 0x1234 })
+    journal = Event::Journal.new(browser: BROWSER, entries: [ read ])
+
+    journal.record
+    clear_enqueued_jobs
+    perform_enqueued_jobs { journal.record }
+
+    assert_equal 1, Event.where(name: "device.read").count
+    assert_equal "bravo-1234", Unit.find_by!(device_id: "0a0b0c0d0e0f1011").slug
   end
 
   # A JSON number has no size, and the firmware's counters and the browser's all fit in a JavaScript number.
