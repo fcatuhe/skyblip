@@ -7,6 +7,7 @@
       setup_partner_value: @partner,
       setup_installed_value: @handoff&.product,
       setup_tag_value: @handoff&.tag,
+      setup_build_value: @handoff&.build,
       setup_handoff_value: briefing_setup_handoff_path,
       setup_challenges_value: activation_challenges_path,
       setup_registrations_value: activation_registrations_path,
@@ -59,6 +60,7 @@
       </li>
     </ul>
     <p class="note" data-setup-target="linux" hidden><%= t("briefing.setup.linux.drive") %></p>
+    <%= turbo_frame_tag :installers, src: briefing_installer_path, loading: :eager, data: { setup_target: "installers", action: "turbo:frame-load->setup#installersLoaded" } %>
     <div class="app-actions">
       <button type="button" class="button-app" data-setup-target="chooseDrive" data-action="setup#install"><%= t("briefing.setup.choose_drive") %></button>
     </div>
@@ -107,7 +109,9 @@
     <div class="app-actions">
       <button type="button" class="button-app" data-setup-target="retry" data-action="setup#retry" hidden><%= t("briefing.setup.try_again") %></button>
       <button type="button" class="button-app" data-setup-target="reconnect" data-action="setup#reconnect" hidden><%= t("briefing.unit.reconnect") %></button>
+      <button type="button" class="button-app" data-setup-target="usePhone" data-action="setup#usePhone" hidden><%= t("briefing.setup.handoff.use_phone") %></button>
     </div>
+    <%= render "briefing/activation_handoff", controller: "setup", target: "activationHandoff", code_target: "activationCode" %>
   </section>
 
   <section class="setup-step" data-setup-target="panel" data-panel="aircraft" hidden>
@@ -174,6 +178,4 @@
   </div>
 
   <%= render "briefing/glass" %>
-
-  <%= turbo_frame_tag :installers, src: briefing_installer_path, loading: :eager, data: { setup_target: "installers" } %>
 <% end %>

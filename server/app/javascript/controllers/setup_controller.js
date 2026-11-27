@@ -20,7 +20,7 @@ const INSTALLED_KEY = "skyblip.setup.installed.v1"
 const SETUP_NOTICES = ["setup_notices", "notices"]
 const ACTIVATING = { asking: "words.asking_server", registering: "words.registering", unlocking: "words.registering" }
 const PRODUCT_WORDS = { go: "Go", bravo: "Bravo" }
-const RECONNECT = new Set(["cancelled", "refused_on_device", "claimed", "small_mtu"])
+const RECONNECT = new Set(["cancelled", "refused_on_device", "claimed"])
 const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: ["aircraft_type", "callsign", "aircraft_address"], bravo: ["aircraft_address"] }
 
 // INFO: fc 17nov26 one page from Meshtastic to a unit ready to fly: USB, Bluetooth, then the aircraft (skyblip/README.md, The installer)
@@ -28,8 +28,8 @@ export default class extends Controller {
   static targets = ["title", "steps", "panel", "install", "driveText", "byHand", "chooseDrive", "writingText", "connectText", "connect", "connectHint",
                     "finishText", "pressBravo", "retry", "reconnect", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
                     "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers",
-                    "linux", "bluetoothFirst", "phoneAhead", "handoff", "handoffCode", "handoffText", "another", "copyLink", "byHandLink"]
-  static values = { devices: String, setup: String, partner: String, challenges: String, registrations: String, installed: String, tag: String, handoff: String }
+                    "linux", "bluetoothFirst", "phoneAhead", "handoff", "handoffCode", "handoffText", "another", "copyLink", "byHandLink", "usePhone", "activationHandoff", "activationCode"]
+  static values = { devices: String, setup: String, partner: String, challenges: String, registrations: String, installed: String, tag: String, handoff: String, build: String }
   static outlets = ["glass"]
 
   connect() {
@@ -77,12 +77,16 @@ export default class extends Controller {
 
   async connectInstalled() {
     this.failure = null
-    const { product, tag } = this.#awaiting()
+    const waiting = this.#awaiting()
+    const { product, tag } = waiting
+    this.connectTarget.disabled = true
     try {
       const unit = await this.fleet.connectNew(installedNames(product, tag))
-      if (unit) this.#onboard(unit)
+      if (unit && this.#verified(unit, waiting)) this.#onboard(unit)
     } catch (error) {
       this.failure = { key: "failed", detail: error.message }
+    } finally {
+      this.connectTarget.disabled = false
     }
     this.#render()
   }
@@ -99,25 +103,30 @@ export default class extends Controller {
     this.#render()
   }
 
-  retry() {
+  async retry() {
+    this.activationHandoffTarget.hidden = true
+    const unit = this.unit
+    if (this.onboarding.failure?.key === "small_mtu") {
+      this.mtuRetry = unit
+      await unit.reconnect()
+      if (!unit.linked) return this.#render()
+    }
     this.onboarding = null
-    this.#onboard(this.unit)
+    this.#onboard(unit)
+  }
+
+  usePhone() {
+    this.activationCodeTarget.src = this.#handoffCode(this.unit)
+    this.activationHandoffTarget.hidden = false
+    this.unit.disconnect()
+    this.#handOff(this.unit, "small_mtu")
   }
 
   async reconnect() {
     const unit = this.unit
     this.#stage({ stage: "activating", failure: null })
-    if (unit.linked) {
-      const dropped = new Promise(resolve => {
-        const stop = this.fleet.listen(() => {
-          if (!unit.linked) resolve(stop())
-        })
-      })
-      unit.disconnect()
-      await dropped
-    }
     try {
-      await this.fleet.connect(unit.slug)
+      await unit.reconnect()
     } catch (error) {
       return this.#stage({ stage: "activating", failure: { key: "failed", detail: error.message } })
     }
@@ -125,6 +134,10 @@ export default class extends Controller {
   }
 
   edited() {
+    this.#render()
+  }
+
+  installersLoaded() {
     this.#render()
   }
 
@@ -218,11 +231,11 @@ export default class extends Controller {
   }
 
   async #download(product) {
-    const link = this.installersTarget.querySelector(`[data-installer="${product}"]`)
-    if (!link) throw new Error(say("setup_notices.no_image"))
-    const response = await fetch(link.href)
+    const choice = this.installersTarget.querySelector(`[data-installer="${product}"] select`)?.selectedOptions[0]
+    if (!choice) throw new Error(say("setup_notices.no_image"))
+    const response = await fetch(choice.value)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    return { bytes: new Uint8Array(await response.arrayBuffer()), version: link.dataset.version }
+    return { bytes: new Uint8Array(await response.arrayBuffer()), version: choice.dataset.version }
   }
 
   #render() {
@@ -256,9 +269,26 @@ export default class extends Controller {
     const drive = DRIVE_NAMES[state.product] ?? `${DRIVE_NAMES.go}${say("setup.or")}${DRIVE_NAMES.bravo}`
     const words = state.drive === "restarted" ? "setup.drive" : state.drive === "ready" ? "setup.drive_ready" : state.product ? "setup.drive_gesture" : "setup.drive_by_hand"
     this.driveTextTarget.textContent = say(words, { name, drive })
-    this.byHandTarget.hidden = state.drive !== "gesture"
+    this.byHandTarget.hidden = state.drive !== "gesture" && state.notice?.key !== "drive_closed"
     for (const item of this.byHandTarget.children) item.hidden = Boolean(state.product) && item.dataset.product !== state.product
+    for (const field of this.installersTarget.querySelectorAll("[data-installer]")) {
+      field.hidden = field.querySelector("select").options.length < 2 || (Boolean(state.product) && field.dataset.installer !== state.product)
+    }
     this.chooseDriveTarget.disabled = state.phase !== "drive"
+    this.chooseDriveTarget.textContent = say(state.notice?.key === "drive_closed" ? "setup.choose_drive_again" : "setup.choose_drive")
+  }
+
+  #verified(unit, { product, build }) {
+    if (!build) return unit.linked
+    const { identity, image, running } = unit.state
+    if (unit.linked && identity?.product === product && (running ?? identity.version) === build && image?.state === "confirmed") {
+      sharedJournal().record("installer.verified", { product, build }, { device: unit.slug })
+      return true
+    }
+    this.failure = { key: "not_verified" }
+    sharedJournal().record("installer.noticed", { key: this.failure.key, phase: "connect" }, { device: unit.slug })
+    unit.disconnect()
+    return false
   }
 
   #connectPanel(waiting) {
@@ -269,51 +299,53 @@ export default class extends Controller {
     const code = tagText(waiting.tag) ?? "…"
     const listed = waiting.product === "go" ? `activate ${code} skyBlip` : `skyBlip Bravo ${code}`
     this.connectTarget.hidden = !ready
-    this.anotherTarget.hidden = !installing || (ready && waiting.from !== "tab")
+    this.connectTarget.textContent = say(waiting.build ? "setup.verify" : "setup.connect")
+    this.anotherTarget.hidden = !installing || (ready && waiting.from !== "tab" && this.failure?.key !== "not_verified")
     this.handoffTarget.hidden = ready
     if (ready) {
-      this.connectTextTarget.textContent = say(waiting.from === "code" ? "setup.resumed" : waiting.trusted ? "setup.installed_trusted" : "setup.installed", { name })
+      const message = waiting.build ? (waiting.trusted ? "setup.verify_trusted" : "setup.verify_written") : "setup.resumed"
+      this.connectTextTarget.textContent = say(message, { name })
       this.connectHintTarget.textContent = say("setup.choose_in_list", { name: listed })
     } else {
-      this.connectTextTarget.textContent = say("setup.installed_no_bluetooth", { name })
+      this.connectTextTarget.textContent = say("setup.verify_no_bluetooth", { name })
       this.handoffCodeTarget.src = this.#handoffCode(waiting)
       this.handoffTextTarget.textContent = say("setup.handoff.scan", { name: listed })
-      this.connectHintTarget.textContent = say(checks.flag === "missing" ? "setup.connect_after_flag" : "setup.connect_after_adapter")
-      this.#handOff(waiting, checks)
+      this.connectHintTarget.textContent = say(checks.flag === "missing" ? "setup.connect_after_flag" : "setup.connect_after_adapter", { action: this.connectTarget.textContent })
+      this.#handOff(waiting, checks.flag === "missing" ? "flag" : checks.adapter === "missing" ? "adapter" : "browser")
     }
     this.#show("connect", { notice: this.failure })
   }
 
-  #handoffCode({ product, tag }) {
+  #handoffCode({ product, tag, build }) {
     const query = new URLSearchParams({ installed: product })
-    if (tag !== null && tag !== undefined) query.set("tag", tag.toString(16).padStart(4, "0"))
+    if (tagText(tag)) query.set("tag", tagText(tag).toLowerCase())
+    if (build) query.set("build", build)
     return `${this.handoffValue}?${query}`
   }
 
-  #handOff({ product }, checks) {
-    if (this.handedOff) return
-    this.handedOff = true
-    const cause = checks.flag === "missing" ? "flag" : checks.adapter === "missing" ? "adapter" : "browser"
+  #handOff({ product }, cause) {
+    if (this.handedOff === cause) return
+    this.handedOff = cause
     sharedJournal().record("installer.handed_off", { product, cause })
   }
 
   #awaiting() {
     const state = this.installer.state
-    if (state.phase === "installed") return state
+    if (state.phase === "written") return state
     return state.phase === "idle" ? this.resumed : null
   }
 
   #installerChanged(state) {
-    if (state.phase === "installed") {
-      const { product, tag, trusted } = state
-      this.#storage()?.setItem(INSTALLED_KEY, JSON.stringify({ product, tag, trusted }))
+    if (state.phase === "written") {
+      const { product, tag, trusted, build } = state
+      this.#storage()?.setItem(INSTALLED_KEY, JSON.stringify({ product, tag, trusted, build }))
     }
     this.#render()
   }
 
   #handedOver() {
     if (!this.installedValue) return null
-    return { product: this.installedValue, tag: this.tagValue ? parseInt(this.tagValue, 16) : null, trusted: false, from: "code" }
+    return { product: this.installedValue, tag: this.tagValue ? parseInt(this.tagValue, 16) : null, build: this.buildValue, trusted: false, from: "code" }
   }
 
   #recalled() {
@@ -349,6 +381,7 @@ export default class extends Controller {
     this.pressBravoTarget.hidden = stage !== "pairing" || this.onboarding.step !== "press_bravo"
     this.retryTarget.hidden = !failure || RECONNECT.has(failure.key)
     this.reconnectTarget.hidden = !RECONNECT.has(failure?.key)
+    this.usePhoneTarget.hidden = failure?.key !== "small_mtu" || this.mtuRetry !== unit || !this.activationHandoffTarget.hidden
     this.#show("finish", { notice: failure, scopes: ["activation_notices", "notices"] })
   }
 

@@ -3,21 +3,30 @@
   <%= link_to t("briefing.tools.back"), briefing_root_path, class: "unit-back" %>
   <h1><%= t("briefing.preferences.title") %></h1>
 
-  <%= form_with model: @preferences, scope: :preferences, url: briefing_preferences_path, method: :patch, class: "unit-settings", data: { turbo: false, controller: "auto-submit", action: "change->auto-submit#submit" } do |form| %>
-    <fieldset class="unit-fields">
-      <legend><%= t("briefing.preferences.language") %></legend>
-      <% Briefing::Preferences.locales.each do |locale| %>
-        <div class="field field--check">
-          <%= form.label :locale, t("language_name", locale:), value: locale, lang: locale %>
-          <%= form.radio_button :locale, locale %>
-        </div>
-      <% end %>
-    </fieldset>
-  <% end %>
+  <section class="preferences-language" aria-labelledby="language-title">
+    <h2 id="language-title"><%= t("briefing.preferences.language") %></h2>
+    <%= render "shared/locale_switcher", alternates: same_page_in_every_locale %>
+  </section>
 
   <section class="preferences-support" aria-labelledby="support-code-title">
     <h2 id="support-code-title"><%= t("briefing.preferences.support_code") %></h2>
     <p class="support-code" data-controller="support-code"></p>
     <p class="note"><%= t("briefing.preferences.support_code_hint") %></p>
   </section>
+
+  <%= form_with model: @preferences, scope: :preferences, url: briefing_preferences_path, method: :patch, class: "unit-settings", data: { turbo: false, controller: "auto-submit", action: "change->auto-submit#submit" } do |form| %>
+    <fieldset class="unit-fields">
+      <legend><%= t("briefing.preferences.software") %></legend>
+      <div class="field field--check">
+        <%= form.label :development_builds, t("briefing.preferences.development_builds") %>
+        <%= form.check_box :development_builds, aria: { describedby: "development-builds-hint" } %>
+        <p class="field-hint" id="development-builds-hint">
+          <%= t("briefing.preferences.development_builds_hint") %>
+          <% if @preferences.development_builds %>
+            <%= link_to t("briefing.preferences.every_build"), "#{Rails.configuration.x.repository_url}/releases" %>
+          <% end %>
+        </p>
+      </div>
+    </fieldset>
+  <% end %>
 </div>

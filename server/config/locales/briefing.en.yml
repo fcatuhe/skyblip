@@ -17,6 +17,10 @@ en:
       language: Language
       support_code: Support code
       support_code_hint: "When you ask for help, give this code. It lets us read what happened between this browser and your devices: connections, refusals, installs and errors. It holds nothing you typed."
+      software: "Software"
+      development_builds: "Offer development builds"
+      development_builds_hint: "Setup lists them under the latest release, which stays chosen. They are untested, for testing skyBlip."
+      every_build: "See every build on GitHub."
     devices:
       attention: Needs attention
       paired: Paired with this Go
@@ -178,18 +182,22 @@ en:
         go: "Go: press RESET twice, quickly. It is the upper button on its left side."
         bravo: "Bravo: unplug it, hold its button, plug it back in, and release once the LED above the button turns white."
       choose_drive: Choose the drive
+      choose_drive_again: "Choose the drive again"
+      version: "Version"
       downloading: "Downloading skyBlip for %{name}."
       writing: "Installing skyBlip %{version} on %{name}."
       keep_plugged: Keep it plugged in. This takes a few seconds.
-      installed: "Installed. Last step: connect %{name} over Bluetooth."
-      installed_trusted: "Installed. Last step: connect %{name} over Bluetooth. It trusts this browser, so it asks for no button press."
+      verify_written: "The USB step is done. Connect to %{name} over Bluetooth to verify the firmware."
+      verify_trusted: "The USB step is done. Connect to %{name} to verify the firmware. If the trust record went through, you won't need to press its button to activate."
       connect_after_flag: "Or turn on Web Bluetooth with the steps on this page. Once Chrome has restarted, open Your devices and connect it from there."
-      connect_after_adapter: "Or turn on Bluetooth with the steps on this page, and Connect appears here."
-      installed_no_bluetooth: "Installed. This computer cannot reach %{name} over Bluetooth, so finish the setup on your phone."
+      connect_after_adapter: "Or turn on Bluetooth with the steps on this page, and %{action} appears here."
+      verify_no_bluetooth: "This computer cannot reach %{name} over Bluetooth. Verify the firmware and finish setup on your phone."
       resumed: "skyBlip is installed on %{name}. Connect it from this phone to finish the setup."
       resumed_no_bluetooth: "skyBlip is installed on %{name}, but this browser cannot connect over Bluetooth. Open this page in Chrome on an Android phone, or on a computer with Bluetooth."
       another: "Install another device"
       handoff:
+        use_phone: "Continue on an Android phone"
+        activation: "Briefing disconnected this browser. Scan this code with an Android phone, open the link in Chrome, and connect to your Go."
         code: "Code that opens this setup on your phone"
         scan: "Scan this code with the camera of an Android phone, and open the link in Chrome. Briefing opens on this step: choose %{name} in the list."
         type: "No camera? Open skyblip.eu/setup in Chrome on the phone."
@@ -200,6 +208,7 @@ en:
         new_title: "New device?"
         new: "skyBlip installs from a computer with a USB cable, in Chrome or Edge. Open skyblip.eu/setup on the computer. Without Bluetooth, it shows a code that brings you back to this phone."
       connect: Connect
+      verify: "Connect to verify"
       choose_in_list: "Choose %{name} in the list."
       activating: "Activating %{name}."
       confirm_activation: Press the Go's button to activate it.
@@ -231,6 +240,7 @@ en:
       port_busy_linux: "Another program is using the device, or Linux does not let this browser open it. Close any program using it. If none is, run sudo usermod -aG dialout $USER in a terminal (the group is uucp on Arch Linux), log out and back in, then click Install again."
       other_board: "This board does not run skyBlip. skyBlip runs on a LilyGO T-Echo or T-Echo Plus, and on a Seeed MeshTracker X1."
       not_drive: "That is not the drive. Choose the drive named TECHOBOOT or X1."
+      drive_closed: "No drive was selected. If it is missing, follow the instructions below to put your device back into USB install mode."
       drive_denied: "Briefing needs permission to save to the drive. Choose it again, and click Allow or Save changes."
       drive_failed: "The drive could not be opened:"
       download_failed: "The skyBlip image did not download. Check the connection, then choose the drive again."
@@ -240,6 +250,7 @@ en:
       image_no_image: The published file holds no skyBlip image. Tell us.
       image_no_room: "The image leaves no room for this browser's key, so the device will ask for its presses."
       write_failed: "The drive refused the file. Unplug the device, plug it back in, then try again:"
+      not_verified: "Briefing could not confirm the new firmware. Check that you chose the right device, then try again."
       failed: "Something failed:"
     tango:
       title_go: Bravo
@@ -430,6 +441,7 @@ en:
       in_flight: The device is in flight. Nothing changed. Save once it has landed.
       low_power: The battery is too low to store settings. Charge it first.
       expired: Nobody pressed within thirty seconds. Nothing changed.
+      timeout: The device did not say whether it saved. Check the settings it reads back before you save again.
       cancelled: Refused on the device. Nothing changed.
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
@@ -463,7 +475,7 @@ en:
       keyless: The device could not read or create its own key. Restart it and activate again.
       no_session: The device no longer has the number used to start this activation. Activate again.
       bad_signature: The device did not recognise what skyblip.eu signed. Activate again. If it happens twice, tell us which firmware it runs.
-      small_mtu: This phone or browser is using the smallest Bluetooth packet. It is too small for the reply. Reconnect. If it happens again, use another phone or a computer.
+      small_mtu: "The Bluetooth link cannot carry the data needed to activate. Reconnect once. If it happens again, continue on an Android phone or try another computer."
       in_flight: This device is already activated. It is in flight. Activate it again once it has landed.
       low_power: The battery is too low to store the serial number. Charge it then activate.
       flash: The device could not store its serial number. Activate again. If it happens again, tell us.

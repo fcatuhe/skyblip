@@ -321,17 +321,19 @@
 
   .tools,
   .preferences { display: grid; gap: var(--space-m); }
-  .preferences .unit-fields { border-block-start: 0; }
+  .preferences .unit-fields { gap: 0; border-block-start: 0; }
   .preferences legend {
     float: inline-start;
     inline-size: 100%;
-    padding: 0 0 var(--space-xs);
-    border-block-end: 1px solid var(--card-border);
+    padding: 0;
+    font-family: var(--font-display);
     font-weight: 700;
+    letter-spacing: -0.015em;
   }
+  .preferences-language { display: flex; align-items: center; justify-content: space-between; gap: var(--space-inline-m); }
   .preferences-support { display: grid; gap: var(--space-xs); }
-  .preferences-support :is(h2, p) { margin: 0; }
-  .preferences-support h2 { font-size: inherit; }
+  :is(.preferences-language, .preferences-support) :is(h2, p) { margin: 0; }
+  :is(.preferences-language, .preferences-support) h2 { font-size: inherit; }
   .preferences .field--check { grid-template-columns: minmax(0, 1fr) auto; }
   .tools-list { display: grid; margin: 0; padding: 0; list-style: none; border-block-start: 1px solid var(--card-border); }
   .tools-link {
