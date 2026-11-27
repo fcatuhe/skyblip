@@ -273,6 +273,34 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
     CHECK(walk.records == written);
 }
 
+// With no fix a capture is named by the seconds since boot, which the next boot counts again.
+TEST_CASE("capture: a capture armed at the same uptime in a later boot lists apart") {
+    Rig bench;
+    REQUIRE(bench.setup() == Status::Ok);
+    bench.now_ms = 100;
+    bench.blind_seconds(5);
+    arm_over_the_link(bench);
+    feed(bench, 300);
+    stop_over_the_link(bench);
+    const uint32_t first = bench.product.capture().session_id();
+
+    Rig rebooted;
+    rebooted.platform.log_flash().restore(bench.platform.log_flash().bytes());
+    REQUIRE(rebooted.setup() == Status::Ok);
+    rebooted.now_ms = 100;
+    rebooted.blind_seconds(5);
+    arm_over_the_link(rebooted);
+    feed(rebooted, 10);
+    stop_over_the_link(rebooted);
+    const uint32_t second = rebooted.product.capture().session_id();
+    const uint32_t written = rebooted.product.capture().records_written();
+
+    const std::string count = ask(rebooted, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
+    CHECK(field(count, "sessions") == "2");
+    CHECK(second == first + 1);
+    CHECK(offload_capture(rebooted, second).records == written);
+}
+
 TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);

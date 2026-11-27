@@ -36,6 +36,9 @@ class RecordStore {
     RecordPool& pool() { return pool_; }
     const RecordPool& pool() const { return pool_; }
 
+    uint32_t unused_session_id(uint32_t wanted) const {
+        return pool_.allocator().unused_session_id(owner_, wanted);
+    }
     void begin_session(uint32_t session_id);
     Append append(const uint8_t* record, uint32_t now_ms) { return append(record, 1, now_ms); }
     Append append(const uint8_t* records, uint32_t count, uint32_t now_ms);
