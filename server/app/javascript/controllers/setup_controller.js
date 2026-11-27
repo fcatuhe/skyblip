@@ -125,6 +125,10 @@ export default class extends Controller {
     this.#render()
   }
 
+  installersLoaded() {
+    this.#render()
+  }
+
   editNow() {
     this.editing = true
     this.#render()
@@ -215,11 +219,11 @@ export default class extends Controller {
   }
 
   async #download(product) {
-    const link = this.installersTarget.querySelector(`[data-installer="${product}"]`)
-    if (!link) throw new Error(say("setup_notices.no_image"))
-    const response = await fetch(link.href)
+    const choice = this.installersTarget.querySelector(`[data-installer="${product}"] select`)?.selectedOptions[0]
+    if (!choice) throw new Error(say("setup_notices.no_image"))
+    const response = await fetch(choice.value)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    return { bytes: new Uint8Array(await response.arrayBuffer()), version: link.dataset.version }
+    return { bytes: new Uint8Array(await response.arrayBuffer()), version: choice.dataset.version }
   }
 
   #render() {
@@ -255,6 +259,9 @@ export default class extends Controller {
     this.driveTextTarget.textContent = say(words, { name, drive })
     this.byHandTarget.hidden = state.drive !== "gesture" && state.notice?.key !== "drive_closed"
     for (const item of this.byHandTarget.children) item.hidden = Boolean(state.product) && item.dataset.product !== state.product
+    for (const field of this.installersTarget.querySelectorAll("[data-installer]")) {
+      field.hidden = field.querySelector("select").options.length < 2 || (Boolean(state.product) && field.dataset.installer !== state.product)
+    }
     this.chooseDriveTarget.disabled = state.phase !== "drive"
     this.chooseDriveTarget.textContent = say(state.notice?.key === "drive_closed" ? "setup.choose_drive_again" : "setup.choose_drive")
   }

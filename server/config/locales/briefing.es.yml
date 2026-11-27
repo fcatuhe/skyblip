@@ -17,6 +17,10 @@ es:
       language: "Idioma"
       support_code: "Código de asistencia"
       support_code_hint: "Indica este código si pides ayuda. Nos permite consultar qué pasó entre este navegador y tus dispositivos: conexiones, rechazos, instalaciones y errores. No guarda nada de lo que escribiste."
+      software: "Software"
+      development_builds: "Ofrecer versiones de desarrollo"
+      development_builds_hint: "La instalación las muestra bajo la última versión, que sigue elegida. No están probadas: sirven para probar skyBlip."
+      every_build: "Ver todas las versiones en GitHub."
     devices:
       attention: "Requiere atención"
       paired: "Emparejado con este Go"
@@ -179,6 +183,7 @@ es:
         bravo: "Bravo: desenchúfalo y mantén pulsado el botón mientras lo vuelves a enchufar. Suéltalo cuando el LED de encima se ponga blanco."
       choose_drive: "Elegir la unidad"
       choose_drive_again: "Volver a elegir la unidad"
+      version: "Versión"
       downloading: "Descargando skyBlip para %{name}."
       writing: "Instalando skyBlip %{version} en %{name}."
       keep_plugged: "Déjalo enchufado. Tarda unos segundos."
