@@ -3,41 +3,21 @@
 #include <cstring>
 #include <string>
 
-#include "boards/lilygo/t_echo_plus/log_flash.h"
 #include "core/diagnostics/payload.h"
 #include "core/events/link.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
 #include "products/common/services/capture.h"
 #include "products/common/services/flight_log.h"
-#include "products/skyblip_go/capture_settings.h"
-#include "products/skyblip_go/flash_window.h"
-#include "products/skyblip_go/settings_store.h"
 #include "test/support/capture_rig.h"
 #include "test/support/config_frame.h"
 #include "test/support/diagnostics_read.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
+#include "test/support/small_pool_rig.h"
 
 using namespace skyblip;
 using skyblip::reads_in;
-
-namespace {
-
-void label_sector(platform::host::FlashRegion& flash, uint32_t sector, store::SectorOwner owner,
-                  uint32_t sequence, uint32_t session) {
-    store::SectorHeader header{};
-    header.owner = owner;
-    header.sequence = sequence;
-    header.session_id = session;
-    header.record_bytes = static_cast<uint8_t>(diagnostics::kRecordBytes);
-    uint8_t raw[store::kSectorHeaderBytes];
-    store::encode_sector_header(header, raw);
-    REQUIRE(
-        is_ok(flash.write(sector * platform::host::FlashRegion::kSectorBytes, raw, sizeof(raw))));
-}
-
-}  // namespace
 
 // The pool is full and the pilot takes off: the flight comes first, the capture carries on.
 TEST_CASE("capture: a flights session claims a diagnostics sector, and the capture keeps going") {
@@ -90,121 +70,6 @@ TEST_CASE("capture: the capture takes flights sectors down to the floor and no f
     const uint32_t flights_left = count - rig.product.capture().sectors_owned();
     CHECK(flights_left >= floor_sectors);
 }
-
-namespace {
-
-// A partition the floor swallows whole, the one shape the allocator can refuse a capture in.
-struct SmallPoolRig {
-    static constexpr uint32_t kSectors =
-        store::flights_floor_sectors(flight::log_seconds_per_sector(flight::kLogSlotsPerSector)) +
-        1;
-
-    platform::host::Clock clock;
-    platform::host::Link link;
-    platform::host::FlashRegion flash;
-    ports::NullRoles null;
-    platform::host::Identity identity{platform::host::Identity::kSerial};
-    platform::host::Random random{};
-    ports::Roles roles{clock,     null.rf,          link,     null.display,         null.key_value,
-                       flash,     null.annunciator, null.dfu, null.die_temperature, null.indicator,
-                       null.gnss, identity,         random};
-    bus::Bus bus{};
-    bus::State state{};
-    diagnostics::Recorder recorder{};
-    runtime::Context context{roles, bus, state, recorder};
-    go::Settings settings{};
-    go::SettingsStore store{settings, state.activation, state.own_transponder};
-    common::ConfigService config{link, store};
-    store::SectorSlots<boards::t_echo_plus::kLogSectors> log_sectors{};
-    common::RecordPool pool{context, go::book_flash_in_dwell, log_sectors.table()};
-    common::RecordStore flights{pool, store::SectorOwner::Flights};
-    common::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
-    go::CaptureSettings capture_settings{settings};
-    common::CaptureService capture{context, capture_store, flights, capture_settings, config};
-
-    explicit SmallPoolRig(uint32_t sectors = kSectors) : flash(sectors) {
-        roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
-        state.own.utc_valid = true;
-        state.own.utc_s = kBaseUtcS;
-        link.raise_link(1);
-    }
-
-    void label(uint32_t sector, store::SectorOwner owner, uint32_t sequence, uint32_t session) {
-        label_sector(flash, sector, owner, sequence, session);
-    }
-
-    void setup() {
-        flights.open();
-        REQUIRE(capture.setup() == Status::Ok);
-    }
-
-    void fill_flights_to_the_floor() {
-        const uint32_t floor_sectors = store::flights_floor_sectors(
-            flight::log_seconds_per_sector(flight::kLogSlotsPerSector));
-        for (uint32_t sector = 0; sector < floor_sectors; sector++)
-            label(sector, store::SectorOwner::Flights, sector + 1, 4000);
-    }
-
-    uint32_t now_ms{0};
-
-    uint32_t feed_until_stopped(uint32_t records) {
-        uint32_t pushed = 0;
-        while (pushed < records && capture.capturing()) {
-            for (int i = 0; i < diagnostics::Recorder::kMaxRecords && pushed < records; i++)
-                if (recorder.record(bench_record(kBaseUtcS + pushed))) pushed++;
-            capture.tick(now_ms);
-            now_ms += 50;
-        }
-        capture.tick(now_ms);
-        return pushed;
-    }
-};
-
-struct CaptureWalk {
-    int gaps{0};
-    uint32_t biggest_gap{0};
-    int boots_after_gap{0};
-    int configs_after_gap{0};
-};
-
-CaptureWalk walk_sectors(SmallPoolRig& rig, uint32_t session) {
-    CaptureWalk walk{};
-    uint32_t index = 0;
-    uint32_t sector = 0;
-    while (rig.pool.allocator().session_sector(store::SectorOwner::Diagnostics, session, index,
-                                               sector)) {
-        for (uint32_t slot = 0; slot < rig.pool.slots_per_sector(); slot++) {
-            uint8_t raw[diagnostics::kRecordBytes];
-            if (!rig.pool.read_slot(sector, slot, raw)) break;
-            diagnostics::Record record{};
-            if (diagnostics::decode_record(raw, record) != Status::Ok) break;
-            if (record.type == diagnostics::Type::Gap) {
-                diagnostics::Gap gap{};
-                REQUIRE(diagnostics::read(record, gap));
-                walk.gaps++;
-                if (gap.dropped > walk.biggest_gap) walk.biggest_gap = gap.dropped;
-            }
-            if (walk.gaps > 0 && record.type == diagnostics::Type::Boot) walk.boots_after_gap++;
-            if (walk.gaps > 0 && record.type == diagnostics::Type::Config) walk.configs_after_gap++;
-        }
-        index++;
-    }
-    return walk;
-}
-
-// Slowly enough that the RAM ring never overflows, so every hole on the flash is the store's.
-void feed_gently(SmallPoolRig& rig, uint32_t records) {
-    uint32_t pushed = 0;
-    while (pushed < records && rig.capture.capturing()) {
-        for (int i = 0; i < 8 && pushed < records; i++)
-            if (rig.recorder.record(bench_record(kBaseUtcS + pushed))) pushed++;
-        rig.capture.tick(rig.now_ms);
-        rig.now_ms += 50;
-    }
-    rig.capture.tick(rig.now_ms);
-}
-
-}  // namespace
 
 TEST_CASE("capture: the floor refuses a sector, the refusal reaches the flash, the capture stops") {
     SmallPoolRig rig;
@@ -295,6 +160,53 @@ TEST_CASE("capture: a second capture counts its own records and not the first on
     feed_gently(rig, 20);
     CHECK(rig.capture.records_written() > 0);
     CHECK(rig.capture.records_written() < first);
+}
+
+namespace {
+
+// Before the first fix a capture is dated in seconds since boot, as on bravo-d582 at 10 s.
+constexpr uint32_t kArmedAtUptimeMs = 10'000;
+
+void arm_before_a_fix(SmallPoolRig& rig) {
+    rig.state.own.utc_valid = false;
+    rig.setup();
+    rig.now_ms = kArmedAtUptimeMs;
+    rig.recorder.arm();
+    rig.capture.tick(rig.now_ms);
+    rig.now_ms += 50;
+    REQUIRE(rig.capture.capturing());
+}
+
+void stop(SmallPoolRig& rig) {
+    rig.recorder.disarm();
+    rig.capture.tick(rig.now_ms);
+    rig.now_ms += 50;
+    REQUIRE_FALSE(rig.capture.capturing());
+}
+
+}  // namespace
+
+// The ring counts a recycled front by name until reboot, so a name taken again starts clean.
+TEST_CASE("capture: a capture named as a session the ring recycled since boot has lost nothing") {
+    SmallPoolRig rig{SmallPoolRig::kSectors + 3};
+    rig.fill_flights_to_the_floor();
+    const uint32_t floor_sectors = SmallPoolRig::kSectors - 1;
+    const uint32_t recycled = 20;
+    rig.label(floor_sectors, store::SectorOwner::Diagnostics, floor_sectors + 1, recycled);
+    rig.label(floor_sectors + 1, store::SectorOwner::Diagnostics, floor_sectors + 2, recycled);
+    arm_before_a_fix(rig);
+    feed_gently(rig, flight::kLogSlotsPerSector * 2);
+    stop(rig);
+    REQUIRE(rig.pool.allocator().recycled_sectors(store::SectorOwner::Diagnostics, recycled) == 2);
+    rig.flights.begin_erase();
+    while (rig.flights.erasing()) rig.flights.step_erase(rig.now_ms += 50);
+
+    rig.now_ms = recycled * 1000;
+    rig.recorder.arm();
+    rig.capture.tick(rig.now_ms);
+    REQUIRE(rig.capture.session_id() == recycled);
+    feed_gently(rig, 20);
+    CHECK(rig.pool.allocator().recycled_sectors(store::SectorOwner::Diagnostics, recycled) == 0);
 }
 
 // A pass that spends the whole window on flash is a pass that misses the dwell it owed.

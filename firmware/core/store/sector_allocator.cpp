@@ -83,6 +83,7 @@ Claim SectorAllocator::claim(SectorOwner owner, uint32_t session_id) {
 
     out.session_start = !owns_session(owner, session_id);
     note_taken(sector);
+    if (out.session_start) forget_recycled(owner, session_id);
     take(sector, owner, session_id, out.session_start);
     out.sector = sector;
     out.sequence = sequence_;
@@ -119,6 +120,12 @@ void SectorAllocator::note_recycled(SectorOwner owner, uint32_t session_id) {
     Recycled& recycled = recycled_[ring_of(owner)];
     if (recycled.session_id != session_id) recycled = Recycled{session_id, 0};
     recycled.sectors++;
+}
+
+// INFO: fc 27nov26 a session that opens has lost nothing, even under a name recycled since boot
+void SectorAllocator::forget_recycled(SectorOwner owner, uint32_t session_id) {
+    Recycled& recycled = recycled_[ring_of(owner)];
+    if (recycled.session_id == session_id) recycled = Recycled{};
 }
 
 uint32_t SectorAllocator::lost_sectors(SectorOwner owner) const {
