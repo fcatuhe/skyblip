@@ -345,6 +345,20 @@ struct Screening {
 
 Screening screening_of(const ports::AdsbReceiverStatistics& statistics, uint32_t unmatched);
 
+struct Drain {
+    uint32_t irq_wakes{0};
+    uint32_t empty_wakes{0};
+    uint32_t poll_ms{0};
+    uint32_t screen_ms{0};
+    uint32_t busy_wait_ms{0};
+    uint32_t transactions{0};
+    uint32_t repaired{0};
+    uint32_t repairs_refused{0};
+};
+
+Drain drain_of(const ports::AdsbReceiverStatistics& statistics, uint32_t repaired,
+               uint32_t repairs_refused);
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -370,6 +384,7 @@ Record record_of(const Receiver& value, const Instant& at);
 Record record_of(const Reception& value, const Instant& at);
 Record record_of(const Framing& value, const Instant& at);
 Record record_of(const Screening& value, const Instant& at);
+Record record_of(const Drain& value, const Instant& at);
 
 }  // namespace skyblip::diagnostics
 

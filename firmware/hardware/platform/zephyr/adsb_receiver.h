@@ -20,14 +20,20 @@ namespace skyblip::platform::zephyr {
 class AdsbReceiver : public ports::AdsbReceiver {
    public:
     static constexpr int kStackBytes = 1536;
-    static constexpr int kHealthTickMs = 250;
-    // INFO: fc 27nov26 bravo-d582 spent 500 us a frame waking per frame, so a drain waits for more
-    static constexpr uint32_t kDrainPeriodUs = 5000;
-    // INFO: fc 27nov26 the most frames a second bravo-d582 heard outdoors, in session 126
+    // INFO: fc 27nov26 session 13 spent 1.18 ms a wake, so a quiet sky is swept, not woken per
+    // frame
+    static constexpr uint32_t kSweepPeriodMs = 20;
+    static constexpr uint32_t kFallbackSweepPeriodMs = 5;
+    // INFO: fc 27nov26 the most frames a second bravo-d582 heard outdoors, 1460 in session 13
     static constexpr uint32_t kFloodFramesPerSecond = 1500;
-    static_assert(parts::lr2021::kFifoFrames * 1000000ULL >=
-                      2ULL * kFloodFramesPerSecond * kDrainPeriodUs,
-                  "the FIFO holds twice the frames a flood brings in a drain period");
+    // INFO: fc 27nov26 session 13's longest wake was 2.84 ms, its once-a-second probe included
+    static constexpr uint32_t kWakeAllowanceUs = 3000;
+    static_assert((parts::lr2021::kFifoFrames - parts::lr2021::kFifoHighFrames) * 1000000ULL >=
+                      1ULL * kFloodFramesPerSecond * kWakeAllowanceUs,
+                  "the FIFO past its IRQ level holds a flood's frames for one wake");
+    static_assert(parts::lr2021::kFifoFrames * 1000ULL >=
+                      2ULL * kFloodFramesPerSecond * kFallbackSweepPeriodMs,
+                  "with no IRQ edge, the FIFO holds twice a flood's frames for one sweep");
     static constexpr uint64_t kProbePeriodUs = 1000000;
 
     AdsbReceiver(parts::Lr2021& radio, ports::Clock& clock, const struct gpio_dt_spec& irq,
@@ -113,16 +119,18 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     void run() {
         for (;;) {
-            const k_timeout_t idle = irq_wakes_ ? K_MSEC(kHealthTickMs) : K_NO_WAIT;
-            const bool edge = k_sem_take(&wake_, idle) == 0;
+            const k_timeout_t sweep = K_MSEC(irq_wakes_ ? kSweepPeriodMs : kFallbackSweepPeriodMs);
+            const bool edge = k_sem_take(&wake_, sweep) == 0;
             if (sleep_requested_) {
                 park();
                 return;
             }
             const uint32_t started = k_cycle_get_32();
             const uint32_t drained = drain();
-            // INFO: fc 26nov26 RxDone held the line high with no edge seen, so frames waited a tick
-            if (!edge && irq_wakes_ && drained != 0) missed_edges_++;
+            if (edge) edge_wakes_++;
+            if (drained == 0) empty_wakes_++;
+            // INFO: fc 27nov26 a sweep finding the FIFO past its IRQ level means an edge was lost
+            if (!edge && irq_wakes_ && drained >= parts::lr2021::kFifoHighFrames) missed_edges_++;
             health();
             probe();
             const uint64_t spent_us = k_cyc_to_us_floor64(k_cycle_get_32() - started);
@@ -134,20 +142,21 @@ class AdsbReceiver : public ports::AdsbReceiver {
             k_sched_unlock();
             publish();
             listening_ = radio_.mode() == parts::Lr2021Mode::Receive;
-            // INFO: fc 27nov26 a cooperative thread yields only when it waits, so it waits each
-            // period
-            if (spent_us < kDrainPeriodUs) k_sleep(K_USEC(kDrainPeriodUs - spent_us));
         }
     }
 
-    // INFO: fc 27nov26 a frame landing during the read waits a period, so a wake costs one snapshot
+    // INFO: fc 27nov26 a frame landing during the read waits for the next wake: one snapshot a wake
     uint32_t drain() {
         const uint64_t woke_us = clock_.microseconds();
+        const uint32_t polled = k_cycle_get_32();
         const parts::Lr2021Event event = radio_.poll(batch_, sizeof(batch_));
+        const uint32_t screened = k_cycle_get_32();
+        poll_us_ += k_cyc_to_us_floor64(screened - polled);
         if (event.type != parts::Lr2021EventType::Frame) return 0;
         k_sched_lock();
         hand_over(batch_, event, woke_us, statistics_, out_);
         k_sched_unlock();
+        screen_us_ += k_cyc_to_us_floor64(k_cycle_get_32() - screened);
         return event.frames;
     }
 
@@ -175,6 +184,12 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics_.framing_resyncs = radio_.framing_resyncs();
         statistics_.drains = drains_;
         statistics_.drain_busy_us = drain_busy_us_;
+        statistics_.irq_wakes = edge_wakes_;
+        statistics_.empty_wakes = empty_wakes_;
+        statistics_.poll_us = poll_us_;
+        statistics_.screen_us = screen_us_;
+        statistics_.busy_wait_us = radio_.busy_wait_us();
+        statistics_.transactions = radio_.transactions();
         statistics_.overflow_drops = radio_.overflow_drops();
         statistics_.resync_drops = radio_.resync_drops();
         statistics_.in_flight = radio_.in_flight();
@@ -211,6 +226,10 @@ class AdsbReceiver : public ports::AdsbReceiver {
     uint32_t missed_edges_{0};
     uint32_t drains_{0};
     uint64_t drain_busy_us_{0};
+    uint32_t edge_wakes_{0};
+    uint32_t empty_wakes_{0};
+    uint64_t poll_us_{0};
+    uint64_t screen_us_{0};
     uint8_t batch_[kAdsbBatchBytes]{};
     struct k_sem wake_{};
     struct gpio_callback irq_callback_{};

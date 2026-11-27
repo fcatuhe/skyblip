@@ -159,7 +159,7 @@ TEST_CASE("lr2021: the default threshold is the -110 dBm #293 measured best, bel
     CHECK(part.reg(0xF30E14) == static_cast<uint32_t>(((-100 + 74) & 0x7F) << 20));
 }
 
-TEST_CASE("lr2021: receive is continuous, with RxDone alone on the IRQ line" *
+TEST_CASE("lr2021: receive is continuous, with the FIFO's level alone on the IRQ line" *
           doctest::test_suite("main")) {
     models::Lr2021 part;
     Lr2021 radio = lr2021_for(part);
@@ -168,7 +168,9 @@ TEST_CASE("lr2021: receive is continuous, with RxDone alone on the IRQ line" *
     CHECK(radio.mode() == Lr2021Mode::Receive);
     CHECK(part.mode == models::Lr2021::Mode::Receive);
     CHECK(part.rx_timeout == 0xFFFFFF);
-    CHECK(part.dio_irq_mask[8] == chip::kIrqRxDone);
+    CHECK(part.dio_irq_mask[8] == chip::kIrqRxFifo);
+    CHECK(part.rx_fifo_irq_enable == (chip::kFifoHigh | chip::kFifoOverflow));
+    CHECK(part.rx_high_threshold == 11 * adsb::kFrameBytes);
     CHECK(part.listening_for_adsb());
     CHECK(part.refused.empty());
 }
@@ -180,7 +182,6 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
     REQUIRE(radio.mode() == Lr2021Mode::Receive);
     const AdsbAir air = identification(kAddress);
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -61));
-    CHECK(radio.irq_asserted());
 
     uint8_t frame[adsb::kFrameBytes]{};
     const parts::Lr2021Event event = radio.poll(frame, sizeof(frame));
@@ -188,8 +189,33 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
     CHECK(event.rssi_valid);
     CHECK(event.rssi_dbm == -61);
     CHECK(address_in(frame) == kAddress);
-    CHECK_FALSE(radio.irq_asserted());
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+}
+
+// A quiet sky is swept on a timer, and only a FIFO filling toward its 18 frames wakes the host.
+TEST_CASE("lr2021: the IRQ line rises at the FIFO's eleventh frame, and a drain lowers it") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    const AdsbAir air = identification(kAddress);
+    for (int i = 0; i < 10; i++) REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
+    CHECK_FALSE(radio.irq_asserted());
+    REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
+    CHECK(radio.irq_asserted());
+
+    uint8_t frames[chip::kFifoFrames * adsb::kFrameBytes]{};
+    CHECK(radio.poll(frames, sizeof(frames)).frames == 11);
+    CHECK_FALSE(radio.irq_asserted());
+}
+
+// Session 13 measured 1.18 ms a wake, so a sweep with nothing new costs one read and no more.
+TEST_CASE("lr2021: a poll with no new frame reads the part's count and stops there") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    const size_t commands = part.commands_seen.size();
+    uint8_t frame[adsb::kFrameBytes]{};
+    CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+    REQUIRE(part.commands_seen.size() == commands + 1);
+    CHECK(part.commands_seen.back() == chip::kGetOokRxStats);
 }
 
 // With no sync word, every downlink format lands, and the decoder tells them apart.
@@ -257,7 +283,7 @@ TEST_CASE("lr2021: a wake reads every frame its snapshot vouched for in one FIFO
         const AdsbAir air = identification(address);
         REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -50));
     }
-    const int snapshots = part.count(chip::kGetAndClearIrqStatus);
+    const int snapshots = part.count(chip::kGetRxFifoLevel);
 
     uint8_t frames[chip::kFifoFrames * adsb::kFrameBytes]{};
     const parts::Lr2021Event event = radio.poll(frames, sizeof(frames));
@@ -267,7 +293,7 @@ TEST_CASE("lr2021: a wake reads every frame its snapshot vouched for in one FIFO
     for (int i = 0; i < 3; i++)
         CHECK(address_in(frames + static_cast<size_t>(i) * adsb::kFrameBytes) == addresses[i]);
     CHECK(part.count(chip::kReadRadioRxFifo) == 1);
-    CHECK(part.count(chip::kGetAndClearIrqStatus) == snapshots + 1);
+    CHECK(part.count(chip::kGetRxFifoLevel) == snapshots + 1);
     CHECK(part.fifo.empty());
 }
 
@@ -282,13 +308,13 @@ TEST_CASE("lr2021: frames past the caller's room wait for the next poll, which t
     const parts::Lr2021Event first = radio.poll(frames, sizeof(frames));
     REQUIRE(first.frames == 2);
     CHECK_FALSE(first.rssi_valid);
-    const int snapshots = part.count(chip::kGetAndClearIrqStatus);
+    const int snapshots = part.count(chip::kGetRxFifoLevel);
 
     const parts::Lr2021Event rest = radio.poll(frames, sizeof(frames));
     REQUIRE(rest.frames == 1);
     CHECK(rest.rssi_valid);
     CHECK(address_in(frames) == 0x3C6DD0);
-    CHECK(part.count(chip::kGetAndClearIrqStatus) == snapshots);
+    CHECK(part.count(chip::kGetRxFifoLevel) == snapshots);
 }
 
 TEST_CASE("lr2021: chips with no preamble in them are not a frame" * doctest::test_suite("main")) {

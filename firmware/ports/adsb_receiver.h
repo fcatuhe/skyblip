@@ -73,6 +73,12 @@ struct AdsbReceiverStatistics {
     uint32_t fifo_peak_frames{0};
     uint32_t queue_peak_frames{0};
     uint32_t worst_drain_us{0};
+    uint32_t irq_wakes{0};
+    uint32_t empty_wakes{0};
+    uint64_t poll_us{0};
+    uint64_t screen_us{0};
+    uint64_t busy_wait_us{0};
+    uint32_t transactions{0};
     // INFO: fc 21nov26 false means the thread polls every 5 ms, since the IRQ edge never armed
     bool irq_armed{false};
     ReceiverProbe probe{};
@@ -83,23 +89,23 @@ struct AdsbReceiverStatistics {
     uint32_t queue_peak_counting{0};
     uint32_t worst_drain_counting{0};
 
-    // INFO: fc 27nov26 counts every frame read, then says whether the decoder can read it
-    bool admit(const uint8_t* frame, int8_t rssi_dbm, bool rssi_valid, uint64_t at_us) {
+    // INFO: fc 27nov26 counts every frame read, repairs one bit if it can, and gives the verdict
+    adsb::Screened admit(uint8_t* frame, int8_t rssi_dbm, bool rssi_valid, uint64_t at_us) {
         heard(rssi_dbm, rssi_valid, at_us);
         const uint8_t format = frame[0] >> 3;
         formats[std::min<uint8_t>(format, adsb::kDownlinkFormats - 1)]++;
-        const adsb::Screened screened = adsb::screen(frame);
+        adsb::Screened screened = adsb::screen(frame);
+        if (screened == adsb::Screened::Parity && adsb::repair_one_bit(frame))
+            screened = adsb::Screened::Repaired;
         switch (screened) {
             case adsb::Screened::Squitter: squitters++; break;
             case adsb::Screened::AllCall: all_calls++; break;
             case adsb::Screened::Reply: replies++; break;
+            case adsb::Screened::Repaired: one_bit_errors++; break;
             case adsb::Screened::Format: format_refused++; break;
-            case adsb::Screened::Parity:
-                parity_refused++;
-                if (adsb::one_bit_error(frame)) one_bit_errors++;
-                break;
+            case adsb::Screened::Parity: parity_refused++; break;
         }
-        return adsb::kept(screened);
+        return screened;
     }
 
     void drained(uint32_t fifo_frames, uint32_t queue_frames, uint32_t busy_us, uint64_t at_us) {

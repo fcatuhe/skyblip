@@ -26,6 +26,7 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     static constexpr uint8_t kCommandData = 0x03;
     static constexpr uint8_t kResetSourceAnalog = 0x01;
     static constexpr uint8_t kResetSourcePin = 0x02;
+    static constexpr uint8_t kFifoHigh = 0x04;
     static constexpr uint8_t kFifoFull = 0x08;
     static constexpr uint8_t kFifoOverflow = 0x10;
     static constexpr uint32_t kSleepableHoldUs = 1000;
@@ -116,6 +117,9 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                 }
             }
             if (fifo.size() == kFifoBytes) rx_fifo_flags |= kFifoFull;
+            if (rx_high_threshold != 0 && fifo.size() >= rx_high_threshold)
+                rx_fifo_flags |= kFifoHigh;
+            if ((rx_fifo_flags & rx_fifo_irq_enable) != 0) irq |= parts::lr2021::kIrqRxFifo;
             last_length = payload_bytes;
             ook_packets++;
             rssi_high_raw = static_cast<uint16_t>(-2 * rssi_dbm);
@@ -225,6 +229,8 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     std::map<uint32_t, uint32_t> masks;
     std::deque<uint8_t> fifo;
     uint8_t rx_fifo_flags{0};
+    uint8_t rx_fifo_irq_enable{0};
+    uint16_t rx_high_threshold{0};
     uint16_t last_length{0};
     uint16_t rssi_high_raw{0};
     uint16_t ook_packets{0};
@@ -298,6 +304,8 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
         registers.clear();
         fifo.clear();
         rx_fifo_flags = 0;
+        rx_fifo_irq_enable = 0;
+        rx_high_threshold = 0;
         ook_packets = 0;
         response_pending_ = false;
         command_status_ = kCommandOk;
@@ -472,6 +480,10 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                          low(rssi_high_raw & 0x01), 0});
                 break;
             case chip::kClearRxFifo: fifo.clear(); break;
+            case chip::kConfigFifoIrq:
+                rx_fifo_irq_enable = args[0];
+                rx_high_threshold = be16(args + 2);
+                break;
             case chip::kGetAndClearFifoIrqFlags:
                 respond({rx_fifo_flags, 0});
                 rx_fifo_flags = 0;

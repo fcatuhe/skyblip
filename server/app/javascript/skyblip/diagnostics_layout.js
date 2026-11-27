@@ -338,5 +338,15 @@ export const DIAGNOSTICS_LAYOUT = Object.freeze({
       {"name": "fifo_peak_frames", "kind": "u8", "at": 14},
       {"name": "queue_peak_frames", "kind": "u8", "at": 15},
     ]],
+    [26, "drain", [
+      {"name": "irq_wakes", "kind": "u16", "at": 0},
+      {"name": "empty_wakes", "kind": "u16", "at": 2},
+      {"name": "poll_ms", "kind": "u16", "at": 4},
+      {"name": "screen_ms", "kind": "u16", "at": 6},
+      {"name": "busy_wait_ms", "kind": "u16", "at": 8},
+      {"name": "transactions", "kind": "u16", "at": 10},
+      {"name": "repaired", "kind": "u16", "at": 12},
+      {"name": "repairs_refused", "kind": "u16", "at": 14},
+    ]],
   ],
 });

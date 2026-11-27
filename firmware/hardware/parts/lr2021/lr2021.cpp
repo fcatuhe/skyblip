@@ -83,11 +83,14 @@ Status Lr2021::start_receive() {
     if (mode_ != Lr2021Mode::Standby) return Status::Invalid;
     const uint8_t path[2] = {lr2021::kRxPathLowFrequency, lr2021::kRxBoostOff};
     uint8_t irq_config[5] = {irq_dio_};
-    put_be32(irq_config + 1, lr2021::kIrqRxDone);
+    put_be32(irq_config + 1, lr2021::kIrqRxFifo);
+    uint8_t fifo_irq[10] = {lr2021::kFifoHigh | lr2021::kFifoOverflow, 0};
+    put_be16(fifo_irq + 2, lr2021::kFifoHighFrames * lr2021::kFifoFrameBytes);
     uint8_t clear[4];
     put_be32(clear, lr2021::kIrqAll);
     uint8_t continuous[3] = {0xFF, 0xFF, 0xFF};
     Status status = command(lr2021::kSetRxPath, path, sizeof(path));
+    if (status == Status::Ok) status = command(lr2021::kConfigFifoIrq, fifo_irq, sizeof(fifo_irq));
     if (status == Status::Ok) status = command(lr2021::kSetDioIrqConfig, irq_config, 5);
     if (status == Status::Ok) status = command(lr2021::kClearIrq, clear, sizeof(clear));
     if (status == Status::Ok) status = read_packets(packets_at_clear_);
@@ -123,25 +126,26 @@ Lr2021Event Lr2021::poll(uint8_t* frames, size_t capacity) {
     return event;
 }
 
-// INFO: fc 11nov26 the packet status is read on both sides of the level, and only agreement gives a
-// level
+// INFO: fc 27nov26 two equal counts around the packet status make it the newest counted frame's
 Status Lr2021::take_snapshot() {
-    uint8_t irq[4] = {};
-    uint8_t before[6] = {};
+    uint16_t packets_before = 0;
+    Status status = read_packets(packets_before);
+    if (status != Status::Ok) return status;
+    const uint16_t whole =
+        static_cast<uint16_t>(packets_before - packets_at_clear_ - frames_since_clear_);
+    if (whole == 0) return Status::Ok;
+    uint8_t packet[6] = {};
     uint8_t level[2] = {};
     uint8_t fifo_flags[2] = {};
-    uint8_t after[6] = {};
-    uint16_t packets_before = 0;
     uint16_t packets_after = 0;
-    Status status = read(lr2021::kGetAndClearIrqStatus, irq, sizeof(irq));
-    if (status != Status::Ok || (be32(irq) & lr2021::kIrqRxDone) == 0) return status;
-    status = read(lr2021::kGetOokPacketStatus, before, sizeof(before));
-    if (status == Status::Ok) status = read_packets(packets_before);
+    uint8_t clear[4];
+    put_be32(clear, lr2021::kIrqAll);
+    status = read(lr2021::kGetOokPacketStatus, packet, sizeof(packet));
     if (status == Status::Ok) status = read(lr2021::kGetRxFifoLevel, level, sizeof(level));
     if (status == Status::Ok)
         status = read(lr2021::kGetAndClearFifoIrqFlags, fifo_flags, sizeof(fifo_flags));
     if (status == Status::Ok) status = read_packets(packets_after);
-    if (status == Status::Ok) status = read(lr2021::kGetOokPacketStatus, after, sizeof(after));
+    if (status == Status::Ok) status = command(lr2021::kClearIrq, clear, sizeof(clear));
     if (status != Status::Ok) return status;
     if ((fifo_flags[0] & lr2021::kFifoOverflow) != 0) {
         const uint32_t lost =
@@ -149,10 +153,8 @@ Status Lr2021::take_snapshot() {
         overflow_drops_ += lost != 0 ? lost : 1;
         return restart_receive();
     }
-    newest_rssi_valid_ = std::memcmp(before, after, sizeof(before)) == 0;
-    newest_rssi_dbm_ = rssi_high_dbm(after);
-    const uint16_t whole =
-        static_cast<uint16_t>(packets_before - packets_at_clear_ - frames_since_clear_);
+    newest_rssi_valid_ = packets_before == packets_after;
+    newest_rssi_dbm_ = rssi_high_dbm(packet);
     // INFO: fc 26nov26 a frame that closed between the two counts may or may not be in the level
     if (packets_before != packets_after) {
         split_counts_++;
@@ -281,6 +283,7 @@ Status Lr2021::wait_busy_low(uint32_t ceiling_us) {
             waited_us < lr2021::kBusySpinUs ? lr2021::kBusySpinPollUs : lr2021::kBusySleepPollUs;
         delay_.wait_at_least_us(step_us);
         waited_us += step_us;
+        busy_wait_us_ += step_us;
     }
     return Status::Ok;
 }
@@ -432,6 +435,7 @@ Status Lr2021::command(uint16_t opcode, const uint8_t* arguments, size_t bytes) 
     put_be16(tx, opcode);
     if (bytes != 0) std::memcpy(tx + 2, arguments, bytes);
     spi_.select(true);
+    transactions_++;
     spi_.transfer(tx, rx, bytes + 2);
     spi_.select(false);
     note_status(rx);
@@ -456,6 +460,7 @@ Status Lr2021::read(uint16_t opcode, const uint8_t* arguments, size_t argument_b
         return Status::Timeout;
     }
     spi_.select(true);
+    transactions_++;
     spi_.transfer(tx, rx, bytes + 2);
     spi_.select(false);
     note_status(rx);
@@ -530,6 +535,7 @@ Status Lr2021::read_frames(uint8_t* frames, uint8_t count, Lr2021Event& event) {
     uint8_t status[2] = {};
     put_be16(opcode, lr2021::kReadRadioRxFifo);
     spi_.select(true);
+    transactions_++;
     spi_.transfer(opcode, status, sizeof(opcode));
     spi_.transfer(nullptr, frames, static_cast<size_t>(count) * lr2021::kFifoFrameBytes);
     spi_.select(false);

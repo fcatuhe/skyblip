@@ -425,6 +425,20 @@ inline bool read(const Record& record, Screening& out) {
     return true;
 }
 
+inline bool read(const Record& record, Drain& out) {
+    if (record.type != Type::Drain) return false;
+    out = Drain{};
+    out.irq_wakes = wire::get_uint16(record.payload + drain_at::kIrqWakes);
+    out.empty_wakes = wire::get_uint16(record.payload + drain_at::kEmptyWakes);
+    out.poll_ms = wire::get_uint16(record.payload + drain_at::kPollMs);
+    out.screen_ms = wire::get_uint16(record.payload + drain_at::kScreenMs);
+    out.busy_wait_ms = wire::get_uint16(record.payload + drain_at::kBusyWaitMs);
+    out.transactions = wire::get_uint16(record.payload + drain_at::kTransactions);
+    out.repaired = wire::get_uint16(record.payload + drain_at::kRepaired);
+    out.repairs_refused = wire::get_uint16(record.payload + drain_at::kRepairsRefused);
+    return true;
+}
+
 }  // namespace skyblip::diagnostics
 
 #endif

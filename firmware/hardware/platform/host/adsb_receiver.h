@@ -11,7 +11,7 @@
 
 namespace skyblip::platform::host {
 
-// INFO: fc 12nov26 the silicon thread's drain, run from the board's poll: the host has no IRQ edge
+// INFO: fc 27nov26 the silicon thread's sweep, run from the board's poll: the host has no IRQ edge
 class AdsbReceiver : public ports::AdsbReceiver {
    public:
     static constexpr uint32_t kProbePeriodMs = 1000;
@@ -35,15 +35,14 @@ class AdsbReceiver : public ports::AdsbReceiver {
     void service(uint32_t now_ms) {
         if (!started_ || stopped_) return;
         const uint64_t woke_us = clock_.microseconds();
-        if (radio_.irq_asserted()) drains_++;
-        uint32_t drained = 0;
-        while (radio_.irq_asserted()) {
-            const parts::Lr2021Event event = radio_.poll(batch_, sizeof(batch_));
-            if (event.type != parts::Lr2021EventType::Frame) break;
+        drains_++;
+        const parts::Lr2021Event event = radio_.poll(batch_, sizeof(batch_));
+        if (event.type == parts::Lr2021EventType::Frame) {
             hand_over(batch_, event, woke_us, statistics_, out_);
-            drained += event.frames;
+        } else {
+            empty_wakes_++;
         }
-        statistics_.drained(drained, out_.size(), 0, woke_us);
+        statistics_.drained(event.frames, out_.size(), 0, woke_us);
         (void)radio_.service(now_ms - serviced_ms_, runtime::kRadioRxSilenceCeilingMs);
         serviced_ms_ = now_ms;
         if (now_ms - probed_ms_ < kProbePeriodMs) return;
@@ -61,6 +60,9 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics.dropped = radio_.fifo_drops() + out_.dropped();
         statistics.part_resets = radio_.part_resets();
         statistics.drains = drains_;
+        statistics.empty_wakes = empty_wakes_;
+        statistics.busy_wait_us = radio_.busy_wait_us();
+        statistics.transactions = radio_.transactions();
         statistics.framing_resyncs = radio_.framing_resyncs();
         statistics.overflow_drops = radio_.overflow_drops();
         statistics.resync_drops = radio_.resync_drops();
@@ -106,6 +108,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     ports::ReceiverProbe probe_{};
     uint32_t serviced_ms_{0};
     uint32_t drains_{0};
+    uint32_t empty_wakes_{0};
     uint32_t probed_ms_{0};
     uint8_t batch_[kAdsbBatchBytes]{};
     bool started_{false};

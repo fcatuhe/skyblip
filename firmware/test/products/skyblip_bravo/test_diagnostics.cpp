@@ -10,7 +10,7 @@ TEST_CASE("bravo: the adsb group splits refused frames from the aircraft folded 
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(1);
     AdsbAir corrupted = adsb_air(adsb::airborne_position(0x3C6586, 0, 48.51, 8.5, false, 1800));
-    corrupted.chips[10] ^= 0x0C;
+    corrupted.chips[10] ^= 0xCC;
     rig.platform.radio().receive_air(corrupted.chips, sizeof(corrupted.chips));
     rig.hear(adsb::squitter(0x3C6586, 0, 28));
     rig.hear_aircraft(0x3C6586, 2000);

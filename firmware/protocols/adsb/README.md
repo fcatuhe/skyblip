@@ -10,7 +10,7 @@ skyBlip keeps the rest: the observation a track becomes (`core/protocol/adsb_obs
 
 **Bits.** The receiver decides each bit from its two chips, so the decoder never sees a chip. 1090 MHz sends a 1 as `10`, so `squitter.h`'s `chips_of()` is `wire::manchester_encode` inverted. DF18 is refused as `Unsupported`, so TIS-B, ADS-R and non-transponder ADS-B are not read.
 
-**Parity.** Mode S parity is ADS-L's CRC (`protocols/common/crc.h`), so `wire::crc24_check` leaves 0 for a sound DF17 frame. A frame that fails is refused as `Crc` and never repaired: the LR2021 marks no doubtful chip, and a blind one-bit repair can draw a ghost aircraft.
+**Parity.** Mode S parity is ADS-L's CRC (`protocols/common/crc.h`), so `wire::crc24_check` leaves 0 for a sound DF17 frame. A frame that fails is refused as `Crc`. `receive()` repairs nothing: the LR2021 marks no doubtful chip, and a blind one-bit repair can draw a ghost aircraft. `repair_one_bit()` lets a caller repair a DF17 that holds an address it already knows (The screen).
 
 **Messages.** Each one carries the 24-bit address, the capability field and the type code. Units follow `firmware/README.md`:
 
@@ -51,9 +51,9 @@ Every other format is `Unsupported` with no parity checked. `kDownlinkFormats`, 
 
 ## The screen
 
-`screen()` gives `receive()`'s verdict on a frame without decoding it, so a radio thread can run it before a queue: `Squitter` for a DF17 whose parity leaves 0, `AllCall` for a DF11 whose parity leaves 0 or an interrogator code, `Reply` for DF0, 4, 5, 16, 20 and 21, `Format` for every other format and `Parity` for a DF11 or DF17 that fails. It keeps every frame `receive()` reads: a test runs both on 20,000 frames of noise, squitters and all-calls and checks it. A `Reply` passes unchecked, because its parity is its address, and only the caller knows the addresses heard in clear. A DF17 with a type code the decoder does not read passes as a `Squitter` and comes back `Unsupported` from `receive()`. The parity costs one pass of the bitwise CRC over 7 or 14 bytes, run only for DF11 and DF17.
+`screen()` gives `receive()`'s verdict on a frame without decoding it, so a radio thread can run it before a queue: `Squitter` for a DF17 whose parity leaves 0, `AllCall` for a DF11 whose parity leaves 0 or an interrogator code, `Reply` for DF0, 4, 5, 16, 20 and 21, `Format` for every other format and `Parity` for a DF11 or DF17 that fails. `Repaired` is the caller's verdict on a `Parity` frame that `repair_one_bit()` mended. It keeps every frame `receive()` reads: a test runs both on 20,000 frames of noise, squitters and all-calls and checks it. A `Reply` passes unchecked, because its parity is its address, and only the caller knows the addresses heard in clear. A DF17 with a type code the decoder does not read passes as a `Squitter` and comes back `Unsupported` from `receive()`. The parity costs one pass of the bitwise CRC over 7 or 14 bytes, run only for DF11 and DF17.
 
-`one_bit_error()` says whether a DF17 that fails is one flipped bit away from sound. Mode S parity is linear, so a sound frame with one bit flipped leaves that bit's syndrome, and the stack holds the 107 syndromes of bits 6 to 112. DO-260B 2.2.4.3.4.7.3.a never corrects the DF field, so its five bits are left out. Nothing is repaired: the count tells a bench whether a repair gated on a tracked address is worth building.
+`repair_one_bit()` mends a DF17 that fails by one flipped bit. Mode S parity is linear, so a sound frame with one bit flipped leaves that bit's syndrome, and the stack holds the 107 syndromes of bits 6 to 112. DO-260B 2.2.4.3.4.7.3.a never corrects the DF field, so its five bits are left out, and a DF11 is left alone because its parity may carry an interrogator code. A random syndrome lands on one of the 107 about once in 157,000 tries, and then names a random address. So the caller keeps a repaired frame only for an aircraft it already holds, as ADSBee does (PantsForBirds/adsbee #382), and a repair never founds a track. dump1090 repairs one bit the same way with `--fix`.
 
 ## ADS-B: from messages to an aircraft
 

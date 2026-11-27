@@ -41,7 +41,7 @@ SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and
 | GetErrors | | DS 6.7.4 |
 | GetStatus | | DS 6.7.1: clears the reset source the NRESET pulse left, so a later one is a reset the driver never asked for |
 
-`start_receive()` sends SetRxPath, SetDioIrqConfig with RxDone alone on the IRQ DIO, ClearIrq and SetRx with timeout 0xFFFFFF, continuous receive (DS 6.3.5): the part keeps listening after each frame.
+`start_receive()` sends SetRxPath, ConfigFifoIrq with FifoHigh at 11 frames (154 bytes) and FifoOverflow, SetDioIrqConfig with RxFifo alone on the IRQ DIO, ClearIrq and SetRx with timeout 0xFFFFFF, continuous receive (DS 6.3.5, 6.10.1): the part keeps listening after each frame.
 
 Pattern 0x0285 read first bit first is `1010000101000000`, the 8 us preamble at two chips a microsecond, with pulses at 0, 1, 3.5 and 4.5 us (DS 16.3.8). With no sync word, the part decodes the 224 chips behind it as 112 Manchester bits and puts 14 bytes in the FIFO.
 
@@ -49,12 +49,12 @@ Pattern 0x0285 read first bit first is `1010000101000000`, the 8 us preamble at 
 
 Each SPI frame opens on two status bytes whose command status is the result of the command before (DS 6.7.1). The driver counts a CMD_FAIL or CMD_PERR there as a `command_error` and runs on, as SoftRF does. A read is two frames: the command, then zeros that clock the answer out (DS 5.4.1.2). The FIFO read answers in its own frame (DS 5.4.1.3).
 
-On the IRQ the driver takes a snapshot: GetAndClearIrqStatus, GetOokPacketStatus, GetOokRxStats, GetRxFifoLevel, GetAndClearFifoIrqFlags, GetOokRxStats again and GetOokPacketStatus again. `poll()` then reads every whole frame the snapshot vouched for in one ReadRadioRxFifo, oldest first, as many as the caller has room for. The FIFO read answers any number of bytes in sequence (DS 5.3.1), so 18 frames cost one command and 252 bytes on the wire. Frames the caller had no room for wait for the next `poll()`, which reads them without a new snapshot. Frames keep landing meanwhile, so the driver holds four rules:
+`poll()` first reads the part's packet count (GetOokRxStats). With no new packet it stops there, so a sweep of a quiet sky costs one read. Otherwise it takes the rest of a snapshot: GetOokPacketStatus, GetRxFifoLevel, GetAndClearFifoIrqFlags, GetOokRxStats again and ClearIrq, 11 SPI transactions where the snapshot before took 14. It then reads every whole frame the snapshot vouched for in one ReadRadioRxFifo, oldest first, as many as the caller has room for. The FIFO read answers any number of bytes in sequence (DS 5.3.1), so 18 frames cost one command and 252 bytes on the wire. Frames the caller had no room for wait for the next `poll()`, which reads them without a new snapshot. Frames keep landing meanwhile, so the driver holds four rules:
 
 - **An overflow stops the reading.** Nineteen frames fill the 256-byte FIFO with eighteen and 4 bytes of the nineteenth, so every later read would start 4 bytes off. The overflow flag latches whether or not its IRQ is enabled (DS 6.10.1, 6.10.2, 6.10.4). When it is set, the driver counts every frame the level held in `fifo_drops`, goes to STDBY_RC, clears the FIFO and restarts receive, before reading anything.
-- **An empty FIFO proves nothing.** A frame that lands after GetAndClearIrqStatus is read in the same snapshot, and its own RxDone then finds nothing. That RxDone is neither a frame nor a drop, and the FIFO is not cleared, because a frame may be landing.
+- **A frame landing during the snapshot waits.** It is in the level and not in the first count, so the snapshot reads only the frames both vouch for, and the next poll reads it. Nothing is dropped and the FIFO is not cleared.
 - **Every byte belongs to a frame.** See Framing, below.
-- **A level is given only when it is certain.** GetOokPacketStatus describes the last packet (DS 16.3.7), which may have landed after the level was read. Only the newest frame of the snapshot carries the RssiHigh level, in half-dB steps, and only when both reads of the packet status agree.
+- **A level is given only when it is certain.** GetOokPacketStatus describes the last packet (DS 16.3.7), which may have landed after the first count. Only the newest frame of the snapshot carries the RssiHigh level, in half-dB steps, and only when the two counts around the packet status agree, so no packet closed between them.
 
 ## Framing
 
@@ -96,11 +96,13 @@ The Zephyr adapter's thread is cooperative, so nothing preempts it between an IR
 
 ### The receiver thread
 
-The thread sleeps on the IRQ's rising edge, takes one snapshot, reads its frames in one transfer, screens them, then sleeps out the rest of `kDrainPeriodUs`, 5 ms, before it waits for the next edge. A frame that lands during the read waits for the next period, so a wake costs one snapshot whatever the sky does.
+The thread wakes every `kSweepPeriodMs`, 20 ms, or earlier when the FIFO reaches 11 frames and raises the IRQ. It takes one snapshot, reads its frames in one transfer and screens them. A frame that lands during the read waits for the next wake, so a wake costs one snapshot whatever the sky does. ADSBee 1421 drains the same part the same way, a sweep every 4 ms and a FIFO IRQ at 11 packets (#389).
 
 Woken per frame, as it was before #550, a snapshot of 7 to 9 reads cost about 500 us a frame, measured on bravo-d582 as the service loop's busy time against the frame rate. The thread is cooperative, so it yielded only when the FIFO ran empty, and at 1500 frames a second, a flood outdoors, it held the CPU: the loop fell to 7 passes a second and the GNSS UART overran. Paced at 5 ms but still reading a frame per transfer and taking a new snapshot whenever one landed, it measured 0.8 ms a wake plus 0.47 ms a frame in session 10 (R² 1.00), 63 to 76% of the CPU outdoors, and the queue to the decoder lost up to 260 frames a second. ADSBee 1421 drains the same part the same way, one level read and one FIFO read of the whole frames, and decodes 99.2% of 4000 frames a second with none lost after reception (PantsForBirds/adsbee #313).
 
-The FIFO's 18 frames hold a 5 ms period at up to 3600 frames a second, twice the flood bravo-d582 met (`static_assert`). Past that the FIFO overflows, and the frames are counted lost rather than the CPU. The thread's own busy time, its drains, its longest wake and the most frames one wake found reach a capture's `Framing` and `Screening` records, because the loop's busy time counts it inside whichever service it interrupted.
+Paced at 5 ms and woken on RxDone, it measured 1.18 ms a wake plus 0.025 ms a frame in session 13 (R² 1.00). Indoors nearly every frame had a wake of its own, so the fixed cost was all of it, and outdoors bursts filled the FIFO's 18 frames inside 5 ms and lost 69 frames to overflow. Swept every 20 ms, a quiet sky costs at most 50 wakes a second. In a busy one the IRQ wakes the thread every 11 frames, and the 7 frames left in the FIFO hold 4.7 ms at 1500 frames a second, more than session 13's longest wake, 2.84 ms (`static_assert`). Past that the FIFO overflows, and the frames are counted lost rather than the CPU. When the IRQ trigger cannot be armed, the thread sweeps every 5 ms instead, and the FIFO holds twice a flood's frames for that period.
+
+The thread's own busy time, its wakes, its longest wake, the most frames one wake found, and where a wake's time went reach a capture's `Framing`, `Screening` and `Drain` records, because the loop's busy time counts it inside whichever service it interrupted. `Drain` splits a wake into the driver's poll, the BUSY waits inside it, its SPI transactions and the screen, so the cost of one transaction reads straight off a capture.
 
 ### The screen
 
@@ -108,9 +110,11 @@ Outdoors about nine frames in ten are noise the preamble detector let through: a
 
 The part cannot screen in its place. Its OOK modem takes one sync word and one pair of one-byte address values (DS 16.3.4, 16.3.5), and the formats Bravo reads share no prefix: DF0, 4, 5 and 11 open on 0, DF16 to 21 on 1. A sync on DF17 drops every Mode S reply. Its CRC still writes a failed frame into the FIFO (DS 5.3.1), and its one initial value fits only DF17. ADSBee 1421 tried a DF17 detector pattern on this part and decoded 67% at -80 dBm and 81% at -50 dBm, against 97% and 100% for the full preamble (#266).
 
+A DF17 one bit from sound is repaired, not refused (`../../../protocols/adsb/README.md`, The screen), and goes up marked `repaired`. Bravo's decoder keeps it only for an aircraft it already holds, so a repair never founds a track. Session 13 counted 468 such squitters against 2518 sound ones, 19%.
+
 The screen cannot win back the air a noise frame takes. The part has no re-trigger: after a detection it reads 112 bits whatever arrives, so each detection blinds it for about 140 us (ADSBee #313). At 1100 detections a second that is about 15% of real frames.
 
-If the GPIO driver refuses the trigger, at start or when a reset re-arms it, the thread polls the part once each period instead, and the diagnostics' `irq_armed` reads false.
+If the GPIO driver refuses the trigger, at start or when a reset re-arms it, the thread sweeps every 5 ms, and the diagnostics' `irq_armed` reads false. A sweep that finds 11 frames or more while the trigger is armed counts a `missed_edge`.
 
 The driver leaves out RadioLib's DC-DC workaround, `setDCDCworkaround()` (`67d7121`, #1864), as SoftRF does: neither selects the DC-DC converter, and SetRegMode's default is SIMO_OFF, the LDOs (DS 6.3.18).
 

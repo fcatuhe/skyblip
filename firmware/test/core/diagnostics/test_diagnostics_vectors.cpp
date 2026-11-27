@@ -408,6 +408,19 @@ Screening screening() {
     return value;
 }
 
+Drain drain() {
+    Drain value{};
+    value.irq_wakes = 200;
+    value.empty_wakes = 300;
+    value.poll_ms = 1000;
+    value.screen_ms = 540;
+    value.busy_wait_ms = 7;
+    value.transactions = 68174;
+    value.repaired = 9;
+    value.repairs_refused = 3;
+    return value;
+}
+
 std::vector<std::vector<uint8_t>> written() {
     const Instant at = vector_instant();
     return {bytes_of(record_of(boot(), at)),      bytes_of(record_of(config(), at)),
@@ -422,7 +435,7 @@ std::vector<std::vector<uint8_t>> written() {
             bytes_of(record_of(hop(), at)),       bytes_of(record_of(loop(), at)),
             bytes_of(record_of(adsb(), at)),      bytes_of(record_of(receiver(), at)),
             bytes_of(record_of(reception(), at)), bytes_of(record_of(framing(), at)),
-            bytes_of(record_of(screening(), at))};
+            bytes_of(record_of(screening(), at)), bytes_of(record_of(drain(), at))};
 }
 
 }  // namespace

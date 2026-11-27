@@ -58,7 +58,7 @@ uint32_t AdsbService::impossible_formats(const ports::AdsbReceiverStatistics& st
     return impossible;
 }
 
-// INFO: fc 26nov26 four records every second whatever the sky does, so silence still records
+// INFO: fc 26nov26 five records every second whatever the sky does, so silence still records
 void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) {
         recorded_ = false;
@@ -73,6 +73,7 @@ void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     context_.diagnostics.record(diagnostics::framing_of(statistics), at);
     context_.diagnostics.record(diagnostics::screening_of(statistics, transponders_.unmatched()),
                                 at);
+    context_.diagnostics.record(diagnostics::drain_of(statistics, repaired_, repairs_refused_), at);
     diagnostics::Reception reception{};
     reception.crc = crc_ + statistics.parity_refused;
     reception.unsupported = unsupported_ + statistics.format_refused;
@@ -110,6 +111,14 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     if (status != Status::Ok) {
         refuse(status);
         return;
+    }
+    // INFO: fc 27nov26 a repaired squitter only refreshes an aircraft held, so it founds no ghost
+    if (frame.repaired) {
+        if (!assembly_.holds(message.address)) {
+            repairs_refused_++;
+            return;
+        }
+        repaired_++;
     }
     if (!transponders_.hear(message, now_ms)) return;
     // INFO: fc 13nov26 before the fold drops the aircraft address, so a set address still reads as

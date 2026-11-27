@@ -45,6 +45,8 @@ class AdsbService : public runtime::Service {
     uint32_t crc() const;
     uint32_t unsupported() const;
     uint32_t folded() const { return folded_; }
+    uint32_t repaired() const { return repaired_; }
+    uint32_t repairs_refused() const { return repairs_refused_; }
     uint32_t positions() const { return positions_; }
     std::array<uint32_t, adsb::kDownlinkFormats> formats() const;
     const adsb::Assembly& assembly() const { return assembly_; }
@@ -72,6 +74,8 @@ class AdsbService : public runtime::Service {
     uint32_t unsupported_{0};
     uint32_t folded_{0};
     uint32_t positions_{0};
+    uint32_t repaired_{0};
+    uint32_t repairs_refused_{0};
     uint32_t recorded_ms_{0};
     bool recorded_{false};
 };

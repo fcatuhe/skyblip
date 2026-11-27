@@ -254,4 +254,35 @@ Record record_of(const Screening& value, const Instant& at) {
     return record;
 }
 
+Drain drain_of(const ports::AdsbReceiverStatistics& statistics, uint32_t repaired,
+               uint32_t repairs_refused) {
+    Drain value{};
+    value.irq_wakes = statistics.irq_wakes;
+    value.empty_wakes = statistics.empty_wakes;
+    value.poll_ms = static_cast<uint32_t>(statistics.poll_us / 1000);
+    value.screen_ms = static_cast<uint32_t>(statistics.screen_us / 1000);
+    value.busy_wait_ms = static_cast<uint32_t>(statistics.busy_wait_us / 1000);
+    value.transactions = statistics.transactions;
+    value.repaired = repaired;
+    value.repairs_refused = repairs_refused;
+    return value;
+}
+
+Record record_of(const Drain& value, const Instant& at) {
+    Record record = framed(Type::Drain, at);
+    wire::put_uint16(record.payload + drain_at::kIrqWakes, static_cast<uint16_t>(value.irq_wakes));
+    wire::put_uint16(record.payload + drain_at::kEmptyWakes,
+                     static_cast<uint16_t>(value.empty_wakes));
+    wire::put_uint16(record.payload + drain_at::kPollMs, static_cast<uint16_t>(value.poll_ms));
+    wire::put_uint16(record.payload + drain_at::kScreenMs, static_cast<uint16_t>(value.screen_ms));
+    wire::put_uint16(record.payload + drain_at::kBusyWaitMs,
+                     static_cast<uint16_t>(value.busy_wait_ms));
+    wire::put_uint16(record.payload + drain_at::kTransactions,
+                     static_cast<uint16_t>(value.transactions));
+    wire::put_uint16(record.payload + drain_at::kRepaired, static_cast<uint16_t>(value.repaired));
+    wire::put_uint16(record.payload + drain_at::kRepairsRefused,
+                     static_cast<uint16_t>(value.repairs_refused));
+    return record;
+}
+
 }  // namespace skyblip::diagnostics

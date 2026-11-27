@@ -28,7 +28,7 @@ std::vector<diagnostics::Record> stop(BravoRig& rig) {
 
 void hear_corrupted(BravoRig& rig) {
     AdsbAir corrupted = adsb_air(adsb::airborne_position(0x3C6586, 0, 48.51, 8.5, false, 1800));
-    corrupted.chips[10] ^= 0x0C;
+    corrupted.chips[10] ^= 0xCC;
     rig.platform.radio().receive_air(corrupted.chips, sizeof(corrupted.chips));
     rig.step();
 }
@@ -64,7 +64,7 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
     REQUIRE(last_of(records, screening));
     CHECK(screening.squitters == 2);
     CHECK(screening.parity_refused == 1);
-    CHECK(screening.one_bit_errors == 1);
+    CHECK(screening.one_bit_errors == 0);
     CHECK(screening.all_calls == 0);
     CHECK(screening.replies == 0);
     uint32_t fifo_peak = 0;
@@ -74,6 +74,13 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
             fifo_peak = std::max(fifo_peak, second.fifo_peak_frames);
     }
     CHECK(fifo_peak >= 1);
+    CHECK(count_of(records, diagnostics::Type::Drain) ==
+          count_of(records, diagnostics::Type::Receiver));
+    diagnostics::Drain drain{};
+    REQUIRE(last_of(records, drain));
+    CHECK(drain.transactions > 0);
+    CHECK(drain.empty_wakes > 0);
+    CHECK(drain.repaired == 0);
 
     diagnostics::Receiver receiver{};
     REQUIRE(last_of(records, receiver));
@@ -137,7 +144,7 @@ TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded, and reception
     CHECK(last.frames == 4);
 }
 
-TEST_CASE("bravo reception: a power run leaves the four records out, as it does every second's") {
+TEST_CASE("bravo reception: a power run leaves the five records out, as it does every second's") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -149,4 +156,5 @@ TEST_CASE("bravo reception: a power run leaves the four records out, as it does 
     CHECK(count_of(records, diagnostics::Type::Reception) == 0);
     CHECK(count_of(records, diagnostics::Type::Framing) == 0);
     CHECK(count_of(records, diagnostics::Type::Screening) == 0);
+    CHECK(count_of(records, diagnostics::Type::Drain) == 0);
 }

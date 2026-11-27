@@ -33,9 +33,10 @@ enum class Type : uint8_t {
     Reception = 23,
     Framing = 24,
     Screening = 25,
+    Drain = 26,
 };
 
-constexpr uint8_t kHighestType = 25;
+constexpr uint8_t kHighestType = 26;
 
 enum class Profile : uint8_t {
     Full = 0,
@@ -495,6 +496,19 @@ enum : uint32_t {
     kWorstDrainUs = 12,
     kFifoPeakFrames = 14,
     kQueuePeakFrames = 15,
+};
+}
+
+namespace drain_at {
+enum : uint32_t {
+    kIrqWakes = 0,
+    kEmptyWakes = 2,
+    kPollMs = 4,
+    kScreenMs = 6,
+    kBusyWaitMs = 8,
+    kTransactions = 10,
+    kRepaired = 12,
+    kRepairsRefused = 14,
 };
 }
 

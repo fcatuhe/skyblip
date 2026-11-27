@@ -1,5 +1,7 @@
 // The screen a radio thread runs before the queue: the decoder's own refusals, and nothing more.
+#include <algorithm>
 #include <cstdint>
+#include <iterator>
 
 #include "doctest/doctest.h"
 #include "protocols/adsb/message.h"
@@ -80,20 +82,32 @@ TEST_CASE("adsb screen: it refuses only what receive() refuses, over every forma
     }
 }
 
-TEST_CASE("adsb screen: one flipped bit past the DF field is a one-bit error, two are not") {
+TEST_CASE("adsb screen: one flipped bit past the DF field is repaired to the sound frame") {
     const Squitter sound = sealed(squitter(kAddress, 5, 4));
-    CHECK_FALSE(one_bit_error(sound.bytes));
+    Squitter untouched = sound;
+    CHECK_FALSE(repair_one_bit(untouched.bytes));
     for (uint8_t bit = 6; bit <= 112; bit++) {
         Squitter damaged = sound;
         flip_bit(damaged, bit);
         CAPTURE(bit);
-        CHECK(one_bit_error(damaged.bytes));
+        REQUIRE(repair_one_bit(damaged.bytes));
+        CHECK(std::equal(std::begin(damaged.bytes), std::end(damaged.bytes), sound.bytes));
     }
+}
+
+// DO-260B 2.2.4.3.4.7.3.a: a repair never touches the DF, and two errors are beyond one bit.
+TEST_CASE("adsb screen: two flipped bits, a DF bit and an all-call are never repaired") {
+    const Squitter sound = sealed(squitter(kAddress, 5, 4));
     Squitter twice = sound;
     flip_bit(twice, 40);
     flip_bit(twice, 70);
-    CHECK_FALSE(one_bit_error(twice.bytes));
+    const Squitter before = twice;
+    CHECK_FALSE(repair_one_bit(twice.bytes));
+    CHECK(std::equal(std::begin(twice.bytes), std::end(twice.bytes), before.bytes));
+    Squitter format = sound;
+    flip_bit(format, 5);
+    CHECK_FALSE(repair_one_bit(format.bytes));
     Squitter acquisition = all_call(kAddress, 5);
     flip_bit(acquisition, 20);
-    CHECK_FALSE(one_bit_error(acquisition.bytes));
+    CHECK_FALSE(repair_one_bit(acquisition.bytes));
 }

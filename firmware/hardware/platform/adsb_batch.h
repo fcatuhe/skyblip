@@ -27,8 +27,10 @@ inline void hand_over(const uint8_t* batch, const parts::Lr2021Event& event, uin
         frame.at_us = woke_us;
         frame.rssi_valid = newest && event.rssi_valid;
         frame.rssi_dbm = frame.rssi_valid ? event.rssi_dbm : 0;
-        if (statistics.admit(frame.bytes.data(), frame.rssi_dbm, frame.rssi_valid, woke_us))
-            (void)out.push(frame);
+        const adsb::Screened screened =
+            statistics.admit(frame.bytes.data(), frame.rssi_dbm, frame.rssi_valid, woke_us);
+        frame.repaired = screened == adsb::Screened::Repaired;
+        if (adsb::kept(screened)) (void)out.push(frame);
     }
 }
 

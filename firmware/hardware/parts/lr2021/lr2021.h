@@ -58,6 +58,8 @@ class Lr2021 {
     uint32_t split_counts() const { return split_counts_; }
     uint32_t stranded_resyncs() const { return stranded_resyncs_; }
     uint32_t short_resyncs() const { return short_resyncs_; }
+    uint32_t transactions() const { return transactions_; }
+    uint64_t busy_wait_us() const { return busy_wait_us_; }
 
    private:
     Status wait_busy_low(uint32_t ceiling_us);
@@ -113,6 +115,8 @@ class Lr2021 {
     uint32_t split_counts_{0};
     uint32_t stranded_resyncs_{0};
     uint32_t short_resyncs_{0};
+    uint32_t transactions_{0};
+    uint64_t busy_wait_us_{0};
     uint16_t packets_at_clear_{0};
     uint16_t frames_since_clear_{0};
 };
@@ -134,6 +138,7 @@ constexpr uint16_t kClearIrq = 0x0116;
 constexpr uint16_t kGetAndClearIrqStatus = 0x0117;
 constexpr uint16_t kGetRxFifoLevel = 0x011C;
 constexpr uint16_t kGetAndClearFifoIrqFlags = 0x012E;
+constexpr uint16_t kConfigFifoIrq = 0x011A;
 constexpr uint16_t kClearRxFifo = 0x011E;
 constexpr uint16_t kSetTcxoMode = 0x0120;
 constexpr uint16_t kCalibrate = 0x0122;
@@ -177,10 +182,12 @@ constexpr uint8_t kDioFunctionIrqPullDown = 0x11;
 constexpr uint8_t kCalibrateAllBlocks = 0x6F;
 constexpr uint32_t kRxContinuous = 0xFFFFFF;
 constexpr uint32_t kIrqAll = 0xFFFFFFFF;
+constexpr uint32_t kIrqRxFifo = 1UL << 0;
 constexpr uint32_t kIrqRxDone = 1UL << 18;
 // INFO: fc 11nov26 DS 6.10.1 and 6.10.4: the overflow flag latches whether or not its IRQ is
 // enabled
 constexpr uint8_t kFifoOverflow = 0x10;
+constexpr uint8_t kFifoHigh = 0x04;
 
 constexpr uint16_t kErrorHfXoscStart = 0x0001;
 constexpr uint16_t kErrorPllLock = 0x0004;
@@ -221,6 +228,9 @@ constexpr uint32_t kInFlightGrowthUs = 3 * kFifoByteUs;
 // INFO: fc 27nov26 DS 5.3: the receive FIFO holds 256 bytes, so 18 whole frames
 constexpr uint32_t kFifoBytes = 256;
 constexpr uint32_t kFifoFrames = kFifoBytes / kFifoFrameBytes;
+// INFO: fc 27nov26 ADSBee 1421 #389 raises its FIFO IRQ at 11 packets, leaving 7 for the wake
+constexpr uint32_t kFifoHighFrames = 11;
+static_assert(kFifoHighFrames < kFifoFrames);
 // INFO: fc 11nov26 DS 16.3.8 names these for ADS-B: pattern 0x0285, no repeat, falling edge, no SFD
 constexpr uint16_t kAdsbPreamblePattern = 0x0285;
 constexpr uint8_t kAdsbPreambleChips = 16;

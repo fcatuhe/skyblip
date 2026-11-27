@@ -1,4 +1,7 @@
 // What the 1090 MHz receiver counts for the bench, and how deep its queue is and why.
+#include <algorithm>
+#include <iterator>
+
 #include "core/bus/bus.h"
 #include "core/events/adsb.h"
 #include "doctest/doctest.h"
@@ -51,24 +54,28 @@ TEST_CASE("adsb receiver: the frame rate is the last whole second, and a silent 
     CHECK(statistics.frames == 3);
 }
 
-TEST_CASE("adsb receiver: every frame read is counted by format, and only a readable one is kept") {
+TEST_CASE("adsb receiver: every frame read is counted by format, one bit off is repaired") {
     AdsbReceiverStatistics statistics;
     adsb::Squitter squitter = adsb::squitter(0x4840D6, 5, 4);
     adsb::seal(squitter.bytes);
-    CHECK(statistics.admit(squitter.bytes, -60, true, 0));
-    adsb::Squitter damaged = squitter;
-    damaged.bytes[7] ^= 0x10;
-    CHECK_FALSE(statistics.admit(damaged.bytes, 0, false, 0));
+    CHECK(statistics.admit(squitter.bytes, -60, true, 0) == adsb::Screened::Squitter);
+    adsb::Squitter one_bit = squitter;
+    one_bit.bytes[7] ^= 0x10;
+    CHECK(statistics.admit(one_bit.bytes, 0, false, 0) == adsb::Screened::Repaired);
+    CHECK(std::equal(std::begin(one_bit.bytes), std::end(one_bit.bytes), squitter.bytes));
+    adsb::Squitter two_bits = squitter;
+    two_bits.bytes[7] ^= 0x30;
+    CHECK(statistics.admit(two_bits.bytes, 0, false, 0) == adsb::Screened::Parity);
     adsb::Squitter noise{};
     noise.bytes[0] = 9 << 3;
-    CHECK_FALSE(statistics.admit(noise.bytes, 0, false, 0));
+    CHECK(statistics.admit(noise.bytes, 0, false, 0) == adsb::Screened::Format);
 
-    CHECK(statistics.frames == 3);
-    CHECK(statistics.formats[17] == 2);
+    CHECK(statistics.frames == 4);
+    CHECK(statistics.formats[17] == 3);
     CHECK(statistics.formats[9] == 1);
     CHECK(statistics.squitters == 1);
-    CHECK(statistics.parity_refused == 1);
     CHECK(statistics.one_bit_errors == 1);
+    CHECK(statistics.parity_refused == 1);
     CHECK(statistics.format_refused == 1);
 }
 

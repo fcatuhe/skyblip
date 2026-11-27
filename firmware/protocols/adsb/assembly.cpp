@@ -1,5 +1,6 @@
 #include "protocols/adsb/assembly.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <initializer_list>
 
@@ -161,6 +162,12 @@ int Assembly::count() const {
     int used = 0;
     for (const Aircraft& aircraft : aircraft_) used += aircraft.used ? 1 : 0;
     return used;
+}
+
+bool Assembly::holds(uint32_t address) const {
+    return std::any_of(aircraft_.begin(), aircraft_.end(), [address](const Aircraft& aircraft) {
+        return aircraft.used && aircraft.address == address;
+    });
 }
 
 Assembly::Aircraft* Assembly::admit(const Message& message, uint32_t at_ms,

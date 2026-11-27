@@ -307,11 +307,16 @@ Screened screen(const uint8_t* frame) {
 }
 
 // INFO: fc 27nov26 parity is linear: one flipped bit in a sound frame leaves that bit's syndrome
-bool one_bit_error(const uint8_t* frame) {
+bool repair_one_bit(uint8_t* frame) {
     if (bits(frame, 1, 5) != kExtendedSquitter) return false;
     const uint32_t syndrome = wire::crc24_check(frame, kFrameBytes);
-    return syndrome != 0 && std::find(kOneBitSyndromes.begin(), kOneBitSyndromes.end(), syndrome) !=
-                                kOneBitSyndromes.end();
+    if (syndrome == 0) return false;
+    const auto* const found = std::find(kOneBitSyndromes.begin(), kOneBitSyndromes.end(), syndrome);
+    if (found == kOneBitSyndromes.end()) return false;
+    const size_t index =
+        kFirstCorrectableBit - 1u + static_cast<size_t>(found - kOneBitSyndromes.begin());
+    frame[index >> 3] = static_cast<uint8_t>(frame[index >> 3] ^ (0x80u >> (index & 7u)));
+    return true;
 }
 
 }
