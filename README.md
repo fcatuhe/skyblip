@@ -45,7 +45,7 @@ To contribute to the firmware, read [`firmware/EXTENDING.md`](firmware/EXTENDING
 
 ## Building
 
-The host test suite and the simulator need nothing but a C++ compiler: `make -C firmware test`, `make -C firmware simulator`.
+The host test suite needs nothing but a C++ compiler: `make -C firmware test`. The browser simulator builds with `make -C firmware browser`, which installs the pinned Emscripten on first use (`scripts/emsdk.rb`).
 
 The device image is built off a committed ref, `main` by default, into `builds/`:
 

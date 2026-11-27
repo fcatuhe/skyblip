@@ -65,9 +65,7 @@ void encode_status(const LogStatus& status, uint8_t* out) {
 
 void encode_target(const LogTarget& target, uint8_t* out) {
     const uint32_t address = target.address & settings::kAddressMask;
-    out[2] = static_cast<uint8_t>(address);
-    out[3] = static_cast<uint8_t>(address >> 8);
-    out[4] = static_cast<uint8_t>(address >> 16);
+    wire::put_uint24(out + 2, address);
     out[5] = target.address_mapping_table;
     wire::put_uint16(out + 6, target.distance_m);
     wire::put_uint16(out + 8, static_cast<uint16_t>(target.relative_altitude_m));

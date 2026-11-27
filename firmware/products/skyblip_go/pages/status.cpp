@@ -2,6 +2,7 @@
 
 #include "core/units/units.h"
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 #include "protocols/common/geometry.h"
 
@@ -50,22 +51,12 @@ void row(ui::Canvas& canvas, int y, const char* label, const char* value) {
     canvas.draw_text(kValueX, y, value, true, 1);
 }
 
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
-    canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
-}
-
-int length(const char* text) {
-    int count = 0;
-    while (text[count]) count++;
-    return count;
-}
-
 void text_row(ui::Canvas& canvas, int y, const char* label, const char* value, const char* unit,
               const char* second_value = "", const char* second_unit = "") {
     canvas.draw_text(kLeft, y, label, true, 1);
-    right_aligned(canvas, kAeronauticalNumberEnd, y, value, length(value));
+    right_aligned(canvas, kAeronauticalNumberEnd, y, value);
     canvas.draw_text(kAeronauticalUnitX, y, unit, true, 1);
-    right_aligned(canvas, kMetricNumberEnd, y, second_value, length(second_value));
+    right_aligned(canvas, kMetricNumberEnd, y, second_value);
     canvas.draw_text(kMetricUnitX, y, second_unit, true, 1);
 }
 
@@ -82,12 +73,12 @@ void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aeronautica
 
     int written = format_signed(text, aeronautical.value, 1, aeronautical.decimals, plus_sign);
     text[written] = 0;
-    right_aligned(canvas, kAeronauticalNumberEnd, y, text, written);
+    right_aligned(canvas, kAeronauticalNumberEnd, y, text);
     canvas.draw_text(kAeronauticalUnitX, y, aeronautical.unit, true, 1);
 
     written = format_signed(text, metric.value, 1, metric.decimals, plus_sign);
     text[written] = 0;
-    right_aligned(canvas, kMetricNumberEnd, y, text, written);
+    right_aligned(canvas, kMetricNumberEnd, y, text);
     canvas.draw_text(kMetricUnitX, y, metric.unit, true, 1);
 }
 
@@ -98,7 +89,7 @@ void pressure_row(ui::Canvas& canvas, int y, uint32_t pressure_mpa) {
     barometer[written] = 0;
 
     canvas.draw_text(kLeft, y, "BARO", true, 1);
-    right_aligned(canvas, kAeronauticalUnitEnd, y, barometer, written);
+    right_aligned(canvas, kAeronauticalUnitEnd, y, barometer);
     canvas.draw_text(kMetricUnitX, y, " hPa", true, 1);
 }
 
@@ -148,7 +139,7 @@ void imu_field(ui::Canvas& canvas, int y, const StatusSnapshot& snapshot) {
         written += imu_traffic(text + written, snapshot);
     }
     text[written] = 0;
-    right_aligned(canvas, kGlassWidth - kLeft, y, text, written);
+    right_aligned(canvas, kGlassWidth - kLeft, y, text);
 }
 
 // INFO: fc 05oct26 on the cable the divider reads the USB rail, so CHG stands in for the numbers
@@ -187,7 +178,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     text[written] = 0;
     canvas.draw_text(kLeft, 3, text, true, 2);
     if (snapshot.callsign != nullptr && snapshot.callsign[0] != 0)
-        right_aligned(canvas, kGlassWidth - kLeft, 8, snapshot.callsign, length(snapshot.callsign));
+        right_aligned(canvas, kGlassWidth - kLeft, 8, snapshot.callsign);
     canvas.horizontal_line(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
     int y = 27;
@@ -221,12 +212,12 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
         written = format_signed(text, snapshot.latitude_1e7, 1, 7, false);
         text[written] = 0;
         canvas.draw_text(kLeft, y, "LAT", true, 1);
-        right_aligned(canvas, kAeronauticalUnitEnd, y, text, written);
+        right_aligned(canvas, kAeronauticalUnitEnd, y, text);
 
         written = format_string(text, "LON ");
         written += format_signed(text + written, snapshot.longitude_1e7, 1, 7, false);
         text[written] = 0;
-        right_aligned(canvas, kGlassWidth - kLeft, y, text, written);
+        right_aligned(canvas, kGlassWidth - kLeft, y, text);
     } else {
         row(canvas, y, "LAT", "no fix");
     }
