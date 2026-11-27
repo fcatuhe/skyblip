@@ -21,6 +21,13 @@ bool ConfigChannel::disconnect(uint16_t session_id) {
     return true;
 }
 
+bool ConfigChannel::release_departed_holder() {
+    if (!claim_.held() || live(claim_.peer())) return false;
+    claim_.release();
+    drop_replies();
+    return true;
+}
+
 bool ConfigChannel::admit(const events::Peer& peer) {
     if (claim_.grant(peer)) return true;
     refuse_unclaimed(peer);

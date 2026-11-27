@@ -30,8 +30,8 @@ class OAuth::Authorization
 
   def refused_url = answer(**refusal.to_h)
 
-  def approved_url(user)
-    grant = OAuth::Grant.approve(user:, client:)
+  def approved_url(session)
+    grant = OAuth::Grant.approve(session:, client:)
 
     answer code: grant.issue_code(code_challenge: fields[:code_challenge], redirect_uri:)
   end

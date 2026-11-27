@@ -31,6 +31,7 @@ class ConfigChannel {
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
     bool disconnect(uint16_t session_id);
+    bool release_departed_holder();
     // INFO: fc 27nov26 read from the link, because a full link_events queue drops an Up
     bool link_up() const { return link_.centrals() > 0; }
     bool live(const events::Peer& peer) const {

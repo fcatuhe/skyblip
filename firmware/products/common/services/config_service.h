@@ -113,6 +113,7 @@ class ConfigService {
 
     void on_link_up(const events::LinkUp& event);
     void on_link_down(const events::LinkDown& event);
+    void release_departed_holder();
     void on_rx(const events::RxFrame& frame);
     bool from_live_connection(const events::RxFrame& frame) const {
         return channel_.from_live_connection(frame);
@@ -236,6 +237,8 @@ class ConfigService {
     void refuse(link::Reason reason) { acknowledge(false, reason); }
     void refuse_too_wide() { channel_.refuse_too_wide(); }
     bool prompt_refused();
+    void forget_session(uint16_t session_id);
+    void forget_holder();
     void stage(Pending pending, link::Reason reason);
     void send_config();
     void send_status();
