@@ -131,7 +131,7 @@ enum class Screened : uint8_t { Squitter, AllCall, Reply, Repaired, Format, Pari
 // INFO: fc 27nov26 receive()'s own refusals, cheap enough for a radio thread to run first
 Screened screen(const uint8_t* frame);
 constexpr bool kept(Screened screened) { return screened < Screened::Format; }
-bool repair_one_bit(uint8_t* frame);
+uint8_t repair_bits(uint8_t* frame);
 
 }
 

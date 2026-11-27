@@ -33,6 +33,7 @@ struct ReceiverProbe {
     uint8_t gain_step{0};
     bool interrupt_pending{false};
     bool front_end_kept{false};
+    bool boosted{false};
     bool valid{false};
 };
 
@@ -70,13 +71,13 @@ struct AdsbReceiverStatistics {
     uint32_t format_refused{0};
     uint32_t parity_refused{0};
     uint32_t one_bit_errors{0};
+    uint32_t two_bit_errors{0};
     uint32_t fifo_peak_frames{0};
     uint32_t queue_peak_frames{0};
     uint32_t worst_drain_us{0};
     uint32_t irq_wakes{0};
     uint32_t empty_wakes{0};
     uint64_t poll_us{0};
-    uint64_t screen_us{0};
     uint64_t busy_wait_us{0};
     uint32_t transactions{0};
     // INFO: fc 21nov26 false means the thread polls every 5 ms, since the IRQ edge never armed
@@ -95,13 +96,17 @@ struct AdsbReceiverStatistics {
         const uint8_t format = frame[0] >> 3;
         formats[std::min<uint8_t>(format, adsb::kDownlinkFormats - 1)]++;
         adsb::Screened screened = adsb::screen(frame);
-        if (screened == adsb::Screened::Parity && adsb::repair_one_bit(frame))
-            screened = adsb::Screened::Repaired;
+        const uint8_t repaired =
+            screened == adsb::Screened::Parity ? adsb::repair_bits(frame) : uint8_t{0};
+        if (repaired != 0) screened = adsb::Screened::Repaired;
         switch (screened) {
             case adsb::Screened::Squitter: squitters++; break;
             case adsb::Screened::AllCall: all_calls++; break;
             case adsb::Screened::Reply: replies++; break;
-            case adsb::Screened::Repaired: one_bit_errors++; break;
+            case adsb::Screened::Repaired:
+                if (repaired == 1) one_bit_errors++;
+                if (repaired == 2) two_bit_errors++;
+                break;
             case adsb::Screened::Format: format_refused++; break;
             case adsb::Screened::Parity: parity_refused++; break;
         }

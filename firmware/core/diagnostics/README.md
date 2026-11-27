@@ -123,7 +123,7 @@ Ten a second is at most a hundred a period, the size of the table that remembers
 
 Bravo writes one `Receiver`, one `Framing`, one `Screening`, one `Drain` and one `Reception` each second of a `Full` capture, so an outage reads as seconds whose counters stop, not as a hole. Every counter crosses as its low 8 or 16 bits since boot, and a reader subtracts two records as it does `Duty`'s. `scripts/reception_check.py` does that and names the outages.
 
-`Receiver` carries the driver's counters and the probe the receiver thread takes once a second (`../../hardware/parts/lr2021/README.md`, The probe). Flag bit 4, `probed`, vouches for the probe's fields: the LR2021's own packet count, its errors, the noise floor, the threshold it holds, its chip mode, its reset source and the gain step the driver set, so two builds' captures say which gain each measured. Read together they separate the causes of a silent receiver:
+`Receiver` carries the driver's counters and the probe the receiver thread takes once a second (`../../hardware/parts/lr2021/README.md`, The probe). Flag bit 4, `probed`, vouches for the probe's fields: the LR2021's own packet count, its errors, the noise floor, the threshold it holds, its chip mode, its reset source, and the gain step and LF boost the driver set (`gain_step`, flag bit 7 `boosted`), so two builds' captures say which setting each measured. Read together they separate the causes of a silent receiver:
 
 | What the records show | What it means |
 |---|---|
@@ -153,9 +153,8 @@ Bravo writes one `Receiver`, one `Framing`, one `Screening`, one `Drain` and one
 | Fields | What they answer |
 |---|---|
 | `squitters` against `reception.positions` | how many sound squitters the decoder turned into positions. Fewer squitters than the aircraft send is air the LR2021 missed, not a CPU or queue loss |
-| `parity_refused`, `one_bit_errors` | DF11 and DF17 refused for parity, and the DF17 one flipped bit from sound, which the thread repaired and passed instead. `drain.repaired` says how many the decoder kept |
+| `parity_refused`, `one_bit_errors`, `two_bit_errors` | DF11 and DF17 refused for parity, and the DF17 one or two flipped bits from sound, which the thread repaired and passed instead. `drain.repaired` says how many the decoder kept |
 | `unmatched` | replies the decoder dropped because their address was not heard in clear first, most of them noise in a reply format |
-| `worst_drain_us` | the longest one wake held the CPU in the last whole second. The thread is cooperative, so the loop waited that long |
 | `fifo_peak_frames` | the most frames one wake found in the FIFO, which holds 18. Near 18 says the drain period is too long, or a FIFO-level IRQ is due |
 | `queue_peak_frames` | the most frames waiting for the decoder after a wake, of 64. Near 64 says the decoder falls behind |
 
@@ -165,7 +164,7 @@ Bravo writes one `Receiver`, one `Framing`, one `Screening`, one `Drain` and one
 |---|---|
 | `irq_wakes`, `empty_wakes` | wakes on the FIFO IRQ, and wakes that found nothing new. `framing.drains` less `irq_wakes` is the timed sweeps |
 | `poll_ms`, `busy_wait_ms`, `transactions` | the time in the LR2021 driver, the part of it spent waiting on BUSY, and the SPI transactions it made. `poll_ms` less `busy_wait_ms` over `transactions` is the cost of one transaction |
-| `screen_ms` | the time screening and queueing frames. `framing.drain_busy_ms` less `poll_ms` and `screen_ms` is the probe and the health check |
+| `worst_drain_us` | the longest one wake held the CPU in the last whole second. The thread is cooperative, so the loop waited that long |
 | `repaired`, `repairs_refused` | repaired squitters the decoder kept because it held their aircraft, and those it dropped because it held none |
 
 ### The transmitter

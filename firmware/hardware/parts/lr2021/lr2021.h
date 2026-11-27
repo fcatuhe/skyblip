@@ -102,6 +102,7 @@ class Lr2021 {
     int8_t newest_rssi_dbm_{0};
     bool newest_rssi_valid_{false};
     bool reset_owed_{false};
+    uint8_t rx_boost_{0};
     uint32_t since_frame_ms_{0};
     uint32_t rearms_{0};
     uint32_t resets_{0};

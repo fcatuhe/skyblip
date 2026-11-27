@@ -231,6 +231,7 @@ Receiver receiver_of(const ports::AdsbReceiverStatistics& statistics, bool liste
     value.gain_step = probe.gain_step;
     value.interrupt_pending = probe.interrupt_pending;
     value.front_end_kept = probe.front_end_kept;
+    value.boosted = probe.boosted;
     return value;
 }
 
@@ -255,6 +256,7 @@ Record record_of(const Receiver& value, const Instant& at) {
     set_flag(record.flags, kReceiverFlagProbed, value.probed);
     set_flag(record.flags, kReceiverFlagInterruptPending, value.interrupt_pending);
     set_flag(record.flags, kReceiverFlagFrontEndKept, value.front_end_kept);
+    set_flag(record.flags, kReceiverFlagBoosted, value.boosted);
     return record;
 }
 

@@ -299,6 +299,7 @@ struct Receiver {
     bool probed{false};
     bool interrupt_pending{false};
     bool front_end_kept{false};
+    bool boosted{false};
 };
 
 Receiver receiver_of(const ports::AdsbReceiverStatistics& statistics, bool listening);
@@ -338,7 +339,7 @@ struct Screening {
     uint32_t parity_refused{0};
     uint32_t one_bit_errors{0};
     uint32_t unmatched{0};
-    uint32_t worst_drain_us{0};
+    uint32_t two_bit_errors{0};
     uint32_t fifo_peak_frames{0};
     uint32_t queue_peak_frames{0};
 };
@@ -349,7 +350,7 @@ struct Drain {
     uint32_t irq_wakes{0};
     uint32_t empty_wakes{0};
     uint32_t poll_ms{0};
-    uint32_t screen_ms{0};
+    uint32_t worst_drain_us{0};
     uint32_t busy_wait_ms{0};
     uint32_t transactions{0};
     uint32_t repaired{0};

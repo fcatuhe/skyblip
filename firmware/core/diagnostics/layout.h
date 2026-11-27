@@ -453,6 +453,7 @@ constexpr uint8_t kReceiverFlagIrqArmed = 1u << 3;
 constexpr uint8_t kReceiverFlagProbed = 1u << 4;
 constexpr uint8_t kReceiverFlagInterruptPending = 1u << 5;
 constexpr uint8_t kReceiverFlagFrontEndKept = 1u << 6;
+constexpr uint8_t kReceiverFlagBoosted = 1u << 7;
 
 namespace reception_at {
 enum : uint32_t {
@@ -493,7 +494,7 @@ enum : uint32_t {
     kParityRefused = 6,
     kOneBitErrors = 8,
     kUnmatched = 10,
-    kWorstDrainUs = 12,
+    kTwoBitErrors = 12,
     kFifoPeakFrames = 14,
     kQueuePeakFrames = 15,
 };
@@ -504,7 +505,7 @@ enum : uint32_t {
     kIrqWakes = 0,
     kEmptyWakes = 2,
     kPollMs = 4,
-    kScreenMs = 6,
+    kWorstDrainUs = 6,
     kBusyWaitMs = 8,
     kTransactions = 10,
     kRepaired = 12,

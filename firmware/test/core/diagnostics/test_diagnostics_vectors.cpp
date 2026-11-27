@@ -402,7 +402,7 @@ Screening screening() {
     value.parity_refused = 987;
     value.one_bit_errors = 12;
     value.unmatched = 3456;
-    value.worst_drain_us = 70000;
+    value.two_bit_errors = 77;
     value.fifo_peak_frames = 18;
     value.queue_peak_frames = 300;
     return value;
@@ -413,7 +413,7 @@ Drain drain() {
     value.irq_wakes = 200;
     value.empty_wakes = 300;
     value.poll_ms = 1000;
-    value.screen_ms = 540;
+    value.worst_drain_us = 70000;
     value.busy_wait_ms = 7;
     value.transactions = 68174;
     value.repaired = 9;

@@ -85,29 +85,47 @@ TEST_CASE("adsb screen: it refuses only what receive() refuses, over every forma
 TEST_CASE("adsb screen: one flipped bit past the DF field is repaired to the sound frame") {
     const Squitter sound = sealed(squitter(kAddress, 5, 4));
     Squitter untouched = sound;
-    CHECK_FALSE(repair_one_bit(untouched.bytes));
+    CHECK(repair_bits(untouched.bytes) == 0);
     for (uint8_t bit = 6; bit <= 112; bit++) {
         Squitter damaged = sound;
         flip_bit(damaged, bit);
         CAPTURE(bit);
-        REQUIRE(repair_one_bit(damaged.bytes));
+        REQUIRE(repair_bits(damaged.bytes) == 1);
         CHECK(std::equal(std::begin(damaged.bytes), std::end(damaged.bytes), sound.bytes));
     }
 }
 
-// DO-260B 2.2.4.3.4.7.3.a: a repair never touches the DF, and two errors are beyond one bit.
-TEST_CASE("adsb screen: two flipped bits, a DF bit and an all-call are never repaired") {
+// Every pair of the 107 bits past the DF field has a syndrome of its own, so none is repaired
+// wrong.
+TEST_CASE("adsb screen: any two flipped bits past the DF field are repaired to the sound frame") {
     const Squitter sound = sealed(squitter(kAddress, 5, 4));
-    Squitter twice = sound;
-    flip_bit(twice, 40);
-    flip_bit(twice, 70);
-    const Squitter before = twice;
-    CHECK_FALSE(repair_one_bit(twice.bytes));
-    CHECK(std::equal(std::begin(twice.bytes), std::end(twice.bytes), before.bytes));
+    for (uint8_t first = 6; first <= 112; first++) {
+        for (uint8_t second = static_cast<uint8_t>(first + 1); second <= 112; second++) {
+            Squitter damaged = sound;
+            flip_bit(damaged, first);
+            flip_bit(damaged, second);
+            CAPTURE(first);
+            CAPTURE(second);
+            REQUIRE(repair_bits(damaged.bytes) == 2);
+            REQUIRE(std::equal(std::begin(damaged.bytes), std::end(damaged.bytes), sound.bytes));
+        }
+    }
+}
+
+// DO-260B 2.2.4.3.4.7.3.a: a repair never touches the DF, and three errors are beyond two bits.
+TEST_CASE("adsb screen: three flipped bits, a DF bit and an all-call are never repaired") {
+    const Squitter sound = sealed(squitter(kAddress, 5, 4));
+    Squitter thrice = sound;
+    flip_bit(thrice, 40);
+    flip_bit(thrice, 70);
+    flip_bit(thrice, 100);
+    const Squitter before = thrice;
+    CHECK(repair_bits(thrice.bytes) == 0);
+    CHECK(std::equal(std::begin(thrice.bytes), std::end(thrice.bytes), before.bytes));
     Squitter format = sound;
     flip_bit(format, 5);
-    CHECK_FALSE(repair_one_bit(format.bytes));
+    CHECK(repair_bits(format.bytes) == 0);
     Squitter acquisition = all_call(kAddress, 5);
     flip_bit(acquisition, 20);
-    CHECK_FALSE(repair_one_bit(acquisition.bytes));
+    CHECK(repair_bits(acquisition.bytes) == 0);
 }

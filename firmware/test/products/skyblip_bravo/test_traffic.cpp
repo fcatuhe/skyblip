@@ -112,7 +112,7 @@ TEST_CASE("bravo: a frame that fails its parity is counted as crc") {
     rig.seconds_with_fix(1);
     adsb::Squitter frame = adsb::airborne_position(kAircraft, 0, 48.51, 8.5, false, 1800);
     adsb::seal(frame.bytes);
-    frame.bytes[5] ^= 0x30;
+    frame.bytes[5] ^= 0x70;
     const AdsbAir air = [&] {
         AdsbAir out;
         out.chips[0] = kAdsbPreambleAir[0];

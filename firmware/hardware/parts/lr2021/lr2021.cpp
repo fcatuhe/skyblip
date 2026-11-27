@@ -81,7 +81,7 @@ Status Lr2021::begin(int16_t detection_threshold_dbm) {
 
 Status Lr2021::start_receive() {
     if (mode_ != Lr2021Mode::Standby) return Status::Invalid;
-    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, lr2021::kRxBoostOff};
+    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, rx_boost_};
     uint8_t irq_config[5] = {irq_dio_};
     put_be32(irq_config + 1, lr2021::kIrqRxFifo);
     uint8_t fifo_irq[10] = {lr2021::kFifoHigh | lr2021::kFifoOverflow, 0};
@@ -241,6 +241,7 @@ Status Lr2021::sample(ports::ReceiverProbe& probe) {
     probe.threshold_dbm = threshold_dbm(threshold);
     probe.mode = mode_of(chip_status[1]);
     probe.gain_step = lr2021::kGainStep;
+    probe.boosted = rx_boost_ != lr2021::kRxBoostOff;
     probe.interrupt_pending = (chip_status[0] & lr2021::kInterruptPending) != 0;
     probe.front_end_kept = (front_end & lr2021::kOokQuirkMask) == lr2021::kOokQuirkData;
     probe.valid = true;
@@ -327,7 +328,7 @@ Status Lr2021::bring_up() {
     const uint8_t dio[2] = {irq_dio_, lr2021::kDioFunctionIrqPullDown};
     const uint8_t blocks = lr2021::kCalibrateAllBlocks;
     const uint8_t packet_type = lr2021::kPacketTypeOok;
-    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, lr2021::kRxBoostOff};
+    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, rx_boost_};
     uint8_t calibration[6] = {};
     put_be16(calibration, lr2021::kCalibFe1090Word);
     uint8_t frequency[4];

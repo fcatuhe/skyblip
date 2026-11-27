@@ -263,7 +263,45 @@ constexpr std::array<uint32_t, kCorrectableBits> one_bit_syndromes() {
     return syndromes;
 }
 
-constexpr std::array<uint32_t, kCorrectableBits> kOneBitSyndromes = one_bit_syndromes();
+struct Syndrome {
+    uint32_t value;
+    uint8_t bit;
+};
+
+// INFO: fc 27nov26 sorted at compile time, so a two-bit search is 107 binary searches, about 10 us
+constexpr std::array<Syndrome, kCorrectableBits> sorted_syndromes() {
+    const std::array<uint32_t, kCorrectableBits> values = one_bit_syndromes();
+    std::array<Syndrome, kCorrectableBits> sorted{};
+    for (size_t i = 0; i < kCorrectableBits; i++) {
+        size_t at = i;
+        while (at > 0 && sorted[at - 1].value > values[i]) {
+            sorted[at] = sorted[at - 1];
+            at--;
+        }
+        sorted[at] = {values[i], static_cast<uint8_t>(kFirstCorrectableBit - 1u + i)};
+    }
+    return sorted;
+}
+
+constexpr std::array<Syndrome, kCorrectableBits> kSyndromes = sorted_syndromes();
+
+const Syndrome* find_syndrome(uint32_t value) {
+    size_t low = 0;
+    size_t high = kCorrectableBits;
+    while (low < high) {
+        const size_t middle = (low + high) / 2;
+        if (kSyndromes[middle].value < value) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    return low < kCorrectableBits && kSyndromes[low].value == value ? &kSyndromes[low] : nullptr;
+}
+
+void flip(uint8_t* frame, uint8_t index) {
+    frame[index >> 3] = static_cast<uint8_t>(frame[index >> 3] ^ (0x80u >> (index & 7u)));
+}
 
 }
 
@@ -305,18 +343,23 @@ Screened screen(const uint8_t* frame) {
     }
 }
 
-// INFO: fc 27nov26 parity is linear: one flipped bit in a sound frame leaves that bit's syndrome
-bool repair_one_bit(uint8_t* frame) {
-    if (bits(frame, 1, 5) != kExtendedSquitter) return false;
+// INFO: fc 27nov26 parity is linear: flipped bits in a sound frame leave the XOR of their syndromes
+uint8_t repair_bits(uint8_t* frame) {
+    if (bits(frame, 1, 5) != kExtendedSquitter) return 0;
     const uint32_t syndrome = wire::crc24_check(frame, kFrameBytes);
-    if (syndrome == 0) return false;
-    for (size_t i = 0; i < kCorrectableBits; i++) {
-        if (kOneBitSyndromes[i] != syndrome) continue;
-        const size_t index = kFirstCorrectableBit - 1u + i;
-        frame[index >> 3] = static_cast<uint8_t>(frame[index >> 3] ^ (0x80u >> (index & 7u)));
-        return true;
+    if (syndrome == 0) return 0;
+    if (const Syndrome* one = find_syndrome(syndrome)) {
+        flip(frame, one->bit);
+        return 1;
     }
-    return false;
+    for (const Syndrome& first : kSyndromes) {
+        const Syndrome* second = find_syndrome(syndrome ^ first.value);
+        if (second == nullptr) continue;
+        flip(frame, first.bit);
+        flip(frame, second->bit);
+        return 2;
+    }
+    return 0;
 }
 
 }

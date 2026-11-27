@@ -27,7 +27,7 @@ WIDE_COUNTERS = ("frames", "part_packets", "crc", "unsupported", "folded", "posi
                  "capture_refused", "impossible_formats", "overflow_drops", "resync_drops",
                  "queue_drops", "in_flight", "split_counts", "drains", "drain_busy_ms",
                  "squitters", "all_calls", "replies", "parity_refused", "one_bit_errors",
-                 "unmatched", "irq_wakes", "empty_wakes", "poll_ms", "screen_ms", "busy_wait_ms",
+                 "two_bit_errors", "unmatched", "irq_wakes", "empty_wakes", "poll_ms", "busy_wait_ms",
                  "transactions", "repaired", "repairs_refused")
 NARROW_COUNTERS = ("rearms", "resets", "part_resets", "command_errors", "missed_edges",
                    "framing_resyncs", "stranded_resyncs", "short_resyncs")
@@ -200,16 +200,17 @@ def screened(seconds, total):
                     if "gain_step" in second.receiver})
     return [
         "  screened: %d of %d frames to the decoder (%d squitters, %d all-calls, %d replies, "
-        "%d one bit off and repaired), %d refused for parity" % (
-            kept + total["one_bit_errors"], total["frames"], total["squitters"],
-            total["all_calls"], total["replies"], total["one_bit_errors"],
-            total["parity_refused"]),
+        "%d one bit and %d two bits off, repaired), %d refused for parity" % (
+            kept + total["one_bit_errors"] + total["two_bit_errors"], total["frames"],
+            total["squitters"], total["all_calls"], total["replies"], total["one_bit_errors"],
+            total["two_bit_errors"], total["parity_refused"]),
         "  replies with no address heard in clear: %d" % total["unmatched"],
-        "  peaks: a wake held the CPU %d us, found %d of %d frames in the FIFO, left %d of %d "
-        "in the queue" % (max(screen["worst_drain_us"] for screen in screens),
-                          max(screen["fifo_peak_frames"] for screen in screens), FIFO_FRAMES,
-                          max(screen["queue_peak_frames"] for screen in screens), QUEUE_FRAMES),
-        "  gain step %s" % (", ".join(str(gain) for gain in gains) or "unprobed"),
+        "  peaks: a wake found %d of %d frames in the FIFO, left %d of %d in the queue" % (
+            max(screen["fifo_peak_frames"] for screen in screens), FIFO_FRAMES,
+            max(screen["queue_peak_frames"] for screen in screens), QUEUE_FRAMES),
+        "  gain step %s, boost %s" % (", ".join(str(gain) for gain in gains) or "unprobed",
+                                      ", ".join(sorted({"on" if second.receiver.get("boosted")
+                                                        else "off" for second in seconds}))),
     ]
 
 
@@ -218,11 +219,13 @@ def woken(seconds, total):
         return []
     each_us = ((total["poll_ms"] - total["busy_wait_ms"]) * 1000 / total["transactions"]
                if total["transactions"] else 0)
+    drains = [second.drain for second in seconds if second.drain]
     return [
-        "  wakes: %d on the FIFO IRQ, %d empty; poll %d ms (%d waiting on BUSY, %d SPI "
-        "transactions, %d us each), screen %d ms" % (
-            total["irq_wakes"], total["empty_wakes"], total["poll_ms"], total["busy_wait_ms"],
-            total["transactions"], each_us, total["screen_ms"]),
+        "  wakes: %d on the FIFO IRQ, %d empty, the longest %d us; poll %d ms (%d waiting on "
+        "BUSY, %d SPI transactions, %d us each)" % (
+            total["irq_wakes"], total["empty_wakes"],
+            max(drain.get("worst_drain_us", 0) for drain in drains), total["poll_ms"],
+            total["busy_wait_ms"], total["transactions"], each_us),
         "  repairs: %d kept for an aircraft held, %d refused" % (total["repaired"],
                                                                  total["repairs_refused"]),
     ]

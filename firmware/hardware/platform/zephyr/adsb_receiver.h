@@ -150,13 +150,12 @@ class AdsbReceiver : public ports::AdsbReceiver {
         const uint64_t woke_us = clock_.microseconds();
         const uint32_t polled = k_cycle_get_32();
         const parts::Lr2021Event event = radio_.poll(batch_, sizeof(batch_));
-        const uint32_t screened = k_cycle_get_32();
-        poll_us_ += k_cyc_to_us_floor64(screened - polled);
+        const uint32_t polled_until = k_cycle_get_32();
+        poll_us_ += k_cyc_to_us_floor64(polled_until - polled);
         if (event.type != parts::Lr2021EventType::Frame) return 0;
         k_sched_lock();
         hand_over(batch_, event, woke_us, statistics_, out_);
         k_sched_unlock();
-        screen_us_ += k_cyc_to_us_floor64(k_cycle_get_32() - screened);
         return event.frames;
     }
 
@@ -187,7 +186,6 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics_.irq_wakes = edge_wakes_;
         statistics_.empty_wakes = empty_wakes_;
         statistics_.poll_us = poll_us_;
-        statistics_.screen_us = screen_us_;
         statistics_.busy_wait_us = radio_.busy_wait_us();
         statistics_.transactions = radio_.transactions();
         statistics_.overflow_drops = radio_.overflow_drops();
@@ -229,7 +227,6 @@ class AdsbReceiver : public ports::AdsbReceiver {
     uint32_t edge_wakes_{0};
     uint32_t empty_wakes_{0};
     uint64_t poll_us_{0};
-    uint64_t screen_us_{0};
     uint8_t batch_[kAdsbBatchBytes]{};
     struct k_sem wake_{};
     struct gpio_callback irq_callback_{};

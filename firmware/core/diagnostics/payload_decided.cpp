@@ -228,7 +228,7 @@ Screening screening_of(const ports::AdsbReceiverStatistics& statistics, uint32_t
     value.parity_refused = statistics.parity_refused;
     value.one_bit_errors = statistics.one_bit_errors;
     value.unmatched = unmatched;
-    value.worst_drain_us = statistics.worst_drain_us;
+    value.two_bit_errors = statistics.two_bit_errors;
     value.fifo_peak_frames = statistics.fifo_peak_frames;
     value.queue_peak_frames = statistics.queue_peak_frames;
     return value;
@@ -247,8 +247,8 @@ Record record_of(const Screening& value, const Instant& at) {
                      static_cast<uint16_t>(value.one_bit_errors));
     wire::put_uint16(record.payload + screening_at::kUnmatched,
                      static_cast<uint16_t>(value.unmatched));
-    wire::put_uint16(record.payload + screening_at::kWorstDrainUs,
-                     clamp_uint16(value.worst_drain_us));
+    wire::put_uint16(record.payload + screening_at::kTwoBitErrors,
+                     static_cast<uint16_t>(value.two_bit_errors));
     record.payload[screening_at::kFifoPeakFrames] = clamped<uint8_t>(value.fifo_peak_frames);
     record.payload[screening_at::kQueuePeakFrames] = clamped<uint8_t>(value.queue_peak_frames);
     return record;
@@ -260,7 +260,7 @@ Drain drain_of(const ports::AdsbReceiverStatistics& statistics, uint32_t repaire
     value.irq_wakes = statistics.irq_wakes;
     value.empty_wakes = statistics.empty_wakes;
     value.poll_ms = static_cast<uint32_t>(statistics.poll_us / 1000);
-    value.screen_ms = static_cast<uint32_t>(statistics.screen_us / 1000);
+    value.worst_drain_us = statistics.worst_drain_us;
     value.busy_wait_ms = static_cast<uint32_t>(statistics.busy_wait_us / 1000);
     value.transactions = statistics.transactions;
     value.repaired = repaired;
@@ -274,7 +274,7 @@ Record record_of(const Drain& value, const Instant& at) {
     wire::put_uint16(record.payload + drain_at::kEmptyWakes,
                      static_cast<uint16_t>(value.empty_wakes));
     wire::put_uint16(record.payload + drain_at::kPollMs, static_cast<uint16_t>(value.poll_ms));
-    wire::put_uint16(record.payload + drain_at::kScreenMs, static_cast<uint16_t>(value.screen_ms));
+    wire::put_uint16(record.payload + drain_at::kWorstDrainUs, clamp_uint16(value.worst_drain_us));
     wire::put_uint16(record.payload + drain_at::kBusyWaitMs,
                      static_cast<uint16_t>(value.busy_wait_ms));
     wire::put_uint16(record.payload + drain_at::kTransactions,

@@ -54,7 +54,7 @@ TEST_CASE("adsb receiver: the frame rate is the last whole second, and a silent 
     CHECK(statistics.frames == 3);
 }
 
-TEST_CASE("adsb receiver: every frame read is counted by format, one bit off is repaired") {
+TEST_CASE("adsb receiver: every frame read is counted by format, two bits off are repaired") {
     AdsbReceiverStatistics statistics;
     adsb::Squitter squitter = adsb::squitter(0x4840D6, 5, 4);
     adsb::seal(squitter.bytes);
@@ -65,16 +65,20 @@ TEST_CASE("adsb receiver: every frame read is counted by format, one bit off is 
     CHECK(std::equal(std::begin(one_bit.bytes), std::end(one_bit.bytes), squitter.bytes));
     adsb::Squitter two_bits = squitter;
     two_bits.bytes[7] ^= 0x30;
-    CHECK(statistics.admit(two_bits.bytes, 0, false, 0) == adsb::Screened::Parity);
+    CHECK(statistics.admit(two_bits.bytes, 0, false, 0) == adsb::Screened::Repaired);
+    adsb::Squitter three_bits = squitter;
+    three_bits.bytes[7] ^= 0x70;
+    CHECK(statistics.admit(three_bits.bytes, 0, false, 0) == adsb::Screened::Parity);
     adsb::Squitter noise{};
     noise.bytes[0] = 9 << 3;
     CHECK(statistics.admit(noise.bytes, 0, false, 0) == adsb::Screened::Format);
 
-    CHECK(statistics.frames == 4);
-    CHECK(statistics.formats[17] == 3);
+    CHECK(statistics.frames == 5);
+    CHECK(statistics.formats[17] == 4);
     CHECK(statistics.formats[9] == 1);
     CHECK(statistics.squitters == 1);
     CHECK(statistics.one_bit_errors == 1);
+    CHECK(statistics.two_bit_errors == 1);
     CHECK(statistics.parity_refused == 1);
     CHECK(statistics.format_refused == 1);
 }

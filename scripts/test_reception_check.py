@@ -61,13 +61,13 @@ class Sky:
         if self.screening is not None:
             screening = {field: self.totals[field] % check.WIDE for field in
                          ("squitters", "all_calls", "replies", "parity_refused",
-                          "one_bit_errors", "unmatched")}
+                          "one_bit_errors", "two_bit_errors", "unmatched")}
             written.append(dict(envelope, type="screening", **screening, **self.screening))
         if self.drain is not None:
             drain = {field: self.totals[field] % check.WIDE for field in
-                     ("irq_wakes", "empty_wakes", "poll_ms", "screen_ms", "busy_wait_ms",
+                     ("irq_wakes", "empty_wakes", "poll_ms", "busy_wait_ms",
                       "transactions", "repaired", "repairs_refused")}
-            written.append(dict(envelope, type="drain", **drain))
+            written.append(dict(envelope, type="drain", **drain, **self.drain))
         written.append(reception)
         for record in written:
             record["index"] = len(self.records)
@@ -217,20 +217,21 @@ class Outages(unittest.TestCase):
     def test_the_screen_says_what_reached_the_decoder_and_a_full_fifo_or_queue_is_named(self):
         sky = Sky()
         sky.framing = {}
-        sky.screening = {"worst_drain_us": 400, "fifo_peak_frames": 3, "queue_peak_frames": 5}
+        sky.screening = {"fifo_peak_frames": 3, "queue_peak_frames": 5}
         screened = dict(squitters=10, all_calls=2, replies=8, parity_refused=6, one_bit_errors=1,
                         unmatched=7)
         sky.seconds(20, **HEARING, **screened)
-        sky.screening = {"worst_drain_us": 2600, "fifo_peak_frames": 17, "queue_peak_frames": 63}
+        sky.screening = {"fifo_peak_frames": 17, "queue_peak_frames": 63}
         sky.seconds(15, frames=1200, part_packets=1200, unsupported=1100, **screened)
         report = sky.report()
         # 34 seconds subtracted from 35 records: the first only sets the counters' base.
         self.assertIn("  screened: 714 of 19140 frames to the decoder (340 squitters, 68 all-calls, "
-                      "272 replies, 34 one bit off and repaired), 204 refused for parity", report)
+                      "272 replies, 34 one bit and 0 two bits off, repaired), 204 refused for "
+                      "parity", report)
         self.assertIn("  replies with no address heard in clear: 238", report)
-        self.assertIn("  peaks: a wake held the CPU 2600 us, found 17 of 18 frames in the FIFO, "
-                      "left 63 of 64 in the queue", report)
-        self.assertIn("  gain step 13", report)
+        self.assertIn("  peaks: a wake found 17 of 18 frames in the FIFO, left 63 of 64 in the "
+                      "queue", report)
+        self.assertIn("  gain step 13, boost off", report)
         self.assertIn("a wake found 17 of the FIFO's 18 frames: the drain period is too long",
                       report)
         self.assertIn("the queue to the decoder held 63 of 64 frames: the decoder fell behind",
@@ -240,13 +241,12 @@ class Outages(unittest.TestCase):
     def test_a_wake_is_split_into_the_spi_it_paid_for_and_repairs_say_what_they_became(self):
         sky = Sky()
         sky.framing = {}
-        sky.drain = {}
+        sky.drain = {"worst_drain_us": 2600}
         sky.seconds(11, drains=60, drain_busy_ms=80, irq_wakes=10, empty_wakes=20, poll_ms=60,
-                    screen_ms=5, busy_wait_ms=10, transactions=500, repaired=2,
-                    repairs_refused=1, **HEARING)
+                    busy_wait_ms=10, transactions=500, repaired=2, repairs_refused=1, **HEARING)
         report = sky.report()
-        self.assertIn("  wakes: 100 on the FIFO IRQ, 200 empty; poll 600 ms (100 waiting on BUSY, "
-                      "5000 SPI transactions, 100 us each), screen 50 ms", report)
+        self.assertIn("  wakes: 100 on the FIFO IRQ, 200 empty, the longest 2600 us; poll 600 ms "
+                      "(100 waiting on BUSY, 5000 SPI transactions, 100 us each)", report)
         self.assertIn("  repairs: 20 kept for an aircraft held, 10 refused", report)
 
 

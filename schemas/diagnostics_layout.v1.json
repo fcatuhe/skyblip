@@ -273,7 +273,8 @@
       {"name": "irq_armed", "kind": "flag", "bit": 3},
       {"name": "probed", "kind": "flag", "bit": 4},
       {"name": "interrupt_pending", "kind": "flag", "bit": 5},
-      {"name": "front_end_kept", "kind": "flag", "bit": 6}
+      {"name": "front_end_kept", "kind": "flag", "bit": 6},
+      {"name": "boosted", "kind": "flag", "bit": 7}
     ]},
     {"name": "reception", "code": 23, "fields": [
       {"name": "crc", "kind": "u16", "at": 0},
@@ -306,7 +307,7 @@
       {"name": "parity_refused", "kind": "u16", "at": 6},
       {"name": "one_bit_errors", "kind": "u16", "at": 8},
       {"name": "unmatched", "kind": "u16", "at": 10},
-      {"name": "worst_drain_us", "kind": "u16", "at": 12},
+      {"name": "two_bit_errors", "kind": "u16", "at": 12},
       {"name": "fifo_peak_frames", "kind": "u8", "at": 14},
       {"name": "queue_peak_frames", "kind": "u8", "at": 15}
     ]},
@@ -314,7 +315,7 @@
       {"name": "irq_wakes", "kind": "u16", "at": 0},
       {"name": "empty_wakes", "kind": "u16", "at": 2},
       {"name": "poll_ms", "kind": "u16", "at": 4},
-      {"name": "screen_ms", "kind": "u16", "at": 6},
+      {"name": "worst_drain_us", "kind": "u16", "at": 6},
       {"name": "busy_wait_ms", "kind": "u16", "at": 8},
       {"name": "transactions", "kind": "u16", "at": 10},
       {"name": "repaired", "kind": "u16", "at": 12},

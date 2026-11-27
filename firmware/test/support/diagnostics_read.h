@@ -375,6 +375,7 @@ inline bool read(const Record& record, Receiver& out) {
     out.probed = record.flagged(kReceiverFlagProbed);
     out.interrupt_pending = record.flagged(kReceiverFlagInterruptPending);
     out.front_end_kept = record.flagged(kReceiverFlagFrontEndKept);
+    out.boosted = (record.flags & kReceiverFlagBoosted) != 0;
     return true;
 }
 
@@ -419,7 +420,7 @@ inline bool read(const Record& record, Screening& out) {
     out.parity_refused = wire::get_uint16(record.payload + screening_at::kParityRefused);
     out.one_bit_errors = wire::get_uint16(record.payload + screening_at::kOneBitErrors);
     out.unmatched = wire::get_uint16(record.payload + screening_at::kUnmatched);
-    out.worst_drain_us = wire::get_uint16(record.payload + screening_at::kWorstDrainUs);
+    out.two_bit_errors = wire::get_uint16(record.payload + screening_at::kTwoBitErrors);
     out.fifo_peak_frames = record.payload[screening_at::kFifoPeakFrames];
     out.queue_peak_frames = record.payload[screening_at::kQueuePeakFrames];
     return true;
@@ -431,7 +432,7 @@ inline bool read(const Record& record, Drain& out) {
     out.irq_wakes = wire::get_uint16(record.payload + drain_at::kIrqWakes);
     out.empty_wakes = wire::get_uint16(record.payload + drain_at::kEmptyWakes);
     out.poll_ms = wire::get_uint16(record.payload + drain_at::kPollMs);
-    out.screen_ms = wire::get_uint16(record.payload + drain_at::kScreenMs);
+    out.worst_drain_us = wire::get_uint16(record.payload + drain_at::kWorstDrainUs);
     out.busy_wait_ms = wire::get_uint16(record.payload + drain_at::kBusyWaitMs);
     out.transactions = wire::get_uint16(record.payload + drain_at::kTransactions);
     out.repaired = wire::get_uint16(record.payload + drain_at::kRepaired);
