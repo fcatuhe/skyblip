@@ -23,10 +23,11 @@ class Attestation::Statement
 
     challenge = Attestation::Challenge.find_live(server_nonce)
     unit = Unit.find_by(device_id:) || raise(Attestation::Refusal.new(:unknown_unit))
-    key = unit.active_key || raise(Attestation::Refusal.new(:no_active_key))
-    raise Attestation::Refusal.new(:bad_signature) unless signed_by?(key)
 
+    # INFO: fc 26nov26 checked inside the transaction that records the firmware, so an admin's revocation lands before or after, never between
     Unit.transaction do
+      key = unit.active_key || raise(Attestation::Refusal.new(:no_active_key))
+      raise Attestation::Refusal.new(:bad_signature) unless signed_by?(key)
       challenge.spend
       unit.attest_firmware(product:, variant:, version:, release:)
     end

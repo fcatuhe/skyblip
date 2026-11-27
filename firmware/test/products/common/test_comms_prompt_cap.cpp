@@ -59,8 +59,8 @@ struct Desk {
     }
 
     void reconnect() {
+        config.on_link_down(events::LinkDown{session_id, link.connection(session_id)});
         link.drop_link(session_id);
-        config.on_link_down(events::LinkDown{session_id});
         session_id++;
         link.raise_link(session_id);
         config.on_link_up(events::LinkUp{session_id, ports::kMinimumLinkPayloadBytes,
