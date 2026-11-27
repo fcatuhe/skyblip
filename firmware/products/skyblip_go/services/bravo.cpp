@@ -75,9 +75,11 @@ void BravoService::tick(uint32_t now_ms) {
 
     if (linked() && (now_ms - claimed_ms_ >= kClaimPeriodMs || call_changed())) claim(now_ms);
     if (leaving_ && farewell_owed_) {
-        farewell_owed_ = false;
-        farewell_ms_ = now_ms;
-        claim(now_ms);
+        if (!farewell_tried_) {
+            farewell_tried_ = true;
+            farewell_ms_ = now_ms;
+        }
+        farewell_owed_ = !claim(now_ms);
     }
     if (leaving_ && now_ms - farewell_ms_ >= kFarewellCeilingMs) leave();
     // INFO: fc 12nov26 the health age is cleared once spent, so it never comes back 49.7 days on
@@ -271,7 +273,10 @@ void BravoService::take_frame(const events::RxFrame& frame, uint32_t now_ms) {
     }
 }
 
+// INFO: fc 27nov26 a health queued before its link's Down is read after it, so only the next
+// link's decides
 void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
+    if (!up_) return;
     const Result<comms::PeerHealth> health = comms::read_health(bytes);
     if (health.status() == Status::Unsupported) {
         refuse_protocol();
@@ -387,6 +392,7 @@ void BravoService::forget() {
 void BravoService::leave() {
     leaving_ = false;
     farewell_owed_ = false;
+    farewell_tried_ = false;
     if (up_ || connecting_) central_.disconnect();
     if (step_ == BravoStep::Idle) release_unless_paired();
 }
@@ -429,7 +435,7 @@ void BravoService::connect(const events::BluetoothAddress& address, uint32_t win
     connecting_ = central_.connect(address, ports::ScanDuty{window_us, period_us}) == Status::Ok;
 }
 
-void BravoService::claim(uint32_t now_ms) {
+bool BravoService::claim(uint32_t now_ms) {
     claimed_ms_ = now_ms;
     const model::Ownship& own = context_.state.own;
     const diagnostics::Instant at = context_.instant(now_ms);
@@ -456,12 +462,13 @@ void BravoService::claim(uint32_t now_ms) {
     uint8_t frame[comms::kPeerClaimWidestBytes];
     const int bytes = comms::write_peer_claim(claim, frame, sizeof(frame));
     // INFO: fc 11nov26 a refused claim is dropped, and the next one leaves kClaimPeriodMs later |
-    // 17nov26 a changed call is written again on the next pass
+    // 17nov26 a changed call is written again on the next pass | 26nov26 so is a farewell
     if (bytes == 0 ||
         central_.write(ConstByteSpan(frame, static_cast<size_t>(bytes))) != Status::Ok)
-        return;
+        return false;
     claimed_call_ = claim.call;
     claimed_alarm_ = settings_.alarm;
+    return true;
 }
 
 bool BravoService::call_changed() const {

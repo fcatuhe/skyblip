@@ -74,6 +74,20 @@ class Unit::ReportingTest < ActiveSupport::TestCase
     assert_equal [ "read" ], Unit.find_by!(device_id: DEVICE_ID).firmwares.pluck(:source)
   end
 
+  # A journal is heard again each time it is posted, so an old install may arrive once the unit left its version and came back.
+  test "an install older than the unit's stretch on its version marks nothing" do
+    hear read(at: 4.hours.ago), read(version: "0.4.0+1400", at: 3.hours.ago)
+    install = entry("device.installed", at: 3.hours.ago, device_id: DEVICE_ID, from: "0.3.0+1234", to: "0.4.0+1400", lasted_ms: 40_000)
+    hear install
+    hear read(version: "0.5.0+1500", at: 2.hours.ago), read(version: "0.4.0+1400", at: 1.hour.ago)
+
+    hear install
+
+    firmwares = Unit.find_by!(device_id: DEVICE_ID).firmwares.newest_first
+    assert_equal [ "0.4.0+1400", "read", nil, nil ], firmwares.first.slice(:version, :source, :from_version, :lasted_ms).values
+    assert_equal [ "0.4.0+1400", "installed", "0.3.0+1234", 40_000 ], firmwares.third.slice(:version, :source, :from_version, :lasted_ms).values
+  end
+
   # A Plus whose haptic driver stops answering its probe reads as a Go from that boot on.
   test "a unit read on another variant opens a stretch on it, and the change is journaled" do
     hear read(variant: "plus", at: 2.hours.ago)
