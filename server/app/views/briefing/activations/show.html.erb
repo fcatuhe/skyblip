@@ -5,6 +5,7 @@
       activation_challenges_value: activation_challenges_path,
       activation_registrations_value: activation_registrations_path,
       activation_devices_value: "#{briefing_root_path}/devices",
+      activation_handoff_value: briefing_setup_handoff_path,
       activation_glass_outlet: ".glass-prompt"
     } do %>
   <header class="unit-head">
@@ -22,7 +23,10 @@
     <button type="button" class="button-app" data-activation-target="find" data-action="activation#find"><%= t("briefing.activation.find") %></button>
     <button type="button" class="button-app" data-activation-target="activate" data-action="activation#activate" hidden><%= t("briefing.activation.activate") %></button>
     <button type="button" class="button-app" data-activation-target="reconnect" data-action="activation#reconnect" hidden><%= t("briefing.unit.reconnect") %></button>
+    <button type="button" class="button-app" data-activation-target="usePhone" data-action="activation#usePhone" hidden><%= t("briefing.setup.handoff.use_phone") %></button>
   </div>
+
+  <%= render "briefing/activation_handoff", controller: "activation", target: "handoff", code_target: "handoffCode" %>
 
   <details class="unit-details" data-activation-target="kept" hidden>
     <summary><%= t("briefing.activation.kept_summary") %></summary>
