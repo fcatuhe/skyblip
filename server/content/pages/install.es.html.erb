@@ -52,7 +52,7 @@ updated_on: "2026-11-25"
     <h3 id="no-bluetooth">Tu ordenador no tiene Bluetooth</h3>
     <p>Instala primero por USB. Después, escanea el código con la cámara de un móvil Android y abre el enlace en Chrome. Si no tienes cámara, abre skyblip.eu/setup en Chrome en ese móvil y pulsa «Conectarlo». También puedes enchufar un adaptador Bluetooth USB al ordenador y conectarte desde allí. Un iPhone no puede conectarse al dispositivo en Briefing.</p>
     <h3 id="manual">Instala el software a mano</h3>
-    <p>Descarga el archivo <code>.uf2</code> para tu dispositivo desde la <%= link_to "última versión de skyBlip", "#{Rails.configuration.x.repository_url}/releases/latest" %>.</p>
+    <p>Descarga el archivo <code>.uf2</code> para tu dispositivo desde la <%= link_to "página de versiones de skyBlip", "#{Rails.configuration.x.repository_url}/releases/latest" %>.</p>
     <ul>
       <li><strong>Go o Go+:</strong> Enchufa el dispositivo y pulsa RESET dos veces seguidas. Está en el lado izquierdo, cerca de la parte superior. Copia el archivo del Go en la unidad <strong>TECHOBOOT</strong>. Si el Go es nuevo, <%= link_to "actívalo por Bluetooth", briefing_activation_path(locale: I18n.locale) %> con Chrome o Edge en un ordenador o en Android. Sigue las indicaciones de la pantalla del Go.</li>
       <li><strong>Bravo:</strong> Desenchufa el dispositivo. Mantén pulsado el botón mientras vuelves a enchufarlo. Suéltalo cuando la luz se ponga blanca. Copia el archivo de skyBlip Bravo en la unidad <strong>X1</strong>.</li>
