@@ -719,7 +719,7 @@ export class Updater {
   }
 
   #unanswered(task) {
-    if (task === 'install') this.#windowOpen = false;
+    if (task === 'install') this.#windowVersion = null;
     this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'timeout' }) });
     return this.#send({ command: 'get' });
   }
