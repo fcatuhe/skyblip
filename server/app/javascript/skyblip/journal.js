@@ -4,8 +4,9 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const BROWSER = /^[0-9A-HJKMNP-TV-Z]{8}$/;
 // INFO: fc 14nov26 a phone offline for a weekend of flying keeps its last 500 entries, and the oldest go first
 const KEPT = 500;
-// INFO: fc 14nov26 a keepalive fetch carries 64 KB at most, and 50 entries stay well under it
 const BATCH = 50;
+// INFO: fc 27nov26 a keepalive fetch carries 64 KB at most, so a batch stops short of it and an entry larger alone is dropped
+const BATCH_BYTES = 60 * 1024;
 const FLUSH_AFTER_MS = 2_000;
 const RETRY_AFTER_MS = 30_000;
 // INFO: fc 14nov26 the support code is a tracker in the CNIL's sense, so it lives 13 months from its minting and is never renewed
@@ -96,8 +97,14 @@ export class Journal {
 
   async #drain() {
     for (;;) {
-      const batch = this.#outbox().slice(0, BATCH);
-      if (batch.length === 0) return true;
+      const outbox = this.#outbox();
+      if (outbox.length === 0) return true;
+      const batch = batchOf(outbox, this.browser);
+      if (batch.length === 0) {
+        console.warn('A journal entry too large to send is dropped:', outbox[0].name);
+        this.#forget(outbox.slice(0, 1));
+        continue;
+      }
       let delivered;
       try {
         delivered = await this.#send({ browser: this.browser, entries: batch });
@@ -109,9 +116,13 @@ export class Journal {
         this.#later(RETRY_AFTER_MS);
         return false;
       }
-      const sent = new Set(batch.map(entry => entry.id));
-      this.#keep(this.#outbox().filter(entry => !sent.has(entry.id)));
+      this.#forget(batch);
     }
+  }
+
+  #forget(entries) {
+    const ids = new Set(entries.map(entry => entry.id));
+    this.#keep(this.#outbox().filter(entry => !ids.has(entry.id)));
   }
 
   #later(ms) {
@@ -167,6 +178,21 @@ export class Journal {
     }
     return code;
   }
+}
+
+function batchOf(outbox, browser) {
+  const batch = [];
+  let bytes = bytesOf({ browser, entries: [] });
+  for (const entry of outbox.slice(0, BATCH)) {
+    bytes += bytesOf(entry) + (batch.length > 0 ? 1 : 0);
+    if (bytes > BATCH_BYTES) break;
+    batch.push(entry);
+  }
+  return batch;
+}
+
+function bytesOf(value) {
+  return new TextEncoder().encode(JSON.stringify(value)).length;
 }
 
 function compact(properties) {
