@@ -209,6 +209,30 @@ TEST_CASE("capture: a capture armed at the uptime of one from an earlier boot is
     CHECK(after.capture.records_written() == flight::kLogSlotsPerSector * 3 + 2);
 }
 
+// The ring counts a recycled front by session name until reboot, so a name taken again starts
+// clean.
+TEST_CASE("capture: a capture named as a session the ring recycled since boot has lost nothing") {
+    SmallPoolRig rig{SmallPoolRig::kSectors + 3};
+    rig.fill_flights_to_the_floor();
+    const uint32_t floor_sectors = SmallPoolRig::kSectors - 1;
+    const uint32_t recycled = 20;
+    rig.label(floor_sectors, store::SectorOwner::Diagnostics, floor_sectors + 1, recycled);
+    rig.label(floor_sectors + 1, store::SectorOwner::Diagnostics, floor_sectors + 2, recycled);
+    arm_before_a_fix(rig);
+    feed_gently(rig, flight::kLogSlotsPerSector * 2);
+    stop(rig);
+    REQUIRE(rig.pool.allocator().recycled_sectors(store::SectorOwner::Diagnostics, recycled) == 2);
+    rig.flights.begin_erase();
+    while (rig.flights.erasing()) rig.flights.step_erase(rig.now_ms += 50);
+
+    rig.now_ms = recycled * 1000;
+    rig.recorder.arm();
+    rig.capture.tick(rig.now_ms);
+    REQUIRE(rig.capture.session_id() == recycled);
+    feed_gently(rig, 20);
+    CHECK(rig.pool.allocator().recycled_sectors(store::SectorOwner::Diagnostics, recycled) == 0);
+}
+
 TEST_CASE("capture: a capture with a fix is named by its UTC second, a second one by the next") {
     SmallPoolRig rig;
     rig.setup();

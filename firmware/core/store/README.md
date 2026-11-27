@@ -40,7 +40,7 @@ The allocator keeps every sector's owner, sequence and session id in RAM, in a `
 
 Both run on the service loop that arms the radio, so neither may scan the pool once per sector. A scan visits all 298 sectors on the T-Echo, at about 1.4 us a sector. A run costs three scans. `session_sector()` bisects on sequence: the nth sector is at least n above the session's lowest, and at least as far below its highest as the session has sectors after it.
 
-A session's name is unique only within its ring, and only among the sessions the ring holds. `owns_session()` answers whether a ring holds one, and a capture opens under the first second it does not hold (`../../products/common/README.md`, How a capture ends).
+A session's name is unique only within its ring, and only among the sessions the ring holds. `owns_session()` answers whether a ring holds one, and a capture opens under the first second it does not hold (`../../products/common/README.md`, How a capture ends). `recycled_sectors()` goes by that name, so a session that opens under the name of one the ring recycled since boot clears the count: nothing of the new session is lost yet.
 
 ## The claim
 
