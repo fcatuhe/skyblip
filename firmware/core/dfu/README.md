@@ -37,6 +37,8 @@ A key per product would make MCUboot refuse the foreign image at boot, which the
 - The check compares with what slot0 runs, so no class is compiled in.
 - An upload declared longer than its image is refused, because a swap can carry slot1's sector past a shorter image onto slot0's first page past it, where Briefing's `.uf2` leaves the install trust record (`../comms/README.md`, The browser that installed the unit). imgtool writes nothing past the TLV area, so every image we sign uploads as exactly its own length.
 
+A first chunk the hook refuses leaves the check on the upload before it. img_mgmt keeps that upload when it refuses a first chunk, and resumes it without asking the hook when the phone sends its SHA again at offset 0 (Zephyr v4.4.2 `zephyr_img_mgmt.c:724-731`). So an upload that a refused image interrupted still passes when the phone sends it again.
+
 The update page offers a unit only its own product's images, by the `identity` frame, and reads the class off the file before it sends anything (`server/app/javascript/skyblip/image.js`). It words error 5 as `wrong_product`, or `unmarked_image` for a file naming no product.
 
 ### Open
