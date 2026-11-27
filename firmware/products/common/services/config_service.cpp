@@ -66,7 +66,6 @@ void ConfigService::set_flight_state(flight::FlightState state) {
 
 // INFO: fc 18sep26 A second Up on one session is the MTU exchange landing late, never a second app.
 void ConfigService::on_link_up(const events::LinkUp& event) {
-    channel_.connect(event.session_id);
     if (image_state_ != dfu::ImageState::Confirmed ||
         settings_fallback_ != settings::Fallback::None)
         push_update(events::Peer{event.session_id, event.connection});
