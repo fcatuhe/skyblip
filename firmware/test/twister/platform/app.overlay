@@ -1,0 +1,11 @@
+/* The SX1262's DIO1, which the radio executor arms for its wakes, on the emulated GPIO. */
+/ {
+	board_part_gpios {
+		compatible = "gpio-keys";
+		status = "disabled";
+
+		radio_dio1_gpio: radio_dio1 {
+			gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};

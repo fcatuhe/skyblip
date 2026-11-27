@@ -1,3 +1,4 @@
+import { versionText } from '#skyblip/image';
 import { IDENTIFY_WITHIN_MS, MeshtasticLink } from '#skyblip/meshtastic';
 import { BLOCK_BYTES, LAYOUTS, Uf2Error, boardOf, encodeUf2, imageOf, parseUf2, trustRecord, withTrustRecord } from '#skyblip/uf2';
 
@@ -93,8 +94,9 @@ export class Installer {
     try {
       drive = await this.#pickDrive();
     } catch (error) {
-      const key = error.name === 'AbortError' ? null : error.name === 'NotAllowedError' || error.name === 'SecurityError' ? 'drive_denied' : 'drive_failed';
-      return this.#set({ phase: 'drive', notice: key && { key, detail: error.message } });
+      if (error.name === 'AbortError') return this.#set({ phase: 'drive', notice: { key: 'drive_closed' } });
+      const key = error.name === 'NotAllowedError' || error.name === 'SecurityError' ? 'drive_denied' : 'drive_failed';
+      return this.#set({ phase: 'drive', notice: { key, detail: error.message } });
     }
     const board = boardOf(await textOf(drive, INFO_FILE));
     if (!board.product) return this.#set({ phase: 'drive', notice: { key: board.id ? 'other_board' : 'not_drive', detail: board.id } });
@@ -107,7 +109,7 @@ export class Installer {
     } catch (error) {
       return this.#set({ phase: 'drive', notice: { key: error instanceof Uf2Error ? `image_${error.key}` : 'download_failed', detail: error.message } });
     }
-    this.#set({ phase: 'writing', version: image.version, trusted: image.trusted });
+    this.#set({ phase: 'writing', version: image.version, build: image.build, trusted: image.trusted });
     await this.#write(drive, image.bytes);
   }
 
@@ -115,13 +117,15 @@ export class Installer {
     const { bytes, version } = await this.#download(product);
     const uf2 = parseUf2(bytes);
     const layout = LAYOUTS[product];
-    if (imageOf(uf2.blocks, layout)?.product !== product) throw new Uf2Error('wrong_product');
+    const image = imageOf(uf2.blocks, layout);
+    if (image?.product !== product) throw new Uf2Error('wrong_product');
+    const build = versionText(image.version);
     const key = await this.#browserKey().catch(error => {
       console.warn('This browser has no key, so the unit will ask for its presses:', error.message);
       return null;
     });
-    if (!key) return { bytes, version, trusted: false };
-    return { bytes: encodeUf2(withTrustRecord(uf2, layout, trustRecord(key))), version, trusted: true };
+    if (!key) return { bytes, version, build, trusted: false };
+    return { bytes: encodeUf2(withTrustRecord(uf2, layout, trustRecord(key))), version, build, trusted: true };
   }
 
   // INFO: fc 18nov26 the bootloader restarts once the last block lands, cutting that write or the close, so only a cut before it is a failure
@@ -147,7 +151,7 @@ export class Installer {
     }
     const { product, version, trusted } = this.#state;
     this.#record('installer.wrote', { product, version, trusted, write_ms: Math.round(performance.now() - started), detail: cut });
-    this.#set({ phase: 'installed', notice: null });
+    this.#set({ phase: 'written', notice: null });
   }
 
   #record(name, properties) {

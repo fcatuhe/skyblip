@@ -52,6 +52,7 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     config.set_reset_reason(power::ResetReason::Watchdog);
     config.diagnostics().refreshes = 1;
 
+    link.clear();
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link_text(link.last().bytes);
@@ -122,6 +123,7 @@ TEST_CASE("comms: status carries state of charge, the charging flag and the leve
     config.set_flight_state(flight::FlightState::Ground);
     config.set_battery_state(battery_of(61, false), power::PowerLevel::Normal);
 
+    link.clear();
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link_text(link.last().bytes);
@@ -149,7 +151,6 @@ TEST_CASE(
     "comms: no push without a link, one push per real change, none for a repeat or for noise "
     "inside a step") {
     platform::host::Link link;
-    link.raise_link(1);
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
@@ -160,6 +161,7 @@ TEST_CASE(
     config.set_battery_state(battery_of(50, true), power::PowerLevel::Normal);
     CHECK(link.sent.empty());
 
+    link.raise_link(1);
     config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
 
     config.set_battery_state(battery_of(50, true), power::PowerLevel::Normal);  // repeat: no push
@@ -183,7 +185,9 @@ TEST_CASE(
                              power::PowerLevel::Critical);  // same step as 56: no push
     CHECK(link.sent.size() == 3);
 
-    config.on_link_down(events::LinkDown{1, link.connection(1)});
+    const uint32_t connection = link.connection(1);
+    link.drop_link(1);
+    config.on_link_down(events::LinkDown{1, connection});
     config.set_battery_state(battery_of(90, false),
                              power::PowerLevel::Normal);  // link is down again
     CHECK(link.sent.size() == 3);
@@ -228,6 +232,7 @@ TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 
     config.set_own_transponder(OwnTransponderHeard{0xFFFFFF, "ABCDEFGH", 17});
     config.set_no_tx(timing::NoTx::Pps);
 
+    link.clear();
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
@@ -266,6 +271,7 @@ TEST_CASE("comms: status without the transponder is 20 bytes at its widest, byte
     config.set_bravo_state(BravoState::NoUtc);
     config.set_no_tx(timing::NoTx::Pps);
 
+    link.clear();
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const uint8_t golden[] = {0xA9, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64,

@@ -178,7 +178,8 @@ export class ActivationWitness {
       this.#since = now;
     }
     if (state.notice && !sameNotice(state.notice, before?.notice)) {
-      entries.push(['activation.noticed', { key: state.notice.key, detail: state.notice.detail, phase: state.phase }]);
+      const { key, detail, lastCommand } = state.notice;
+      entries.push(['activation.noticed', { key, detail, phase: state.phase, ...(lastCommand && { last_command: lastCommand }) }]);
     }
     return entries;
   }

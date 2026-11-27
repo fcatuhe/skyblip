@@ -194,6 +194,7 @@ void ConfigLinkService::drain_link_events(uint32_t now_ms) {
             record_link_down(event, now_ms);
         }
     }
+    config_.release_departed_holder();
 }
 
 // INFO: fc 20nov26 taken at once and never held, so a stream of changes leaves as one write

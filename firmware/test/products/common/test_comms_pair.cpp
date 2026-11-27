@@ -135,7 +135,7 @@ TEST_CASE("pair: a press refused, a take-off or thirty seconds start no pairing"
     Desk flying(common::PairingSide::Go);
     flying.pair(kBravoTag);
     flying.config.set_flight_state(flight::FlightState::Airborne);
-    CHECK(link_text(flying.link.last().bytes) == acknowledgement(false, "in_flight"));
+    CHECK(link_text(flying.link.last_to(1)) == acknowledgement(false, "in_flight"));
     CHECK(flying.config.pending() == common::Pending::None);
 
     Desk waiting(common::PairingSide::Go);

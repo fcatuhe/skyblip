@@ -14,25 +14,15 @@ static_assert(
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 }  // namespace
 
-bool ConfigChannel::connected(uint16_t session_id) const {
-    for (int i = 0; i < connected_count_; i++)
-        if (connected_sessions_[i] == session_id) return true;
-    return false;
-}
-
-void ConfigChannel::connect(uint16_t session_id) {
-    if (connected(session_id) || connected_count_ == static_cast<int>(LinkSessions::kMaxSessions))
-        return;
-    connected_sessions_[connected_count_++] = session_id;
-}
-
 bool ConfigChannel::disconnect(const events::Peer& peer) {
-    for (int i = 0; i < connected_count_; i++) {
-        if (connected_sessions_[i] != peer.session_id) continue;
-        connected_sessions_[i] = connected_sessions_[--connected_count_];
-        break;
-    }
     if (!claim_.holds(peer)) return false;
+    claim_.release();
+    drop_replies();
+    return true;
+}
+
+bool ConfigChannel::release_departed_holder() {
+    if (!claim_.held() || live(claim_.peer())) return false;
     claim_.release();
     drop_replies();
     return true;
