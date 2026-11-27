@@ -685,7 +685,7 @@ export class Updater {
     const awaitingVerdict = phase === 'asking' && task === 'install';
     if (EXPECTED_DROP.has(phase) || awaitingVerdict) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
+      this.#set({ phase: next, task: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }

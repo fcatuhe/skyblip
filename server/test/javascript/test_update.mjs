@@ -331,6 +331,7 @@ test('a link that drops once the last chunk is in waits for the device to come b
   assert.equal(rebooting.notice, null);
   const back = await until(state => state.phase === 'ready' && state.running);
   assert.equal(back.running, '0.2.0+15');
+  assert.equal(back.task, null, 'the install no longer stands, so the page is idle for what waits on it');
   updater.disconnect();
 });
 
