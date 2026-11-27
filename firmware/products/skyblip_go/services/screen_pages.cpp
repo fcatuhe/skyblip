@@ -9,6 +9,7 @@
 #include "core/timing/transmit.h"
 #include "core/traffic/range.h"
 #include "core/units/units.h"
+#include "products/skyblip_go/pages/bravo_corner.h"
 #include "products/skyblip_go/pages/bravo_log.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/no_tx.h"
@@ -35,6 +36,12 @@ int traffic_outside_formation(const traffic::TrafficTable& table) {
         if (target && target->used && !target->in_formation) count++;
     }
     return count;
+}
+
+// INFO: fc 27nov26 the radar draws its own under the plot, and these three already name the Bravo
+bool carries_bravo_corner(Page page) {
+    return page != Page::Radar && page != Page::Nearby && page != Page::BravoLog &&
+           page != Page::Bravo;
 }
 }  // namespace
 
@@ -152,11 +159,10 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.battery_low = battery_low();
             snapshot.off_in_min = off_in_min();
-            snapshot.bravo = context_.state.bravo;
-            if (const comms::PeerHealth* health = bravo_.health()) {
-                snapshot.bravo_battery_low = power::needs_charge(health->power_level);
-                snapshot.bravo_battery_percent = health->battery_percent;
-            }
+            const BravoCorner corner = bravo_corner();
+            snapshot.bravo = corner.state;
+            snapshot.bravo_battery_low = corner.cell_low;
+            snapshot.bravo_battery_percent = corner.cell_percent;
             int count = 0;
             if (plotted) {
                 const model::Ownship own_now = flight::carried_to(*plotted, now_ms);
@@ -362,6 +368,7 @@ void ScreenService::render(uint32_t now_ms) {
             break;
         }
     }
+    if (carries_bravo_corner(page_)) draw_bravo_corner_over(framebuffer_, bravo_corner());
     draw_no_tx(framebuffer_, context_.state.transmit.shown());
 }
 
@@ -395,6 +402,16 @@ NearbyGo ScreenService::nearby_go() const {
     go.transmitting = context_.state.transmit.on_air();
     go.traffic = table.count() - table.count_of(model::Source::Adsb);
     return go;
+}
+
+BravoCorner ScreenService::bravo_corner() const {
+    BravoCorner corner;
+    corner.state = context_.state.bravo;
+    if (const comms::PeerHealth* health = bravo_.health()) {
+        corner.cell_low = power::needs_charge(health->power_level);
+        corner.cell_percent = health->battery_percent;
+    }
+    return corner;
 }
 
 NearbyBravo ScreenService::nearby_bravo() const {

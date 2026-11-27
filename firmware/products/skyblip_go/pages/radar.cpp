@@ -1,10 +1,8 @@
 #include "products/skyblip_go/pages/radar.h"
 
-#include <algorithm>
-
 #include "core/units/units.h"
 #include "core/util/format.h"
-#include "products/skyblip_go/pages/bravo_word.h"
+#include "products/skyblip_go/pages/bravo_corner.h"
 #include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
 #include "products/skyblip_go/pages/radar_traffic.h"
@@ -41,7 +39,6 @@ constexpr int kNoteBelowBanner = kCharacterHeight * kBannerScale + kLabelPad + k
 // INFO: fc 26nov26 the banner stands where it centres with a small line, so the line never moves it
 constexpr int kRingWordsHeight = kNoteBelowBanner + kCharacterHeight * kNoteScale;
 constexpr int kLiveMarkPad = 3;
-constexpr int kBravoCornerLines = 3;
 
 struct Layout {
     int outer_radius;
@@ -180,18 +177,6 @@ const char* ground_word(const RadarSnapshot& snapshot) {
     return snapshot.taxiing ? "TAXI" : "GROUND";
 }
 
-int format_cell(char* out, std::optional<uint8_t> percent) {
-    int written = format_string(out, "BAT ");
-    if (percent) {
-        written += format_unsigned(out + written, *percent);
-        written += format_string(out + written, "%");
-    } else {
-        written += format_string(out + written, "LOW");
-    }
-    out[written] = 0;
-    return written;
-}
-
 const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     if (!snapshot.battery_low) return nullptr;
     format_cell(out, snapshot.battery_percent);
@@ -226,34 +211,8 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     return {state, stage};
 }
 
-// INFO: fc 17nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
-Box bravo_corner(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
-    if (snapshot.bravo == comms::BravoState::Unpaired) return {};
-    char cell_buffer[12];
-    const char* lines[kBravoCornerLines] = {"BRAVO"};
-    int count = 1;
-    if (snapshot.bravo_battery_low) {
-        format_cell(cell_buffer, snapshot.bravo_battery_percent);
-        lines[count++] = cell_buffer;
-    }
-    if (const char* word = bravo_word(snapshot.bravo)) lines[count++] = word;
-    if (count == 1) return {};
-    int width = 0;
-    for (int i = 0; i < count; i++) width = std::max(width, text_width(lines[i], 1));
-    const int right = kGlassWidth - kMargin;
-    const int pitch = kCharacterHeight + kStackGap;
-    const Box box = padded(right - width, kMargin, width, count * pitch - kStackGap);
-    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
-    for (int i = 0; i < count; i++)
-        canvas.draw_text(right - text_width(lines[i], 1), kMargin + i * pitch, lines[i], true, 1);
-    return box;
-}
-
-// INFO: fc 17nov26 reversed after the plot, so traffic over a lost Bravo's corner stays readable
-void reverse(ui::Canvas& canvas, const Box& box) {
-    for (int y = box.y; y < box.y + box.height; y++)
-        for (int x = box.x; x < box.x + box.width; x++)
-            canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
+BravoCorner bravo_corner(const RadarSnapshot& snapshot) {
+    return {snapshot.bravo, snapshot.bravo_battery_low, snapshot.bravo_battery_percent};
 }
 
 Box word_box(const char* word, int y, int scale) {
@@ -444,7 +403,7 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     flight_word(canvas, snapshot);
     range_label(canvas, snapshot);
     traffic_count(canvas, snapshot);
-    const Box corner = bravo_corner(canvas, snapshot);
+    const CornerPatch corner = draw_bravo_corner(canvas, bravo_corner(snapshot));
 
     Box readings[4] = {range_box(snapshot), clock_box(snapshot)};
     int reading_count = 2;
@@ -488,7 +447,9 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
         plot_rim(canvas, snapshot, track_angle16,
                  {label.x, label.y, label.x + label.width - 1, label.y + label.height - 1});
     }
-    if (comms::lost(snapshot.bravo)) reverse(canvas, corner);
+    // INFO: fc 17nov26 reversed after the plot, so traffic over a lost Bravo's corner stays
+    // readable
+    if (comms::lost(snapshot.bravo)) reverse_bravo_corner(canvas, corner);
 }
 
 }  // namespace skyblip::go

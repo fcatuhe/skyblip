@@ -12,7 +12,7 @@ constexpr int kNoTxPad = 2;
 constexpr int kNoTxStackGap = 2;
 constexpr int kNoTxReasonY = kNoTxMargin + ui::kCharacterHeight + kNoTxStackGap;
 
-// INFO: fc 19nov26 top left and reversed, the mirror of the radar's Bravo corner, on any page
+// INFO: fc 19nov26 top left and reversed, the mirror of the Bravo corner, on any page
 void draw_no_tx(ui::Canvas& canvas, timing::NoTx reason);
 
 }  // namespace skyblip::go

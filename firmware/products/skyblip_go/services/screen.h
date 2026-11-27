@@ -17,6 +17,7 @@
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/pages/bravo.h"
+#include "products/skyblip_go/pages/bravo_corner.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/gmeter.h"
 #include "products/skyblip_go/pages/menu.h"
@@ -135,6 +136,7 @@ class ScreenService : public runtime::Service {
     NearbyGo nearby_go() const;
     const SelfTestPart* self_test_now();
     NearbyBravo nearby_bravo() const;
+    BravoCorner bravo_corner() const;
     void enter_menu(uint32_t now_ms);
     void leave_menu();
     void page_forward(uint32_t now_ms);
