@@ -7,7 +7,6 @@
 #include "core/comms/diagnostics.h"
 #include "core/comms/link_claim.h"
 #include "core/comms/link_registry.h"
-#include "core/comms/link_sessions.h"
 #include "core/comms/timing_report.h"
 #include "core/events/link.h"
 #include "core/timing/slot_timing_statistics.h"
@@ -31,9 +30,9 @@ class ConfigChannel {
     void resume(uint32_t now_ms);
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
-    void connect(uint16_t session_id);
     bool disconnect(uint16_t session_id);
-    bool link_up() const { return connected_count_ > 0; }
+    // INFO: fc 27nov26 read from the link, because a full link_events queue drops an Up
+    bool link_up() const { return link_.centrals() > 0; }
     bool live(const events::Peer& peer) const {
         return link_.connection(peer.session_id) == peer.connection;
     }
@@ -68,7 +67,6 @@ class ConfigChannel {
 
    private:
     void refuse_unclaimed(const events::Peer& peer);
-    bool connected(uint16_t session_id) const;
     void hold(const events::Peer& peer, const uint8_t* frame, int bytes);
     void drop_replies();
     template <class Report, class... Arguments>
@@ -83,8 +81,6 @@ class ConfigChannel {
     ports::Link& link_;
     uint32_t& link_drops_;
     LinkClaim claim_{};
-    uint16_t connected_sessions_[LinkSessions::kMaxSessions]{};
-    int connected_count_{0};
     uint32_t now_ms_{0};
     uint8_t held_frame_[kHeldFrameBytes]{};
     int held_bytes_{0};

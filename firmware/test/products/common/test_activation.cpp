@@ -708,7 +708,7 @@ TEST_CASE("activation: an activated unit's register prompt is cancelled at take-
     REQUIRE(desk.config.pending() == common::Pending::Register);
     desk.config.set_flight_state(flight::FlightState::Airborne);
     CHECK(desk.config.pending() == common::Pending::None);
-    CHECK(link_text(desk.link.last().bytes) == refusal("in_flight"));
+    CHECK(link_text(desk.link.last_to(1)) == refusal("in_flight"));
 }
 
 TEST_CASE("activation: a cell too low to write settings refuses an unlock and keeps the nonce") {

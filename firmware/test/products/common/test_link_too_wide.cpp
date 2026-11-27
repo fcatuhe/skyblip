@@ -51,6 +51,7 @@ TEST_CASE(
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
+    link.clear();
 
     // The status and a refusal fit twenty bytes; the config reply is counted, never sent short.
     config.on_rx(config_frame("{\"command\":\"status\"}"));
