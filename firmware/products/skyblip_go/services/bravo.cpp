@@ -176,9 +176,10 @@ void BravoService::answer_link(link::Reason verdict) {
 }
 
 // INFO: fc 11nov26 a connected Go says it unpaired, so Bravo drops its pin and frees its connection
+// | 27nov26 also before Bravo's first health on a reconnect, which turns the link Up
 void BravoService::unpair() {
     if (!paired(settings_)) return;
-    const bool farewell = up_ && link_ == BravoLink::Up;
+    const bool farewell = linked() && (link_ == BravoLink::Up || link_ == BravoLink::Down);
     drop_pin();
     if (farewell) {
         leaving_ = true;
