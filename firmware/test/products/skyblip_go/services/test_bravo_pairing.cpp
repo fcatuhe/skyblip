@@ -37,6 +37,19 @@ std::vector<std::string> claims(const PairedProducts& pair) {
     return named;
 }
 
+// A health as Bravo writes it, from a Bravo that says it is up and live.
+std::string health_frame(bool paired) {
+    comms::PeerHealth health{};
+    health.boot_epoch = 99;
+    health.listening = true;
+    health.utc_valid = true;
+    health.paired = paired;
+    uint8_t frame[comms::kPeerPayloadFloorBytes];
+    const int bytes = comms::write_health(health, frame, sizeof(frame));
+    REQUIRE(bytes > 0);
+    return std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes));
+}
+
 void store_settings(Rig& rig, const std::string& blob) {
     REQUIRE(rig.platform.key_value().write("settings",
                                            reinterpret_cast<const uint8_t*>(blob.data()),
@@ -129,6 +142,26 @@ TEST_CASE("bravo pairing: a lost link reconnects to the pinned Bravo") {
     pair.run_for(2000);
     CHECK(pair.service().link() == go::BravoLink::Up);
     CHECK(pair.go.platform.central().connects >= 2);
+}
+
+// TLA+ WaitingOnLink: a health and the link's Down reach the Go in one pass, the Down read first.
+TEST_CASE("bravo pairing: a health read after its link went down never asks Bravo on no link") {
+    PairedProducts pair;
+    pair.pair_and_store();
+    REQUIRE(pair.service().link() == go::BravoLink::Up);
+    const int connects = pair.go.platform.central().connects;
+
+    pair.air.set_in_range(false);
+    REQUIRE(pair.go.platform.central().notify(health_frame(false)));
+    pair.go.platform.central().drop();
+    pair.run_for(100);
+    CHECK(pair.service().step() == go::BravoStep::Idle);
+    CHECK(pair.go_pinned());
+
+    pair.air.set_in_range(true);
+    pair.run_for(5000);
+    CHECK(pair.go.platform.central().connects > connects);
+    CHECK(pair.service().link() == go::BravoLink::Up);
 }
 
 TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees the phone slot" *

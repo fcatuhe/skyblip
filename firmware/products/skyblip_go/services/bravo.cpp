@@ -272,7 +272,10 @@ void BravoService::take_frame(const events::RxFrame& frame, uint32_t now_ms) {
     }
 }
 
+// INFO: fc 27nov26 a health queued before its link's Down is read after it, so only the next
+// link's decides
 void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
+    if (!up_) return;
     const Result<comms::PeerHealth> health = comms::read_health(bytes);
     if (health.status() == Status::Unsupported) {
         refuse_protocol();
