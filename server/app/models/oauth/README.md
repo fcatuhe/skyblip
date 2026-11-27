@@ -24,7 +24,7 @@ A redirect is either a loopback URL, which matches on any port (RFC 8252), or a 
 
 ## Grants, codes and tokens
 
-Approving makes or refreshes one `OAuth::Grant` per admin and agent, which `Agents` in the admin area lists and Disconnect destroys, with its codes and tokens. A new password or a demotion from admin revokes all of the user's grants the same way, so an agent connected from a leaked session loses access, and promoting the user again brings none back without a new consent.
+Approving makes or refreshes one `OAuth::Grant` per admin and agent, which `Agents` in the admin area lists and Disconnect destroys, with its codes and tokens. A new password or a demotion from admin revokes all of the user's grants the same way, so an agent connected from a leaked session loses access, and promoting the user again brings none back without a new consent. Approving reads the role and the session again under the user's lock, so a demotion or a new password that lands while the admin approves is refused there and leaves no grant behind.
 
 - A code lives a minute and spends once, checked against its client, its redirect and the PKCE verifier. Presented again with the right verifier, it is refused and its grant revoked.
 - An access token lives an hour, a refresh token thirty days, and each refresh spends its refresh token for a new pair. A refresh token presented again after it was spent revokes the whole grant.

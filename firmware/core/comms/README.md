@@ -30,11 +30,11 @@ Every reply is addressed to an `events::Peer`, the session id and the connection
 
 A paired Go reserves one connection for its Bravo: `reserve_peer(true)` lowers `phone_ceiling()` by one whether or not Bravo is connected, and the platform advertises on `admits()`, so the Go takes two phones and refuses a third. A reservation is refused `Full` while phones hold every connection. The Go's own link to Bravo is not a session, so the NMEA broadcast never reaches Bravo. On Bravo the paired Go is a session: `reserve_peer_for()` keeps its slot by the Go's address, and Bravo keeps advertising while that Go is away.
 
-Events are one ordered queue, because an Up read before the Down that came first leaves a service pushing at a link that is gone.
+Events are one ordered queue, because an Up read before the Down that came first leaves a service pushing at a link that is gone. The bus drops an event when that queue is full, so `ConfigChannel::link_up()` asks `ports::Link::centrals()` rather than counting Ups and Downs. A phone whose Up was lost still hears the status pushes and the NMEA stream. A Down carries the connection number too, because a log frame can claim the unit for the next phone in the pass before the old connection's Down is read. `ConfigService::on_link_down()` releases the claim and forgets the browser proof, the activation nonce and the pairing request only when the Down names the connection that holds them.
 
 ## The claim
 
-`LinkClaim` grants config and log to the first session that writes a command, until it disconnects or releases it, because two apps writing settings disagree about what is stored. Another session's command is refused with a reason naming the state. Only the holder's disconnect cancels a pending prompt and closes an upload window.
+`LinkClaim` grants config and log to the first session that writes a command, until it disconnects or releases it, because two apps writing settings disagree about what is stored. Another session's command is refused with a reason naming the state. Only the holder's disconnect cancels a pending prompt and closes an upload window. The bus drops a Down when its queue is full, so every pass `ConfigLinkService` also releases a claim whose connection `ports::Link::connection()` no longer names, with the same effects as the holder's Down.
 
 The claim is not access control. `CONFIG_BT_SMP` is off on every product (`products/common/prj.conf`), so no identity stands behind a session id. What stops a hostile app is the MCUboot signature on the image and the gesture on the device, or a browser key that gesture once approved (Trusted browsers).
 

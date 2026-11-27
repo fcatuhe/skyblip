@@ -102,7 +102,7 @@ class OAuth::CodeTest < ActiveSupport::TestCase
 
   private
     def approved_grant
-      OAuth::Grant.approve(user: users(:francois), client: OAuth::Client.create!(
+      OAuth::Grant.approve(session: users(:francois).sessions.create!, client: OAuth::Client.create!(
         document_url: ConnectingAgents::CLAUDE_CODE, name: "Claude Code", redirect_uris: [ REDIRECT ], fetched_at: Time.current))
     end
 

@@ -41,7 +41,7 @@ struct Bench {
         config.set_flight_state(state);
     }
 
-    std::string last() { return link_text(link.last().bytes); }
+    std::string last() { return link_text(link.last_to(1)); }
 };
 
 struct FinishedUpload : ports::Dfu {
