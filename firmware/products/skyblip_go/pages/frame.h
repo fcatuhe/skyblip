@@ -44,6 +44,10 @@ constexpr int text_width(const char* text, int scale) {
     return text_cells(text) * ui::kCellWidth * scale - scale;
 }
 
+inline void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int scale = 1) {
+    canvas.draw_text(x_end - text_cells(text) * ui::kCellWidth * scale, y, text, true, scale);
+}
+
 constexpr int centred_x(const char* text, int scale) {
     return (kGlassWidth - text_cells(text) * ui::kCellWidth * scale) / 2;
 }
