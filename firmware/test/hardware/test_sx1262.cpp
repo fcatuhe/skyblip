@@ -210,7 +210,7 @@ TEST_CASE("sx1262: a configuration that timed out in standby is written again on
     chip.bitrate = 0;
 
     CHECK(radio.configure_radio(config) == Status::Ok);
-    CHECK(chip.frequency_hz > 868000000);
+    CHECK((chip.frequency_hz + 500) / 1000 == (config.frequency_hz + 500) / 1000);
     CHECK(chip.bitrate == config.bitrate);
 }
 
