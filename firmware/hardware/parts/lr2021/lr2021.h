@@ -39,6 +39,7 @@ class Lr2021 {
     Lr2021Event poll(uint8_t* frames, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
     Status sample(ports::ReceiverProbe& probe);
+    Status retune(int16_t detection_threshold_dbm, uint8_t rx_boost, uint8_t gain_step);
     Status sleep();
     void park();
     void hold_in_reset();
@@ -103,6 +104,7 @@ class Lr2021 {
     bool newest_rssi_valid_{false};
     bool reset_owed_{false};
     uint8_t rx_boost_{0};
+    uint8_t gain_step_{13};
     uint32_t since_frame_ms_{0};
     uint32_t rearms_{0};
     uint32_t resets_{0};

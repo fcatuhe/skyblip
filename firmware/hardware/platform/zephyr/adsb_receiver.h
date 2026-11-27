@@ -5,6 +5,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
+#include <iterator>
+
 #include "core/bus/bus.h"
 #include "core/events/adsb.h"
 #include "hardware/parts/lr2021/lr2021.h"
@@ -132,6 +134,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
             // INFO: fc 27nov26 a sweep finding the FIFO past its IRQ level means an edge was lost
             if (!edge && irq_wakes_ && drained >= parts::lr2021::kFifoHighFrames) missed_edges_++;
             health();
+            alternate_settings();
             probe();
             const uint64_t spent_us = k_cyc_to_us_floor64(k_cycle_get_32() - started);
             drain_busy_us_ += spent_us;
@@ -167,6 +170,26 @@ class AdsbReceiver : public ports::AdsbReceiver {
         health_checked_us_ += static_cast<uint64_t>(elapsed_ms) * 1000;
         if (radio_.service(elapsed_ms, runtime::kRadioRxSilenceCeilingMs))
             irq_wakes_ = irq_wakes_ && arm_irq();
+    }
+
+    struct Setting {
+        int16_t threshold_dbm;
+        uint8_t rx_boost;
+        uint8_t gain_step;
+    };
+
+    // TODO: fc 27nov26 a bench-only A/B of threshold, boost and gain, removed once a walk picks
+    // them
+    static constexpr Setting kSettings[] = {
+        {-110, 0, 13}, {-110, 7, 13}, {-106, 0, 13}, {-106, 7, 13}, {-110, 0, 7}};
+
+    void alternate_settings() {
+        const int64_t minute = k_uptime_get() / 60000;
+        const size_t index = static_cast<size_t>(minute % std::size(kSettings));
+        if (index == setting_index_) return;
+        setting_index_ = index;
+        const Setting& setting = kSettings[index];
+        (void)radio_.retune(setting.threshold_dbm, setting.rx_boost, setting.gain_step);
     }
 
     void probe() {
@@ -227,6 +250,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     uint32_t edge_wakes_{0};
     uint32_t empty_wakes_{0};
     uint64_t poll_us_{0};
+    size_t setting_index_{0};
     uint8_t batch_[kAdsbBatchBytes]{};
     struct k_sem wake_{};
     struct gpio_callback irq_callback_{};

@@ -240,12 +240,25 @@ Status Lr2021::sample(ports::ReceiverProbe& probe) {
     probe.noise_dbm = rssi_inst_dbm(rssi);
     probe.threshold_dbm = threshold_dbm(threshold);
     probe.mode = mode_of(chip_status[1]);
-    probe.gain_step = lr2021::kGainStep;
+    probe.gain_step = gain_step_;
     probe.boosted = rx_boost_ != lr2021::kRxBoostOff;
     probe.interrupt_pending = (chip_status[0] & lr2021::kInterruptPending) != 0;
     probe.front_end_kept = (front_end & lr2021::kOokQuirkMask) == lr2021::kOokQuirkData;
     probe.valid = true;
     return Status::Ok;
+}
+
+// INFO: fc 27nov26 bench-only: the boost goes through a receive restart, the rest is written in Rx
+Status Lr2021::retune(int16_t detection_threshold_dbm, uint8_t rx_boost, uint8_t gain_step) {
+    const bool restart = rx_boost != rx_boost_;
+    detection_threshold_dbm_ = detection_threshold_dbm;
+    rx_boost_ = rx_boost;
+    gain_step_ = gain_step;
+    if (mode_ != Lr2021Mode::Receive) return Status::Ok;
+    Status status = restart ? restart_receive() : Status::Ok;
+    if (status == Status::Ok) status = command(lr2021::kSetAgcGainManual, &gain_step_, 1);
+    if (status == Status::Ok) status = write_threshold();
+    return status;
 }
 
 // INFO: fc 11nov26 a BUSY that blocks the standby gets one reset, so the part sleeps or the caller
@@ -377,7 +390,7 @@ Status Lr2021::configure_ook() {
     uint8_t detector[5] = {};
     put_be16(detector, lr2021::kAdsbPreamblePattern);
     detector[2] = lr2021::kAdsbPreambleChips - 1;
-    const uint8_t gain = lr2021::kGainStep;
+    const uint8_t gain = gain_step_;
 
     Status status = command(lr2021::kSetOokModulationParams, modulation, sizeof(modulation));
     if (status == Status::Ok) status = command(lr2021::kSetOokPacketParams, packet, sizeof(packet));
