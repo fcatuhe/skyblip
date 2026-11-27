@@ -236,7 +236,7 @@ void bravo_live_mark(ui::Canvas& canvas, int right, int bottom) {
 
 void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     char text[4];
-    if (snapshot.fix_valid && snapshot.receiver_listening)
+    if (snapshot.receiver_listening || comms::relaying(snapshot.bravo))
         text[format_unsigned(text, static_cast<uint32_t>(snapshot.heard_count))] = 0;
     else
         text[format_string(text, "-")] = 0;

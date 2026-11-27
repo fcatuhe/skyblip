@@ -55,7 +55,6 @@ NearbySnapshot listing(const traffic::RangeRow* rows, int count, go::Units units
     snapshot.go.battery_percent = 87;
     snapshot.go.stage = gnss::Stage::Fixed;
     snapshot.go.satellites = 11;
-    snapshot.go.transmitting = true;
     snapshot.go.traffic = count;
     snapshot.fix_valid = true;
     snapshot.units = units;
@@ -305,14 +304,12 @@ TEST_CASE("nearby page: the widest word clears a full cell with air between them
                          kNearbyScale));
 }
 
-TEST_CASE("nearby page: a Go that does not transmit says TX OFF, and one on the cable CHG") {
+TEST_CASE("nearby page: a Go on the cable reads CHG for its cell") {
     NearbySnapshot snapshot = listing(nullptr, 0, go::Units::Nautical);
-    snapshot.go.transmitting = false;
     snapshot.go.charging = true;
     snapshot.go.battery_percent.reset();
     Glass canvas;
     draw_nearby(canvas, snapshot);
-    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyUnitY, "TX OFF", kNearbyScale));
     CHECK(reads_right_of(canvas, kNearbyBatteryEnd, kNearbyUnitY, "CHG", kNearbyScale));
 }
 

@@ -399,7 +399,6 @@ NearbyGo ScreenService::nearby_go() const {
     go.charging = context_.state.power.battery.charging;
     go.stage = context_.state.gnss.stage;
     go.satellites = own.satellites;
-    go.transmitting = context_.state.transmit.on_air();
     go.traffic = table.count() - table.count_of(model::Source::Adsb);
     return go;
 }

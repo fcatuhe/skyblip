@@ -69,9 +69,9 @@ const char* stage_word(gnss::Stage stage) {
     return word[0] != 0 ? word : "NO FIX";
 }
 
+// INFO: fc 27nov26 what the Go transmits is NO TX's to say, so a fix always shows its traffic
 const char* go_word(const NearbySnapshot& snapshot) {
-    if (!snapshot.fix_valid || snapshot.bravo_fix) return stage_word(snapshot.go.stage);
-    return snapshot.go.transmitting ? nullptr : "TX OFF";
+    return snapshot.fix_valid && !snapshot.bravo_fix ? nullptr : stage_word(snapshot.go.stage);
 }
 
 void draw_units(ui::Canvas& canvas, const NearbySnapshot& snapshot) {

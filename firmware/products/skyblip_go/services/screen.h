@@ -204,9 +204,11 @@ class ScreenService : public runtime::Service {
 
     void flash_alarm();
 
+    // INFO: fc 27nov26 the radio arms its dwells with an address, PPS or not
+    // (core/timing/README.md)
     bool receiver_listening() const {
         return ports::has(context_.roles.capabilities, ports::Capability::Rf) &&
-               context_.state.clock.pps_locked;
+               context_.state.activation.address().has_value();
     }
 
     bool taxiing() const {

@@ -19,7 +19,6 @@ struct NearbyGo {
     bool charging{false};
     gnss::Stage stage{gnss::Stage::Silent};
     uint8_t satellites{0};
-    bool transmitting{false};
     int traffic{0};
 };
 
