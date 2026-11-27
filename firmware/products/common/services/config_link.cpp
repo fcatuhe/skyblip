@@ -36,7 +36,9 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     config_.set_bravo_state(context_.state.bravo);
     config_.set_own_transponder(context_.state.own_transponder);
     config_.set_no_tx(context_.state.transmit.shown());
-    config_.set_capture(context_.state.capture.available, context_.diagnostics.armed());
+    // INFO: fc 26nov26 a stopped capture drains until its End is written, so a new one waits
+    config_.set_capture(context_.state.capture.available,
+                        context_.diagnostics.armed() || context_.state.capture.armed);
 
     config_.resume_replies(now_ms);
     events::RxFrame frame{};

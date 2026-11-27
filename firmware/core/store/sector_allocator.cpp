@@ -91,6 +91,11 @@ Claim SectorAllocator::claim(SectorOwner owner, uint32_t session_id) {
     return out;
 }
 
+void SectorAllocator::abandon(uint32_t sector) {
+    if (sector >= sector_count_) return;
+    label(table_, sector, kFree);
+}
+
 bool SectorAllocator::owns_session(SectorOwner owner, uint32_t session_id) const {
     for (uint32_t sector = 0; sector < sector_count_; sector++)
         if (code_of(sector) == static_cast<uint8_t>(owner) &&

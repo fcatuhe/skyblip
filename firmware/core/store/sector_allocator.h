@@ -64,6 +64,7 @@ class SectorAllocator {
     void close_session(SectorOwner owner);
 
     Claim claim(SectorOwner owner, uint32_t session_id);
+    void abandon(uint32_t sector);
     Claim prepare(SectorOwner owner);
     void note_erased(SectorOwner owner);
 

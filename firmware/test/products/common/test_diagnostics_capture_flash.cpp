@@ -283,6 +283,19 @@ void check_erased(SmallPoolRig& rig, uint32_t sector, uint32_t slot, uint32_t co
     }
 }
 
+void leave_room_for_one_page_program(SmallPoolRig& rig) {
+    constexpr int kPhaseMs = timing::dwell_of(timing::kUplinkWindowMs).end_ms -
+                             timing::kSwitchRetuneMs - static_cast<int>(store::kSlotWriteCostMs) -
+                             1;
+    rig.now_ms = 20'000 + kPhaseMs;
+    timing::ClockState anchored{};
+    anchored.utc_valid = true;
+    anchored.pps_locked = true;
+    rig.state.rf.plan = timing::Scheduler::plan(kPhaseMs, anchored);
+    rig.state.rf.dwell = timing::DwellPhase{rig.now_ms, kPhaseMs, true, false};
+    rig.clock.set_milliseconds(rig.now_ms);
+}
+
 }  // namespace
 
 // Build 895: one 24 B program per record held the loop ~2.5 ms each, ~40 ms in the uplink dwell.
@@ -340,16 +353,7 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
     queue_numbered(rig, 15);
 
     // Room for one page program and not for the two the straddling write needs after it.
-    constexpr int kPhaseMs = timing::dwell_of(timing::kUplinkWindowMs).end_ms -
-                             timing::kSwitchRetuneMs - static_cast<int>(store::kSlotWriteCostMs) -
-                             1;
-    rig.now_ms = 20'000 + kPhaseMs;
-    timing::ClockState anchored{};
-    anchored.utc_valid = true;
-    anchored.pps_locked = true;
-    rig.state.rf.plan = timing::Scheduler::plan(kPhaseMs, anchored);
-    rig.state.rf.dwell = timing::DwellPhase{rig.now_ms, kPhaseMs, true, false};
-    rig.clock.set_milliseconds(rig.now_ms);
+    leave_room_for_one_page_program(rig);
     rig.capture.tick(rig.now_ms);
 
     CHECK(rig.recorder.queued() == 5);
@@ -361,6 +365,35 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
     rig.capture.tick(rig.now_ms += 1000);
     CHECK(rig.recorder.queued() == 0);
     check_numbered(rig, sector, kRecordsPerPage, 0, 15);
+}
+
+// The window takes the refusal's Gap and defers its End: the next pass owes the End alone.
+TEST_CASE("capture: a refused capture whose End waits a pass still ends on its End") {
+    SmallPoolRig rig;
+    rig.fill_flights_to_the_floor();
+    rig.now_ms = 1000;
+    armed(rig);
+    const uint32_t slots = rig.pool.slots_per_sector();
+    drain_to_slot(rig, slots - common::CaptureService::kTailSlotsReserved);
+    const uint32_t sector = frontier_sector(rig);
+
+    queue_numbered(rig, 1);
+    leave_room_for_one_page_program(rig);
+    rig.capture.tick(rig.now_ms);
+    REQUIRE(rig.capture.capturing());
+    REQUIRE(rig.capture.stopped() == bus::CaptureStop::NoSectors);
+
+    rig.state.rf.dwell = timing::DwellPhase{};
+    rig.capture.tick(rig.now_ms += 1000);
+    CHECK_FALSE(rig.capture.capturing());
+    uint8_t raw[diagnostics::kRecordBytes];
+    diagnostics::Record record{};
+    REQUIRE(rig.pool.read_slot(sector, slots - 2, raw));
+    REQUIRE(diagnostics::decode_record(raw, record) == Status::Ok);
+    CHECK(record.type == diagnostics::Type::Gap);
+    REQUIRE(rig.pool.read_slot(sector, slots - 1, raw));
+    REQUIRE(diagnostics::decode_record(raw, record) == Status::Ok);
+    CHECK(record.type == diagnostics::Type::End);
 }
 
 TEST_CASE("capture: nothing reaches the flash in the slot own-ship may be keying the PA in") {
