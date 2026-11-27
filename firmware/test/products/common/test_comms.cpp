@@ -33,6 +33,7 @@ TEST_CASE("comms: get returns current config on the Config endpoint" *
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
+    link.clear();
     config.on_rx(config_frame("{\"command\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     CHECK(link.last_on(events::Endpoint::Config));
@@ -204,7 +205,7 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
 
     config.set_flight_state(flight::FlightState::Airborne);
     CHECK(config.pending() == Pending::None);
-    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
+    CHECK(link_text(link.last_to(1)).find("in_flight") != std::string::npos);
 }
 
 // The prompt is the whole security boundary, so it has to say what it is: a
@@ -234,7 +235,7 @@ TEST_CASE("comms: link down cancels a pending change") {
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":\"visual\"}"));
     CHECK(config.pending() == Pending::Set);
-    config.on_link_down(events::LinkDown{1});
+    config.on_link_down(events::LinkDown{1, kFirstConnection});
     CHECK(config.pending() == Pending::None);
 }
 

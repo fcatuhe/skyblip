@@ -15,7 +15,6 @@ using namespace radar;
 namespace {
 // INFO: fc 20nov26 for centring text only, which has no pixel pair to straddle
 constexpr int kCentreX = kFar;
-using ui::kCellWidth;
 constexpr int kSecondsScale = 1;
 constexpr int kSecondsGap = 2;
 constexpr int kRangeScale = 2;
@@ -82,12 +81,6 @@ void ring(ui::Canvas& canvas, int radius) {
         canvas.horizontal_line(kNear - outer, kFar + row, width, true);
         canvas.horizontal_line(kNear - outer, kNear - row, width, true);
     }
-}
-
-int text_width(const char* text, int scale) {
-    int count = 0;
-    while (text[count]) count++;
-    return count * kCellWidth * scale - scale;
 }
 
 struct Box {
