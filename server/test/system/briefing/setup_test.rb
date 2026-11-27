@@ -455,6 +455,28 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
+  # The Go refuses every new question on a link whose question the pilot refused, so only a new link can ask again.
+  test "a Go refused on its glass offers Reconnect, and asks again on the new link" do
+    in_chrome_on "Android", mobile: true
+    in_range a_new_go
+    with_installers do
+      visit "/briefing/setup?installed=go&tag=3f2a"
+      click_button "Connect"
+      assert_text "Press the Go's button to activate it."
+      page.execute_script("#{unit("3F2A skyBlip")}.refuse()")
+      assert_text "Refused on the Go. Reconnect, then activate again."
+      screen "71-setup-refused-on-glass"
+      assert_no_button "Try again"
+
+      click_button "Reconnect"
+      assert_text "Press the Go's button to activate it."
+      page.execute_script("#{unit("3F2A skyBlip")}.press()")
+      assert_text "Name your aircraft."
+      assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
+      assert_equal 1, page.evaluate_script("fakeFleet.asked.length")
+    end
+  end
+
   test "a Go the server refused asks the server again on Try again, and activates with no second press, since the first one trusted the browser" do
     in_chrome_on "Android", mobile: true
     in_range a_new_go
