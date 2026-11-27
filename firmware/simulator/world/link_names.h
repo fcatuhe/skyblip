@@ -182,6 +182,13 @@ inline constexpr Value kGnssConfigValues[] = {
 };
 inline constexpr Enumeration kGnssConfig{kGnssConfigValues, 11};
 
+inline constexpr Value kGnssBandValues[] = {
+    {"unknown", 0},
+    {"l1", 1},
+    {"l1_l5", 2},
+};
+inline constexpr Enumeration kGnssBand{kGnssBandValues, 3};
+
 inline constexpr Value kRejectValues[] = {
     {"none", 0},
     {"no_solution", 1},
@@ -542,6 +549,7 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"no_tx", 95, Type::Enum, &kNoTx, 0, false},
     {"irq_armed", 96, Type::Boolean, nullptr, 0, false},
     {"failed_writes", 97, Type::Unsigned, nullptr, 0, false},
+    {"receiver_band", 98, Type::Enum, &kGnssBand, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -829,8 +837,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 96},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 96},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 97},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 97},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

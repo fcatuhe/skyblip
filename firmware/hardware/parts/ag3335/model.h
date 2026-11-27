@@ -34,6 +34,7 @@ class Ag3335 : public io::Uart, public GnssTruth {
 
     bool fix_valid{true};
     uint8_t satellites{14};
+    uint8_t gps_in_view{9};
     uint16_t hdop_e2{70};
     uint16_t vdop_e2{110};
     uint16_t pdop_e2{130};
@@ -41,6 +42,7 @@ class Ag3335 : public io::Uart, public GnssTruth {
 
     bool answers{true};
     uint32_t acks_to_drop{0};
+    uint16_t ack_lost_once{0};
     uint16_t unsupported_command{0};
     // INFO: fc 11nov26 result 1 means still processing and the final result follows, SIM65M §2.3.1
     uint16_t processing_command{0};
@@ -51,6 +53,10 @@ class Ag3335 : public io::Uart, public GnssTruth {
     // INFO: fc 11nov26 an X1 answered AG3335M_V3.3.0 in Meshtastic PR #11889
     const char* project_version{"AG3335M_V3.3.0"};
     char frequency{'D'};
+    // INFO: fc 26nov26 LC29H V1.4 §2.4.29-30 documents the switch, which no X1 has answered yet
+    bool band_switch{true};
+    bool dual_band{true};
+    bool gnss_on{true};
 
     // INFO: fc 11nov26 the factory set is all seven sentences, Meshtastic issue #4626 on a T1000-E
     uint8_t sentence_every[kSentenceTypes]{1, 1, 1, 1, 1, 1, 1};
@@ -69,12 +75,16 @@ class Ag3335 : public io::Uart, public GnssTruth {
     uint32_t commands_rejected{0};
     uint32_t restarts{0};
     uint32_t factory_resets{0};
+    uint32_t power_switches{0};
+    uint32_t power_switches_too_soon{0};
+    uint32_t band_set_while_on{0};
     int last_restart_kind{-1};
 
     bool sentence_on(int type) const { return sentence_every[type] != 0; }
     bool tracks_l5() const {
         const uint8_t l5 = kGps | kGalileo | kBeidou;
-        return frequency == 'D' && (constellations & l5) == l5 && (constellations & kNavic) == 0;
+        return frequency == 'D' && dual_band && (constellations & l5) == l5 &&
+               (constellations & kNavic) == 0;
     }
 
     const std::string& heard() const { return heard_; }
@@ -108,6 +118,7 @@ class Ag3335 : public io::Uart, public GnssTruth {
             armed_ = true;
             last_ms_ = now_ms;
             report_ms_ = now_ms;
+            power_switched_ms_ = now_ms;
             return;
         }
         const int32_t elapsed_ms = static_cast<int32_t>(now_ms - last_ms_);
@@ -115,7 +126,7 @@ class Ag3335 : public io::Uart, public GnssTruth {
         last_ms_ = now_ms;
         fly(elapsed_ms);
         finish_processing();
-        if (restarting()) {
+        if (restarting() || !gnss_on) {
             report_ms_ = now_ms;
             return;
         }
@@ -128,11 +139,13 @@ class Ag3335 : public io::Uart, public GnssTruth {
     static constexpr int kCommandBytes = 64;
     static constexpr int kTypeBytes = 7;
     static constexpr int kArgumentsAt = 9;
+    static constexpr uint32_t kPowerSwitchSpacingMs = 2000;
 
     char command_[kCommandBytes]{};
     int command_length_{0};
     uint32_t last_tick_ms_{0};
     uint32_t restart_since_ms_{0};
+    uint32_t power_switched_ms_{0};
     bool restarting_{false};
     uint16_t processing_id_{0};
     uint32_t processing_since_ms_{0};
@@ -191,6 +204,8 @@ class Ag3335 : public io::Uart, public GnssTruth {
     void apply_constellations(const char* arguments);
     parts::PairResult apply_sentence_rate(const char* arguments);
     void restart(int kind);
+    void switch_power(bool on);
+    parts::PairResult set_dual_band(const char* arguments);
     void acknowledge(uint16_t id, parts::PairResult result);
     void finish_processing() {
         if (processing_id_ == 0 || last_tick_ms_ - processing_since_ms_ < processing_ms) return;
@@ -198,11 +213,13 @@ class Ag3335 : public io::Uart, public GnssTruth {
         processing_id_ = 0;
     }
     void emit_setting();
+    void emit_dual_band();
     void emit_burst();
     void emit_gga();
     void emit_gll();
     void emit_gsa();
     void emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t used);
+    void emit_gsv();
     void emit_rmc();
     void emit_vtg();
     void emit_zda();

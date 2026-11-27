@@ -291,6 +291,7 @@ enum : uint32_t {
     kNoTx = 95,
     kIrqArmed = 96,
     kFailedWrites = 97,
+    kReceiverBand = 98,
 };
 }
 

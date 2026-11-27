@@ -1024,6 +1024,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "failed_writes",
           "number": 97,
           "type": "unsigned"
+        },
+        {
+          "name": "receiver_band",
+          "number": 98,
+          "type": "enum",
+          "enum": "gnss_band"
         }
       ],
       "keys_of": "diagnostics"
@@ -1525,6 +1531,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "failed_writes",
           "number": 97,
           "type": "unsigned"
+        },
+        {
+          "name": "receiver_band",
+          "number": 98,
+          "type": "enum",
+          "enum": "gnss_band"
         }
       ]
     },
@@ -3385,6 +3397,29 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "resetting",
           "code": 10,
           "mirrors": "Resetting"
+        }
+      ]
+    },
+    "gnss_band": {
+      "mirrors": {
+        "type": "ports::GnssBand",
+        "header": "ports/gnss.h"
+      },
+      "values": [
+        {
+          "name": "unknown",
+          "code": 0,
+          "mirrors": "Unknown"
+        },
+        {
+          "name": "l1",
+          "code": 1,
+          "mirrors": "L1"
+        },
+        {
+          "name": "l1_l5",
+          "code": 2,
+          "mirrors": "L1L5"
         }
       ]
     },

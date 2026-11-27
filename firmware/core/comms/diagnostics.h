@@ -80,6 +80,8 @@ struct Diagnostics {
     bool gnss_solution_phase_valid{false};
     uint32_t gnss_recoveries{0};
     bool gnss_recoveries_valid{false};
+    ports::GnssBand gnss_band{ports::GnssBand::Unknown};
+    bool gnss_band_valid{false};
     uint16_t residual_m{0};
     bool residual_valid{false};
 

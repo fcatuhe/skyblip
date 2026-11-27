@@ -260,6 +260,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dump.gnss_solution_phase_valid = true;
     dump.residual_valid = true;
     dump.gnss_recoveries_valid = true;
+    dump.gnss_band_valid = true;
     dump.charge = power::ChargeCondition::TooCold;
     dump.adsb_fitted = true;
     dump.capture_available = true;

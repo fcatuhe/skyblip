@@ -175,6 +175,8 @@ inline Diagnostics widest_device() {
     diagnostics.residual_valid = true;
     diagnostics.gnss_recoveries = 0xFFFFFFFFu;
     diagnostics.gnss_recoveries_valid = true;
+    diagnostics.gnss_band = ports::GnssBand::L1L5;
+    diagnostics.gnss_band_valid = true;
     diagnostics.battery.cell_mv = 65535;
     diagnostics.battery.percent = 255;
     diagnostics.power_level = power::PowerLevel::Critical;  // "CRITICAL"

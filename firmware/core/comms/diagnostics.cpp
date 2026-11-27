@@ -138,6 +138,9 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         if (diagnostics.gnss_recoveries_valid)
             add(Group::Gnss, link::diagnostics_key::kReceiverRecoveries, Kind::Unsigned,
                 diagnostics.gnss_recoveries);
+        if (diagnostics.gnss_band_valid)
+            add(Group::Gnss, link::diagnostics_key::kReceiverBand, Kind::Unsigned,
+                static_cast<uint32_t>(diagnostics.gnss_band));
     }
 
     if (power) {

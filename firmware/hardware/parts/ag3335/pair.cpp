@@ -13,6 +13,7 @@ constexpr int kTalkerBytes = 5;
 constexpr int kIdDigits = 3;
 constexpr uint16_t kAckId = 1;
 constexpr uint16_t kSettingId = 21;
+constexpr uint16_t kDualBandId = 105;
 
 bool digits(const char* text, int count) {
     for (int i = 0; i < count; i++)
@@ -63,6 +64,7 @@ PairReader::Heard PairReader::parse(int bytes) {
     fields++;
     if (id == kAckId) return parse_ack(fields);
     if (id == kSettingId) return parse_setting(fields);
+    if (id == kDualBandId) return parse_dual_band(fields);
     return Heard::Nothing;
 }
 
@@ -82,7 +84,19 @@ PairReader::Heard PairReader::parse_setting(const char* fields) {
     const int kept = length < kVersionBytes - 1 ? length : kVersionBytes - 1;
     std::memcpy(firmware_version_, fields, static_cast<size_t>(kept));
     firmware_version_[kept] = 0;
+    const char frequency = comma[1];
+    frequency_ = (frequency == 'S' || frequency == 'D') && (comma[2] == ',' || comma[2] == '*')
+                     ? frequency
+                     : 0;
     return Heard::Setting;
+}
+
+// INFO: fc 26nov26 the reply to $PAIR105 is 1 with dual band on and 0 with it off, LC29H V1.4
+// §2.4.30
+PairReader::Heard PairReader::parse_dual_band(const char* fields) {
+    if ((fields[0] != '0' && fields[0] != '1') || fields[1] != '*') return Heard::Nothing;
+    dual_band_on_ = fields[0] == '1';
+    return Heard::DualBand;
 }
 
 }  // namespace skyblip::parts

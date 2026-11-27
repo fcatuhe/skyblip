@@ -24,13 +24,14 @@ The AG3335 acknowledges every command with `$PAIR001,<command>,<result>`: 0 is s
 - A result of 1 states no time to wait, so the driver waits `kProcessingWindowMs`, three acknowledgement windows, before resending.
 - An acknowledgement names the command and not its arguments, so a late answer to a resent `$PAIR062` can be credited to the next `$PAIR062`.
 
-The driver asks `$PAIR021` first. The reply carries the project version, such as `AG3335M_V3.3.0`, and a frequency field, `S` for single band or `D` for L1 and L5 (§2.3.11, §2.3.12), which the bench reads off the wire. The reply is 153 bytes in the guide's example, longer than an NMEA sentence, so `PairReader` keeps a line of its own beside `core/gnss`'s parser.
+The driver asks `$PAIR021` first. The reply carries the project version, such as `AG3335M_V3.3.0`, and a frequency field, `S` for single band or `D` for L1 and L5 (§2.3.11, §2.3.12), which `PairReader::frequency()` keeps. The reply is 153 bytes in the guide's example, longer than an NMEA sentence, so `PairReader` keeps a line of its own beside `core/gnss`'s parser.
 
 The sequence, in order:
 
 | Sentence | What it sets | Source |
 |---|---|---|
 | `$PAIR382,1` | keeps the receiver's processor awake, so no later command is lost to sleep | §2.3.73. SoftRF sends it first on the X1 (`nRF52.cpp:4061-4067`) |
+| `$PAIR105` | reads the dual-band switch, only on a `D` build, and turns it on if it is off (L5, below) | LC29H V1.4 §2.4.30 |
 | `$PAIR066,1,1,1,1,1,0` | GPS, GLONASS, Galileo, BeiDou and QZSS | §2.3.36, LC29H V1.4 §2.4.15 |
 | `$PAIR100,1,0` | NMEA 4.10, whose GSA carries the system id in field 18 | §2.3.61 |
 | `$PAIR062,<type>,<every>` | GGA, GSA and RMC every solution. GLL, GSV, VTG and ZDA off | §2.3.32 |
@@ -40,7 +41,18 @@ The sequence, in order:
 | `$PAIR410,1` | search for SBAS satellites | §2.3.80 |
 | `$PAIR752,1,100` | a 100 ms PPS from the first fix on | §2.3.141, LC29H V1.4 §2.4.48 |
 
-**L5.** The SIM65M guide has no command for the band: an "L1 + L5 package" searches in GREB or GEB (§2.3.36). LC29H V1.4 documents `$PAIR104` and `$PAIR105` to set and read dual band (§2.4.29-30), only with the GNSS powered off and back on. Neither says which holds for `AG3335M_V3.3.0`. The driver sends `$PAIR066,1,1,1,1,1,0`, GREB with QZSS, which both documents allow and SoftRF sends outside India (`GNSS.cpp:1268-1274`). It sends no `$PAIR104`, which would power-cycle the GNSS mid bring-up on a firmware nobody has seen take it. The receiver restarts on `$PAIR066` for an unstated time, and the acknowledgement retry covers a restart shorter than `kCommandAttempts` windows.
+**L5.** The SIM65M guide has no command for the band: an "L1 + L5 package" searches in GREB or GEB (§2.3.36). LC29H V1.4 documents `$PAIR104` and `$PAIR105` to set and read the dual-band switch (§2.4.29-30), on the LC29H (AA), whose chip is the X1's. The driver sends `$PAIR066,1,1,1,1,1,0`, GREB with QZSS, which both documents allow and SoftRF sends outside India (`GNSS.cpp:1268-1274`). The receiver restarts on `$PAIR066` for an unstated time, and the acknowledgement retry covers a restart shorter than `kCommandAttempts` windows.
+
+The driver turns L5 on itself, and `Ag3335::band()` says what it got, the dump's `receiver_band` (#551):
+
+- A build whose `$PAIR021` says `S` is single band. The driver asks nothing more and reads `l1`.
+- A `D` build is asked `$PAIR105` right after the sleep lock. The reply, `$PAIR105,1` or `$PAIR105,0`, closes the query, not its acknowledgement.
+- A switch found on reads `l1_l5`.
+- A switch found off is turned on as LC29H V1.4 §2.4.29 shows: `$PAIR003` powers the GNSS system off, `$PAIR104,1` turns dual band on, `$PAIR002` powers it on, and a second `$PAIR105` reads the result. §2.4.2-3 asks more than two seconds between two power switches, so the driver holds each one `kPowerSwitchHoldMs`, 2.5 s, after the last, counting boot as one. A switch sent again after a lost acknowledgement waits out the hold too, because the first send may have switched the power. The cycle runs once per bring-up. A switch still off after it reads `l1`.
+- A refused `$PAIR104` is skipped like any refused command: the receiver reads `DEGRADED`, and `$PAIR002` still powers it back on.
+- A `D` build that answers `$PAIR105` unsupported has no switch to read. The driver goes on, not degraded, and reads `unknown`, because only GSV's signal ids can then say whether L5 is tracked.
+
+LC29H V1.4 does not say whether `$PAIR104` survives a power cut, so the driver reads the switch on every bring-up and pays the cycle, about 5 s, on each boot it finds it off.
 
 **SBAS.** Mode 2 of `$PAIR400` covers WAAS, EGNOS, GAGAN and MSAS, and nothing names EGNOS alone, so the receiver takes whichever SBAS it hears. SBAS does not run in fitness or swimming mode (§2.3.80), and the guide calls both fitness (§2.3.50) and normal (§2.3.51) the default, so the sequence sets normal mode explicitly.
 
@@ -83,12 +95,13 @@ A receiver with no fix sends a 37-byte GGA (Meshtastic issue #4626). `core/gnss`
 
 ## The model
 
-`models::Ag3335` acknowledges `$PAIR` commands as the guide does and answers `$PAIR021`. It emits the sentences its rates ask for in the logged order, on the `GN` talker in NMEA 4.10, with the no-fix forms Meshtastic issue #4626 logged. Its factory state is all seven sentences once a second, as that issue reports. It flies the same `GnssTruth` as the L76K's model (`../gnss_truth.h`). It does not emit GSV, pulse a PPS, sleep or model a cold start, because nothing on Bravo reads them yet.
+`models::Ag3335` acknowledges `$PAIR` commands as the guide does and answers `$PAIR021`. It emits the sentences its rates ask for in the logged order, on the `GN` talker in NMEA 4.10, with the no-fix forms Meshtastic issue #4626 logged. Its factory state is all seven sentences once a second, as that issue reports. It flies the same `GnssTruth` as the L76K's model (`../gnss_truth.h`). Its GSV is one `GP` set on signal 1, which nothing on Bravo reads. It does not pulse a PPS, sleep or model a cold start, because nothing on Bravo reads them yet.
 
 ## What the bench checks (#169)
 
 - Each pin above on the unit. P0.04 pulsing once a second settles SoftRF's PPS against Meshtastic's `VCC_ADC`.
-- `$PAIR021` answers `AG3335M` and `D`, and `$PAIR105` answers whether the dual-band switch exists and is on (LC29H V1.4 §2.4.30).
+- `$PAIR021` answers `AG3335M` and `D`, and `$PAIR105` answers whether the dual-band switch exists and is on (LC29H V1.4 §2.4.30). The dump's `receiver_band` reads `l1_l5`.
+- On a unit whose switch was off, `$PAIR003`, `$PAIR104,1` and `$PAIR002` are each acknowledged with 0, the receiver solves again after the cycle, and the next boot finds the switch on or off. Off means the driver pays the cycle on every boot.
 - Every command is acknowledged with result 0, `$PAIR066` before the receiver restarts, and the restart's length. `$PAIR063,-1` reads back the seven sentence rates (§2.3.33).
 - With a fix, GGA field 11 is filled and `geoid_measured` is true.
 - GSV, turned on by hand, shows GPS on signal 8 (L5) and Galileo on signal 1 (E5a) (§2.2.3), and GGA reports fix quality 2 once SBAS is in use (§2.2.1).

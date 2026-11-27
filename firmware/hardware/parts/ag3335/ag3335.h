@@ -79,6 +79,16 @@ class Ag3335 : public ports::Gnss {
         kSbasCorrections, kSbasSearch,       kPpsAfterFirstFix,
     };
 
+    // INFO: fc 26nov26 LC29H V1.4 §2.4.29-30 switches the band only with the GNSS system off
+    static constexpr const char* kDualBandQuery = "$PAIR105*3E\r\n";
+    static constexpr const char* kGnssOff = "$PAIR003*39\r\n";
+    static constexpr const char* kDualBandOn = "$PAIR104,1*22\r\n";
+    static constexpr const char* kGnssOn = "$PAIR002*38\r\n";
+    static constexpr const char* kBandCommands[] = {kGnssOff, kDualBandOn, kGnssOn, kDualBandQuery};
+    static constexpr int kBandCommandCount = sizeof(kBandCommands) / sizeof(kBandCommands[0]);
+    // INFO: fc 26nov26 LC29H V1.4 §2.4.2-3 waits more than two seconds between GNSS power switches
+    static constexpr uint32_t kPowerSwitchHoldMs = 2500;
+
     // INFO: fc 11nov26 hot, warm, cold and full cold start with factory settings, SIM65M §2.3.4-7
     static constexpr const char* kRestartCommands[4] = {
         "$PAIR004*3E\r\n",
@@ -120,10 +130,9 @@ class Ag3335 : public ports::Gnss {
 
     bool identified() const { return reader_.identified(); }
     const char* firmware_version() const { return reader_.firmware_version(); }
+    ports::GnssBand band() const { return band_; }
 
     void request_restart(ports::Restart kind) override;
-
-    const gnss::SkyView& sky() const { return parser_.sky(); }
 
     uint32_t sentences() const { return parser_.solution().sentences; }
 
@@ -131,11 +140,17 @@ class Ag3335 : public ports::Gnss {
     static constexpr size_t kReadChunkBytes = 64;
     static constexpr uint8_t kNoRestart = 0xFF;
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
+    static constexpr int kPlanCapacity = kCommandCount + 1 + kBandCommandCount;
+    static constexpr uint16_t kDualBandQueryId = 105;
 
     void identify(uint32_t now_ms);
     void start_sequence(uint32_t now_ms);
+    void plan_sequence();
     void send_command(uint32_t now_ms);
     void next_command(uint32_t now_ms);
+    void settle_band();
+    static bool power_switch(const char* sentence);
+    bool switch_missing() const;
     void retry_command(uint32_t now_ms);
     void await(const char* sentence, uint32_t now_ms);
     void send(const char* sentence);
@@ -151,7 +166,15 @@ class Ag3335 : public ports::Gnss {
     ConfigStage stage_{ConfigStage::Idle};
     uint32_t serviced_ms_{0};
     uint32_t last_command_ms_{0};
+    const char* plan_[kPlanCapacity]{};
+    int plan_count_{0};
     int next_command_{0};
+    ports::GnssBand band_{ports::GnssBand::Unknown};
+    uint32_t power_switched_ms_{0};
+    bool band_switched_{false};
+    bool band_answered_{false};
+    bool holding_{false};
+    bool started_{false};
     uint16_t awaited_id_{0};
     uint8_t attempts_{0};
     uint8_t pending_restart_{kNoRestart};

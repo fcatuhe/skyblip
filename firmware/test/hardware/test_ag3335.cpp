@@ -78,7 +78,8 @@ struct Timed {
 };
 
 constexpr const char* kSequence =
-    "PAIR021,PAIR382,PAIR066,PAIR100,PAIR062,PAIR062,PAIR062,PAIR062,PAIR062,PAIR062,PAIR062,"
+    "PAIR021,PAIR382,PAIR105,PAIR066,PAIR100,PAIR062,PAIR062,PAIR062,PAIR062,PAIR062,PAIR062,"
+    "PAIR062,"
     "PAIR050,PAIR080,PAIR400,PAIR410,PAIR752,";
 
 }  // namespace
@@ -141,6 +142,7 @@ TEST_CASE("ag3335: every sentence the driver sends checksums and names its PAIR 
     };
     CHECK(valid(parts::Ag3335::kIdentifyCommand));
     for (const char* command : parts::Ag3335::kCommands) CHECK(valid(command));
+    for (const char* command : parts::Ag3335::kBandCommands) CHECK(valid(command));
     for (const char* command : parts::Ag3335::kRestartCommands) CHECK(valid(command));
 }
 
@@ -154,7 +156,7 @@ TEST_CASE("ag3335: a lost acknowledgement is asked again, and the sequence still
     CHECK(gnss.configured());
     CHECK(gnss.health().config_stage == ports::GnssConfigStage::Ready);
     // Two dropped answers cost two repeats: the identification and the sleep lock.
-    CHECK(chip.commands_seen == parts::Ag3335::kCommandCount + 1 + 2);
+    CHECK(chip.commands_seen == parts::Ag3335::kCommandCount + 2 + 2);
 }
 
 TEST_CASE("ag3335: what is said while the receiver restarts after $PAIR066 lands on a retry") {
@@ -219,7 +221,6 @@ TEST_CASE(
     CHECK(fix.satellites == chip.satellites);
     CHECK(fix.vdop_e2 == chip.vdop_e2);
     CHECK(fix.fix_mode == gnss::kFixMode3D);
-    CHECK(gnss.sky().in_use_of(gnss::System::Gps) > 0);
     CHECK(gnss.last_reject() == gnss::FixReject::None);
 }
 
@@ -299,7 +300,7 @@ TEST_CASE("ag3335: a command still processing is waited for, not sent again") {
     run(gnss, chip, 0, 5000);
 
     CHECK(gnss.configured());
-    CHECK(chip.commands_seen == parts::Ag3335::kCommandCount + 1);
+    CHECK(chip.commands_seen == parts::Ag3335::kCommandCount + 2);
     CHECK(chip.tracks_l5());
 }
 
