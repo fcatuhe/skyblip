@@ -41,7 +41,7 @@ void AdsbService::regulate_threshold(uint32_t now_ms) {
     receiver_.set_detection_threshold(threshold_.threshold_dbm());
 }
 
-// INFO: fc 26nov26 a pair every second whatever the sky does, so a silent receiver still records
+// INFO: fc 26nov26 three records every second whatever the sky does, so silence still records
 void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) {
         recorded_ = false;
@@ -53,6 +53,9 @@ void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     const diagnostics::Instant at = context_.instant(now_ms);
     const ports::AdsbReceiverStatistics statistics = receiver_.statistics();
     context_.diagnostics.record(diagnostics::receiver_of(statistics, receiver_.listening()), at);
+    context_.diagnostics.record(diagnostics::framing_of(statistics, threshold_.false_alarm_hz(),
+                                                        threshold_.threshold_dbm()),
+                                at);
     diagnostics::Reception reception{};
     reception.crc = crc_;
     reception.unsupported = unsupported_;

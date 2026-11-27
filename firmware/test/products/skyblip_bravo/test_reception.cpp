@@ -3,6 +3,7 @@
 
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
+#include "products/skyblip_bravo/detection_threshold.h"
 #include "test/support/bravo_rig.h"
 #include "test/support/diagnostics_corpus.h"
 #include "test/support/diagnostics_read.h"
@@ -48,6 +49,14 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
     CHECK(count_of(records, diagnostics::Type::Receiver) <= 7);
     CHECK(count_of(records, diagnostics::Type::Reception) ==
           count_of(records, diagnostics::Type::Receiver));
+    CHECK(count_of(records, diagnostics::Type::Framing) ==
+          count_of(records, diagnostics::Type::Receiver));
+    diagnostics::Framing framing{};
+    REQUIRE(last_of(records, framing));
+    CHECK(framing.threshold_wanted_dbm == bravo::DetectionThreshold::kFloorDbm);
+    CHECK(framing.overflow_drops == 0);
+    CHECK(framing.resync_drops == 0);
+    CHECK(framing.queue_drops == 0);
 
     diagnostics::Receiver receiver{};
     REQUIRE(last_of(records, receiver));
@@ -110,7 +119,7 @@ TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded, and reception
     CHECK(last.frames == 4);
 }
 
-TEST_CASE("bravo reception: a power run leaves both records out, as it does every second's") {
+TEST_CASE("bravo reception: a power run leaves the three records out, as it does every second's") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -120,4 +129,5 @@ TEST_CASE("bravo reception: a power run leaves both records out, as it does ever
     const std::vector<diagnostics::Record> records = stop(rig);
     CHECK(count_of(records, diagnostics::Type::Receiver) == 0);
     CHECK(count_of(records, diagnostics::Type::Reception) == 0);
+    CHECK(count_of(records, diagnostics::Type::Framing) == 0);
 }

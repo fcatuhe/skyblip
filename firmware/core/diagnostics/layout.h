@@ -31,9 +31,10 @@ enum class Type : uint8_t {
     Adsb = 21,
     Receiver = 22,
     Reception = 23,
+    Framing = 24,
 };
 
-constexpr uint8_t kHighestType = 23;
+constexpr uint8_t kHighestType = 24;
 
 enum class Profile : uint8_t {
     Full = 0,
@@ -467,6 +468,21 @@ enum : uint32_t {
 }
 
 constexpr uint8_t kReceptionFlagFixValid = 1u << 2;
+
+namespace framing_at {
+enum : uint32_t {
+    kOverflowDrops = 0,
+    kResyncDrops = 2,
+    kQueueDrops = 4,
+    kInFlight = 6,
+    kSplitCounts = 8,
+    kFalseAlarmHz = 10,
+    kThresholdWantedDbm = 12,
+    kOverflows = 13,
+    kStrandedResyncs = 14,
+    kShortResyncs = 15,
+};
+}
 
 }
 

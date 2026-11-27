@@ -43,7 +43,10 @@ TEST_CASE("lr2021: bytes no counted frame owns empty the FIFO, and the next fram
 
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
     CHECK(radio.framing_resyncs() == 1);
+    CHECK(radio.resync_drops() == 1);
     CHECK(radio.fifo_drops() == 1);
+    CHECK(radio.stranded_resyncs() == 1);
+    CHECK(radio.short_resyncs() == 0);
     CHECK(part.fifo.empty());
     CHECK(part.listening_for_adsb());
 
@@ -63,6 +66,7 @@ TEST_CASE("lr2021: a frame still arriving behind the counted ones is left to fin
     REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
     CHECK(address_in(frame) == kAddress);
     CHECK(radio.framing_resyncs() == 0);
+    CHECK(radio.in_flight() == 1);
     CHECK(part.fifo.size() == 6);
 }
 
@@ -75,7 +79,38 @@ TEST_CASE("lr2021: a FIFO short of the frames the part counted is emptied, not r
 
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
     CHECK(radio.framing_resyncs() == 1);
+    CHECK(radio.short_resyncs() == 1);
     CHECK(part.listening_for_adsb());
+}
+
+TEST_CASE(
+    "lr2021: bytes past the counted frames that neither grow nor close are stranded remains") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    air(part, kAddress);
+    part.strand(5);
+    uint8_t frame[adsb::kFrameBytes]{};
+
+    CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+    CHECK(radio.framing_resyncs() == 1);
+    CHECK(radio.stranded_resyncs() == 1);
+    CHECK(radio.in_flight() == 0);
+    CHECK(radio.resync_drops() == 1);
+}
+
+TEST_CASE("lr2021: a frame that closes while the level is read is counted as a split snapshot") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    air(part, kAddress);
+    part.arrive_after(chip::kGetRxFifoLevel, [&] { air(part, 0x3C6586); });
+    uint8_t frame[adsb::kFrameBytes]{};
+
+    REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
+    CHECK(address_in(frame) == kAddress);
+    CHECK(radio.split_counts() == 1);
+    CHECK(radio.framing_resyncs() == 0);
+    REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
+    CHECK(address_in(frame) == 0x3C6586);
 }
 
 TEST_CASE("lr2021: whole frames with nothing stray are read with no resync and no wait") {
@@ -119,4 +154,30 @@ TEST_CASE("lr2021: a threshold set while parked is the one the next bring-up wri
     ports::ReceiverProbe probe{};
     REQUIRE(radio.sample(probe) == Status::Ok);
     CHECK(probe.threshold_dbm == -100);
+}
+
+TEST_CASE("lr2021: a frame's worth of bytes no counted frame owns is neither stranded nor short") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    air(part, kAddress);
+    part.strand(adsb::kFrameBytes + 2);
+    uint8_t frame[adsb::kFrameBytes]{};
+
+    CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+    CHECK(radio.framing_resyncs() == 1);
+    CHECK(radio.stranded_resyncs() == 0);
+    CHECK(radio.short_resyncs() == 0);
+}
+
+TEST_CASE("lr2021: an overflow counts once, with every frame the FIFO held") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    for (int i = 0; i < 19; i++) air(part, kAddress);
+    uint8_t frame[adsb::kFrameBytes]{};
+
+    CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+    CHECK(radio.overflows() == 1);
+    CHECK(radio.overflow_drops() == 19);
+    CHECK(radio.framing_resyncs() == 0);
+    CHECK(part.listening_for_adsb());
 }

@@ -317,6 +317,22 @@ struct Reception {
     bool fix_valid{false};
 };
 
+struct Framing {
+    uint32_t overflow_drops{0};
+    uint32_t resync_drops{0};
+    uint32_t queue_drops{0};
+    uint32_t in_flight{0};
+    uint32_t split_counts{0};
+    uint32_t false_alarm_hz{0};
+    int8_t threshold_wanted_dbm{0};
+    uint32_t overflows{0};
+    uint32_t stranded_resyncs{0};
+    uint32_t short_resyncs{0};
+};
+
+Framing framing_of(const ports::AdsbReceiverStatistics& statistics, uint32_t false_alarm_hz,
+                   int16_t threshold_wanted_dbm);
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -340,6 +356,7 @@ Record record_of(const Loop& value, const Instant& at);
 Record record_of(const Adsb& value, const Instant& at);
 Record record_of(const Receiver& value, const Instant& at);
 Record record_of(const Reception& value, const Instant& at);
+Record record_of(const Framing& value, const Instant& at);
 
 }  // namespace skyblip::diagnostics
 

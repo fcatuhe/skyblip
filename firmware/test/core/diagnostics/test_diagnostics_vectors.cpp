@@ -380,6 +380,21 @@ Reception reception() {
     return value;
 }
 
+Framing framing() {
+    Framing value{};
+    value.overflow_drops = 70100;
+    value.resync_drops = 42;
+    value.queue_drops = 900;
+    value.in_flight = 1234;
+    value.split_counts = 56;
+    value.false_alarm_hz = 410;
+    value.threshold_wanted_dbm = -104;
+    value.overflows = 300;
+    value.stranded_resyncs = 3;
+    value.short_resyncs = 1;
+    return value;
+}
+
 std::vector<std::vector<uint8_t>> written() {
     const Instant at = vector_instant();
     return {bytes_of(record_of(boot(), at)),      bytes_of(record_of(config(), at)),
@@ -393,7 +408,7 @@ std::vector<std::vector<uint8_t>> written() {
             bytes_of(record_of(end(), at)),       bytes_of(record_of(duty(), at)),
             bytes_of(record_of(hop(), at)),       bytes_of(record_of(loop(), at)),
             bytes_of(record_of(adsb(), at)),      bytes_of(record_of(receiver(), at)),
-            bytes_of(record_of(reception(), at))};
+            bytes_of(record_of(reception(), at)), bytes_of(record_of(framing(), at))};
 }
 
 }  // namespace

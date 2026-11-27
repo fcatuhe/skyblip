@@ -395,6 +395,22 @@ inline bool read(const Record& record, Reception& out) {
     return true;
 }
 
+inline bool read(const Record& record, Framing& out) {
+    if (record.type != Type::Framing) return false;
+    out = Framing{};
+    out.overflow_drops = wire::get_uint16(record.payload + framing_at::kOverflowDrops);
+    out.resync_drops = wire::get_uint16(record.payload + framing_at::kResyncDrops);
+    out.queue_drops = wire::get_uint16(record.payload + framing_at::kQueueDrops);
+    out.in_flight = wire::get_uint16(record.payload + framing_at::kInFlight);
+    out.split_counts = wire::get_uint16(record.payload + framing_at::kSplitCounts);
+    out.false_alarm_hz = wire::get_uint16(record.payload + framing_at::kFalseAlarmHz);
+    out.threshold_wanted_dbm = get_int8(record.payload + framing_at::kThresholdWantedDbm);
+    out.overflows = record.payload[framing_at::kOverflows];
+    out.stranded_resyncs = record.payload[framing_at::kStrandedResyncs];
+    out.short_resyncs = record.payload[framing_at::kShortResyncs];
+    return true;
+}
+
 }  // namespace skyblip::diagnostics
 
 #endif

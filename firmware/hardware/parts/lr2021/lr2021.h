@@ -49,9 +49,16 @@ class Lr2021 {
     uint32_t resets() const { return resets_; }
     uint32_t command_errors() const { return command_errors_; }
     uint16_t device_errors() const { return device_errors_; }
-    uint32_t fifo_drops() const { return fifo_drops_; }
+    uint32_t fifo_drops() const { return overflow_drops_ + resync_drops_; }
     uint32_t part_resets() const { return part_resets_; }
     uint32_t framing_resyncs() const { return framing_resyncs_; }
+    uint32_t overflows() const { return overflows_; }
+    uint32_t overflow_drops() const { return overflow_drops_; }
+    uint32_t resync_drops() const { return resync_drops_; }
+    uint32_t in_flight() const { return in_flight_; }
+    uint32_t split_counts() const { return split_counts_; }
+    uint32_t stranded_resyncs() const { return stranded_resyncs_; }
+    uint32_t short_resyncs() const { return short_resyncs_; }
     int16_t detection_threshold_dbm() const { return detection_threshold_dbm_; }
 
    private:
@@ -100,9 +107,15 @@ class Lr2021 {
     uint32_t resets_{0};
     uint32_t command_errors_{0};
     uint16_t device_errors_{0};
-    uint32_t fifo_drops_{0};
     uint32_t part_resets_{0};
     uint32_t framing_resyncs_{0};
+    uint32_t overflows_{0};
+    uint32_t overflow_drops_{0};
+    uint32_t resync_drops_{0};
+    uint32_t in_flight_{0};
+    uint32_t split_counts_{0};
+    uint32_t stranded_resyncs_{0};
+    uint32_t short_resyncs_{0};
     uint16_t packets_at_clear_{0};
     uint16_t frames_since_clear_{0};
 };

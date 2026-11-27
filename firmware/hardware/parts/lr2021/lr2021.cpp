@@ -143,7 +143,8 @@ Status Lr2021::take_snapshot() {
     if ((fifo_flags[0] & lr2021::kFifoOverflow) != 0) {
         const uint32_t lost =
             (be16(level) + lr2021::kFifoFrameBytes - 1u) / lr2021::kFifoFrameBytes;
-        fifo_drops_ += lost != 0 ? lost : 1;
+        overflows_++;
+        overflow_drops_ += lost != 0 ? lost : 1;
         return restart_receive();
     }
     newest_rssi_valid_ = std::memcmp(before, after, sizeof(before)) == 0;
@@ -152,6 +153,7 @@ Status Lr2021::take_snapshot() {
         static_cast<uint16_t>(packets_before - packets_at_clear_ - frames_since_clear_);
     // INFO: fc 26nov26 a frame that closed between the two counts may or may not be in the level
     if (packets_before != packets_after) {
+        split_counts_++;
         const uint16_t landed = be16(level) / lr2021::kFifoFrameBytes;
         frames_waiting_ = static_cast<uint8_t>(whole < landed ? whole : landed);
         return Status::Ok;
@@ -173,10 +175,13 @@ Status Lr2021::check_framing(uint16_t whole, uint16_t level) {
         const uint16_t counted =
             static_cast<uint16_t>(packets - packets_at_clear_ - frames_since_clear_);
         if (counted != whole || be16(again) != level) {
+            in_flight_++;
             frames_waiting_ = static_cast<uint8_t>(whole);
             return Status::Ok;
         }
+        stranded_resyncs_++;
     }
+    if (excess < 0) short_resyncs_++;
     if (excess != 0) return resync_framing(whole);
     frames_waiting_ = static_cast<uint8_t>(whole);
     return Status::Ok;
@@ -184,7 +189,7 @@ Status Lr2021::check_framing(uint16_t whole, uint16_t level) {
 
 Status Lr2021::resync_framing(uint16_t whole) {
     framing_resyncs_++;
-    fifo_drops_ += whole;
+    resync_drops_ += whole;
     return restart_receive();
 }
 

@@ -185,7 +185,7 @@ Bravo keys no transmitter, so flash waits only for the 1090 MHz queue, which the
 
 Bravo has no glass, so a page or `scripts/blip.py capture` arms a capture over the link with the `capture` command, which stands as a prompt like every other. The press arms `diagnostics::Recorder`, and `CaptureService` drains it as on the Go, ADS-B records included (`../skyblip_go/README.md`, Which capture is armed).
 
-A `Full` capture also writes a `Receiver` and a `Reception` record each second from `AdsbService` (`../../core/diagnostics/README.md`, The receiver and reception records). They follow a frame from the LR2021's own status to the traffic table, so an outage on an EFB can be traced to the part, the driver, the decoder or the position Bravo places traffic against.
+A `Full` capture also writes a `Receiver`, a `Framing` and a `Reception` record each second from `AdsbService` (`../../core/diagnostics/README.md`, The receiver and reception records). They follow a frame from the LR2021's own status to the traffic table, so an outage on an EFB can be traced to the part, the driver, the decoder or the position Bravo places traffic against.
 
 To catch an outage that comes and goes:
 

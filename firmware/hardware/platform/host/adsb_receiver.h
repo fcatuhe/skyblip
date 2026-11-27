@@ -61,6 +61,14 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics.dropped = radio_.fifo_drops() + out_.dropped();
         statistics.part_resets = radio_.part_resets();
         statistics.framing_resyncs = radio_.framing_resyncs();
+        statistics.overflows = radio_.overflows();
+        statistics.overflow_drops = radio_.overflow_drops();
+        statistics.resync_drops = radio_.resync_drops();
+        statistics.queue_drops = out_.dropped();
+        statistics.in_flight = radio_.in_flight();
+        statistics.split_counts = radio_.split_counts();
+        statistics.stranded_resyncs = radio_.stranded_resyncs();
+        statistics.short_resyncs = radio_.short_resyncs();
         statistics.probe = probe_;
         return statistics;
     }

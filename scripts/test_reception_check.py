@@ -22,6 +22,7 @@ class Sky:
                          "part_reset": "none", "front_end_kept": True}
         self.reception = {"aircraft": 3, "tracked": 3, "reference": "own", "fix_valid": True}
         self.loop = {"passes": 104, "worst_pass_us": 8000, "worst_service": "adsb"}
+        self.framing = None
 
     def seconds(self, count, step_s=1, **per_second):
         for _ in range(count):
@@ -38,12 +39,26 @@ class Sky:
         narrow = {field: self.totals[field] % check.NARROW for field in check.NARROW_COUNTERS}
         envelope = {"at_s": self.at_s, "utc_dated": True}
         receiver = dict(envelope, type="receiver", frames=wide["frames"],
-                        part_packets=wide["part_packets"], **narrow, **self.receiver)
+                        part_packets=wide["part_packets"], frames_dropped=narrow["frames_dropped"],
+                        rearms=narrow["rearms"], resets=narrow["resets"],
+                        part_resets=narrow["part_resets"],
+                        command_errors=narrow["command_errors"],
+                        missed_edges=narrow["missed_edges"], **self.receiver)
         reception = dict(envelope, type="reception",
-                         **{field: wide[field] for field in check.WIDE_COUNTERS[2:]},
+                         framing_resyncs=narrow["framing_resyncs"],
+                         **{field: wide[field] for field in check.WIDE_COUNTERS[2:8]},
                          **self.reception)
         loop = dict(envelope, type="loop", **self.loop)
-        for record in (loop, receiver, reception):
+        written = [loop, receiver]
+        if self.framing is not None:
+            framing = {field: self.totals[field] % check.WIDE for field in
+                       ("overflow_drops", "resync_drops", "queue_drops", "in_flight",
+                        "split_counts")}
+            framing.update({field: self.totals[field] % check.NARROW for field in
+                            ("overflows", "stranded_resyncs", "short_resyncs")})
+            written.append(dict(envelope, type="framing", **framing, **self.framing))
+        written.append(reception)
+        for record in written:
             record["index"] = len(self.records)
             self.records.append(record)
 
@@ -170,6 +185,22 @@ class Outages(unittest.TestCase):
         self.assertIn("the detection threshold moved from -110 to -104 dBm", report)
         self.assertIn("detection threshold -110 to -104 dBm", report)
         self.assertNotIn("lost what the driver wrote", report)
+
+    def test_lost_frames_are_split_by_where_and_a_threshold_the_part_ignored_is_named(self):
+        sky = Sky()
+        sky.framing = {"false_alarm_hz": 40, "threshold_wanted_dbm": -110}
+        sky.seconds(20, **HEARING)
+        sky.framing = {"false_alarm_hz": 900, "threshold_wanted_dbm": -104}
+        sky.seconds(15, frames=1200, part_packets=1200, unsupported=900, overflow_drops=30,
+                    resync_drops=2, queue_drops=50, overflows=2, in_flight=4)
+        report = sky.report()
+        self.assertIn("frames lost to FIFO overflows 450, framing resyncs 30, the full queue 750",
+                      report)
+        self.assertIn("the LR2021 held -110 dBm for 15 s while the regulator asked -104 dBm",
+                      report)
+        self.assertIn("  frames lost: 450 to FIFO overflows, 30 to framing resyncs, 750 to the "
+                      "full queue", report)
+        self.assertIn("  framing: in_flight 60, split_counts 0, stranded_resyncs 0", report)
 
 
 class Subtraction(unittest.TestCase):

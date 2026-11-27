@@ -186,4 +186,41 @@ Record record_of(const Reception& value, const Instant& at) {
     return record;
 }
 
+Framing framing_of(const ports::AdsbReceiverStatistics& statistics, uint32_t false_alarm_hz,
+                   int16_t threshold_wanted_dbm) {
+    Framing value{};
+    value.overflow_drops = statistics.overflow_drops;
+    value.resync_drops = statistics.resync_drops;
+    value.queue_drops = statistics.queue_drops;
+    value.in_flight = statistics.in_flight;
+    value.split_counts = statistics.split_counts;
+    value.false_alarm_hz = false_alarm_hz;
+    value.threshold_wanted_dbm = clamp_int8(threshold_wanted_dbm);
+    value.overflows = statistics.overflows;
+    value.stranded_resyncs = statistics.stranded_resyncs;
+    value.short_resyncs = statistics.short_resyncs;
+    return value;
+}
+
+Record record_of(const Framing& value, const Instant& at) {
+    Record record = framed(Type::Framing, at);
+    wire::put_uint16(record.payload + framing_at::kOverflowDrops,
+                     static_cast<uint16_t>(value.overflow_drops));
+    wire::put_uint16(record.payload + framing_at::kResyncDrops,
+                     static_cast<uint16_t>(value.resync_drops));
+    wire::put_uint16(record.payload + framing_at::kQueueDrops,
+                     static_cast<uint16_t>(value.queue_drops));
+    wire::put_uint16(record.payload + framing_at::kInFlight,
+                     static_cast<uint16_t>(value.in_flight));
+    wire::put_uint16(record.payload + framing_at::kSplitCounts,
+                     static_cast<uint16_t>(value.split_counts));
+    wire::put_uint16(record.payload + framing_at::kFalseAlarmHz,
+                     clamp_uint16(value.false_alarm_hz));
+    put_int8(record.payload + framing_at::kThresholdWantedDbm, value.threshold_wanted_dbm);
+    record.payload[framing_at::kOverflows] = static_cast<uint8_t>(value.overflows);
+    record.payload[framing_at::kStrandedResyncs] = static_cast<uint8_t>(value.stranded_resyncs);
+    record.payload[framing_at::kShortResyncs] = static_cast<uint8_t>(value.short_resyncs);
+    return record;
+}
+
 }  // namespace skyblip::diagnostics

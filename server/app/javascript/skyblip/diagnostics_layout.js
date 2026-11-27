@@ -316,5 +316,17 @@ export const DIAGNOSTICS_LAYOUT = Object.freeze({
       {"name": "impossible_formats", "kind": "u16", "at": 14},
       {"name": "fix_valid", "kind": "flag", "bit": 2},
     ]],
+    [24, "framing", [
+      {"name": "overflow_drops", "kind": "u16", "at": 0},
+      {"name": "resync_drops", "kind": "u16", "at": 2},
+      {"name": "queue_drops", "kind": "u16", "at": 4},
+      {"name": "in_flight", "kind": "u16", "at": 6},
+      {"name": "split_counts", "kind": "u16", "at": 8},
+      {"name": "false_alarm_hz", "kind": "u16", "at": 10},
+      {"name": "threshold_wanted_dbm", "kind": "i8", "at": 12},
+      {"name": "overflows", "kind": "u8", "at": 13},
+      {"name": "stranded_resyncs", "kind": "u8", "at": 14},
+      {"name": "short_resyncs", "kind": "u8", "at": 15},
+    ]],
   ],
 });

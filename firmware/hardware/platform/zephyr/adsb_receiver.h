@@ -66,7 +66,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
         ports::AdsbReceiverStatistics statistics = statistics_;
         k_sched_unlock();
         statistics.roll(clock_.microseconds());
-        statistics.dropped += out_.dropped();
+        statistics.queue_drops = out_.dropped();
+        statistics.dropped += statistics.queue_drops;
         statistics.irq_armed = irq_wakes_;
         return statistics;
     }
@@ -177,6 +178,13 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics_.missed_edges = missed_edges_;
         statistics_.part_resets = radio_.part_resets();
         statistics_.framing_resyncs = radio_.framing_resyncs();
+        statistics_.overflows = radio_.overflows();
+        statistics_.overflow_drops = radio_.overflow_drops();
+        statistics_.resync_drops = radio_.resync_drops();
+        statistics_.in_flight = radio_.in_flight();
+        statistics_.split_counts = radio_.split_counts();
+        statistics_.stranded_resyncs = radio_.stranded_resyncs();
+        statistics_.short_resyncs = radio_.short_resyncs();
         statistics_.probe = probe_;
         statistics_.rearms = radio_.rearms();
         statistics_.resets = radio_.resets();

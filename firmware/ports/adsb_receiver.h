@@ -51,6 +51,14 @@ struct AdsbReceiverStatistics {
     uint32_t missed_edges{0};
     uint32_t part_resets{0};
     uint32_t framing_resyncs{0};
+    uint32_t overflows{0};
+    uint32_t overflow_drops{0};
+    uint32_t resync_drops{0};
+    uint32_t queue_drops{0};
+    uint32_t in_flight{0};
+    uint32_t split_counts{0};
+    uint32_t stranded_resyncs{0};
+    uint32_t short_resyncs{0};
     // INFO: fc 21nov26 false means the thread polls every 200 us, since the IRQ edge never armed
     bool irq_armed{false};
     ReceiverProbe probe{};

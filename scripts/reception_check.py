@@ -23,9 +23,13 @@ import blip_ndjson as ndjson  # noqa: E402
 WIDE = 1 << 16
 NARROW = 1 << 8
 WIDE_COUNTERS = ("frames", "part_packets", "crc", "unsupported", "folded", "positions",
-                 "capture_refused", "impossible_formats")
+                 "capture_refused", "impossible_formats", "overflow_drops", "resync_drops",
+                 "queue_drops", "in_flight", "split_counts")
 NARROW_COUNTERS = ("frames_dropped", "rearms", "resets", "part_resets", "command_errors",
-                   "missed_edges", "framing_resyncs")
+                   "missed_edges", "framing_resyncs", "overflows", "stranded_resyncs",
+                   "short_resyncs")
+FRAMING_COUNTERS = ("in_flight", "split_counts", "stranded_resyncs", "short_resyncs")
+THRESHOLD_LAG_S = 3
 MAX_STEP_S = 5
 # firmware/products/skyblip_bravo/detection_threshold.h regulates the threshold inside this range
 THRESHOLD_RANGE_DBM = (-110, -92)
@@ -35,7 +39,7 @@ LOOP_STALL_US = 100_000
 BREAKS = ("gap", "boot")
 
 Second = collections.namedtuple("Second",
-                                "at_s utc elapsed_s stretch receiver reception counts loop")
+                                "at_s utc elapsed_s stretch receiver reception counts loop framing")
 
 
 def main(argv=None):
@@ -74,28 +78,31 @@ def seconds_of(records):
     before = None
     receiver = None
     loop = None
+    framing = None
     stretch = 0
     last_index = None
     for record in records:
         if breaks(record, last_index):
-            before = receiver = loop = None
+            before = receiver = loop = framing = None
         last_index = record["index"]
         if record.get("error") or record["type"] in BREAKS:
             continue
         if record["type"] == "loop":
             loop = record
+        elif record["type"] == "framing":
+            framing = record
         elif record["type"] == "receiver":
             receiver = record
         elif record["type"] == "reception" and receiver is not None:
-            pair = dict(receiver, **record)
+            pair = {**receiver, **(framing or {}), **record}
             if before is None or not steps(before, pair):
                 stretch += 1
             else:
                 seconds.append(Second(pair["at_s"], pair.get("utc_dated", False),
                                       pair["at_s"] - before["at_s"], stretch, receiver, record,
-                                      counts(before, pair), loop))
+                                      counts(before, pair), loop, framing))
             before = pair
-            receiver = loop = None
+            receiver = loop = framing = None
     return seconds
 
 
@@ -150,7 +157,14 @@ def whole_run(seconds, floor):
     lines.append("  frames %d, crc %d, unsupported %d, folded %d, positions %d"
                  % tuple(total[field] for field in ("frames", "crc", "unsupported", "folded",
                                                     "positions")))
-    lines.append("  " + ", ".join("%s %d" % (field, total[field]) for field in NARROW_COUNTERS))
+    lines.append("  " + ", ".join("%s %d" % (field, total[field])
+                                  for field in NARROW_COUNTERS if field not in FRAMING_COUNTERS))
+    if any(second.framing for second in seconds):
+        lines.append("  frames lost: %d to FIFO overflows, %d to framing resyncs, %d to the full "
+                     "queue" % (total["overflow_drops"], total["resync_drops"],
+                                total["queue_drops"]))
+        lines.append("  framing: " + ", ".join("%s %d" % (field, total[field])
+                                               for field in FRAMING_COUNTERS))
     thresholds = sorted({second.receiver["threshold_dbm"] for second in seconds
                          if "threshold_dbm" in second.receiver})
     if thresholds:
@@ -256,7 +270,17 @@ def verdicts(run, floor, usual):
     if len(thresholds) > 1:
         found.append("the detection threshold moved from %d to %d dBm"
                      % (thresholds[0], thresholds[-1]))
-    if total["frames_dropped"]:
+    if any(second.framing for second in run):
+        lost = [(total[field], where) for field, where in
+                (("overflow_drops", "FIFO overflows"), ("resync_drops", "framing resyncs"),
+                 ("queue_drops", "the full queue")) if total[field]]
+        if lost:
+            found.append("frames lost to " + ", ".join("%s %d" % (where, count)
+                                                       for count, where in lost))
+        lag = untaken(run)
+        if lag:
+            found.append(lag)
+    elif total["frames_dropped"]:
         found.append("%d frames lost to a full queue" % total["frames_dropped"])
     found += stalls(run)
     if total["frames"] == 0 and total["part_packets"] == 0 and not found:
@@ -277,6 +301,25 @@ def verdicts(run, floor, usual):
 
 def regulated(receiver):
     return THRESHOLD_RANGE_DBM[0] <= receiver["threshold_dbm"] <= THRESHOLD_RANGE_DBM[1]
+
+
+def untaken(run):
+    longest = 0
+    streak = 0
+    worst = None
+    for second in run:
+        wanted = second.framing.get("threshold_wanted_dbm") if second.framing else None
+        held = second.receiver.get("threshold_dbm")
+        if wanted is None or held is None or wanted == held:
+            streak = 0
+            continue
+        streak += second.elapsed_s
+        if streak > longest:
+            longest, worst = streak, (wanted, held)
+    if longest < THRESHOLD_LAG_S:
+        return None
+    return ("the LR2021 held %d dBm for %d s while the regulator asked %d dBm"
+            % (worst[1], longest, worst[0]))
 
 
 def stalls(run):
