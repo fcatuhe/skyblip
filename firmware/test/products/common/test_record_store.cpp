@@ -159,6 +159,25 @@ TEST_CASE("record store: a new capture is not charged for a sector recycled from
     CHECK(rig.capture.take_lost_records() == 0);
 }
 
+// With no fix a later boot asks for the name of the capture it is about to recycle.
+TEST_CASE("record store: a capture asking for the last one's name is not charged for it") {
+    platform::host::FlashRegion flash{3};
+    StoreRig rig{flash};
+    rig.open();
+
+    rig.capture.begin_session(kCaptureSession);
+    const uint32_t slots = rig.pool.slots_per_sector();
+    for (uint32_t i = 0; i < slots * 3; i++)
+        write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession + i);
+    rig.capture.end_session();
+
+    const uint32_t named = rig.capture.unused_session_id(kCaptureSession);
+    rig.capture.begin_session(named);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
+    CHECK(named == kCaptureSession + 1);
+    CHECK(rig.capture.take_lost_records() == 0);
+}
+
 // No CRC on a diagnostics slot: without the end marker a torn tail reads as telemetry.
 TEST_CASE("record store: a capture is closed by its end marker and by nothing else") {
     platform::host::FlashRegion flash{4};
