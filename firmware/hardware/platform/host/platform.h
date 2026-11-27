@@ -99,6 +99,9 @@ class Dfu : public ports::Dfu {
         return recovery_path();
     }
     void publish_upload_allowed(bool allowed) override { upload_allowed_published = allowed; }
+    void publish_approved_version(const ports::ImageVersion& version) override {
+        approved_version_published = version;
+    }
     bool upload_finished() override { return finished_upload; }
     void forget_upload() override { finished_upload = false; }
     uint32_t running_slot_bytes() override { return static_cast<uint32_t>(running_slot.size()); }
@@ -134,6 +137,7 @@ class Dfu : public ports::Dfu {
     bool running_hash_valid{false};
     bool staged_hash_valid{false};
     bool upload_allowed_published{false};
+    ports::ImageVersion approved_version_published{};
     bool finished_upload{false};
     bool running_key_valid{false};
     bool staged_key_valid{false};

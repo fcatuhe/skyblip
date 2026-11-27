@@ -250,7 +250,7 @@ test('a refusal on the glass reads as cancelled', async () => {
   assert.equal((await until(settled)).notice.key, 'cancelled');
 });
 
-for (const reason of ['not_approved', 'nothing_staged', 'low_power', 'in_flight']) {
+for (const reason of ['not_approved', 'nothing_staged', 'low_power', 'in_flight', 'window_closed']) {
   test(`an upload the device will not install as ${reason} is said, and the next install asks again`, async () => {
     const { device, updater, until } = await chosen();
     device.refuseInstall = reason;
