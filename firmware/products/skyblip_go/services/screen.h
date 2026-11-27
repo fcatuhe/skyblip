@@ -218,6 +218,8 @@ class ScreenService : public runtime::Service {
         if (!context_.state.power.cable_off_in_ms) return std::nullopt;
         return power::off_in_min(*context_.state.power.cable_off_in_ms);
     }
+    std::optional<model::Ownship> plotted_own() const;
+
     const comms::PeerHealth* bravo_health_live() const {
         return context_.state.bravo == comms::BravoState::Live ? bravo_.health() : nullptr;
     }

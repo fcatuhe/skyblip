@@ -86,6 +86,16 @@ inline std::optional<uint32_t> address_of(const std::optional<OwnTransponderHear
     return heard ? std::optional<uint32_t>(heard->address) : std::nullopt;
 }
 
+// INFO: fc 27nov26 Bravo's own fix, which a Go with none plots around and never transmits
+struct BravoPosition {
+    int32_t latitude_1e7{0};
+    int32_t longitude_1e7{0};
+    uint16_t age_ms{0};
+    std::optional<int16_t> altitude_m{};
+    std::optional<uint16_t> speed_q{};
+    uint16_t track_c9{0};
+};
+
 struct PeerHealth {
     uint32_t boot_epoch{0};
     bool listening{false};
@@ -105,6 +115,7 @@ struct PeerHealth {
     std::optional<gnss::Stage> gnss_stage{};
     std::optional<uint8_t> satellites{};
     std::optional<UtcSource> utc_source{};
+    std::optional<BravoPosition> position{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);

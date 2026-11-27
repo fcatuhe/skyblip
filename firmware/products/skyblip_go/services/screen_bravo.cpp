@@ -1,7 +1,30 @@
+#include "core/units/units.h"
 #include "products/skyblip_go/services/screen.h"
 #include "protocols/adsb/registration.h"
 
 namespace skyblip::go {
+
+// INFO: fc 27nov26 the Go's fix, else its live Bravo's in the same aircraft, for the glass alone
+std::optional<model::Ownship> ScreenService::plotted_own() const {
+    const model::Ownship& own = context_.state.own;
+    if (own.fix_valid) return own;
+    const comms::PeerHealth* health = bravo_health_live();
+    if (health == nullptr || !health->position) return std::nullopt;
+    const comms::BravoPosition& position = *health->position;
+    model::Ownship bravo = own;
+    bravo.fix_valid = true;
+    bravo.latitude_1e7 = position.latitude_1e7;
+    bravo.longitude_1e7 = position.longitude_1e7;
+    bravo.fix_at_ms = bravo_.health_heard_ms() - position.age_ms;
+    bravo.altitude_hae_valid = position.altitude_m.has_value();
+    bravo.altitude_hae_mm = position.altitude_m ? *position.altitude_m * 1000 : 0;
+    bravo.speed_valid = position.speed_q.has_value();
+    bravo.track_valid = position.speed_q.has_value();
+    bravo.speed_mm_s =
+        position.speed_q ? to_mm_s(QuarterMetresPerSecond(*position.speed_q)).value : 0;
+    bravo.track_cdeg = to_centi_degrees(Cordic9(position.track_c9)).value;
+    return bravo;
+}
 
 BravoView ScreenService::bravo_view() const {
     BravoView view;

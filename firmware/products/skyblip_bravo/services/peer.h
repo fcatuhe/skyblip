@@ -89,7 +89,9 @@ class PeerService : public runtime::Service {
     Go* go_of(const events::RxFrame& frame, bool& new_connection);
     void keep_pin();
     void adopt_aircraft_address(uint32_t aircraft_address);
-    void describe_self(comms::PeerHealth& health) const;
+    void describe_self(comms::PeerHealth& health, uint32_t now_ms) const;
+    static std::optional<comms::BravoPosition> position_of(const model::Ownship& own,
+                                                           uint32_t now_ms);
     void send_health(const GateChoice& choice, std::optional<comms::UtcSource> source,
                      uint32_t now_ms);
     void send_observations(const GateChoice& choice, bool utc_valid, uint32_t now_ms);

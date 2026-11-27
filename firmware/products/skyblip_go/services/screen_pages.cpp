@@ -126,19 +126,21 @@ void ScreenService::render(uint32_t now_ms) {
     framebuffer_.clear(/*white=*/true);
 
     const model::Ownship& own = context_.state.own;
+    const std::optional<model::Ownship> plotted = plotted_own();
     const go::Settings& settings = settings_;
 
     switch (page_) {
         case Page::Radar: {
             RadarSnapshot snapshot;
-            snapshot.fix_valid = own.fix_valid;
+            snapshot.fix_valid = plotted.has_value();
+            snapshot.bravo_fix = plotted && !own.fix_valid;
             snapshot.stage = context_.state.gnss.stage;
             snapshot.units = settings.units;
             snapshot.range_step = settings.range_step;
             snapshot.plot = settings.plot;
             snapshot.heard_count = traffic_outside_formation(context_.state.traffic);
-            snapshot.track_cdeg = own.track_cdeg;
-            snapshot.speed_mm_s = own.speed_mm_s;
+            snapshot.track_cdeg = plotted.value_or(own).track_cdeg;
+            snapshot.speed_mm_s = plotted.value_or(own).speed_mm_s;
             snapshot.turn_cdps = context_.state.indicated.turn_cdps;
             snapshot.flight_seconds = context_.state.flight.seconds;
             snapshot.flight_time_valid = context_.state.flight.time_valid;
@@ -157,12 +159,12 @@ void ScreenService::render(uint32_t now_ms) {
                 snapshot.bravo_battery_percent = health->battery_percent;
             }
             int count = 0;
-            if (own.fix_valid) {
-                const model::Ownship own_now = flight::carried_to(own, now_ms);
+            if (plotted) {
+                const model::Ownship own_now = flight::carried_to(*plotted, now_ms);
                 traffic::RangeRow ranked[kMaxRadarTargets];
                 const int ranked_count =
                     traffic::rank_by_relevance(context_.state.traffic, context_.state.callsigns,
-                                               own, ranked, kMaxRadarTargets);
+                                               *plotted, ranked, kMaxRadarTargets);
                 for (int i = 0; i < ranked_count; i++) {
                     const traffic::Target* target = context_.state.traffic.at(ranked[i].slot);
                     const model::AircraftObservation observation =
@@ -240,10 +242,12 @@ void ScreenService::render(uint32_t now_ms) {
             NearbySnapshot snapshot;
             snapshot.go = nearby_go();
             snapshot.bravo = nearby_bravo();
-            snapshot.fix_valid = own.fix_valid;
+            snapshot.fix_valid = plotted.has_value();
+            snapshot.bravo_fix = plotted && !own.fix_valid;
             snapshot.units = settings.units;
-            snapshot.row_count = traffic::rank_by_relevance(
-                context_.state.traffic, context_.state.callsigns, own, nearby_rows_, kNearbyRows);
+            snapshot.row_count =
+                traffic::rank_by_relevance(context_.state.traffic, context_.state.callsigns,
+                                           plotted.value_or(own), nearby_rows_, kNearbyRows);
             snapshot.rows = nearby_rows_;
             draw_nearby(framebuffer_, snapshot);
             break;

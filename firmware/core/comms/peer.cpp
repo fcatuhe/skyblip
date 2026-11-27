@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "core/comms/peer_health.h"
 #include "core/flight/state.h"
 #include "core/protocol/callsign.h"
 #include "core/settings/address.h"
@@ -285,17 +286,6 @@ bool read_bravo_gnss(const cbor::Reader& reader, PeerHealth& health) {
     return true;
 }
 
-// INFO: fc 27nov26 a source without utc_valid dates nothing, so the frame is refused whole
-bool read_utc_source(const cbor::Reader& reader, PeerHealth& health) {
-    uint32_t source = 0;
-    bool sourced = false;
-    if (!take(reader.read_unsigned(link::health_key::kUtcSource), source, sourced)) return false;
-    if (!sourced) return true;
-    if (!health.utc_valid || source > static_cast<uint32_t>(UtcSource::Go)) return false;
-    health.utc_source = static_cast<UtcSource>(source);
-    return true;
-}
-
 }  // namespace
 
 int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
@@ -384,6 +374,7 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     if (health.satellites) writer.add_unsigned(link::health_key::kSatellites, *health.satellites);
     if (health.utc_valid && health.utc_source)
         writer.add_code(link::health_key::kUtcSource, *health.utc_source);
+    if (health.position) write_bravo_position(writer, *health.position);
     return writer.finish();
 }
 
@@ -469,7 +460,8 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     health.aircraft_address_set = aircraft_address_set.value();
     health.paired = paired.value();
     if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health) ||
-        !read_bravo_gnss(reader, health) || !read_utc_source(reader, health))
+        !read_bravo_gnss(reader, health) || !read_utc_source(reader, health) ||
+        !read_bravo_position(reader, health))
         return Status::Invalid;
     uint32_t dismissed = 0;
     bool present = false;

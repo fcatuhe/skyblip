@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "core/dfu/update.h"
+#include "core/units/units.h"
 
 namespace skyblip::bravo {
 
@@ -210,7 +211,7 @@ void PeerService::keep_pin() {
 }
 
 // INFO: fc 15nov26 Bravo has no glass, so its Go shows what it runs, holds and hears
-void PeerService::describe_self(comms::PeerHealth& health) const {
+void PeerService::describe_self(comms::PeerHealth& health, uint32_t now_ms) const {
     ports::ImageVersion running{};
     if (context_.roles.dfu.running_version(running))
         dfu::format_version(running, health.firmware, sizeof(health.firmware));
@@ -222,6 +223,26 @@ void PeerService::describe_self(comms::PeerHealth& health) const {
     health.gnss_stage = context_.state.gnss.stage;
     if (context_.state.gnss.stage == gnss::Stage::Fixed)
         health.satellites = context_.state.own.satellites;
+    health.position = position_of(context_.state.own, now_ms);
+}
+
+// INFO: fc 27nov26 a fix older than its key can say is no position for the Go to plot around
+std::optional<comms::BravoPosition> PeerService::position_of(const model::Ownship& own,
+                                                             uint32_t now_ms) {
+    const uint32_t age_ms = now_ms - own.fix_at_ms;
+    if (!own.fix_valid || age_ms > UINT16_MAX) return std::nullopt;
+    comms::BravoPosition position{};
+    position.latitude_1e7 = own.latitude_1e7;
+    position.longitude_1e7 = own.longitude_1e7;
+    position.age_ms = static_cast<uint16_t>(age_ms);
+    const int32_t altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value;
+    if (own.altitude_hae_valid && altitude_m >= INT16_MIN && altitude_m <= INT16_MAX)
+        position.altitude_m = static_cast<int16_t>(altitude_m);
+    if (own.speed_valid && own.track_valid) {
+        position.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
+        position.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).value;
+    }
+    return position;
 }
 
 // INFO: fc 11nov26 every Go hears whether Bravo holds its pin, so a Go holding one alone drops it
@@ -238,7 +259,7 @@ void PeerService::send_health(const GateChoice& choice, std::optional<comms::Utc
     health.last_sequence = sequence_ - 1;
     health.export_reference = choice.reference;
     health.own_transponder = own_transponder_.heard();
-    describe_self(health);
+    describe_self(health, now_ms);
     dismissed_told_ = alarm_.dismissed_announcement();
     bool blocked = false;
     for (const Go& go : gos_) {

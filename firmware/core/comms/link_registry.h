@@ -493,6 +493,12 @@ enum : uint32_t {
     kGnssStage = 22,
     kSatellites = 23,
     kUtcSource = 24,
+    kLatitude1e7 = 25,
+    kLongitude1e7 = 26,
+    kPositionAgeMs = 27,
+    kAltitudeM = 28,
+    kSpeedQ = 29,
+    kTrackC9 = 30,
 };
 }
 

@@ -93,6 +93,7 @@ class BravoService : public runtime::Service {
     }
     // INFO: fc 15nov26 the last health from the pinned Bravo while fresh, nullptr once it ages out
     const comms::PeerHealth* health() const { return health_heard_ ? &health_ : nullptr; }
+    uint32_t health_heard_ms() const { return health_heard_ms_; }
     // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
     bool take_forgotten_notice();
     // INFO: fc 15nov26 true once when the Go asks its Bravo again, for the glass

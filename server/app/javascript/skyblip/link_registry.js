@@ -2354,6 +2354,36 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 24,
           "type": "enum",
           "enum": "utc_source"
+        },
+        {
+          "name": "latitude_1e7",
+          "number": 25,
+          "type": "integer"
+        },
+        {
+          "name": "longitude_1e7",
+          "number": 26,
+          "type": "integer"
+        },
+        {
+          "name": "position_age_ms",
+          "number": 27,
+          "type": "unsigned"
+        },
+        {
+          "name": "altitude_m",
+          "number": 28,
+          "type": "integer"
+        },
+        {
+          "name": "speed_q",
+          "number": 29,
+          "type": "unsigned"
+        },
+        {
+          "name": "track_c9",
+          "number": 30,
+          "type": "unsigned"
         }
       ]
     },

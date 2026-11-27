@@ -69,7 +69,7 @@ const char* stage_word(gnss::Stage stage) {
 }
 
 const char* go_word(const NearbySnapshot& snapshot) {
-    if (!snapshot.fix_valid) return stage_word(snapshot.go.stage);
+    if (!snapshot.fix_valid || snapshot.bravo_fix) return stage_word(snapshot.go.stage);
     return snapshot.go.transmitting ? nullptr : "TX OFF";
 }
 

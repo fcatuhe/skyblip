@@ -37,6 +37,7 @@ struct NearbySnapshot {
     NearbyGo go{};
     NearbyBravo bravo{};
     bool fix_valid{false};
+    bool bravo_fix{false};
     go::Units units{go::Units::Nautical};
     int row_count{0};
     const traffic::RangeRow* rows{nullptr};

@@ -210,8 +210,10 @@ int format_off_in(char* out, uint8_t minutes) {
 
 // INFO: fc 17nov26 the ring speaks for the Go alone, its first two words standing in this order
 RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
-    const char* state = snapshot.fix_valid ? ground_word(snapshot) : "NO FIX";
-    const char* stage = snapshot.fix_valid ? nullptr : gnss::stage_name(snapshot.stage);
+    const bool own_fix = snapshot.fix_valid && !snapshot.bravo_fix;
+    const char* state = own_fix ? ground_word(snapshot) : "NO FIX";
+    const char* lost = snapshot.bravo_fix ? "BRAVO GPS" : gnss::stage_name(snapshot.stage);
+    const char* stage = own_fix ? nullptr : lost;
     if (snapshot.off_in_min) {
         format_off_in(cell_buffer, *snapshot.off_in_min);
         return {"OFF IN", cell_buffer, /*split=*/true};

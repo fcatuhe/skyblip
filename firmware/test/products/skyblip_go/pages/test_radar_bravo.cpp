@@ -123,6 +123,20 @@ TEST_CASE("radar page: the ring speaks for the Go alone, whatever Bravo says") {
     CHECK(corner_reads(searching, "NO LINK"));
 }
 
+// A plot around Bravo's fix carries no alarm, so the ring must not read as if the Go had a fix.
+TEST_CASE("radar page: a plot on Bravo's fix reads NO FIX over BRAVO GPS, never GROUND") {
+    RadarSnapshot parked = flying(0);
+    parked.flight_running = false;
+    parked.bravo_fix = true;
+    parked.stage = skyblip::gnss::Stage::Silent;
+    parked.bravo = BravoState::Live;
+    const Glass on_bravo = radar(parked);
+    CHECK(reads_in(on_bravo, "NO FIX", 40, 120, 160, 160, 2));
+    CHECK(reads_in(on_bravo, "BRAVO GPS", 20, 140, 180, 175));
+    CHECK_FALSE(reads_in(on_bravo, "GROUND", 20, 110, 180, 165, 2));
+    CHECK_FALSE(reads_in(on_bravo, "GPS OFF", 20, 140, 180, 175));
+}
+
 // Bravo's lamp winks red from its knee, and a Bravo in a flight bag shows it to nobody.
 TEST_CASE("radar page: a live Bravo on a low cell says BRAVO over BAT and its charge") {
     for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {

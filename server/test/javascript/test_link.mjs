@@ -42,10 +42,12 @@ const PEER_FRAMES_AT_THEIR_WIDEST = [
       aircraft_address_set: true, export_reference: 'own', paired: true, own_transponder: 0xffffff,
       own_transponder_callsign: 'ABCD1234', own_transponder_category: 17, firmware: '9.99.99+99999', battery_percent: 100,
       charging: true, power_level: 'low', frame_rate_hz: WIDEST_UNSIGNED, dismissed_announcement: WIDEST_UNSIGNED,
-      gnss_stage: 'fixed', satellites: 255,
+      gnss_stage: 'fixed', satellites: 255, utc_source: 'go', latitude_1e7: -900000000, longitude_1e7: -1800000000,
+      position_age_ms: 0xffff, altitude_m: -32768, speed_q: 0xffff, track_c9: 511,
     },
-    'b400181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f' +
-      '11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff16031718ff',
+    'b81b00181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f' +
+      '11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff16031718ff18180118193a' +
+      '35a4e8ff181a3a6b49d1ff181b19ffff181c397fff181d19ffff181e1901ff',
   ],
   [
     {

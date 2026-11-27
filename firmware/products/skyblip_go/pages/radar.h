@@ -35,6 +35,8 @@ struct RadarTarget {
 
 struct RadarSnapshot {
     bool fix_valid{false};
+    // INFO: fc 27nov26 the fix is a live Bravo's, so the plot stands and the alarm is off
+    bool bravo_fix{false};
     gnss::Stage stage{gnss::Stage::Silent};
     go::Units units{go::Units::Nautical};
     int range_step{kDefaultRangeStep};

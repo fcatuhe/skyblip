@@ -76,6 +76,10 @@ The ring speaks for the Go alone, and a paired Bravo speaks in its own corner. A
 
 Under `NO FIX` stands the receiver's stage (`core/gnss/README.md`), `GPS OFF`, `MOVE OUT` or `FINDS FIX`, each naming an action: a bench, a walk into the open, or patience. Its elapsed seconds stay on `status`, since they would refresh the panel every second.
 
+### The radar on Bravo's fix
+
+A Go with no fix of its own and a live Bravo with one plots and lists its traffic around Bravo's fix, which `health` carries with its age, height, speed and track (`../../skyblip_bravo/README.md`, What Bravo serves), since both units fly in one aircraft. `ScreenService::plotted_own()` builds that own-ship for the radar and `nearby` alone. The ring then reads `NO FIX` over `BRAVO GPS`, never `GROUND` or `TAXI`, so the pilot reads that the picture is Bravo's and that the Go's own position is missing. Nothing else reads it: the Go transmits nothing, grades no alarm, sends an EFB no `$PFLAA` and logs no flight on Bravo's fix, because a burst, an alarm and a log must rest on a position the Go measured and dated itself. The traffic count keeps its own gate. The nearby Go row keeps the Go's own stage.
+
 `TAXI` is `ScreenService::taxiing`: a fix, the ground state of `core/flight/state.h`, and `state.flight.rolling` from `ownship`, which latches between 1.5 and 1.0 m/s (`core/flight/README.md`). So a glider pushed to the grid at a walk is taxiing, and the word holds through a slow turn. The device transmits, logs and locks as when parked, because ADS-L G.1.2 has two states and taxiing is ground. After a landing the word returns while the aircraft still rolls, because the landing hold ends a flight after ten seconds under 8 m/s.
 
 The range stands on the bottom of the ring as its label, `4` at double height with `NM` small beside it, its patch keeping the stroke off the digits.
@@ -123,7 +127,7 @@ A unit row reads the unit's letter, its cell, the satellites its fix uses and th
 
 When a unit has something to say, a word replaces its satellites and traffic, flush right: the receiver's stage without a fix, `GPS OFF`, `MOVE OUT` or `FINDS FIX` (`core/gnss/README.md`), `TX OFF` for a Go with a fix that does not transmit (NO TX), and for Bravo `NO LINK`, `RX DOWN`, or its `gnss_stage`. A Bravo built before `gnss_stage` reads `MOVE OUT` without UTC, as on its radar corner. A lost Bravo's cell reads `--`, and a unit on its cable `CHG`. Nothing is reversed, because black means nothing on this page. The widest word, `FINDS FIX`, holds the stage words to nine characters.
 
-The heads stand flush with the figures they name: `SRC ID` left, `DIST` and `ALT` right. No unit is printed, since the unit is a setting named on the menu. With nothing to list, `NO TRAFFIC` or `NO FIX` stands centred on the second row under the heads.
+The heads stand flush with the figures they name: `SRC ID` left, `DIST` and `ALT` right. No unit is printed, since the unit is a setting named on the menu. With nothing to list, `NO TRAFFIC` or `NO FIX` stands centred on the second row under the heads. A Go listing around its Bravo's fix reads its own stage on its row and lists the traffic (The radar on Bravo's fix).
 
 Each row has three double-height columns:
 
