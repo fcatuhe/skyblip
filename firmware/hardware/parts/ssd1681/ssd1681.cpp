@@ -121,15 +121,22 @@ void Ssd1681::paint_black(uint32_t now_ms) {
 
 void Ssd1681::ensure_awake() {
     if (refreshing_) abort_refresh();
-    if (!asleep_) return;
+    if (!asleep_ && !transfer_failed_) return;
     initialise_panel();
     asleep_ = false;
 }
 
+// INFO: fc 27nov26 a frame the bus dropped part of is not shown, and the next starts from reset
 void Ssd1681::activate(uint8_t sequence, bool full, uint32_t now_ms) {
-    command(kDisplayUpdateControl2);
-    data(sequence);
-    command(kMasterActivation);
+    if (!transfer_failed_) {
+        command(kDisplayUpdateControl2);
+        data(sequence);
+        command(kMasterActivation);
+    }
+    if (transfer_failed_) {
+        glass_known_ = false;
+        return;
+    }
 
     glass_known_ = true;
     refreshing_ = true;
@@ -180,6 +187,7 @@ void Ssd1681::set_backlight(bool on) {
 }
 
 void Ssd1681::initialise_panel() {
+    transfer_failed_ = false;
     gpio_.set(reset_pin_, true);
     gpio_.set(reset_pin_, false);
     delay_.wait_at_least_us(epd::kResetHoldUs);
@@ -222,24 +230,24 @@ void Ssd1681::enter_sleep() {
 
 void Ssd1681::command(uint8_t opcode) {
     gpio_.set(dc_pin_, false);
-    spi_.select(true);
-    spi_.transfer(&opcode, nullptr, 1);
-    spi_.select(false);
+    send(&opcode, 1);
 }
 
 void Ssd1681::data(uint8_t byte) {
     gpio_.set(dc_pin_, true);
-    spi_.select(true);
-    spi_.transfer(&byte, nullptr, 1);
-    spi_.select(false);
+    send(&byte, 1);
 }
 
 void Ssd1681::write_bank(uint8_t opcode) {
     set_cursor(0, 0);
     command(opcode);
     gpio_.set(dc_pin_, true);
+    send(shadow_, kGlassBytes);
+}
+
+void Ssd1681::send(const uint8_t* bytes, size_t count) {
     spi_.select(true);
-    spi_.transfer(shadow_, nullptr, kGlassBytes);
+    if (!spi_.transfer(bytes, nullptr, count)) transfer_failed_ = true;
     spi_.select(false);
 }
 

@@ -66,7 +66,7 @@ class Sx1262 {
     Status wake();
 
     // INFO: fc 15sep26 DS 13.5.2: an instant, and valid only while the receiver is running
-    int8_t instant_rssi_dbm();
+    Result<int8_t> instant_rssi_dbm();
 
     Status wait_ready() { return wait_busy_low(); }
 
@@ -84,33 +84,36 @@ class Sx1262 {
    private:
     Status wait_busy_low(uint32_t max_spins = 100000);
     void select_when_ready();
-    void command(uint8_t opcode, const uint8_t* parameters, size_t bytes);
-    void read_command(uint8_t opcode, uint8_t* out, size_t bytes);
-    void write_frame(const uint8_t* head, size_t head_bytes, const uint8_t* data, size_t bytes);
-    void read_frame(const uint8_t* head, size_t head_bytes, uint8_t* out, size_t bytes);
-    void write_register(uint16_t address, const uint8_t* data, size_t bytes);
-    void read_register(uint16_t address, uint8_t* out, size_t bytes);
+    Status command(uint8_t opcode, const uint8_t* parameters, size_t bytes);
+    Status read_command(uint8_t opcode, uint8_t* out, size_t bytes);
+    Status write_frame(const uint8_t* head, size_t head_bytes, const uint8_t* data, size_t bytes);
+    Status read_frame(const uint8_t* head, size_t head_bytes, uint8_t* out, size_t bytes);
+    Status transfer(const uint8_t* tx, uint8_t* rx, size_t bytes);
+    Status write_register(uint16_t address, const uint8_t* data, size_t bytes);
+    Status read_register(uint16_t address, uint8_t* out, size_t bytes);
     Status reset_to_standby();
     Status verify_link();
     Status enter_standby();
     Status enter_standby_on_tcxo();
     Status enter_standby_on(uint8_t clock);
+    Status reach_standby_on_tcxo();
     bool holds(const RadioConfig& config) const;
     bool hops_to(const RadioConfig& config) const;
     Status retune(const RadioConfig& config, RadioMode was);
-    void write_frequency(const RadioConfig& config);
-    void configure_modulation(const RadioConfig& config);
-    void configure_rx_gain();
-    void configure_tx_clamp();
-    void configure_tx_modulation();
-    void configure_power();
-    void configure_irq();
-    int8_t packet_rssi_dbm();
-    uint8_t read_payload(uint8_t* out, uint8_t capacity);
+    Status write_frequency(const RadioConfig& config);
+    Status configure_modulation(const RadioConfig& config);
+    Status configure_rx_gain();
+    Status configure_tx_clamp();
+    Status configure_tx_modulation();
+    Status configure_power();
+    Status configure_irq();
+    Result<int8_t> packet_rssi_dbm();
+    Result<uint8_t> read_payload(uint8_t* out, uint8_t capacity);
     Status check_device_errors();
-    void clear_device_errors();
-    void configure_frame(const RadioConfig& config);
-    void write_packet_parameters(uint8_t payload_bytes, uint16_t preamble_chips, uint8_t sync_bits);
+    Status clear_device_errors();
+    Status configure_frame(const RadioConfig& config);
+    Status write_packet_parameters(uint8_t payload_bytes, uint16_t preamble_chips,
+                                   uint8_t sync_bits);
     uint32_t tx_timeout_ticks(uint8_t bytes) const;
     void recover_tx();
     Status reinitialise();

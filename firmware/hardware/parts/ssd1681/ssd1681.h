@@ -73,6 +73,7 @@ class Ssd1681 : public ports::Display {
     void command(uint8_t opcode);
     void data(uint8_t byte);
     void write_bank(uint8_t opcode);
+    void send(const uint8_t* bytes, size_t count);
     void stage(const uint8_t* canvas_bytes);
     void invert_shadow();
     void set_window(int x0, int y0, int x1, int y1);
@@ -88,6 +89,7 @@ class Ssd1681 : public ports::Display {
     uint8_t shadow_[kGlassBytes]{};
     bool glass_known_{false};
     bool asleep_{false};
+    bool transfer_failed_{false};
     bool refreshing_{false};
     bool partial_refresh_{false};
     int partials_since_reink_{0};
