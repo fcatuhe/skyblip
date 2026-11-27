@@ -148,20 +148,27 @@ An `observation` enters the Go's table through `traffic::TrafficTable::update`, 
 
 The Go dates the frame through its UTC second's edge, the PPS edge `timing::ClockState` anchored or else the fix that named it, plus `into_ms` when present, so a field known only to the second is dated at its start. The ages are copied as sent and the arrival time is never read, so a frame forwarded late keeps its own age. An instant up to `BravoService::kAheadCeilingMs` ahead keeps its place, because two GNSS clocks may disagree by a second (`../traffic/README.md`). A frame dated further ahead, or one a Go with no UTC cannot place, is refused and counted in `BravoService::unplaced()`. A `callsign` goes to `traffic::CallsignTable` under table 5. A frame whose `callsign`, or whose health's `own_transponder_callsign`, holds a byte `protocol::is_callsign_character` refuses is refused whole, as `protocol::callsign_of` refuses a name off the air, so no comma or `$` reaches a `$PFLAA` ID field and no control character reaches the glass. RSSI is not carried.
 
-`health` alone says whether Bravo is there, since an empty sky sends no observation. `BravoService` publishes `bus::State::bravo`, a `comms::BravoState`, every pass:
+`health` alone says whether Bravo is there, since an empty sky sends no observation. `BravoService` publishes `bus::State::bravo`, a `comms::BravoState`, every pass. It is the one verdict every reader of Bravo takes: the radar corner and its `B`, the `nearby` row, `bravo_log`, `self_test`, the tone, the flight log and `status`. Each value names one word the glass says, so a phone reads what the pilot reads. The first row that holds wins:
 
-| State | When |
-|---|---|
-| `Unpaired` | the Go holds no pin |
-| `Waiting` | paired, not live, its receiver listening, and not yet counted on: no `health` younger than `kHealthMaxAgeMs`, or one that says `utc_valid` false (#193), which a Bravo says only when neither it nor its Go has UTC |
-| `Live` | a `health` younger than `kHealthMaxAgeMs` whose `listening` and `utc_valid` are both true, unless it carries no `utc_source` and its `gnss_stage` is `silent` |
-| `ReceiverDown` | that `health` says `listening` false |
-| `NoUtc` | that `health` says `utc_valid` false while the Go counts on its Bravo, so Bravo exports nothing (#192), or comes from a Bravo built before `utc_source` whose receiver is silent, whose second stopped with it |
-| `LinkDown` | no `health` younger than `kHealthMaxAgeMs` while the Go counts on its Bravo |
+| State | When | The glass says |
+|---|---|---|
+| `Unpaired` | the Go holds no pin | nothing |
+| `Waiting` | no `health` younger than `kHealthMaxAgeMs`, not yet counted on | `NO LINK` |
+| `LinkDown` | the same while the Go counts on its Bravo | `NO LINK`, lost |
+| `ReceiverDown` | that `health` says `listening` false | `RX DOWN`, lost |
+| `WaitingGpsOff` | its `gnss_stage` is `silent` and Bravo exports nothing the Go can date and place, not yet counted on | `GPS OFF` |
+| `GpsOff` | the same while the Go counts on its Bravo | `GPS OFF`, lost |
+| `WaitingUtc` | `utc_valid` false, which Bravo says only when neither it nor its Go has UTC, not yet counted on (#193) | `MOVE OUT` |
+| `NoUtc` | the same while the Go counts on its Bravo, so Bravo exports nothing (#192) | `MOVE OUT`, lost |
+| `FindsFix` | `utc_valid` true and `export_reference` `none`: no position to place its ADS-B on, so Bravo exports nothing | `FINDS FIX` |
+| `CellLow` | Bravo exports, and its `power_level` is `low` or under | `BAT 9%` and the `B` |
+| `Live` | Bravo exports: `listening`, a second it dates on, its own UTC or its Go's (`utc_source`), and an `export_reference` | the `B` |
 
-`kHealthMaxAgeMs` is three `health` periods, so one lost notification is no loss. The Go counts on its Bravo once the pinned Bravo has said `utc_valid` true since the Go booted or paired, or once the Go has rolled, `state.flight.rolling`, after `kBootSettleMs` from boot. Before that a Bravo coming up reads `Waiting`, which plays no tone, so switching a Tango on in the hangar is silent, and from the taxi on a Bravo that is not live reads lost, so a pilot hears it before takeoff. `kBootSettleMs` gives a Go switched on rolling, or rebooted in flight, time to connect. `BravoService::counted_on()` lives in RAM, and unpairing drops it with the pin. `ReceiverDown` is lost from the first `health` that says so, because a receiver that stopped listening does not recover by itself. Bravo plays the Go's calls whatever the Go reads of it.
+`comms::relaying()` is `Live` and `CellLow`, the two states whose ADS-B reaches the table, so only they draw the `B`, count ADS-B as received in the ADS-L status, and show Bravo's satellites and traffic on `nearby`. A Bravo whose GNSS receiver went silent while it still exports, on its uptime clock or on its Go's second, stays `Live`. One built before `utc_source` whose receiver is silent reads `GPS OFF`, because its second stopped with it. `status` sends codes 6 to 10, which came after the first five, in the same one byte, so it still fits a link that never exchanged its MTU. An older phone reads a code it does not know as a paired Bravo.
 
-The last three states are a lost Bravo, `comms::lost()`. The glass reverses its `BRAVO` corner (`products/skyblip_go/pages/README.md`, Bravo has its corner), `common::AlarmService` plays one tone on the pass it turns lost (`../annunciation/README.md`), the flight log writes a `bravo` record (`../flight/README.md`), and `status` carries the state.
+`kHealthMaxAgeMs` is three `health` periods, so one lost notification is no loss. The Go counts on its Bravo once the pinned Bravo has said `utc_valid` true since the Go booted or paired, or once the Go has rolled, `state.flight.rolling`, after `kBootSettleMs` from boot. Before that a Bravo coming up reads `Waiting`, `WaitingGpsOff` or `WaitingUtc`, which play no tone, so switching a Tango on in the hangar is silent, and from the taxi on such a Bravo reads lost, so a pilot hears it before takeoff. `kBootSettleMs` gives a Go switched on rolling, or rebooted in flight, time to connect. `BravoService::counted_on()` lives in RAM, and unpairing drops it with the pin. `ReceiverDown` is lost from the first `health` that says so, because a receiver that stopped listening does not recover by itself. Bravo plays the Go's calls whatever the Go reads of it.
+
+`LinkDown`, `ReceiverDown`, `GpsOff` and `NoUtc` are a lost Bravo, `comms::lost()`. `FindsFix` is never lost, because Bravo lacks a position only while the Go has no fix to lend it, which the Go's own glass already says. The glass reverses its `BRAVO` corner (`products/skyblip_go/pages/README.md`, Bravo has its corner), `common::AlarmService` plays one tone on the pass it turns lost (`../annunciation/README.md`), the flight log writes a `bravo` record (`../flight/README.md`), and `status` carries the state.
 
 The reconnect scan is the Bluetooth Core's slow scanning mode 1, 11.25 ms every 1.28 s, and the pairing scan fast scanning, 30 ms every 60 ms, while a pilot watches the list. What the central link costs the 868 MHz timing is unmeasured until #194.
 

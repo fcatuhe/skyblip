@@ -67,9 +67,7 @@ NearbySnapshot listing(const traffic::RangeRow* rows, int count, go::Units units
 NearbySnapshot paired(const traffic::RangeRow* rows, int count) {
     NearbySnapshot snapshot = listing(rows, count, go::Units::Nautical);
     snapshot.bravo.state = comms::BravoState::Live;
-    snapshot.bravo.heard = true;
     snapshot.bravo.battery_percent = 64;
-    snapshot.bravo.stage = gnss::Stage::Fixed;
     snapshot.bravo.satellites = 9;
     snapshot.bravo.traffic = 3;
     return snapshot;
@@ -333,26 +331,25 @@ TEST_CASE("nearby page: a paired Go reads Bravo's row under its own, and the lis
     CHECK(reads_at(canvas, kNearbyIdX, row_y(1), "L", kNearbyScale));
 }
 
-TEST_CASE("nearby page: Bravo's row says why it is not live in place of satellites and traffic") {
+// Each word is the radar corner's, from the one verdict BravoService works out.
+TEST_CASE(
+    "nearby page: Bravo's row says why it brings no traffic in place of satellites and "
+    "traffic") {
     struct Case {
         comms::BravoState state;
-        bool heard;
-        std::optional<gnss::Stage> stage;
         const char* word;
     };
     for (const Case each :
-         {Case{comms::BravoState::Waiting, false, std::nullopt, "NO LINK"},
-          Case{comms::BravoState::LinkDown, true, gnss::Stage::Fixed, "NO LINK"},
-          Case{comms::BravoState::ReceiverDown, true, gnss::Stage::Fixed, "RX DOWN"},
-          Case{comms::BravoState::NoUtc, true, gnss::Stage::Blind, "MOVE OUT"},
-          Case{comms::BravoState::Waiting, true, gnss::Stage::Silent, "GPS OFF"},
-          Case{comms::BravoState::Live, true, gnss::Stage::Solving, "FINDS FIX"},
-          Case{comms::BravoState::NoUtc, true, std::nullopt, "MOVE OUT"}}) {
+         {Case{comms::BravoState::Waiting, "NO LINK"}, Case{comms::BravoState::LinkDown, "NO LINK"},
+          Case{comms::BravoState::ReceiverDown, "RX DOWN"},
+          Case{comms::BravoState::NoUtc, "MOVE OUT"},
+          Case{comms::BravoState::WaitingUtc, "MOVE OUT"},
+          Case{comms::BravoState::GpsOff, "GPS OFF"},
+          Case{comms::BravoState::WaitingGpsOff, "GPS OFF"},
+          Case{comms::BravoState::FindsFix, "FINDS FIX"}}) {
         CAPTURE(each.word);
         NearbySnapshot snapshot = paired(nullptr, 0);
         snapshot.bravo.state = each.state;
-        snapshot.bravo.heard = each.heard;
-        snapshot.bravo.stage = each.stage;
         Glass canvas;
         draw_nearby(canvas, snapshot);
         CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kBravoY, each.word, kNearbyScale));
@@ -360,10 +357,10 @@ TEST_CASE("nearby page: Bravo's row says why it is not live in place of satellit
     }
 }
 
-// A cell read before the link went is a figure that stopped moving, so the row shows none.
-TEST_CASE("nearby page: a Bravo with no link reads no cell, and one on its cable CHG") {
+TEST_CASE("nearby page: a Bravo with no cell reading reads --, and one on its cable CHG") {
     NearbySnapshot lost = paired(nullptr, 0);
     lost.bravo.state = comms::BravoState::LinkDown;
+    lost.bravo.battery_percent.reset();
     Glass gone;
     draw_nearby(gone, lost);
     CHECK(reads_right_of(gone, kNearbyBatteryEnd, kBravoY, "--", kNearbyScale));
@@ -375,14 +372,17 @@ TEST_CASE("nearby page: a Bravo with no link reads no cell, and one on its cable
     CHECK(reads_right_of(charging, kNearbyBatteryEnd, kBravoY, "CHG", kNearbyScale));
 }
 
-TEST_CASE("nearby page: a live Bravo from before gnss_stage reads no satellites, not a word") {
-    NearbySnapshot snapshot = paired(nullptr, 0);
-    snapshot.bravo.stage.reset();
-    snapshot.bravo.satellites.reset();
-    Glass canvas;
-    draw_nearby(canvas, snapshot);
-    CHECK(figure_reads(canvas, kNearbySatellitesEnd, kBravoY, "--", "SAT"));
-    CHECK(figure_reads(canvas, kNearbyRelativeAltitudeEnd, kBravoY, "3", "TFC"));
+// A relaying Bravo shows what it brings, whatever its own receiver says, a low cell included.
+TEST_CASE("nearby page: a relaying Bravo with no fix of its own reads -- SAT and its traffic") {
+    for (const comms::BravoState state : {comms::BravoState::Live, comms::BravoState::CellLow}) {
+        NearbySnapshot snapshot = paired(nullptr, 0);
+        snapshot.bravo.state = state;
+        snapshot.bravo.satellites.reset();
+        Glass canvas;
+        draw_nearby(canvas, snapshot);
+        CHECK(figure_reads(canvas, kNearbySatellitesEnd, kBravoY, "--", "SAT"));
+        CHECK(figure_reads(canvas, kNearbyRelativeAltitudeEnd, kBravoY, "3", "TFC"));
+    }
 }
 
 TEST_CASE("nearby page: a paired Go lists one row fewer, and never draws past the glass") {

@@ -1,6 +1,7 @@
 #include "products/skyblip_go/pages/bravo_log.h"
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/bravo_word.h"
 #include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 
@@ -24,15 +25,9 @@ constexpr int kAddressX = column_x(19);
 constexpr int kRightEnd = column_x(32);
 
 const char* state_word(comms::BravoState state) {
-    switch (state) {
-        case comms::BravoState::Live: return "LIVE";
-        case comms::BravoState::Waiting: return "WAIT";
-        case comms::BravoState::LinkDown: return "LINK DOWN";
-        case comms::BravoState::ReceiverDown: return "RECEIVER DOWN";
-        case comms::BravoState::NoUtc: return "NO UTC";
-        case comms::BravoState::Unpaired: break;
-    }
-    return "NOT PAIRED";
+    if (state == comms::BravoState::Unpaired) return "NOT PAIRED";
+    if (comms::relaying(state)) return "LIVE";
+    return bravo_word(state);
 }
 
 const char* verdict_word(BravoVerdict verdict) {

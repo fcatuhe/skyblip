@@ -240,8 +240,13 @@ inline constexpr Value kBravoValues[] = {
     {"link_down", 3},
     {"receiver_down", 4},
     {"no_utc", 5},
+    {"gps_off", 6},
+    {"waiting_gps_off", 7},
+    {"waiting_utc", 8},
+    {"finds_fix", 9},
+    {"cell_low", 10},
 };
-inline constexpr Enumeration kBravo{kBravoValues, 5};
+inline constexpr Enumeration kBravo{kBravoValues, 10};
 
 inline constexpr Value kUtcSourceValues[] = {
     {"own", 0},

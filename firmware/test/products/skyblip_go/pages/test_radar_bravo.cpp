@@ -16,7 +16,6 @@ TEST_CASE("radar page: a live Bravo is a B by the traffic count, and the corner 
         RadarSnapshot live = flying(0);
         live.plot = plot;
         live.bravo = BravoState::Live;
-        live.bravo_heard = true;
         const Glass canvas = radar(live);
         CHECK(marks_bravo_live(canvas));
         CHECK_FALSE(corner_reads(canvas, "B"));
@@ -46,7 +45,6 @@ TEST_CASE("radar page: a live Bravo's B stands over TRAFFIC, or over the digits 
         unpaired.heard_count = each.heard;
         RadarSnapshot live = unpaired;
         live.bravo = BravoState::Live;
-        live.bravo_heard = true;
         const Glass bare = radar(unpaired), marked = radar(live);
 
         const int digits_x = each.heard > 9 ? 163 : 181;
@@ -76,26 +74,29 @@ TEST_CASE("radar page: a live Bravo's B stands over TRAFFIC, or over the digits 
 }
 
 // White while Bravo comes up by itself, reversed once the pilot counts on it.
-TEST_CASE("radar page: a Bravo not live says BRAVO and why in the corner, reversed when lost" *
-          doctest::test_suite("main")) {
+TEST_CASE(
+    "radar page: a Bravo that brings no traffic says BRAVO and why in the corner, reversed "
+    "when lost" *
+    doctest::test_suite("main")) {
     struct Case {
         BravoState state;
-        bool heard;
         const char* why;
         bool lost;
     };
-    for (const Case each : {Case{BravoState::Waiting, false, "NO LINK", false},
-                            Case{BravoState::Waiting, true, "MOVE OUT", false},
-                            Case{BravoState::LinkDown, false, "NO LINK", true},
-                            Case{BravoState::NoUtc, true, "MOVE OUT", true},
-                            Case{BravoState::ReceiverDown, true, "RX DOWN", true}}) {
+    for (const Case each :
+         {Case{BravoState::Waiting, "NO LINK", false},
+          Case{BravoState::WaitingUtc, "MOVE OUT", false},
+          Case{BravoState::WaitingGpsOff, "GPS OFF", false},
+          Case{BravoState::FindsFix, "FINDS FIX", false},
+          Case{BravoState::LinkDown, "NO LINK", true}, Case{BravoState::NoUtc, "MOVE OUT", true},
+          Case{BravoState::GpsOff, "GPS OFF", true},
+          Case{BravoState::ReceiverDown, "RX DOWN", true}}) {
         CAPTURE(each.why);
         CAPTURE(each.lost);
         for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
             RadarSnapshot snapshot = flying(0);
             snapshot.plot = plot;
             snapshot.bravo = each.state;
-            snapshot.bravo_heard = each.heard;
             const Glass canvas = radar(snapshot);
             CHECK(corner_reads(canvas, "BRAVO", !each.lost));
             CHECK(corner_reads(canvas, each.why, !each.lost));
@@ -142,7 +143,7 @@ TEST_CASE("radar page: a live Bravo on a low cell says BRAVO over BAT and its ch
     for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
         RadarSnapshot low = flying(0);
         low.plot = plot;
-        low.bravo = BravoState::Live;
+        low.bravo = BravoState::CellLow;
         low.bravo_battery_low = true;
         low.bravo_battery_percent = 9;
         const Glass canvas = radar(low);
@@ -152,7 +153,7 @@ TEST_CASE("radar page: a live Bravo on a low cell says BRAVO over BAT and its ch
     }
 
     RadarSnapshot unread = flying(0);
-    unread.bravo = BravoState::Live;
+    unread.bravo = BravoState::CellLow;
     unread.bravo_battery_low = true;
     CHECK(corner_reads(radar(unread), "BAT LOW"));
 
@@ -162,6 +163,19 @@ TEST_CASE("radar page: a live Bravo on a low cell says BRAVO over BAT and its ch
     const Glass warned = radar(both);
     CHECK(reads_in(warned, "BAT 4%", 40, 120, 160, 160, 2));
     CHECK(corner_reads(warned, "BAT LOW"));
+}
+
+// The cell stands over the reason, as the ring stands the Go's cell over its state word.
+TEST_CASE("radar page: a Bravo on a low cell that brings no traffic says BRAVO, its cell and why") {
+    RadarSnapshot snapshot = flying(0);
+    snapshot.bravo = BravoState::ReceiverDown;
+    snapshot.bravo_battery_low = true;
+    snapshot.bravo_battery_percent = 9;
+    const Glass canvas = radar(snapshot);
+    CHECK(reads_in(canvas, "BRAVO", 140, 0, kGlassWidth, 12, 1, false));
+    CHECK(reads_in(canvas, "BAT 9%", 140, 11, kGlassWidth, 21, 1, false));
+    CHECK(reads_in(canvas, "RX DOWN", 140, 20, kGlassWidth, 30, 1, false));
+    CHECK_FALSE(marks_bravo_live(canvas));
 }
 
 // The block is reversed after the plot, so an aircraft over it is not lost in the black.

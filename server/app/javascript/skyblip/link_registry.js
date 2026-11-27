@@ -3644,6 +3644,31 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "no_utc",
           "code": 5,
           "mirrors": "NoUtc"
+        },
+        {
+          "name": "gps_off",
+          "code": 6,
+          "mirrors": "GpsOff"
+        },
+        {
+          "name": "waiting_gps_off",
+          "code": 7,
+          "mirrors": "WaitingGpsOff"
+        },
+        {
+          "name": "waiting_utc",
+          "code": 8,
+          "mirrors": "WaitingUtc"
+        },
+        {
+          "name": "finds_fix",
+          "code": 9,
+          "mirrors": "FindsFix"
+        },
+        {
+          "name": "cell_low",
+          "code": 10,
+          "mirrors": "CellLow"
         }
       ]
     },

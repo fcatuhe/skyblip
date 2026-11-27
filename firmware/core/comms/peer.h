@@ -142,19 +142,36 @@ struct PeerObservation {
 };
 
 // INFO: fc 12nov26 what a paired Go makes of its Bravo's health, the status frame's bravo
+// | 27nov26 one code for each word the glass says
 enum class BravoState : uint8_t {
     Unpaired = 0,
     Waiting = 1,
     Live = 2,
     LinkDown = 3,
     ReceiverDown = 4,
-    NoUtc = 5
+    NoUtc = 5,
+    GpsOff = 6,
+    WaitingGpsOff = 7,
+    WaitingUtc = 8,
+    FindsFix = 9,
+    CellLow = 10
 };
 
 constexpr bool lost(BravoState state) {
     return state == BravoState::LinkDown || state == BravoState::ReceiverDown ||
-           state == BravoState::NoUtc;
+           state == BravoState::NoUtc || state == BravoState::GpsOff;
 }
+
+constexpr bool waiting(BravoState state) {
+    return state == BravoState::Waiting || state == BravoState::WaitingGpsOff ||
+           state == BravoState::WaitingUtc;
+}
+
+constexpr bool relaying(BravoState state) {
+    return state == BravoState::Live || state == BravoState::CellLow;
+}
+
+constexpr bool dated(BravoState state) { return relaying(state) || state == BravoState::FindsFix; }
 
 Result<link::Command> peer_command(ConstByteSpan frame);
 // INFO: fc 11nov26 Invalid without protocol_version, Unsupported for one this build does not speak

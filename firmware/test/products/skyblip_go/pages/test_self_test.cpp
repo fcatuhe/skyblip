@@ -375,11 +375,14 @@ TEST_CASE("self-test page: a paired Go lists its Bravo by tag under the bus, and
         skyblip::comms::BravoState state;
         const char* verdict;
     };
-    for (const Row row : {Row{skyblip::comms::BravoState::Waiting, "WAIT"},
+    for (const Row row : {Row{skyblip::comms::BravoState::Waiting, "NO LINK"},
                           Row{skyblip::comms::BravoState::Live, "ON"},
-                          Row{skyblip::comms::BravoState::LinkDown, "LINK DOWN"},
-                          Row{skyblip::comms::BravoState::ReceiverDown, "RECEIVER DOWN"},
-                          Row{skyblip::comms::BravoState::NoUtc, "NO UTC"}}) {
+                          Row{skyblip::comms::BravoState::CellLow, "ON"},
+                          Row{skyblip::comms::BravoState::FindsFix, "FINDS FIX"},
+                          Row{skyblip::comms::BravoState::LinkDown, "NO LINK"},
+                          Row{skyblip::comms::BravoState::ReceiverDown, "RX DOWN"},
+                          Row{skyblip::comms::BravoState::GpsOff, "GPS OFF"},
+                          Row{skyblip::comms::BravoState::NoUtc, "MOVE OUT"}}) {
         CAPTURE(row.verdict);
         snapshot.bravo = row.state;
         Glass canvas;
@@ -414,11 +417,11 @@ TEST_CASE(
     Glass lost;
     draw_self_test(lost, snapshot);
     CHECK(reads_at(lost, kSelfTestLeftX, self_test_row_y(last), "BRAVO 3F2A"));
-    CHECK(row_reads(lost, last, "NO UTC"));
+    CHECK(row_reads(lost, last, "MOVE OUT"));
 
-    snapshot.bravo = skyblip::comms::BravoState::Waiting;
+    snapshot.bravo = skyblip::comms::BravoState::WaitingUtc;
     Glass waiting;
     draw_self_test(waiting, snapshot);
     CHECK(reads_at(waiting, kSelfTestLeftX, self_test_row_y(last), "BRAVO 3F2A"));
-    CHECK(row_reads(waiting, last, "WAIT"));
+    CHECK(row_reads(waiting, last, "MOVE OUT"));
 }

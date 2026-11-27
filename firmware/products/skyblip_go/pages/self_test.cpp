@@ -1,6 +1,7 @@
 #include "products/skyblip_go/pages/self_test.h"
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/bravo_word.h"
 #include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 
@@ -27,15 +28,9 @@ void leaders(ui::Canvas& canvas, int from_x, int to_x, int y) {
 }
 
 const char* bravo_verdict(comms::BravoState state) {
-    switch (state) {
-        case comms::BravoState::Live: return "ON";
-        case comms::BravoState::Waiting: return "WAIT";
-        case comms::BravoState::LinkDown: return "LINK DOWN";
-        case comms::BravoState::ReceiverDown: return "RECEIVER DOWN";
-        case comms::BravoState::NoUtc: return "NO UTC";
-        case comms::BravoState::Unpaired: break;
-    }
-    return "";
+    if (state == comms::BravoState::Unpaired) return "";
+    if (comms::relaying(state)) return "ON";
+    return bravo_word(state);
 }
 
 void named_row(ui::Canvas& canvas, int y, const char* name, const char* mark) {
@@ -120,7 +115,7 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     // then LIVE
     const bool paired = snapshot.bravo != comms::BravoState::Unpaired;
     const bool warned = snapshot.aircraft_address_warning && !comms::lost(snapshot.bravo) &&
-                        snapshot.bravo != comms::BravoState::Waiting;
+                        !comms::waiting(snapshot.bravo);
     if ((paired || warned) && y < self_test_row_y(kSelfTestRows)) {
         if (warned)
             named_row(canvas, y, kSelfTestAircraftAddressName, kSelfTestUnsetVerdict);

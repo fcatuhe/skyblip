@@ -220,10 +220,6 @@ class ScreenService : public runtime::Service {
     }
     std::optional<model::Ownship> plotted_own() const;
 
-    const comms::PeerHealth* bravo_health_live() const {
-        return context_.state.bravo == comms::BravoState::Live ? bravo_.health() : nullptr;
-    }
-
     Settings& settings_;
     common::ConfigService& config_;
     common::AlarmService& alarm_;

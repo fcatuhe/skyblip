@@ -88,16 +88,20 @@ The range stands on the bottom of the ring as its label, `4` at double height wi
 
 ### Bravo has its corner
 
-A paired Go says what is wrong with its Bravo in the top-right corner, small, flush right, on a patch it clears, and nowhere else on the page. A live Bravo with nothing to report leaves the corner empty and shows a `B` in an 11 by 13 px frame over `TRAFFIC`, `kStackGap` above it, because the count holds its ADS-B traffic. Where `TO SCALE` shortens the word to `TFC`, the `B` stands over the digits, clear of the ring. A live Bravo on a low cell keeps its `B` and says the cell in the corner. Any other Bravo has no `B` and says `BRAVO` over the reason:
+A paired Go says what is wrong with its Bravo in the top-right corner, small, flush right, on a patch it clears, and nowhere else on the page. The words come from the one verdict `BravoService` works out from Bravo's `health` and publishes as `bus::State::bravo` (`../../../core/comms/README.md`, What the Go makes of its Bravo), so the corner, the `nearby` row, `bravo_log`, `self_test` and the phone's `status` say the same thing. A Bravo that relays its ADS-B, `comms::relaying()`, leaves the corner empty and shows a `B` in an 11 by 13 px frame over `TRAFFIC`, `kStackGap` above it, because the count holds its ADS-B traffic. Where `TO SCALE` shortens the word to `TFC`, the `B` stands over the digits, clear of the ring. A relaying Bravo on a low cell keeps its `B` and says the cell in the corner. Any other Bravo has no `B` and says `BRAVO` over the reason (`bravo_word.h`):
 
 | Bravo | Reason |
 |---|---|
 | no `health` | `NO LINK` |
-| `health` without UTC | `MOVE OUT`, the Go's own word before it has a date |
 | its 1090 MHz receiver not listening | `RX DOWN` |
-| live, its cell at `Low` or under | `BAT 9%`, or `BAT LOW` where `health` carries a level and no percentage |
+| its GNSS receiver silent, and not relaying | `GPS OFF`, the word nearby gives a silent receiver |
+| `health` without UTC, its receiver talking or from before `gnss_stage` | `MOVE OUT`, the Go's own word before it has a date |
+| UTC, but no position, its own or the Go's, to place its ADS-B on | `FINDS FIX` |
+| relaying, its cell at `Low` or under | `BAT 9%`, or `BAT LOW` where `health` carries a level and no percentage |
 
-The block is black on white while Bravo comes up by itself, and reversed once it is lost, after the plot so a mark over it reads white on black (`comms::lost`, `../../../core/comms/README.md`, What the Go makes of its Bravo). A Bravo is lost once it has been live since the Go booted or paired, once the Go has taxied, or when its receiver does not listen, and the tone sounds on the pass the block reverses. So a Tango switched on in the hangar clears a white block by itself, and a Bravo still not live at the taxi gets the black block and the tone on the ground. The corner reads health alone, so a quiet sky says nothing.
+A Bravo with any reason on a low cell says the cell between `BRAVO` and the reason, as the ring stands the Go's cell over its state word, because a Bravo in a bag shows its red lamp to nobody whatever else is wrong with it.
+
+The block is black on white while Bravo comes up by itself, and reversed once it is lost, after the plot so a mark over it reads white on black (`comms::lost`, `../../../core/comms/README.md`, What the Go makes of its Bravo). A Bravo with no link, no UTC or a silent GNSS receiver is lost once it has been live since the Go booted or paired or once the Go has taxied, one whose 1090 MHz receiver does not listen at once, and the tone sounds on the pass the block reverses. `FINDS FIX` is never lost, because Bravo lacks a position only while the Go has no fix either, which the ring already says. So a Tango switched on in the hangar clears a white block by itself, and a Bravo still not live at the taxi gets the black block and the tone on the ground. The corner reads health alone, so a quiet sky says nothing.
 
 The cell shows because a Bravo in a flight bag shows its red lamp to nobody. Its level comes from `health` (`../../skyblip_bravo/README.md`).
 
@@ -125,7 +129,7 @@ The footer readings share one baseline, 4 px off the bottom of the glass, as the
 
 A unit row reads the unit's letter, its cell, the satellites its fix uses and the traffic its own radio holds: `GO 87% 11 SAT 9 TFC`. A pilot checks it before taxiing, and a Bravo in a bag has no other glass. The two `TFC` figures split the table by source, Bravo's being `traffic::TrafficTable::count_of(model::Source::Adsb)`, and together count every emitter, formation included, so a radio gone quiet shows its own `0`. The satellites are those in the solution, GGA's count, from `model::Ownship::satellites` and from `health` (`../../skyblip_bravo/README.md`, What Bravo serves), because satellites in view need GSV, which only the `satellites` page asks for. A Bravo built before a key reads `--` for it.
 
-When a unit has something to say, a word replaces its satellites and traffic, flush right: the receiver's stage without a fix, `GPS OFF`, `MOVE OUT` or `FINDS FIX` (`core/gnss/README.md`), `TX OFF` for a Go with a fix that does not transmit (NO TX), and for Bravo `NO LINK`, `RX DOWN`, or its `gnss_stage`. A Bravo built before `gnss_stage` reads `MOVE OUT` without UTC, as on its radar corner. A lost Bravo's cell reads `--`, and a unit on its cable `CHG`. Nothing is reversed, because black means nothing on this page. The widest word, `FINDS FIX`, holds the stage words to nine characters.
+When a unit has something to say, a word replaces its satellites and traffic, flush right: the receiver's stage without a fix, `GPS OFF`, `MOVE OUT` or `FINDS FIX` (`core/gnss/README.md`), `TX OFF` for a Go with a fix that does not transmit (NO TX), and for a Bravo that relays nothing the radar corner's reason, `NO LINK`, `RX DOWN`, `GPS OFF`, `MOVE OUT` or `FINDS FIX` (Bravo has its corner). A Bravo that relays shows its satellites and its traffic whatever its own receiver says, `--` satellites without a fix of its own, because its ADS-B is placed on the Go's position. A Bravo with no `health` reads `--` for its cell, and a unit on its cable `CHG`. Nothing is reversed, because black means nothing on this page. The widest word, `FINDS FIX`, holds the stage words to nine characters.
 
 The heads stand flush with the figures they name: `SRC ID` left, `DIST` and `ALT` right. No unit is printed, since the unit is a setting named on the menu. With nothing to list, `NO TRAFFIC` or `NO FIX` stands centred on the second row under the heads. A Go listing around its Bravo's fix reads its own stage on its row and lists the traffic (The radar on Bravo's fix).
 
@@ -177,7 +181,7 @@ The second line explains the stamps. `PPS LOCK`, `PPS HOLD 12` and `PPS NONE` sa
 
 `bravo_log` is where a pilot reads a paired Bravo, which has no glass, from the `BRAVO LOG` row of the `DIAGNOSTICS` menu. It is `radio_log` for the frames Bravo forwards, under a three-line head.
 
-1. The tag, `BRAVO 3F2A`, and on the right the Go's verdict: `LIVE`, `WAIT`, `LINK DOWN`, `RECEIVER DOWN`, `NO UTC`, or `NOT PAIRED` on a Go with no pin.
+1. The tag, `BRAVO 3F2A`, and on the right the Go's verdict: `LIVE` while Bravo relays, the radar corner's reason otherwise (Bravo has its corner), or `NOT PAIRED` on a Go with no pin.
 2. The image Bravo runs, `FW 0.4.1+1702`, and its cell: `BAT 80%`, `BAT CHG` on the cable or `BAT --` with no reading.
 3. Its 1090 MHz receiver, `1090 412/S` for the frames handed up in the last second or `1090 OFF`, and on the right `B 14 IN 1234 OUT 2`: the ADS-B aircraft in the table, the frames folded since boot, and the frames refused or unplaced, once there are any.
 
@@ -274,7 +278,7 @@ One row per part reads what it is, which part answered and how:
 
 The bus row, `I2C IMU RTC HAPTIC BARO`, names every address that answered on the sensor bus, ascending, from `boards/lilygo/t_echo_plus/i2c_scan.h`, and prints an unknown one as hex, which is why the bus is scanned rather than probed. The scan costs about 20 ms, so the board runs it the first time a menu opens, and at boot only on a unit that refuses to fly. The RTC appears only here, because nothing drives it and a row would claim a `PASS`.
 
-The fifteen rows set the pitch at 9 px. A paired Go adds `BRAVO 3F2A` and its verdict, `WAIT`, `ON`, `LINK DOWN`, `RECEIVER DOWN` or `NO UTC`, as a sixteenth. While neither the Go nor its Bravo has an aircraft address and Bravo is neither lost nor waiting, that row reads `ADS-B` and `UNSET` instead, without claiming the transponder shows as traffic, since the Go cannot know it has ADS-B Out. The sixteenth row shares the footer's line, ending at 198 px.
+The fifteen rows set the pitch at 9 px. A paired Go adds `BRAVO 3F2A` and its verdict, `ON` while Bravo relays and the radar corner's reason otherwise (Bravo has its corner), as a sixteenth. While neither the Go nor its Bravo has an aircraft address and Bravo is neither lost nor waiting, that row reads `ADS-B` and `UNSET` instead, without claiming the transponder shows as traffic, since the Go cannot know it has ADS-B Out. The sixteenth row shares the footer's line, ending at 198 px.
 
 The radio and receiver rows add how the part works now, because the transmit gate reads both (`../../../core/timing/README.md`, The transmit gate). `RADIO SX1262 CCA OK` enters its dwells and reads its channel before a burst, and `NO CCA` stopped. `GNSS L76K 2 HZ` solves twice a second on 115200 with a fix, UTC and an edge. Otherwise the word is the first requirement unmet: the bring-up stage, `1 HZ` at the factory rate, `STAMP` for a solution off `.000` and `.500`, `NO FIX`, `NO UTC` or `NO PPS`. While the `NO TX` mark names that requirement, the verdict reads `NO TX`. The boot verdict under the divider stays.
 

@@ -1,7 +1,10 @@
 #include "products/skyblip_go/pages/radar.h"
 
+#include <algorithm>
+
 #include "core/units/units.h"
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/bravo_word.h"
 #include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
 #include "products/skyblip_go/pages/radar_traffic.h"
@@ -38,6 +41,7 @@ constexpr int kNoteBelowBanner = kCharacterHeight * kBannerScale + kLabelPad + k
 // INFO: fc 26nov26 the banner stands where it centres with a small line, so the line never moves it
 constexpr int kRingWordsHeight = kNoteBelowBanner + kCharacterHeight * kNoteScale;
 constexpr int kLiveMarkPad = 3;
+constexpr int kBravoCornerLines = 3;
 
 struct Layout {
     int outer_radius;
@@ -223,34 +227,25 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
 }
 
 // INFO: fc 17nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
-const char* bravo_reason(const RadarSnapshot& snapshot, char* cell_buffer) {
-    switch (snapshot.bravo) {
-        case comms::BravoState::Waiting: return snapshot.bravo_heard ? "MOVE OUT" : "NO LINK";
-        case comms::BravoState::LinkDown: return "NO LINK";
-        case comms::BravoState::NoUtc: return "MOVE OUT";
-        case comms::BravoState::ReceiverDown: return "RX DOWN";
-        case comms::BravoState::Live:
-            if (!snapshot.bravo_battery_low) return nullptr;
-            format_cell(cell_buffer, snapshot.bravo_battery_percent);
-            return cell_buffer;
-        case comms::BravoState::Unpaired: break;
-    }
-    return nullptr;
-}
-
 Box bravo_corner(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     if (snapshot.bravo == comms::BravoState::Unpaired) return {};
     char cell_buffer[12];
-    const char* reason = bravo_reason(snapshot, cell_buffer);
-    if (!reason) return {};
-    const int name_width = text_width("BRAVO", 1), reason_width = text_width(reason, 1);
-    const int width = name_width > reason_width ? name_width : reason_width;
+    const char* lines[kBravoCornerLines] = {"BRAVO"};
+    int count = 1;
+    if (snapshot.bravo_battery_low) {
+        format_cell(cell_buffer, snapshot.bravo_battery_percent);
+        lines[count++] = cell_buffer;
+    }
+    if (const char* word = bravo_word(snapshot.bravo)) lines[count++] = word;
+    if (count == 1) return {};
+    int width = 0;
+    for (int i = 0; i < count; i++) width = std::max(width, text_width(lines[i], 1));
     const int right = kGlassWidth - kMargin;
-    const int reason_y = kMargin + kCharacterHeight + kStackGap;
-    const Box box = padded(right - width, kMargin, width, reason_y + kCharacterHeight - kMargin);
+    const int pitch = kCharacterHeight + kStackGap;
+    const Box box = padded(right - width, kMargin, width, count * pitch - kStackGap);
     canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
-    canvas.draw_text(right - name_width, kMargin, "BRAVO", true, 1);
-    canvas.draw_text(right - reason_width, reason_y, reason, true, 1);
+    for (int i = 0; i < count; i++)
+        canvas.draw_text(right - text_width(lines[i], 1), kMargin + i * pitch, lines[i], true, 1);
     return box;
 }
 
@@ -293,7 +288,7 @@ void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     const bool shortened = snapshot.plot == RadarPlot::ToScale && text[1];
     const char* word = shortened ? "TFC" : "TRAFFIC";
     canvas.draw_text(x - kUnitGap - text_width(word, 1), kFooterY, word, true, 1);
-    if (snapshot.bravo == comms::BravoState::Live) {
+    if (comms::relaying(snapshot.bravo)) {
         // INFO: fc 18nov26 a B over TFC would cross the TO SCALE ring, so it stands over the digits
         if (shortened)
             bravo_live_mark(canvas, kGlassWidth - kMargin, y - kStackGap);

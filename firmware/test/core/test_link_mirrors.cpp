@@ -207,6 +207,11 @@ constexpr bool on_the_wire(comms::BravoState value) {
         case comms::BravoState::LinkDown:
         case comms::BravoState::ReceiverDown:
         case comms::BravoState::NoUtc:
+        case comms::BravoState::GpsOff:
+        case comms::BravoState::WaitingGpsOff:
+        case comms::BravoState::WaitingUtc:
+        case comms::BravoState::FindsFix:
+        case comms::BravoState::CellLow:
             return true;
         case comms::BravoState::Unpaired:
             return false;
@@ -446,6 +451,11 @@ static_assert(code(comms::BravoState::Live) == 2, "bravo live");
 static_assert(code(comms::BravoState::LinkDown) == 3, "bravo link_down");
 static_assert(code(comms::BravoState::ReceiverDown) == 4, "bravo receiver_down");
 static_assert(code(comms::BravoState::NoUtc) == 5, "bravo no_utc");
+static_assert(code(comms::BravoState::GpsOff) == 6, "bravo gps_off");
+static_assert(code(comms::BravoState::WaitingGpsOff) == 7, "bravo waiting_gps_off");
+static_assert(code(comms::BravoState::WaitingUtc) == 8, "bravo waiting_utc");
+static_assert(code(comms::BravoState::FindsFix) == 9, "bravo finds_fix");
+static_assert(code(comms::BravoState::CellLow) == 10, "bravo cell_low");
 static_assert(on_the_wire(comms::BravoState::Waiting), "bravo");
 
 static_assert(code(comms::UtcSource::Own) == 0, "utc_source own");

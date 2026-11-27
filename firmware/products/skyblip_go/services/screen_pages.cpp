@@ -153,8 +153,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.battery_low = battery_low();
             snapshot.off_in_min = off_in_min();
             snapshot.bravo = context_.state.bravo;
-            snapshot.bravo_heard = bravo_.health() != nullptr;
-            if (const comms::PeerHealth* health = bravo_health_live()) {
+            if (const comms::PeerHealth* health = bravo_.health()) {
                 snapshot.bravo_battery_low = power::needs_charge(health->power_level);
                 snapshot.bravo_battery_percent = health->battery_percent;
             }
@@ -402,12 +401,9 @@ NearbyBravo ScreenService::nearby_bravo() const {
     NearbyBravo bravo;
     bravo.state = context_.state.bravo;
     bravo.traffic = context_.state.traffic.count_of(model::Source::Adsb);
-    const comms::PeerHealth* health = bravo_.health();
-    bravo.heard = health != nullptr;
-    if (health != nullptr) {
+    if (const comms::PeerHealth* health = bravo_.health()) {
         bravo.battery_percent = health->battery_percent;
         bravo.charging = health->charging;
-        bravo.stage = health->gnss_stage;
         bravo.satellites = health->satellites;
     }
     return bravo;

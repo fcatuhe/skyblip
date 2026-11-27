@@ -83,7 +83,7 @@ TEST_CASE("bravo clock: a Bravo whose GNSS and pulse stop together relays past t
 }
 
 // A Bravo built before utc_source keeps the second of its last solution once its receiver stops.
-TEST_CASE("bravo clock: a Bravo with no utc_source whose receiver is silent is not live") {
+TEST_CASE("bravo clock: a Bravo with no utc_source whose receiver is silent reads GPS OFF") {
     Flight flight;
     flight.tango.bravo.health.status_fields =
         "\"charging\":false,\"power_level\":\"normal\",\"gnss_stage\":\"fixed\",\"satellites\":9";
@@ -93,7 +93,7 @@ TEST_CASE("bravo clock: a Bravo with no utc_source whose receiver is silent is n
     flight.tango.bravo.health.status_fields =
         "\"charging\":false,\"power_level\":\"normal\",\"gnss_stage\":\"silent\"";
     flight.fly(2);
-    CHECK(flight.state().bravo == comms::BravoState::NoUtc);
+    CHECK(flight.state().bravo == comms::BravoState::GpsOff);
 
     flight.tango.bravo.health.status_fields =
         "\"charging\":false,\"power_level\":\"normal\",\"gnss_stage\":\"silent\","

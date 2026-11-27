@@ -4,11 +4,11 @@
 
 namespace skyblip::go {
 
-// INFO: fc 27nov26 the Go's fix, else its live Bravo's in the same aircraft, for the glass alone
+// INFO: fc 27nov26 the Go's fix, else its Bravo's in the same aircraft, for the glass alone
 std::optional<model::Ownship> ScreenService::plotted_own() const {
     const model::Ownship& own = context_.state.own;
     if (own.fix_valid) return own;
-    const comms::PeerHealth* health = bravo_health_live();
+    const comms::PeerHealth* health = bravo_.health();
     if (health == nullptr || !health->position) return std::nullopt;
     const comms::BravoPosition& position = *health->position;
     model::Ownship bravo = own;
@@ -123,7 +123,7 @@ Detected ScreenService::detected() const {
     Detected out;
     if (!paired(settings_)) return out;
     out.state = Detection::NotConnected;
-    if (context_.state.bravo != comms::BravoState::Live) return out;
+    if (!comms::dated(context_.state.bravo)) return out;
     out.state = Detection::Airborne;
     if (context_.state.flight.confirmed_state == flight::FlightState::Airborne) return out;
     out.state = Detection::NoFix;

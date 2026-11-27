@@ -32,7 +32,7 @@ inline Glass radar(const RadarSnapshot& snapshot) {
 
 // The top-right corner, where the radar says what is wrong with a Bravo: black, or reversed.
 inline bool corner_reads(const ui::Canvas& canvas, const char* text, bool ink = true) {
-    return reads_in(canvas, text, 140, 0, kGlassWidth, 24, 1, ink);
+    return reads_in(canvas, text, 140, 0, kGlassWidth, 34, 1, ink);
 }
 
 // The footer's right end, where a live Bravo's B stands by the traffic count it adds to.

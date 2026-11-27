@@ -256,9 +256,14 @@
         "live",
         "link_down",
         "receiver_down",
-        "no_utc"
+        "no_utc",
+        "gps_off",
+        "waiting_gps_off",
+        "waiting_utc",
+        "finds_fix",
+        "cell_low"
       ],
-      "description": "bravo. What the Go made of its Bravo's health, byte 2, written on the fix the Bravo was lost and on the fix it came back: link_down, receiver_down or no_utc when lost, the glass's reversed corner, and live, or unpaired after an unpair, when it came back. A lost Bravo never comes back waiting, because the Go counts on it until the Go reboots. Codes: 0 unpaired, 1 waiting, 2 live, 3 link_down, 4 receiver_down, 5 no_utc, the link registry's bravo enum (schemas/link.v1.json)."
+      "description": "bravo. What the Go made of its Bravo's health, byte 2, written on the fix the Bravo was lost and on the fix it came back: link_down, receiver_down, gps_off or no_utc when lost, the glass's reversed corner, and live, cell_low, finds_fix, or unpaired after an unpair, when it came back. A lost Bravo never comes back waiting, waiting_gps_off or waiting_utc, because the Go counts on it until the Go reboots. Codes: 0 unpaired, 1 waiting, 2 live, 3 link_down, 4 receiver_down, 5 no_utc, 6 gps_off, 7 waiting_gps_off, 8 waiting_utc, 9 finds_fix, 10 cell_low, the link registry's bravo enum (schemas/link.v1.json). A flight written before codes 6 to 10 holds only 0 to 5."
     },
     "heard_s": {
       "type": "integer",

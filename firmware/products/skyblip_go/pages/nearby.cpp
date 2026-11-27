@@ -3,6 +3,7 @@
 #include "core/model/aircraft.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/bravo_word.h"
 #include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 #include "protocols/common/geometry.h"
@@ -73,31 +74,13 @@ const char* go_word(const NearbySnapshot& snapshot) {
     return snapshot.go.transmitting ? nullptr : "TX OFF";
 }
 
-// INFO: fc 18nov26 an older Bravo sends no gnss_stage, so no UTC reads MOVE OUT as on its corner
-const char* bravo_word(const NearbyBravo& bravo) {
-    switch (bravo.state) {
-        case comms::BravoState::LinkDown: return "NO LINK";
-        case comms::BravoState::ReceiverDown: return "RX DOWN";
-        case comms::BravoState::Waiting:
-            if (!bravo.heard) return "NO LINK";
-            break;
-        case comms::BravoState::NoUtc:
-        case comms::BravoState::Live:
-        case comms::BravoState::Unpaired: break;
-    }
-    if (bravo.stage) return *bravo.stage == gnss::Stage::Fixed ? nullptr : stage_word(*bravo.stage);
-    return bravo.state == comms::BravoState::Live ? nullptr : stage_word(gnss::Stage::Blind);
-}
-
 void draw_units(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
     unit_row(canvas, kNearbyUnitY, "GO", snapshot.go.battery_percent, snapshot.go.charging,
              go_word(snapshot), snapshot.go.satellites, snapshot.go.traffic);
     const NearbyBravo& bravo = snapshot.bravo;
     if (bravo.state == comms::BravoState::Unpaired) return;
-    const bool heard = bravo.heard && bravo.state != comms::BravoState::LinkDown;
-    unit_row(canvas, kNearbyUnitY + kNearbyLineHeight, "B",
-             heard ? bravo.battery_percent : std::nullopt, heard && bravo.charging,
-             bravo_word(bravo), bravo.satellites, bravo.traffic);
+    unit_row(canvas, kNearbyUnitY + kNearbyLineHeight, "B", bravo.battery_percent, bravo.charging,
+             bravo_word(bravo.state), bravo.satellites, bravo.traffic);
 }
 
 void banner(ui::Canvas& canvas, int y, const char* text) {

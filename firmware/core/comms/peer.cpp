@@ -450,8 +450,10 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     const Result<bool> aircraft_address_set =
         reader.read_boolean(link::health_key::kAircraftAddressSet);
     const Result<bool> paired = reader.read_boolean(link::health_key::kPaired);
+    const Result<uint32_t> reference = reader.read_unsigned(link::health_key::kExportReference);
     if (!epoch.ok() || !listening.ok() || !utc_valid.ok() || !aircraft_address_set.ok() ||
-        !paired.ok())
+        !paired.ok() || !reference.ok() ||
+        reference.value() > static_cast<uint32_t>(ExportReference::Own))
         return Status::Invalid;
     PeerHealth health{};
     health.boot_epoch = epoch.value();
@@ -459,6 +461,7 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     health.utc_valid = utc_valid.value();
     health.aircraft_address_set = aircraft_address_set.value();
     health.paired = paired.value();
+    health.export_reference = static_cast<ExportReference>(reference.value());
     if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health) ||
         !read_bravo_gnss(reader, health) || !read_utc_source(reader, health) ||
         !read_bravo_position(reader, health))

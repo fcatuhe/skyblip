@@ -318,8 +318,7 @@ TEST_CASE("paired scenario: Bravo reads lost only where the link is lost, from b
             }
             lost = lost || comms::lost(paired.bravo());
             live = live || paired.bravo() == comms::BravoState::Live;
-            waiting_otherwise =
-                waiting_otherwise && (live || paired.bravo() == comms::BravoState::Waiting);
+            waiting_otherwise = waiting_otherwise && (live || comms::waiting(paired.bravo()));
             tone_before_fix = tone_before_fix ||
                               (!paired.go().own.fix_valid &&
                                paired.simulator.go().platform().annunciator().tone_commands() > 0);
@@ -335,7 +334,7 @@ TEST_CASE("paired scenario: Bravo reads lost only where the link is lost, from b
 TEST_CASE("paired scenario: the Go reads BRAVO on white until Bravo has UTC, then live") {
     Paired paired("scenarios/paired_quiet_sky.json");
     paired.run_until(500);
-    CHECK(paired.bravo() == comms::BravoState::Waiting);
+    CHECK(comms::waiting(paired.bravo()));
     CHECK_FALSE(paired.simulator.bravo().state().own.utc_valid);
     CHECK(paired.reads_waiting());
     paired.run_until(3000);

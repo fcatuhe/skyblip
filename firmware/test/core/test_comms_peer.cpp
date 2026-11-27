@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <utility>
 
 #include "core/comms/peer.h"
 #include "core/flight/state.h"
@@ -84,6 +85,31 @@ TEST_CASE("peer frames: a health frame says whether Bravo holds an aircraft addr
     CHECK(health.value().aircraft_address_set);
     CHECK(health.value().listening);
     CHECK(health.value().utc_valid);
+}
+
+// The Go tells a Bravo that exports from one with nothing to place its ADS-B on.
+TEST_CASE("peer frames: a health frame says what Bravo places its exports on, and needs it") {
+    const std::string head =
+        "{\"command\":\"health\",\"protocol_version\":2,\"boot_epoch\":9,\"listening\":true,"
+        "\"utc_valid\":true,\"aircraft_address_set\":true";
+    const std::string tail = "\"paired\":true,\"charging\":false,\"power_level\":\"normal\"}";
+    for (const auto& [name, reference] : {std::pair{"go", comms::ExportReference::Go},
+                                          std::pair{"own", comms::ExportReference::Own},
+                                          std::pair{"none", comms::ExportReference::None}}) {
+        CAPTURE(name);
+        const std::string frame =
+            complete_registry_frame(head + ",\"export_reference\":\"" + name + "\"," + tail);
+        const Result<comms::PeerHealth> health = comms::read_health(
+            ConstByteSpan(reinterpret_cast<const uint8_t*>(frame.data()), frame.size()));
+        REQUIRE(health.ok());
+        CHECK(health.value().export_reference == reference);
+    }
+    uint8_t bare[128];
+    const int bytes = simulator::link_text::frame_from_text((head + "," + tail).c_str(), bare,
+                                                            static_cast<int>(sizeof(bare)));
+    REQUIRE(bytes > 0);
+    CHECK(comms::read_health(ConstByteSpan(bare, static_cast<size_t>(bytes))).status() ==
+          Status::Invalid);
 }
 
 TEST_CASE("peer frames: an observation or a torn frame is no health") {

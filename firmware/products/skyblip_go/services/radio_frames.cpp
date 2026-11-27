@@ -71,12 +71,12 @@ bool RadioService::carries_position() const {
            (next_armed_ && next_dwell_.carries(Payload::Position));
 }
 
-// INFO: fc 13nov26 G.2.6 leaves an unknown capability unset: ADS-B counts while Bravo is live
+// INFO: fc 13nov26 G.2.6 leaves an unknown capability unset: ADS-B counts while Bravo relays
 adsl::StatusReport RadioService::status_report() const {
     adsl::StatusReport report{};
     report.m_band = adsl::receive_class(timing::Scheduler::direct_heard_permille());
     report.conspicuity_received = adsl::conspicuity::kFlarm;
-    if (context_.state.bravo == comms::BravoState::Live)
+    if (comms::relaying(context_.state.bravo))
         report.conspicuity_received |= adsl::conspicuity::kAdsb1090;
     // INFO: fc 19nov26 Bravo's service runs after this one, so an address changed this pass is
     // unconfirmed

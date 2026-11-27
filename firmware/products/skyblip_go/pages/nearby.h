@@ -25,10 +25,8 @@ struct NearbyGo {
 
 struct NearbyBravo {
     comms::BravoState state{comms::BravoState::Unpaired};
-    bool heard{false};
     std::optional<uint8_t> battery_percent{};
     bool charging{false};
-    std::optional<gnss::Stage> stage{};
     std::optional<uint8_t> satellites{};
     int traffic{0};
 };
