@@ -57,6 +57,8 @@ Flights evicts Diagnostics first, because a flight is what the device exists to 
 
 A ring's frontier is never handed out, because it is being written. Taking free sectors forward of the newest keeps a lone ring contiguous.
 
+The claim labels the sector before the service erases it and writes its header. If the part refuses either, the service calls `abandon(sector)`, which frees the label. Otherwise the session would count a sector with no header of its own, and a read would serve whatever that sector still holds. The next claim looks for a free sector forward of the abandoned one.
+
 ## The floor
 
 `kFlightsFloorHours` is 6: a capture never evicts the last six hours of flights. At 170 slots a sector and one record a second, a sector is 2 min 50 s, so six hours is 128 of 298 sectors, and `flights_floor_sectors()` does that sum. Twelve hours would leave a capture about 11 minutes. A flight's events ride in its sectors (`../flight/README.md`), so a busy sky shortens the six hours a little.

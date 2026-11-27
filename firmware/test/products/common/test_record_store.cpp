@@ -36,6 +36,34 @@ class BlindSectorFlash : public platform::host::FlashRegion {
     const uint32_t blind_;
 };
 
+// One sector of the partition refuses its next erase, or its next header write.
+class FaultySectorFlash : public platform::host::FlashRegion {
+   public:
+    FaultySectorFlash(uint32_t sectors, uint32_t faulty) : FlashRegion(sectors), faulty_(faulty) {}
+
+    Status erase_sector(uint32_t index) override {
+        if (index == faulty_ && refuse_erase) {
+            refuse_erase = false;
+            return Status::Down;
+        }
+        return FlashRegion::erase_sector(index);
+    }
+
+    Status write(uint32_t offset, const uint8_t* data, uint32_t bytes) override {
+        if (offset == faulty_ * kSectorBytes && refuse_header) {
+            refuse_header = false;
+            return Status::Down;
+        }
+        return FlashRegion::write(offset, data, bytes);
+    }
+
+    bool refuse_erase{false};
+    bool refuse_header{false};
+
+   private:
+    const uint32_t faulty_;
+};
+
 bool says(const std::string& reply, const char* key_value) {
     return reply.find(key_value) != std::string::npos;
 }
@@ -197,6 +225,29 @@ TEST_CASE("record store: a write the part refused is a fault the caller can retr
     CHECK(append_one(rig.capture) == common::Append::Fault);
     CHECK(rig.pool.faults() == faults + 1);
     CHECK(rig.capture.session_records() == 1);
+}
+
+// A claim the part refused once left its sector labeled for the session, read as a full sector.
+TEST_CASE("record store: a claim the part refused leaves no sector to the session") {
+    for (const bool header_refused : {false, true}) {
+        FaultySectorFlash flash{4, 0};
+        StoreRig rig{flash};
+        rig.open();
+        flash.refuse_erase = !header_refused;
+        flash.refuse_header = header_refused;
+
+        rig.capture.begin_session(kCaptureSession);
+        CHECK(append_one(rig.capture) == common::Append::Fault);
+        CHECK(rig.capture.sectors_owned() == 0);
+        CHECK(append_one(rig.capture) == common::Append::Ok);
+        rig.capture.end_session();
+        rig.capture.rebuild_index();
+
+        CHECK(rig.capture.sectors_owned() == 1);
+        const std::string listed = rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0);
+        CHECK(says(listed, "\"records\":1,"));
+        CHECK(says(listed, "\"truncated\":false"));
+    }
 }
 
 TEST_CASE("record store: a refused sector is not a fault, it is the end of the capture") {

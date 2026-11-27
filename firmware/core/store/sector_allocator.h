@@ -61,6 +61,7 @@ class SectorAllocator {
     uint32_t quarantined() const;
 
     Claim claim(SectorOwner owner, uint32_t session_id);
+    void abandon(uint32_t sector);
     Claim prepare(SectorOwner owner);
     void note_erased(SectorOwner owner);
 
