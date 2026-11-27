@@ -350,6 +350,7 @@ export class Updater {
     this.#set({ notice: null });
     const version = versionText(this.#version);
     if (this.#windowVersion === version) return this.#upload();
+    this.#windowVersion = null;
     return this.#ask('dfu', { version });
   }
 
