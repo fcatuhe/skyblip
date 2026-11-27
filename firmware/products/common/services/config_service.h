@@ -114,6 +114,7 @@ class ConfigService {
 
     void on_link_up(const events::LinkUp& event);
     void on_link_down(const events::LinkDown& event);
+    void release_departed_holder();
     void on_rx(const events::RxFrame& frame);
     bool from_live_connection(const events::RxFrame& frame) const {
         return channel_.from_live_connection(frame);
@@ -237,6 +238,8 @@ class ConfigService {
     void refuse(link::Reason reason) { acknowledge(false, reason); }
     void refuse_too_wide() { channel_.refuse_too_wide(); }
     bool prompt_refused();
+    void forget_peer(const events::Peer& peer);
+    void forget_holder();
     void stage(Pending pending, link::Reason reason);
     void send_config();
     void send_status();
@@ -320,6 +323,8 @@ class ConfigService {
     bool refused_on_device_{false};
     bool settings_dirty_{false};
     bool upload_window_open_{false};
+    // INFO: fc 26nov26 the channel holds one reply, so the deadline's answer waits until it is free
+    bool window_closed_owed_{false};
     // INFO: fc 13nov26 an image that lands in flight installs on the ground, since a swap goes dark
     bool install_held_{false};
     uint32_t upload_window_opened_ms_{0};

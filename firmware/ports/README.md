@@ -12,7 +12,7 @@ A port is something the core calls: arm this dwell, send these bytes, paint this
 
 `Link::send()` puts one frame on every subscribed central, because the traffic picture is everyone's, and answers `Unsubscribed` when the connected centrals all left the endpoint unsubscribed. So `payload_bytes()` with no session is the smallest of the connected centrals: a broadcast frame is formatted once and must fit the narrowest. `core/comms/README.md` has the rest.
 
-`Link` keeps one connection for a paired peer whether or not the peer is connected, so a Go never reserves what it cannot keep (#178). Bravo keeps it for its paired Go's address (#192), and `phones()` leaves that Go out so Bravo's lamp shows a phone and not its own Go.
+`Link` keeps one connection for a paired peer whether or not the peer is connected, so a Go never reserves what it cannot keep (#178). Bravo keeps it for its paired Go's address (#192), and `phones()` leaves that Go out so Bravo's lamp shows a phone and not its own Go. `centrals()` counts every connection, that Go included, and is what decides whether the link is up.
 
 `Central` is the Go's side of that connection. A scan takes a `ScanDuty` because how much of the radio it takes is the product's decision, and a name prefix so the platform drops other advertisers before they reach a queue. `Central` is not a field of `Roles` because only the Go uses it: the board hands `central()` to the product, or `NullCentral` without Bluetooth.
 

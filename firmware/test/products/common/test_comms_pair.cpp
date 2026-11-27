@@ -135,7 +135,7 @@ TEST_CASE("pair: a press refused, a take-off or thirty seconds start no pairing"
     Desk flying(common::PairingSide::Go);
     flying.pair(kBravoTag);
     flying.config.set_flight_state(flight::FlightState::Airborne);
-    CHECK(link_text(flying.link.last().bytes) == acknowledgement(false, "in_flight"));
+    CHECK(link_text(flying.link.last_to(1)) == acknowledgement(false, "in_flight"));
     CHECK(flying.config.pending() == common::Pending::None);
 
     Desk waiting(common::PairingSide::Go);
@@ -201,7 +201,7 @@ TEST_CASE("pair: the Go's verdict reaches the session that asked, and nobody onc
     CHECK(desk.link.sent.size() == before + 1);
 
     desk.pair(kBravoTag);
-    desk.config.on_link_down(events::LinkDown{1});
+    desk.config.on_link_down(events::LinkDown{1, kFirstConnection});
     desk.link.drop_link(1);
     const size_t dropped = desk.link.sent.size();
     desk.config.pairing_ended(link::Reason::NoAnswer);
