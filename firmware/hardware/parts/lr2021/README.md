@@ -70,7 +70,7 @@ At each snapshot the driver reads the count on both sides of the level. When the
 
 The law holds whether the part writes a frame byte by byte or whole at RxDone, and whatever left the stray bytes: a frame abandoned in a flood, an overflow missed, an underflow or a driver fault. It costs one register read a snapshot and, only when the excess is not zero, a 24 us wait. Recovery comes on the snapshot after the fault, not after a timer, and receive never stops to frame a healthy stream.
 
-On the SX1262 the Go reads ADS-L and FLARM with, the question never arises: each packet carries a sync word of 24 bits or more, and GetRxBufferStatus gives each packet's start and length. cb-tfc (`radio.cpp` `handle_es_rx`) and SoftRF frame the LR2021's FIFO by starting receive again after every frame, which loses the frames that land in the restart.
+On the SX1262 the Go reads ADS-L and FLARM with, the question never arises: each packet carries a sync word of 24 bits or more, and GetRxBufferStatus gives each packet's start and length. cb-tfc (`radio.cpp` `handle_es_rx`) starts receive again after every frame, which loses the frames that land in the restart. SoftRF (`radiolib.cpp` `lr20xx_receive`, `d091924e`) receives continuously, reads one packet per RxDone, and empties the FIFO only when 15 s pass without a frame, behind a 0x95 sync byte that keeps most noise out of the FIFO.
 
 ## The frame in the FIFO
 
