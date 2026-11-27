@@ -162,6 +162,8 @@ Aircraft fly together on purpose, and the device cannot see intent, so `formatio
 
 The station is where the target was first seen inside the band, not own-ship's position, so a glider on tow 60 m behind is not a wingman on arrival.
 
+Only a target inside the band takes one of the tracker's `kMaxTrackedTargets` places. A target outside it gives back the place it held, so the far traffic a paired Bravo hears never evicts a joining or parting member.
+
 Nothing is announced. The plot draws a square around own-ship with a count per quadrant instead of the members' own symbols, and the radar's traffic count leaves them out. `nearby` still lists them (`products/skyblip_go/pages/README.md`).
 
 **Closure takes the silence back.** A member closing at `kClosingMps` or more on `kClosingFixes` receptions in a row is graded like other traffic. 3 m/s is the smallest closure the wire can mean: ADS-L's 0.25 m/s and 512-step track quantisation make half a metre a second of phantom closure at 40 m/s (G.1.8, G.1.10). It is compared in millimetres a second, because the alarm's whole metres round 2.5 m/s up to 3. Two fixes, because two units in one car logged 3.1 m/s of closure on GNSS noise.

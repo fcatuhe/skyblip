@@ -1,6 +1,7 @@
 #include "products/skyblip_go/pages/self_test.h"
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 
 namespace skyblip::go {
@@ -11,16 +12,6 @@ constexpr int kLeft = kSelfTestLeftX;
 constexpr int kRight = kSelfTestRightX;
 using ui::kCellWidth;
 constexpr int kLineHeight = kSelfTestRowHeight;
-
-int length(const char* text) {
-    int count = 0;
-    while (text[count]) count++;
-    return count;
-}
-
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text) {
-    canvas.draw_text(x_end - length(text) * kCellWidth, y, text, true, 1);
-}
 
 const char* verdict(PartState state) {
     switch (state) {
@@ -49,8 +40,8 @@ const char* bravo_verdict(comms::BravoState state) {
 
 void named_row(ui::Canvas& canvas, int y, const char* name, const char* mark) {
     canvas.draw_text(kLeft, y, name, true, 1);
-    leaders(canvas, kLeft + (length(name) + 1) * kCellWidth,
-            kRight - (length(mark) + 1) * kCellWidth, y);
+    leaders(canvas, kLeft + (text_cells(name) + 1) * kCellWidth,
+            kRight - (text_cells(mark) + 1) * kCellWidth, y);
     right_aligned(canvas, kRight, y, mark);
 }
 
@@ -98,14 +89,14 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     for (int i = 0; i < rows; i++) {
         const SelfTestPart& part = snapshot.parts[i];
         const char* mark = part.no_tx ? kSelfTestNoTxVerdict : verdict(part.state);
-        int name_end = kLeft + (length(part.name) + 1) * kCellWidth;
+        int name_end = kLeft + (text_cells(part.name) + 1) * kCellWidth;
         canvas.draw_text(kLeft, y, part.name, true, 1);
         for (const char* said : {part.detail, part.now}) {
             if (!said) continue;
             canvas.draw_text(name_end, y, said, true, 1);
-            name_end += (length(said) + 1) * kCellWidth;
+            name_end += (text_cells(said) + 1) * kCellWidth;
         }
-        leaders(canvas, name_end, kRight - (length(mark) + 1) * kCellWidth, y);
+        leaders(canvas, name_end, kRight - (text_cells(mark) + 1) * kCellWidth, y);
         right_aligned(canvas, kRight, y, mark);
         y += kLineHeight;
     }
@@ -115,7 +106,7 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         written = format_string(bus, "I2C");
         for (int i = 0; i < snapshot.i2c_address_count; i++) {
             const char* role = snapshot.i2c_roles ? snapshot.i2c_roles[i] : nullptr;
-            if (written + 1 + (role ? length(role) : 2) > kSelfTestRowCells) break;
+            if (written + 1 + (role ? text_cells(role) : 2) > kSelfTestRowCells) break;
             written += format_string(bus + written, " ");
             written += role ? format_string(bus + written, role)
                             : format_hex(bus + written, snapshot.i2c_addresses[i], 2);
@@ -154,7 +145,7 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     canvas.draw_text(kLeft, y, text, true, 1);
 
     const char* status = snapshot.flyable ? "PASS" : "FAIL";
-    const int width = (length(status) + 2) * kCellWidth;
+    const int width = (text_cells(status) + 2) * kCellWidth;
     canvas.rectangle(kRight - width, y - kSelfTestVerdictRise, width, kSelfTestVerdictHeight, true,
                      /*fill=*/true);
     canvas.draw_text(kRight - width + kCellWidth, y, status, false, 1);

@@ -250,6 +250,7 @@
         return this.reply({ command: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
       }
       if (command === 'register') {
+        if (this.mtu - 3 < 146) return this.acknowledge(false, 'small_mtu');
         if (!(await this.verifies(fields.signature, join(label('register'), bytes(this.nonce), fields.server_nonce)))) return this.acknowledge(false, 'bad_signature');
         this.serverNonce = hex(fields.server_nonce);
         return this.ask('register', 'confirm_register');

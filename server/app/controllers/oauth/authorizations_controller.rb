@@ -13,7 +13,7 @@ class OAuth::AuthorizationsController < Admin::ApplicationController
     if authorization.refusal
       redirect_to authorization.refused_url, allow_other_host: true
     else
-      redirect_to authorization.approved_url(Current.user), allow_other_host: true
+      redirect_to authorization.approved_url(Current.session), allow_other_host: true
     end
   end
 

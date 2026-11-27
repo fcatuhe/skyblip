@@ -3101,6 +3101,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "unknown_protocol",
           "code": 62
+        },
+        {
+          "name": "window_closed",
+          "code": 63
         }
       ]
     },
