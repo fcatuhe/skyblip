@@ -52,8 +52,8 @@ module BriefingTestHelper
     end
 
     # INFO: fc 17nov26 the newest images GitHub held when the cassette was recorded, the .uf2 a USB install writes among them
-    def with_installers
-      VCR.use_cassette("github/installers", allow_playback_repeats: true) do
+    def with_installers(cassette = "github/installers")
+      VCR.use_cassette(cassette, allow_playback_repeats: true) do
         yield
         assert_no_selector "html[aria-busy], turbo-frame#installers:not([complete])", visible: :all
         assert_no_selector "turbo-frame#firmware_shelf:not([complete])", visible: :all

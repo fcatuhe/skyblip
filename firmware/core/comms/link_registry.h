@@ -116,6 +116,7 @@ enum class Reason : uint8_t {
     NoAnswer = 60,
     LinkLost = 61,
     UnknownProtocol = 62,
+    WindowClosed = 63,
 };
 
 namespace acknowledgement_key {

@@ -3,7 +3,7 @@
     <%= link_to_page "index", label: render("layouts/wordmark", css: "wordmark-nav"), class: "site-nav-brand" %>
     <%= render "layouts/nav_links" %>
     <div class="site-nav-actions">
-      <%= render "layouts/locale_switcher" %>
+      <%= render "shared/locale_switcher" %>
       <%= link_to t("briefing.title"), briefing_root_path, class: "site-nav-manage" %>
       <% if Current.user&.admin? %>
         <%= link_to "Admin", analytics_default_path, class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("admin/")) %>

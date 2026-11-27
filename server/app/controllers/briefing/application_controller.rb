@@ -4,6 +4,8 @@ class Briefing::ApplicationController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "briefing" }
 
   private
+    def preferences = Briefing::Preferences.new(development_builds: cookies.fetch(:development_builds, false))
+
     def requested_locale = embedding_locale || chosen_locale || browser_locale || I18n.default_locale
 
     def embedding_locale = params[:locale].presence_in(Briefing::Preferences.locales)

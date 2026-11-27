@@ -34,7 +34,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/blog</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/adsl-only</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/blog/cable-mode</loc>
@@ -47,6 +51,10 @@
   <url>
     <loc>https://skyblip.eu/blog/gps-to-tablet</loc>
     <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/blog/mit-license</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/blog/network-or-radio</loc>
@@ -110,11 +118,15 @@
   </url>
   <url>
     <loc>https://skyblip.eu/de/blog</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/blog/eigenes-flugzeug</loc>
     <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/flarm-und-ads-l</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/blog/gps-auf-dem-tablet</loc>
@@ -123,6 +135,10 @@
   <url>
     <loc>https://skyblip.eu/de/blog/kabelmodus</loc>
     <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/de/blog/mit-und-codepruefung</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/de/blog/netz-oder-funk</loc>
@@ -258,7 +274,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/es/blog</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/blog/bolsillo-o-instalado</loc>
@@ -271,6 +287,10 @@
   <url>
     <loc>https://skyblip.eu/es/blog/gps-en-tu-tableta</loc>
     <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/licencia-mit</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/blog/modo-cable</loc>
@@ -291,6 +311,10 @@
   <url>
     <loc>https://skyblip.eu/es/blog/skyblip-softrf-stratux</loc>
     <lastmod>2026-11-26</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/es/blog/solo-ads-l</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/es/blog/tu-propia-aeronave</loc>
@@ -402,7 +426,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/blog</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/flarm-et-ads-l</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/blog/flotte-de-club</loc>
@@ -411,6 +439,10 @@
   <url>
     <loc>https://skyblip.eu/fr/blog/gps-sur-votre-tablette</loc>
     <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/blog/licence-mit-et-revue-du-code</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/blog/mode-cable</loc>
@@ -566,11 +598,15 @@
   </url>
   <url>
     <loc>https://skyblip.eu/it/blog</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/blog/chi-vede-ads-l</loc>
     <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/flarm-e-ads-l</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/blog/flotta-del-club</loc>
@@ -583,6 +619,10 @@
   <url>
     <loc>https://skyblip.eu/it/blog/il-tuo-aereo</loc>
     <lastmod>2026-11-25</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/it/blog/licenza-mit</loc>
+    <lastmod>2026-11-27</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/it/blog/modalita-cavo</loc>
@@ -722,7 +762,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/roadmap</loc>
-    <lastmod>2026-11-18</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/see-and-avoid</loc>
