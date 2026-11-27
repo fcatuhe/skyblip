@@ -178,7 +178,7 @@ TEST_CASE(
     models::Lr2021 clockless;
     clockless.calibration_errors = chip::kErrorHfXoscStart;
     Lr2021 radio = lr2021_for(clockless);
-    REQUIRE(radio.begin(chip::kDetectionThresholdDbm) == Status::Down);
+    REQUIRE(radio.begin() == Status::Down);
     radio.park();
     CHECK(clockless.mode == models::Lr2021::Mode::Sleep);
     CHECK_FALSE(clockless.in_reset);
@@ -186,7 +186,7 @@ TEST_CASE(
     models::Lr2021 stuck;
     stuck.busy_stuck = true;
     Lr2021 silent = lr2021_for(stuck);
-    REQUIRE(silent.begin(chip::kDetectionThresholdDbm) == Status::Timeout);
+    REQUIRE(silent.begin() == Status::Timeout);
     silent.park();
     CHECK(stuck.in_reset);
     CHECK_FALSE(stuck.listening_for_adsb());

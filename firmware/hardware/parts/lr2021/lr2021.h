@@ -34,7 +34,7 @@ class Lr2021 {
           irq_dio_(irq_dio) {}
 
     Status probe();
-    Status begin(int16_t detection_threshold_dbm);
+    Status begin();
     Status start_receive();
     Lr2021Event poll(uint8_t* frames, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
@@ -81,7 +81,6 @@ class Lr2021 {
     Status read_packets(uint16_t& packets);
     Status check_framing(uint16_t whole, uint16_t level);
     Status resync_framing(uint16_t whole);
-    Status write_threshold();
     Status write_mask(uint32_t address, uint32_t mask, uint32_t data);
     void note_status(const uint8_t* status);
     Status read_errors();
@@ -95,7 +94,6 @@ class Lr2021 {
     int busy_pin_, reset_pin_, irq_pin_;
     uint8_t irq_dio_;
     Lr2021Mode mode_{Lr2021Mode::Reset};
-    int16_t detection_threshold_dbm_{0};
     uint16_t last_opcode_{0};
     uint8_t last_status_[2]{};
     uint8_t frames_waiting_{0};
@@ -247,8 +245,6 @@ constexpr int16_t kOokThresholdOffsetDb = 74;
 // INFO: fc 26nov26 -110 dBm writes -36 into the 7-bit field, so it reads back two's complement
 constexpr uint32_t kOokThresholdSignBit = 0x40;
 constexpr int16_t kOokThresholdSpan = 0x80;
-// INFO: fc 17nov26 #293 decoded the most positions at -110 dBm, and -114 dBm let noise through
-constexpr int16_t kDetectionThresholdDbm = -110;
 // INFO: fc 17nov26 #293: 0x18, SoftRF's, decoded more than 0x75, the part's own, which blanks a
 // saturated ADC
 constexpr uint32_t kOokQuirkRegister = 0xF30150;

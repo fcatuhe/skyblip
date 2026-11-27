@@ -37,18 +37,13 @@ class AdsbReceiver : public ports::AdsbReceiver {
     static constexpr uint64_t kProbePeriodUs = 1000000;
 
     AdsbReceiver(parts::Lr2021& radio, ports::Clock& clock, const struct gpio_dt_spec& irq,
-                 bus::AdsbQueue& out,
-                 int16_t detection_threshold_dbm = parts::lr2021::kDetectionThresholdDbm)
-        : radio_(radio),
-          clock_(clock),
-          irq_(irq),
-          out_(out),
-          detection_threshold_dbm_(detection_threshold_dbm) {
+                 bus::AdsbQueue& out)
+        : radio_(radio), clock_(clock), irq_(irq), out_(out) {
         k_sem_init(&wake_, 0, 1);
     }
 
     Status begin() override {
-        Status status = radio_.begin(detection_threshold_dbm_);
+        Status status = radio_.begin();
         if (status == Status::Ok) status = radio_.start_receive();
         // INFO: fc 11nov26 no thread will ever park a part that failed here, so it is parked now
         if (status != Status::Ok) {
@@ -216,7 +211,6 @@ class AdsbReceiver : public ports::AdsbReceiver {
     ports::Clock& clock_;
     struct gpio_dt_spec irq_;
     bus::AdsbQueue& out_;
-    int16_t detection_threshold_dbm_;
     ports::AdsbReceiverStatistics statistics_{};
     ports::ReceiverProbe probe_{};
     uint64_t health_checked_us_{0};

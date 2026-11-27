@@ -39,7 +39,7 @@ FIFO_FRAMES = 18
 QUEUE_FRAMES = 64
 PEAK_MARGIN_FRAMES = 2
 MAX_STEP_S = 5
-DETECTION_THRESHOLD_DBM = -110
+DETECTION_THRESHOLD_DBM = -106
 NOISE_RISE_DB = 6
 FLOOD_FACTOR = 3
 LOOP_STALL_US = 100_000
@@ -299,7 +299,7 @@ def verdicts(run, floor, usual):
                          if receiver.get("threshold_dbm", DETECTION_THRESHOLD_DBM)
                          != DETECTION_THRESHOLD_DBM})
     if thresholds or any(not receiver.get("front_end_kept") for receiver in probed):
-        found.append("the LR2021 lost what the driver wrote: threshold %s dBm, 0xF30150 %s"
+        found.append("the LR2021 lost its 1090 MHz setup: threshold %s dBm, 0xF30150 %s"
                      % (",".join(str(value) for value in thresholds) or "kept",
                         "lost" if any(not receiver.get("front_end_kept") for receiver in probed)
                         else "kept"))

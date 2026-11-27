@@ -11,7 +11,7 @@ The Semtech LR2021 on skyBlip Bravo, a Seeed SenseCAP MeshTracker X1, receiving 
 | SoftRF, commit `d091924`, `driver/radio/radiolib.cpp:2232-2359` and `platform/iomap/Seeed_X1.h` (GPL-3.0) | the 1090 MHz modem values, the register write at 0xF30150, the X1's TCXO voltage, its DIO8 IRQ and its pins | read for facts, no code copied |
 | Semtech USP, commit `db5bbb0`, `lr20xx_driver/src/lr20xx_workarounds.c`, `lr20xx_system.c` and `lr20xx_radio_common.c` | the OOK threshold field, the SetSleep and CalibFE layouts | facts, no code copied |
 
-SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and `b087af9` differ, the driver sends the bytes SoftRF put on the wire. It departs from SoftRF in three places, on the evidence of the reception trial of #293 on Bravo D582: the part's Manchester decoding of 14-byte frames, cb-tfc's layout ([perryc/cb-tfc](https://github.com/perryc/cb-tfc)), a threshold of -110 dBm, and the threshold written after the frequency. It departs in a fourth on ADSBee 1421's evidence, which runs the same part for Mode S: a fixed gain instead of the AGC (The gain, below).
+SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and `b087af9` differ, the driver sends the bytes SoftRF put on the wire. It departs from SoftRF on the evidence of the reception trial of #293 and the captures of #550 on Bravo D582: the part's Manchester decoding of 14-byte frames, cb-tfc's layout ([perryc/cb-tfc](https://github.com/perryc/cb-tfc)), and the part's own detection threshold, where SoftRF writes one. It departs in a fourth on ADSBee 1421's evidence, which runs the same part for Mode S: a fixed gain instead of the AGC (The gain, below).
 
 ## What the driver sends
 
@@ -36,7 +36,6 @@ SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and
 | SetOokSyncword | none, 0 bits, MSB first | cb-tfc's `setSyncWord(NULL, 0)`, DS 16.3.4 |
 | SetOokDetector | pattern 0x0285, 16 chips, no repeat, falling edge, no SFD | SoftRF `:2338`, DS 16.3.8 |
 | SetAgcGainManual | 13, the highest fixed gain | ADSBee 1421 `lr2021_ook_adsb.hh` `kModeSGainStep`, DS 7.3.9 |
-| WriteRegMemMask32 | 0xF30E14, mask 0x07F00000, the threshold | SoftRF `:2350`, `lr20xx_workarounds.c` for the register and field, DS 22.1 for the order |
 | WriteRegMemMask32 | 0xF30150, mask 0x000000FF, data 0x18 | SoftRF `:2359`. #293 measured it against 0x75, the part's own |
 | GetErrors | | DS 6.7.4 |
 | GetStatus | | DS 6.7.1: clears the reset source the NRESET pulse left, so a later one is a reset the driver never asked for |
@@ -146,11 +145,9 @@ GetErrors is read at the end of the bring-up. HF_XOSC_START_ERR (the TCXO never 
 
 DS 22.1 says a host may override the OOK threshold the part computes from the bandwidth, after SetOokModulationParams, and names no register or formula. Semtech's driver writes the threshold in dB plus 74 into bits 26:20 of register 0xF30E14 (`lr20xx_workarounds_ook_set_detection_threshold_level`), with -106 dBm as the default at 3076 kHz. RadioLib writes the threshold plus 64, so by Semtech's formula cb-tfc's +40 is -98 dBm and SoftRF's -80 is -90.
 
-`lr2021::kDetectionThresholdDbm` is -110, the pick of #293's trial. Against -106 dBm it decoded 58 more positions a minute (95% interval +6 to +110) and 8 more aircraft a minute. -114 dBm decoded no more positions and refused 56% of its frames.
+The driver writes no threshold, so the part keeps its own, -106 dBm by Semtech's figure. #293 had picked -110 dBm: against -106 it decoded 58 more positions a minute (95% interval +6 to +110), when every frame cost the receiver thread about 500 us and a queue slot. #550 made a frame cost about 25 us and screened junk out before the queue, and session 36 on bravo-d582 then cycled the two each minute: -106 gave +1.05 ± 0.87 squitters and +1.27 ± 0.80 positions a second over 12 paired cycles, and cut indoor detections from 106 to 19 a second. Outdoors the flood barely moved, since it is strong pulses. So the override went, and with it the question of which command resets it.
 
-Write the threshold after SetRfFrequency, as RadioLib's `beginOOK()` and cb-tfc do. Written before SetRxPath, CalibFE and SetRfFrequency, it behaved in #293 like the part's own threshold, so one of those commands most likely resets it. Which one is not known.
-
-The probe reads the register back, so a capture shows the threshold the part holds. Across the overflow restarts of the bravo-d582 floods the register kept -110 dBm, so SetRxPath alone does not reset it. Why it stays fixed is in `../../../products/skyblip_bravo/README.md`, The detection threshold.
+The probe reads the register back, so a capture shows the threshold the part holds. A value other than the part's own after a bring-up means its setup was lost.
 
 ## Unverified until #169 benches a unit
 

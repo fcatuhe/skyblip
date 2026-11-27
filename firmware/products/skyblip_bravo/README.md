@@ -27,7 +27,7 @@ A pass decodes at most `kFramesPerPassCeiling` frames, `events::kAdsbLoadFrames`
 
 ## The detection threshold
 
-1090ES has only a four-pulse preamble and no sync word, so the LR2021's detector fires on every pulse train that fits the preamble: Mode A/C replies, aircraft DME, other pulsed signals in the band, and noise. The detection threshold stays at `parts::lr2021::kDetectionThresholdDbm`, -110 dBm, #293's measured best, and Bravo makes each false alarm cheap instead of trying to keep it out.
+1090ES has only a four-pulse preamble and no sync word, so the LR2021's detector fires on every pulse train that fits the preamble: Mode A/C replies, aircraft DME, other pulsed signals in the band, and noise. The detection threshold is the LR2021's own, -106 dBm, and Bravo makes each false alarm cheap instead of trying to keep it out. Once a junk frame cost the receiver thread about 25 us, -106 decoded as many squitters as #293's -110 dBm, or more, and five times fewer junk frames indoors (`../../hardware/parts/lr2021/README.md`, The detection threshold).
 
 The bravo-d582 captures of #550 settle it. Outdoors the quietest noise readings barely moved (-101 against -102 dBm indoors) while the loudest rose from -95 to -77 dBm: the flood was strong pulses, not a raised floor. A regulator that raised the threshold to -92 dBm left 40 to 150 junk frames a second and decoded about one position every two seconds, because the real aircraft there arrived weaker than -92 dBm, while at -109 to -103 dBm the same flood still gave 2 to 9 positions a second. ADSBee 1090 found the same (`PantsForBirds/adsbee` #356): a trigger set high loses valid frames, and the best one sits near the floor.
 

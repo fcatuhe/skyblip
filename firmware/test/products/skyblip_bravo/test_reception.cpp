@@ -91,7 +91,7 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
     CHECK(receiver.probed);
     CHECK(receiver.part_mode == ports::ReceiverMode::Receive);
     CHECK(receiver.part_reset == ports::ReceiverReset::None);
-    CHECK(receiver.threshold_dbm == parts::lr2021::kDetectionThresholdDbm);
+    CHECK(receiver.threshold_dbm == models::Lr2021::kDefaultThresholdDbm);
     CHECK(receiver.front_end_kept);
     CHECK(receiver.noise_dbm == -120);
     CHECK(receiver.gain_step == parts::lr2021::kGainStep);
@@ -128,7 +128,7 @@ TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded, and reception
         if (receiver.part_reset != ports::ReceiverReset::PowerOn) continue;
         reported = true;
         CHECK(receiver.part_mode == ports::ReceiverMode::StandbyRc);
-        CHECK(receiver.threshold_dbm != parts::lr2021::kDetectionThresholdDbm);
+        CHECK(receiver.threshold_dbm != models::Lr2021::kDefaultThresholdDbm);
         CHECK_FALSE(receiver.front_end_kept);
         CHECK(receiver.listening);
     }
@@ -140,7 +140,7 @@ TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded, and reception
     CHECK(last.resets == 1);
     CHECK(last.part_reset == ports::ReceiverReset::None);
     CHECK(last.part_mode == ports::ReceiverMode::Receive);
-    CHECK(last.threshold_dbm == parts::lr2021::kDetectionThresholdDbm);
+    CHECK(last.threshold_dbm == models::Lr2021::kDefaultThresholdDbm);
     CHECK(last.front_end_kept);
     CHECK(last.frames == 4);
 }

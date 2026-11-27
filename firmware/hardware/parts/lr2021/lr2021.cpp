@@ -71,8 +71,7 @@ Status Lr2021::probe() {
     return verify_version();
 }
 
-Status Lr2021::begin(int16_t detection_threshold_dbm) {
-    detection_threshold_dbm_ = detection_threshold_dbm;
+Status Lr2021::begin() {
     reset_owed_ = false;
     const Status status = bring_up();
     if (status != Status::Ok) mode_ = Lr2021Mode::Reset;
@@ -347,8 +346,6 @@ Status Lr2021::bring_up() {
     if (status == Status::Ok) status = command(lr2021::kSetRxPath, path, sizeof(path));
     if (status == Status::Ok) status = command(lr2021::kCalibFe, calibration, sizeof(calibration));
     if (status == Status::Ok) status = command(lr2021::kSetRfFrequency, frequency, 4);
-    // INFO: fc 17nov26 #293: written before CalibFE and SetRfFrequency, the threshold acted near
-    // -106 dBm, not the -90 it asked
     if (status == Status::Ok) status = configure_ook();
     if (status == Status::Ok) status = read_errors();
     if (status != Status::Ok) return status;
@@ -359,8 +356,7 @@ Status Lr2021::bring_up() {
     return Status::Ok;
 }
 
-// INFO: fc 11nov26 DS 22.1: the threshold override goes after SetOokModulationParams, which
-// recomputes it
+// INFO: fc 27nov26 DS 22.1: SetOokModulationParams sets the part's own threshold, which #550 keeps
 Status Lr2021::configure_ook() {
     uint8_t modulation[7] = {};
     put_be32(modulation, lr2021::kBitrateBps);
@@ -386,7 +382,6 @@ Status Lr2021::configure_ook() {
     if (status == Status::Ok) status = command(lr2021::kSetOokSyncword, syncword, sizeof(syncword));
     if (status == Status::Ok) status = command(lr2021::kSetOokDetector, detector, sizeof(detector));
     if (status == Status::Ok) status = command(lr2021::kSetAgcGainManual, &gain, 1);
-    if (status == Status::Ok) status = write_threshold();
     if (status == Status::Ok)
         status =
             write_mask(lr2021::kOokQuirkRegister, lr2021::kOokQuirkMask, lr2021::kOokQuirkData);
@@ -411,7 +406,7 @@ Status Lr2021::restart_receive() {
 
 Status Lr2021::reinitialise() {
     resets_++;
-    Status status = begin(detection_threshold_dbm_);
+    Status status = begin();
     if (status == Status::Ok) status = start_receive();
     reset_owed_ = status != Status::Ok;
     return status;
@@ -486,14 +481,6 @@ Status Lr2021::read_packets(uint16_t& packets) {
     const Status status = read(lr2021::kGetOokRxStats, stats, sizeof(stats));
     if (status == Status::Ok) packets = be16(stats);
     return status;
-}
-
-Status Lr2021::write_threshold() {
-    const uint32_t threshold =
-        (static_cast<uint32_t>(detection_threshold_dbm_ + lr2021::kOokThresholdOffsetDb)
-         << lr2021::kOokThresholdShift) &
-        lr2021::kOokThresholdMask;
-    return write_mask(lr2021::kOokThresholdRegister, lr2021::kOokThresholdMask, threshold);
 }
 
 // INFO: fc 26nov26 DS 6.7.1: GetStatus clears the reset source every later status reports

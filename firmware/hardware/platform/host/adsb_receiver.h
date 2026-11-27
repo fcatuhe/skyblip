@@ -20,7 +20,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
-        Status status = radio_.begin(parts::lr2021::kDetectionThresholdDbm);
+        Status status = radio_.begin();
         if (status == Status::Ok) status = radio_.start_receive();
         if (status != Status::Ok) {
             radio_.park();

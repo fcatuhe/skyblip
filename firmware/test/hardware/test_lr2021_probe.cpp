@@ -27,7 +27,7 @@ void hear_one(models::Lr2021& part, Lr2021& radio) {
 TEST_CASE("lr2021: bring-up clears the reset source its own NRESET pulse left in the status") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_for(part);
-    REQUIRE(radio.begin(chip::kDetectionThresholdDbm) == Status::Ok);
+    REQUIRE(radio.begin() == Status::Ok);
     CHECK(part.reset_source() == 0);
     CHECK(part.last_order(chip::kGetErrors) < part.last_order(chip::kGetStatus));
 }
@@ -48,7 +48,7 @@ TEST_CASE("lr2021: a probe reads the mode, the noise, the part's own count and t
     CHECK(probe.errors == 0);
     // 203 half-dB steps is -101.5 dBm, read in whole dB toward zero.
     CHECK(probe.noise_dbm == -101);
-    CHECK(probe.threshold_dbm == chip::kDetectionThresholdDbm);
+    CHECK(probe.threshold_dbm == models::Lr2021::kDefaultThresholdDbm);
     CHECK(probe.front_end_kept);
     CHECK(radio.part_resets() == 0);
     CHECK(radio.mode() == parts::Lr2021Mode::Receive);
@@ -63,7 +63,7 @@ TEST_CASE("lr2021: a brown-out is reported once, with the mode and settings the 
     REQUIRE(radio.sample(probe) == Status::Ok);
     CHECK(probe.reset == ports::ReceiverReset::PowerOn);
     CHECK(probe.mode == ports::ReceiverMode::StandbyRc);
-    CHECK(probe.threshold_dbm != chip::kDetectionThresholdDbm);
+    CHECK(probe.threshold_dbm != models::Lr2021::kDefaultThresholdDbm);
     CHECK_FALSE(probe.front_end_kept);
     CHECK(radio.part_resets() == 1);
     CHECK(radio.mode() == parts::Lr2021Mode::Receive);
@@ -91,7 +91,7 @@ TEST_CASE("lr2021: a part the probe found reset is brought up again at the next 
 
     REQUIRE(radio.sample(probe) == Status::Ok);
     CHECK(probe.reset == ports::ReceiverReset::None);
-    CHECK(probe.threshold_dbm == chip::kDetectionThresholdDbm);
+    CHECK(probe.threshold_dbm == models::Lr2021::kDefaultThresholdDbm);
     CHECK(probe.front_end_kept);
     CHECK(radio.part_resets() == 1);
 }

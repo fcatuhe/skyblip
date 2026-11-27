@@ -30,6 +30,8 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     static constexpr uint8_t kFifoFull = 0x08;
     static constexpr uint8_t kFifoOverflow = 0x10;
     static constexpr uint32_t kSleepableHoldUs = 1000;
+    // INFO: fc 27nov26 Semtech's lr20xx_workarounds.c: the part's own OOK threshold at 3076 kHz
+    static constexpr int16_t kDefaultThresholdDbm = -106;
 
     void set(int pin, bool level) override {
         if (pin != reset_pin) return;
@@ -415,6 +417,13 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                 pulse_shape = args[4];
                 rx_bandwidth = args[5];
                 depth = args[6];
+                registers[parts::lr2021::kOokThresholdRegister] =
+                    (reg(parts::lr2021::kOokThresholdRegister) &
+                     ~parts::lr2021::kOokThresholdMask) |
+                    ((static_cast<uint32_t>(kDefaultThresholdDbm +
+                                            parts::lr2021::kOokThresholdOffsetDb)
+                      << parts::lr2021::kOokThresholdShift) &
+                     parts::lr2021::kOokThresholdMask);
                 break;
             case chip::kSetOokPacketParams:
                 if (packet_type != chip::kPacketTypeOok) {

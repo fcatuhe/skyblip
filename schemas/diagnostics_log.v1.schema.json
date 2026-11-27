@@ -367,7 +367,7 @@
     "missed_edges": {"type": "integer", "minimum": 0, "maximum": 255,
                      "description": "receiver. Wakes of the receiver thread that found frames with no IRQ edge to wake it, since boot, the low 8 bits, payload byte 11. Readers subtract. Each one held frames up to a 250 ms health tick. Always 0 on the host"},
     "threshold_dbm": {"type": "integer", "minimum": -128, "maximum": 127,
-                      "description": "receiver. The OOK detection threshold read back from the LR2021's register 0xF30E14, dBm, payload byte 13. The driver writes -110: any other value means the part lost or replaced it. Absent unless probed"},
+                      "description": "receiver. The OOK detection threshold read back from the LR2021's register 0xF30E14, dBm, payload byte 13. The driver writes none, so the part holds its own, -106 dBm at 3076 kHz: any other value means the part lost its setup. Absent unless probed"},
     "part_mode": {"type": "string",
                   "enum": ["sleep", "standby_rc", "standby_xosc", "synthesis", "receive", "transmit", "unknown"],
                   "description": "receiver. The chip mode the LR2021's own status word gives, payload byte 14. Anything but receive while listening is true is a part that left receive behind the driver's back. Codes: 0 sleep, 1 standby_rc, 2 standby_xosc, 3 synthesis, 4 receive, 5 transmit, 6 unknown. Absent unless probed"},

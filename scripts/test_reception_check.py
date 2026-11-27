@@ -18,7 +18,7 @@ class Sky:
         self.at_s = START_S
         self.totals = dict.fromkeys(check.WIDE_COUNTERS + check.NARROW_COUNTERS, 0)
         self.receiver = {"listening": True, "irq_armed": True, "probed": True,
-                         "noise_dbm": -118, "threshold_dbm": -110, "part_mode": "receive",
+                         "noise_dbm": -118, "threshold_dbm": -106, "part_mode": "receive",
                          "part_reset": "none", "front_end_kept": True, "gain_step": 13}
         self.reception = {"aircraft": 3, "tracked": 3, "reference": "own", "fix_valid": True}
         self.loop = {"passes": 104, "worst_pass_us": 8000, "worst_service": "adsb"}
@@ -189,14 +189,14 @@ class Outages(unittest.TestCase):
         sky.seconds(15, framing_resyncs=1, frames=60, part_packets=60, unsupported=50)
         report = sky.report()
         self.assertIn("the receive FIFO lost its framing and was emptied 15 times", report)
-        self.assertNotIn("lost what the driver wrote", report)
+        self.assertNotIn("lost its 1090 MHz setup", report)
 
-    def test_a_threshold_other_than_the_drivers_is_one_the_part_lost(self):
+    def test_a_threshold_other_than_the_parts_own_is_a_lost_setup(self):
         sky = Sky()
         sky.seconds(20, **HEARING)
         sky.receiver["threshold_dbm"] = -104
         sky.seconds(15, frames=60, part_packets=60, unsupported=50)
-        self.assertIn("the LR2021 lost what the driver wrote: threshold -104 dBm", sky.report())
+        self.assertIn("the LR2021 lost its 1090 MHz setup: threshold -104 dBm", sky.report())
 
     def test_lost_frames_are_split_by_where_and_a_receiver_thread_hogging_the_cpu_is_named(self):
         sky = Sky()
