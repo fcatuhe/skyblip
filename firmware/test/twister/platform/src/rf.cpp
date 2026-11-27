@@ -13,14 +13,15 @@ namespace {
 
 class PendingSx1262 : public models::Sx1262 {
    public:
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
-        models::Sx1262::transfer(tx, rx, bytes);
+    bool transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+        const bool moved = models::Sx1262::transfer(tx, rx, bytes);
         if (!pend_on_stage_ || commands_seen.empty() ||
             commands_seen.back() != parts::sx1262::kWriteBuffer)
-            return;
+            return moved;
         pend_on_stage_ = false;
         k_sem_give(&staging_);
         (void)k_sem_take(&resume_, K_FOREVER);
+        return moved;
     }
 
     void pend_on_next_stage() {

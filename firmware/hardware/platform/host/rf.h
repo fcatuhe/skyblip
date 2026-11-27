@@ -285,17 +285,21 @@ class Rf : public ports::Rf {
     }
 
     // INFO: fc 15sep26 virtual time stands still in a pass, so the run of reads is the window
-    int8_t sample_carrier() {
-        if (radio_.mode() != parts::RadioMode::Rx) return carrier_.level_dbm;
-        carrier_.level_dbm = read_level();
+    void sample_carrier() {
+        if (radio_.mode() != parts::RadioMode::Rx) return;
+        const Result<int8_t> level = read_level();
+        if (!level.ok()) return;
+        carrier_.level_dbm = level.value();
         carrier_.samples++;
-        return carrier_.level_dbm;
     }
 
-    int8_t read_level() {
+    Result<int8_t> read_level() {
         int8_t window[timing::ChannelLevel::kSamples];
-        for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++)
-            window[i] = radio_.instant_rssi_dbm();
+        for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++) {
+            const Result<int8_t> sample = radio_.instant_rssi_dbm();
+            if (!sample.ok()) return sample.status();
+            window[i] = sample.value();
+        }
         return timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
     }
 

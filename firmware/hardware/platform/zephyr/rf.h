@@ -241,22 +241,25 @@ class Rf : public ports::Rf {
         return config;
     }
 
-    int8_t sample_carrier() {
-        if (radio_.mode() != parts::RadioMode::Rx) return carrier_.level_dbm;
-        carrier_.level_dbm = read_level();
+    void sample_carrier() {
+        if (radio_.mode() != parts::RadioMode::Rx) return;
+        const Result<int8_t> level = read_level();
+        if (!level.ok()) return;
+        carrier_.level_dbm = level.value();
         carrier_.samples++;
-        return carrier_.level_dbm;
     }
 
     // INFO: fc 15sep26 the last read is kWindowUs after the first whatever a read costs on the bus
-    int8_t read_level() {
+    Result<int8_t> read_level() {
         int8_t window[timing::ChannelLevel::kSamples];
         const uint64_t opened_us = clock_.microseconds();
         for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++) {
             const uint64_t due_us =
                 opened_us + static_cast<uint64_t>(i) * timing::ChannelLevel::kSampleSpacingUs;
             while (clock_.microseconds() < due_us) k_busy_wait(1);
-            window[i] = radio_.instant_rssi_dbm();
+            const Result<int8_t> sample = radio_.instant_rssi_dbm();
+            if (!sample.ok()) return sample.status();
+            window[i] = sample.value();
         }
         return timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
     }
