@@ -1,5 +1,6 @@
 // The EFB's own-ship sentences at 2 Hz: the whole second they report, and its withdrawal.
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -108,4 +109,32 @@ TEST_CASE("nmea: a run of lost whole seconds keeps the tablet's passes a second 
         CHECK(heartbeats_ms[i] - heartbeats_ms[i - 1] <=
               common::NmeaService::kMovingTargetRedrawPeriodMs +
                   common::NmeaService::kPassDeferralCeilingMs);
+}
+
+// Two passes must never send the tablet one second twice, so a lost whole second is not resent.
+TEST_CASE("nmea: each GPRMC the EFB reads names a second it has not read before") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.raise_link();
+    uint32_t updates = 0;
+    std::vector<uint32_t> heartbeats_ms;
+    for (uint32_t second = 1; second <= 5; second++)
+        for (uint32_t half = 0; half < 2; half++) {
+            solve(rig, second, half, 25000, updates);
+            tick_through(rig, second * 1000 + half * kHalfSecondFeedMs + kFeedLatencyMs + 10,
+                         heartbeats_ms);
+        }
+    for (uint32_t second = 6; second <= 9; second++) {
+        tick_through(rig, second * 1000 + kFeedLatencyMs, heartbeats_ms);
+        solve(rig, second, 1, 25000, updates);
+        tick_through(rig, second * 1000 + kHalfSecondFeedMs + kFeedLatencyMs + 10, heartbeats_ms);
+    }
+    std::map<std::string, int> sent_per_time;
+    for (const std::string& sentence : sentences(rig))
+        if (sentence.rfind("$GPRMC", 0) == 0) sent_per_time[fields(sentence)[1]]++;
+    REQUIRE(sent_per_time.size() >= 4);
+    for (const auto& [time, count] : sent_per_time) {
+        CAPTURE(time);
+        CHECK(count == 1);
+    }
 }

@@ -53,6 +53,7 @@ void NmeaService::tick(uint32_t now_ms) {
     if (!listening()) {
         cursor_ = 0;
         passed_once_ = false;
+        sent_solution_ = false;
         held_ = false;
         pass_bytes_ = pass_sent_ = resume_count_ = 0;
         return;
@@ -161,14 +162,31 @@ void NmeaService::emit_status(uint32_t now_ms) {
     write(sentence_, length);
 }
 
-// INFO: fc 20nov26 core/protocol gates both sentences on the fix and UTC validity, so nothing is
-// gated here a second time
 void NmeaService::emit_ownship() {
-    const model::Ownship& own = context_.state.own_second;
-    const int rmc = protocol::format_gprmc(sentence_, sizeof(sentence_), own);
+    const model::Ownship* solution = unsent_solution();
+    if (solution == nullptr) return;
+    const int rmc = protocol::format_gprmc(sentence_, sizeof(sentence_), *solution);
     if (rmc > 0) write(sentence_, rmc);
-    const int gga = protocol::format_gpgga(sentence_, sizeof(sentence_), own);
+    const int gga = protocol::format_gpgga(sentence_, sizeof(sentence_), *solution);
     if (gga > 0) write(sentence_, gga);
+    if (rmc <= 0 && gga <= 0) return;
+    if (solution == &context_.state.own_second) sent_second_s_ = solution->utc_s;
+    sent_solution_ = true;
+    sent_utc_s_ = solution->utc_s;
+    sent_utc_ms_ = solution->utc_ms;
+}
+
+// INFO: fc 27nov26 a lost whole second sends the newest solution under its own time, never the
+// last second again
+const model::Ownship* NmeaService::unsent_solution() const {
+    const model::Ownship& second = context_.state.own_second;
+    if (second.fix_valid && second.utc_valid && (!sent_solution_ || second.utc_s != sent_second_s_))
+        return &second;
+    const model::Ownship& newest = context_.state.own;
+    if (newest.fix_valid && newest.utc_valid &&
+        (!sent_solution_ || newest.utc_s != sent_utc_s_ || newest.utc_ms != sent_utc_ms_))
+        return &newest;
+    return nullptr;
 }
 
 // INFO: nm 04aug26 $PGRMZ is read as barometric, so it carries pressure altitude on 1013.25 hPa and
