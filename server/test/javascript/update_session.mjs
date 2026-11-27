@@ -1,5 +1,14 @@
+import { afterEach } from 'node:test';
+
 import { FakeSkyblip, signedImage } from './fake_skyblip.mjs';
 import { Updater } from '#skyblip/update';
+
+const updaters = [];
+
+// A test that ends while the page awaits a verdict would hold the process open until its deadline.
+afterEach(() => {
+  for (const updater of updaters.splice(0)) updater.disconnect();
+});
 
 export const NEWER = { major: 0, minor: 2, revision: 0, build: 15 };
 export const IMAGE_BYTES = 6000;
@@ -15,6 +24,7 @@ export function session(options = {}) {
       }
     },
   });
+  updaters.push(updater);
   const until = predicate =>
     new Promise(resolve => {
       if (predicate(updater.state)) resolve(updater.state);
