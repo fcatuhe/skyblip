@@ -103,3 +103,5 @@ A write the part refuses is a storage fault: it is counted on the pool, publishe
 A long capture rotates rather than stopping. When it loses the sector it opened in, it writes a `Gap` plus a fresh `Boot` and `Config`, and the `list` reply marks the session `truncated` (`../../core/store/README.md`).
 
 The flight log is the one service that drains `bus.log_rx`, because its gates are the flights gates: the link claim, the ground state and the prompt a destructive erase takes. It refuses `no_diagnostics` for a store this build has no service for, and `flights_only` for an erase aimed at the capture, whose ring the allocator recycles on its own.
+
+A bulk erase refuses every log command `busy` until it ends. A flights read still running when the erase starts stops `busy` at its next chunk, because the erase wipes sectors that stay labeled as flights until it ends, and a read would send their erased slots as records.

@@ -336,6 +336,11 @@ void RecordStore::answer_ended(const events::Peer& peer, uint32_t session_id, ui
 void RecordStore::continue_read() {
     while (reading_.active && !pool_.holding()) {
         const events::Peer peer = reading_.peer;
+        if (erasing_) {
+            reading_.active = false;
+            acknowledge(peer, false, link::Reason::Busy);
+            return;
+        }
         skip_recycled();
         if (reading_.window.chunks == 0) {
             reading_.active = false;
