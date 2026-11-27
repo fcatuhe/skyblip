@@ -1,12 +1,12 @@
 #include "products/skyblip_go/pages/satellites.h"
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/frame.h"
 
 namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-using ui::kCellWidth;
 using ui::kCharacterHeight;
 constexpr int kRight = kGlassWidth - kLeft;
 
@@ -32,10 +32,6 @@ constexpr int kNoteY = 184;
 constexpr gnss::System kSystemOrder[] = {gnss::System::Gps, gnss::System::Beidou,
                                          gnss::System::Glonass, gnss::System::Qzss,
                                          gnss::System::Unknown};
-
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
-    canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
-}
 
 int bar_height(uint8_t cn0_dbhz) {
     if (cn0_dbhz == 0) return 0;
@@ -77,7 +73,7 @@ void scale_mark(ui::Canvas& canvas) {
     char text[4];
     const int written = format_unsigned(text, kGoodDbHz, 2);
     text[written] = 0;
-    right_aligned(canvas, kRight, y - kCharacterHeight - 1, text, written);
+    right_aligned(canvas, kRight, y - kCharacterHeight - 1, text);
 }
 
 uint32_t used_count(const SatellitesSnapshot& snapshot) {
@@ -95,7 +91,7 @@ void draw_counts(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
         written += format_unsigned(text + written, static_cast<uint32_t>(snapshot.sky->count()), 1);
     }
     text[written] = 0;
-    right_aligned(canvas, kRight, kTitleY, text, written);
+    right_aligned(canvas, kRight, kTitleY, text);
 }
 
 void draw_dops(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
@@ -121,7 +117,7 @@ void draw_solution_phase(ui::Canvas& canvas, const SatellitesSnapshot& snapshot)
     written += format_unsigned(text + written, snapshot.solution_phase_ms, 3);
     written += format_string(text + written, "MS");
     text[written] = 0;
-    right_aligned(canvas, kRight, kDopY, text, written);
+    right_aligned(canvas, kRight, kDopY, text);
 }
 
 void draw_port(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
