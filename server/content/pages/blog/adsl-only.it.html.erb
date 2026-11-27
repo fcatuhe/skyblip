@@ -1,0 +1,81 @@
+---
+title: "Perché il Go riceve FLARM ma trasmette solo ADS-L"
+nav_title: FLARM e ADS-L
+slug: blog/flarm-e-ads-l
+description: "skyBlip Go riceve FLARM ma trasmette solo in ADS-L. Cosa cambia per chi vola in aliante, come ripartisce il tempo radio e perché Bravo ha una radio sua."
+published_on: "2026-11-27"
+parent: blog
+updated_on: "2026-11-27"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 27 novembre 2026</p>
+  <h1>Perché il Go riceve FLARM ma trasmette solo in ADS-L?</h1>
+  <p class="lede">Uno skyBlip Go può mostrarti un aliante vicino grazie al suo segnale FLARM. Se il FLARM dell&rsquo;aliante non riceve ADS-L, non può a sua volta mostrare il Go. Abbiamo scelto di trasmettere la nostra posizione solo in ADS-L, un protocollo radio pubblico. Oggi, per chi vola in aliante, resta questa lacuna.</p>
+</section>
+
+<section>
+  <h2 class="kicker">La domanda su SoftRF_community</h2>
+  <h3>Se vedi un aliante, non è detto che il suo FLARM ti veda.</h3>
+  <p><a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">Moshe Braner ha fatto notare</a> che la maggior parte degli alianti è equipaggiata con FLARM. Se conti su quegli apparati per farti vedere, un dispositivo che non trasmette mai in FLARM è una scelta poco convincente. Nemmeno un PowerFLARM che riceve ADS-B su 1090&nbsp;MHz può ricevere il segnale di un Go su quella frequenza.</p>
+  <p>Per trasmettere in FLARM serve una licenza di FLARM. Lo riceviamo, ma non lo trasmettiamo mai. Secondo FLARM, la maggior parte dei dispositivi con una sola radio riceve ADS-L male o per niente. Questi dispositivi alternano i canali e FLARM dà la precedenza ai propri segnali. FLARM vende una licenza per <em>trasmettere</em> in ADS-L sui PowerFLARM e include la trasmissione nel nuovo PowerFLARM Flex. Speriamo che i piloti attivino la ricezione ADS-L sui dispositivi che la supportano e che FLARM la attivi di serie. Nella <%= link_to_page "blog/who-sees-ads-l", label: "guida a chi vede ADS-L" %> trovi gli altri ricevitori.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Perché trasmettiamo in ADS-L</h2>
+  <h3>Vogliamo che tutti i dispositivi usino lo stesso protocollo pubblico.</h3>
+  <p>François ha sviluppato skyBlip inizialmente per gli aerei leggeri a motore, che pilota lui stesso. <a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">Nella risposta a Moshe</a> ha spiegato perché abbiamo scelto un solo modo di trasmettere. L'Agenzia dell'Unione europea per la sicurezza aerea (EASA) ha riunito i costruttori attorno ad ADS-L e ha pubblicato la specifica ADS-L 4 SRD-860 Issue 2. EASA indica ADS-L come un modo per rendere gli aeromobili elettronicamente visibili nello U-space ai sensi del SERA.6005(c).</p>
+  <p>Solo il protocollo deve essere pubblico. I costruttori possono condividere un formato radio e continuare a competere con i loro prodotti. Ogni dispositivo che trasmette in ADS-L anziché in un protocollo chiuso aggiunge un segnale che tutti i ricevitori ADS-L possono leggere.</p>
+  <p>Da ottobre 2026 skyBlip ha un proprio intervallo di indirizzi costruttore nel registro ADS-L. Ogni clausola della specifica applicata dal firmware ha il suo test di conformità. Stiamo preparando la <%= link_to_page "ads-l/conformity", label: "dichiarazione di conformità" %>.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Una sola radio sul Go</h2>
+  <h3>Ogni protocollo in più dovrebbe trovare posto nello stesso secondo.</h3>
+  <p>Con il fork di SoftRF di Moshe, fino a quattro protocolli condividono un&rsquo;unica radio: ADS-L, FLARM, FANET (usato da chi vola in parapendio) e PilotAware (PAW). Nella versione che stava ultimando per il SenseCAP MeshTracker X1, la ricezione ADS-B prende il posto di PilotAware. La sua programmazione tiene conto degli intervalli di trasmissione di FLARM e di quanto di rado trasmette FANET.</p>
+  <p>Una radio può ascoltare un solo canale alla volta. Aggiungere un protocollo toglie tempo di ascolto o di trasmissione agli altri. Organizziamo l'intero secondo per ricevere ADS-L e FLARM e trasmettere in ADS-L. Il Go non riceve FANET, PilotAware né il formato proprio dei tracker OGN.</p>
+  <p>Il Go usa tre <%= link_to_page "timing", label: "finestre di ascolto", anchor: "second" %>. Conta dall'inizio di ogni secondo UTC:</p>
+  <ul>
+    <li><strong>Da 210 a 440&nbsp;ms:</strong> il Go ascolta su 869.525&nbsp;MHz il collegamento ADS-L da terra, cioè i messaggi inviati dalle stazioni a terra.</li>
+    <li><strong>Da 450 a 820&nbsp;ms:</strong> il Go ascolta su 868.2&nbsp;MHz i segnali ADS-L e FLARM degli aeromobili.</li>
+    <li><strong>Da 830 a 1200&nbsp;ms:</strong> il Go ascolta lo stesso traffico su 868.4&nbsp;MHz. Resta su quel canale per 200&nbsp;ms nel secondo successivo per ricevere i dispositivi di generazione FLARM che stanno ancora trasmettendo.</li>
+  </ul>
+  <p>In volo il Go programma una posizione ogni secondo, su 868.2&nbsp;MHz nei secondi pari e su 868.4&nbsp;MHz in quelli dispari. Programma anche il nominativo e i messaggi Status su un ciclo di 20&nbsp;s. I messaggi Status indicano agli altri ricevitori cosa può ricevere il Go. La <%= link_to_page "radio", label: "guida alla radio" %> mostra cosa passa in ciascuna finestra.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Una radio a parte per ADS-B</h2>
+  <h3>Bravo ascolta su 1090&nbsp;MHz senza togliere tempo alla radio del Go.</h3>
+  <p><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %> funziona sul SenseCAP MeshTracker X1 e usa la propria radio LR2021 per ricevere ADS-B. Bravo può inviare il traffico ADS-B direttamente a un'app di navigazione. Abbinalo a un Go e ottieni <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>, con il traffico ADS-L, FLARM e ADS-B su un unico radar. Il Go mantiene gli stessi intervalli di trasmissione e di ascolto.</p>
+  <p>Bravo rileva anche i transponder Mode S che non trasmettono ADS-B. Quei segnali non contengono una posizione. Per ora Bravo non segnala questi rilevamenti. Prima di segnalarli, stiamo misurando il legame fra intensità del segnale e distanza.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Fonti</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot; <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860 Issue 2</a>.
+      <span class="support">La specifica radio pubblica e il suo ruolo nello U-space.</span>
+    </li>
+    <li>
+      <strong>FLARM</strong> &middot; <a href="https://www.flarm.com/en/general-aviation/electronic-conspicuity-and-ads-l/">ADS-L and FASST-CH</a>, consultata il 2 novembre 2026.
+      <span class="support">La ricezione sui dispositivi con una sola radio e la trasmissione ADS-L sui PowerFLARM.</span>
+    </li>
+    <li>
+      <strong>SoftRF_community</strong> &middot; <a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">skyBlip: an open ADS-L platform with room for soaring</a>.
+      <span class="support">La domanda di Moshe Braner e la risposta di François.</span>
+    </li>
+    <li>
+      <strong>skyBlip</strong> &middot; <%= link_to_page "timing", label: "Quando trasmette il Go" %>.
+      <span class="support">Le finestre di ascolto del Go e la programmazione delle trasmissioni.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
