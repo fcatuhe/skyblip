@@ -39,7 +39,7 @@ updated_on: "2026-11-27"
     <li><strong>450 to 820&nbsp;ms:</strong> Go listens on 868.2&nbsp;MHz for ADS-L and FLARM from aircraft.</li>
     <li><strong>830 to 1200&nbsp;ms:</strong> Go listens for the same traffic on 868.4&nbsp;MHz. It stays on that channel for 200&nbsp;ms into the next second to hear FLARM-generation devices still transmitting there.</li>
   </ul>
-  <p>In flight, Go schedules one position each second, on 868.2&nbsp;MHz in even seconds and 868.4&nbsp;MHz in odd ones. It also schedules its callsign and Status messages on a 20&nbsp;s cycle. Status tells other receivers what the Go can receive. The <%= link_to_page "radio", label: "radio guide" %> shows what each window carries.</p>
+  <p>In flight, Go schedules one position each second, on 868.2&nbsp;MHz in even seconds and 868.4&nbsp;MHz in odd ones. It also schedules its callsign and a Status message about every 10&nbsp;s. Status tells other receivers what the Go can receive. The <%= link_to_page "radio", label: "radio guide" %> shows what each window carries.</p>
 </section>
 
 <section>
