@@ -23,10 +23,6 @@ constexpr int kVerdictX = column_x(13);
 constexpr int kAddressX = column_x(19);
 constexpr int kRightEnd = column_x(32);
 
-void right_aligned(ui::Canvas& canvas, int y, const char* text, int length) {
-    canvas.draw_text(kRightEnd - length * kCellWidth, y, text, true, 1);
-}
-
 const char* state_word(comms::BravoState state) {
     switch (state) {
         case comms::BravoState::Live: return "LIVE";
@@ -63,7 +59,7 @@ void draw_title(ui::Canvas& canvas, const BravoLogSnapshot& snapshot) {
     text[written] = 0;
     canvas.draw_text(kLeft, kTitleY, text, true, 1);
     const char* state = state_word(snapshot.state);
-    right_aligned(canvas, kTitleY, state, text_cells(state));
+    right_aligned(canvas, kRightEnd, kTitleY, state);
 }
 
 int format_cell(char* out, const comms::PeerHealth& health) {
@@ -82,7 +78,7 @@ void draw_health(ui::Canvas& canvas, const comms::PeerHealth& health) {
     canvas.draw_text(kLeft, kFirmwareY, text, true, 1);
     written = format_cell(text, health);
     text[written] = 0;
-    right_aligned(canvas, kFirmwareY, text, written);
+    right_aligned(canvas, kRightEnd, kFirmwareY, text);
 
     written = format_string(text, "1090 ");
     if (health.frame_rate_hz) {
@@ -106,7 +102,7 @@ void draw_counts(ui::Canvas& canvas, const BravoLogSnapshot& snapshot) {
         written += format_unsigned(text + written, snapshot.refused + snapshot.unplaced);
     }
     text[written] = 0;
-    right_aligned(canvas, kCountsY, text, written);
+    right_aligned(canvas, kRightEnd, kCountsY, text);
 }
 
 void draw_row(ui::Canvas& canvas, int y, const BravoLogEntry& entry) {
@@ -121,14 +117,14 @@ void draw_row(ui::Canvas& canvas, int y, const BravoLogEntry& entry) {
     canvas.draw_text(kAddressX, y, text, true, 1);
 
     if (entry.callsign[0] != 0) {
-        right_aligned(canvas, y, entry.callsign, text_cells(entry.callsign));
+        right_aligned(canvas, kRightEnd, y, entry.callsign);
         return;
     }
     if (!entry.pressure_altitude_valid) return;
     written = format_string(text, "FL");
     written += format_signed(text + written, entry.pressure_altitude_ft / 100, 3, 0, false);
     text[written] = 0;
-    right_aligned(canvas, y, text, written);
+    right_aligned(canvas, kRightEnd, y, text);
 }
 
 }  // namespace

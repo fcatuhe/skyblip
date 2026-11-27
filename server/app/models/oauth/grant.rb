@@ -21,11 +21,18 @@ class OAuth::Grant < ApplicationRecord
       used: last_used_at?
   end
 
-  def self.approve(user:, client:)
-    find_or_initialize_by(user:, client:).tap do |grant|
-      renewed = grant.persisted?
-      grant.update! scope: OAuth::SCOPE, resource: OAuth.resource, approved_at: Time.current
-      Rails.event.notify("oauth_grant.approved", grant_id: grant.id, client_id: client.id, renewed:)
+  # INFO: fc 26nov26 security: approving rereads the role and session under the user's lock, so a demotion or new password lands before or after it, never between
+  def self.approve(session:, client:)
+    session.user.with_lock do
+      if session.user.admin? && Session.exists?(session.id)
+        find_or_initialize_by(user: session.user, client:).tap do |grant|
+          renewed = grant.persisted?
+          grant.update! scope: OAuth::SCOPE, resource: OAuth.resource, approved_at: Time.current
+          Rails.event.notify("oauth_grant.approved", grant_id: grant.id, client_id: client.id, renewed:)
+        end
+      else
+        raise OAuth::Error.new("access_denied", "Only an admin who is signed in can connect an agent")
+      end
     end
   end
 

@@ -75,7 +75,7 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
   test "a blog post offers the next post on the right, before its sources" do
     get "/fr/blog/flotte-de-club"
 
-    assert_select ".pager-place", text: "Blog · 5 sur 9"
+    assert_select ".pager-place", text: "Blog · 5 sur 11"
     assert_select ".pager-link--previous[href='/fr/blog/reseau-ou-radio']", text: /Précédent/
     assert_select ".pager-link--next[href='/fr/blog/poche-ou-installe']", text: /Suivant/
 

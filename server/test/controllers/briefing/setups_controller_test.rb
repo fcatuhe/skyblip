@@ -18,8 +18,8 @@ class Briefing::SetupsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a unit installed on another device opens the setup on its Connect step" do
-    get "/briefing/setup", params: { installed: "go", tag: "3F2A" }
-    assert_select "[data-setup-installed-value='go'][data-setup-tag-value='3f2a']"
+    get "/briefing/setup", params: { installed: "go", tag: "3F2A", build: "0.8.1+2708" }
+    assert_select "[data-setup-installed-value='go'][data-setup-tag-value='3f2a'][data-setup-build-value='0.8.1+2708']"
 
     get "/briefing/setup", params: { installed: "router", tag: "3F2A" }
     assert_select "[data-setup-installed-value]", count: 0

@@ -17,6 +17,10 @@ it:
       language: Lingua
       support_code: Codice di assistenza
       support_code_hint: "Quando chiedi aiuto, comunica questo codice. Ci permette di leggere cosa è successo tra questo browser e i tuoi dispositivi: connessioni, rifiuti, installazioni ed errori. Non contiene nulla di ciò che hai digitato."
+      software: "Software"
+      development_builds: "Proponi le versioni di sviluppo"
+      development_builds_hint: "L'installazione le elenca sotto l'ultima versione, che resta scelta. Non sono collaudate: servono a provare skyBlip."
+      every_build: "Vedi tutte le versioni su GitHub."
     devices:
       attention: Richiede attenzione
       paired: Abbinato a questo Go
@@ -178,18 +182,22 @@ it:
         go: "Go: premi RESET due volte, rapidamente. È il pulsante superiore sul lato sinistro."
         bravo: "Bravo: scollegalo, tieni premuto il pulsante, ricollegalo e rilascia quando il LED sopra il pulsante diventa bianco."
       choose_drive: Scegli l'unità
+      choose_drive_again: "Scegli di nuovo l\u2019unità"
+      version: "Versione"
       downloading: "Scaricamento di skyBlip per %{name}."
       writing: "Installazione di skyBlip %{version} su %{name}."
       keep_plugged: Lascialo collegato. Ci vogliono pochi secondi.
-      installed: "Installato. Ultimo passo: collega %{name} via Bluetooth."
-      installed_trusted: "Installato. Ultimo passo: collega %{name} via Bluetooth. Questo browser è autorizzato, quindi non serve premere il pulsante."
+      verify_written: "Il passaggio USB è terminato. Collega %{name} via Bluetooth per verificare il firmware."
+      verify_trusted: "Il passaggio USB è terminato. Collega %{name} per verificare il firmware. Se il dispositivo riconosce questo browser, non dovrai premere il pulsante per attivarlo."
       connect_after_flag: "Oppure attiva Web Bluetooth con i passaggi di questa pagina. Dopo il riavvio di Chrome, apri I tuoi dispositivi e collegalo da lì."
-      connect_after_adapter: "Oppure accendi il Bluetooth con i passaggi di questa pagina, e qui compare Collega."
-      installed_no_bluetooth: "Installato. Questo computer non raggiunge %{name} via Bluetooth, quindi completa la configurazione sul telefono."
+      connect_after_adapter: "Oppure accendi il Bluetooth con i passaggi di questa pagina, e qui compare %{action}."
+      verify_no_bluetooth: "Questo computer non può collegarsi a %{name} via Bluetooth. Verifica il firmware e completa la configurazione sul telefono."
       resumed: "skyBlip è installato su %{name}. Collegalo da questo telefono per completare la configurazione."
       resumed_no_bluetooth: "skyBlip è installato su %{name}, ma questo browser non può collegarsi via Bluetooth. Apri questa pagina in Chrome su un telefono Android, o su un computer con Bluetooth."
       another: "Installa un altro dispositivo"
       handoff:
+        use_phone: "Continua su un telefono Android"
+        activation: "Briefing ha scollegato questo browser. Scansiona il codice da un telefono Android, apri il link in Chrome e collega il Go."
         code: "Codice che apre questa configurazione sul tuo telefono"
         scan: "Inquadra questo codice con la fotocamera di un telefono Android e apri il link in Chrome. Briefing si apre su questo passo: scegli %{name} nell'elenco."
         type: "Niente fotocamera? Apri skyblip.eu/setup in Chrome sul telefono."
@@ -200,6 +208,7 @@ it:
         new_title: "Dispositivo nuovo?"
         new: "skyBlip si installa da un computer con un cavo USB, in Chrome o Edge. Apri skyblip.eu/setup sul computer. Senza Bluetooth, mostra un codice che ti riporta su questo telefono."
       connect: Collega
+      verify: "Collega per verificare"
       choose_in_list: "Scegli %{name} nell'elenco."
       activating: "Attivazione di %{name}."
       confirm_activation: Premi il pulsante del Go per attivarlo.
@@ -231,6 +240,7 @@ it:
       port_busy_linux: "Un altro programma sta usando il dispositivo, oppure Linux non lascia che questo browser lo apra. Chiudi ogni programma che lo usa. Se nessuno lo usa, esegui sudo usermod -aG dialout $USER in un terminale (su Arch Linux il gruppo è uucp), esci e rientra nella sessione, poi fai di nuovo clic su Installa."
       other_board: "Questa scheda non supporta skyBlip. skyBlip funziona su LilyGO T-Echo o T-Echo Plus e su Seeed MeshTracker X1."
       not_drive: "Non è l'unità giusta. Scegli l'unità chiamata TECHOBOOT o X1."
+      drive_closed: "Non hai selezionato alcuna unità. Se non compare, segui le istruzioni qui sotto per tornare alla modalità di installazione USB."
       drive_denied: "Briefing richiede il permesso di salvare sull'unità. Sceglila di nuovo e fai clic su Consenti o Salva modifiche."
       drive_failed: "Impossibile aprire l'unità:"
       download_failed: "L'immagine skyBlip non è stata scaricata. Controlla la connessione, poi scegli di nuovo l'unità."
@@ -240,6 +250,7 @@ it:
       image_no_image: Il file pubblicato non contiene un'immagine skyBlip. Segnalacelo.
       image_no_room: "L'immagine non lascia spazio per la chiave di questo browser, quindi il dispositivo chiederà di premere il pulsante."
       write_failed: "L'unità ha rifiutato il file. Scollega il dispositivo, ricollegalo e riprova:"
+      not_verified: "Briefing non ha potuto confermare il nuovo firmware. Verifica di aver scelto il dispositivo giusto e riprova."
       failed: "Qualcosa non ha funzionato:"
     tango:
       title_go: Bravo
@@ -430,6 +441,7 @@ it:
       in_flight: Il dispositivo è in volo. Nulla è cambiato. Salva dopo l'atterraggio.
       low_power: La batteria è troppo scarica per memorizzare le impostazioni. Ricaricala prima.
       expired: Nessuno ha premuto entro trenta secondi. Nulla è cambiato.
+      timeout: Il dispositivo non ha comunicato se ha salvato. Controlla le impostazioni che rimanda prima di salvare di nuovo.
       cancelled: Rifiutato sul dispositivo. Nulla è cambiato.
       refused_on_device: Rifiutato sul dispositivo. Nulla è cambiato.
       prompt_pending: Il dispositivo sta già facendo una domanda. Rispondi o attendi trenta secondi.
@@ -463,7 +475,7 @@ it:
       keyless: Il dispositivo non è riuscito a leggere o creare la propria chiave. Riavvialo e attiva di nuovo.
       no_session: Il dispositivo non ha più il numero usato per avviare questa attivazione. Attiva di nuovo.
       bad_signature: Il dispositivo non ha riconosciuto ciò che skyblip.eu ha firmato. Attiva di nuovo. Se succede due volte, comunicaci il firmware che usa.
-      small_mtu: Questo telefono o browser usa il pacchetto Bluetooth più piccolo. È troppo piccolo per la risposta. Ricollega. Se succede di nuovo, usa un altro telefono o un computer.
+      small_mtu: "La connessione Bluetooth non può trasportare i dati necessari per l\u2019attivazione. Ricollega il dispositivo una volta. Se succede di nuovo, continua su un telefono Android o prova un altro computer."
       in_flight: Questo dispositivo è già attivato. È in volo. Attivalo di nuovo dopo l'atterraggio.
       low_power: La batteria è troppo scarica per memorizzare il numero di serie. Ricaricala e poi attiva.
       flash: Il dispositivo non è riuscito a memorizzare il numero di serie. Attiva di nuovo. Se succede ancora, segnalacelo.

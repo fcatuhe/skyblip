@@ -106,6 +106,7 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
     switch (heard) {
         case Heard::Pinned:
         case Heard::Committed:
+            go->claimed_pin = true;
             gate_.hear(claim.value(), context_.instant(now_ms), now_ms);
             adopt_aircraft_address(claim.value().aircraft_address);
             follow(go->address, claim.value(), now_ms);

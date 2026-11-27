@@ -103,8 +103,9 @@ inline constexpr Value kReasonValues[] = {
     {"no_answer", 60},
     {"link_lost", 61},
     {"unknown_protocol", 62},
+    {"window_closed", 63},
 };
-inline constexpr Enumeration kReason{kReasonValues, 62};
+inline constexpr Enumeration kReason{kReasonValues, 63};
 
 inline constexpr Value kAlarmValues[] = {
     {"off", 0},

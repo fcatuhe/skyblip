@@ -1,9 +1,10 @@
+<%# locals: (alternates: page_alternate_paths) -%>
 <%= tag.nav class: "locale-switcher", aria: { label: "Language" }, data: {
       controller: ("locale" unless crawler?),
       locale_current_value: I18n.locale,
       locale_default_value: I18n.default_locale,
       locale_available_value: I18n.available_locales.to_json,
-      locale_alternates_value: page_alternate_paths.to_json
+      locale_alternates_value: alternates.to_json
     } do %>
   <details>
     <summary><%= locale_flag(I18n.locale) %><%= I18n.locale.to_s.upcase %></summary>
@@ -13,7 +14,7 @@
         <li lang="<%= locale %>">
           <% if locale == I18n.locale %>
             <span aria-current="true"><%= label %></span>
-          <% elsif (path = page_alternate_paths[locale]) %>
+          <% elsif (path = alternates[locale]) %>
             <%= link_to label, path, hreflang: locale, data: { action: "locale#choose", locale_locale_param: locale } %>
           <% else %>
             <span aria-disabled="true"><%= label %></span>

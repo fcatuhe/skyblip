@@ -118,7 +118,7 @@ class BravoService : public runtime::Service {
     void refuse_protocol();
     void release_unless_paired();
     void connect(const events::BluetoothAddress& address, uint32_t window_us, uint32_t period_us);
-    void claim(uint32_t now_ms);
+    bool claim(uint32_t now_ms);
     bool call_changed() const;
     std::optional<comms::OwnTransponderHeard> own_transponder_on_ground() const;
     bus::AircraftTransponder aircraft_transponder() const;
@@ -168,6 +168,7 @@ class BravoService : public runtime::Service {
     bool up_{false};
     bool leaving_{false};
     bool farewell_owed_{false};
+    bool farewell_tried_{false};
     bool forgotten_{false};
     bool asking_again_{false};
     bool asking_noticed_{false};

@@ -39,7 +39,7 @@ void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextBytes] = {0};
     if (!identity_->unit().key_provisioned() || !running_version_text(version, sizeof(version)) ||
-        !identity_->open(channel_.claim().holder(), channel_.now_ms())) {
+        !identity_->open(channel_.claim().peer(), channel_.now_ms())) {
         refuse(link::Reason::Keyless);
         return;
     }
@@ -65,7 +65,7 @@ void ConfigService::register_unit(const cbor::Reader& frame) {
         refuse(link::Reason::Keyless);
         return;
     }
-    if (!identity_->live(channel_.claim().holder(), channel_.now_ms())) {
+    if (!identity_->live(channel_.claim().peer(), channel_.now_ms())) {
         refuse(link::Reason::NoSession);
         return;
     }
@@ -94,7 +94,7 @@ void ConfigService::register_unit(const cbor::Reader& frame) {
 
 void ConfigService::send_registration() {
     if (identity_ == nullptr ||
-        !identity_->registering(channel_.claim().holder(), channel_.now_ms())) {
+        !identity_->registering(channel_.claim().peer(), channel_.now_ms())) {
         refuse(link::Reason::NoSession);
         return;
     }
@@ -191,7 +191,7 @@ void ConfigService::attest(const cbor::Reader& frame) {
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it
 void ConfigService::unlock(const cbor::Reader& frame) {
     if (identity_refused_in_flight()) return;
-    if (!identity_->live(channel_.claim().holder(), channel_.now_ms())) {
+    if (!identity_->live(channel_.claim().peer(), channel_.now_ms())) {
         refuse(link::Reason::NoSession);
         return;
     }

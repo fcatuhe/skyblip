@@ -5,7 +5,7 @@ import {
   BLOB_PIN, DEFAULTS, signedImage,
 } from './fake_skyblip.mjs';
 import { SmpError } from '#skyblip/smp';
-import { noticeOf } from '#skyblip/update';
+import { VERDICT_WITHIN_MS, noticeOf } from '#skyblip/update';
 
 import { NEWER, IMAGE_BYTES, session, asking, settled, connected, chosen } from './update_session.mjs';
 
@@ -58,6 +58,46 @@ test('a save refused on the glass says so under Save, and the settings stay as s
   device.refuse();
   assert.deepEqual((await until(settled)).notice, { key: 'cancelled', during: 'set' });
   assert.deepEqual(device.stored, FLOWN);
+});
+
+// The unit drops a reply as Full behind one it holds, and never sends it again.
+test('a save whose verdict is lost gives up after its deadline, and shows what the device stored', async t => {
+  const { device, updater, until } = await withSettings();
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  updater.saveSettings({ ...FLOWN_SHOWN, callsign: 'F-JXYZ' });
+  await until(asking('set'));
+  device.lostReplies = 1;
+  device.press();
+  t.mock.timers.tick(VERDICT_WITHIN_MS - 1);
+  assert.equal(updater.state.phase, 'confirming');
+  t.mock.timers.tick(1);
+  const read = await until(state => state.settings.callsign === 'F-JXYZ');
+  assert.equal(read.phase, 'ready');
+  assert.deepEqual(read.notice, { key: 'timeout', during: 'set' });
+});
+
+test('a question whose prompt is lost gives up after its deadline, and reads the device back', async t => {
+  const { device, updater, until } = await chosen();
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  device.lostReplies = 1;
+  await updater.install();
+  assert.equal(updater.state.phase, 'asking');
+  t.mock.timers.tick(VERDICT_WITHIN_MS);
+  const timedOut = await until(settled);
+  assert.deepEqual(timedOut.notice, { key: 'timeout' });
+  await until(state => state.settings !== timedOut.settings);
+  assert.equal(device.commands.at(-1), 'get');
+});
+
+test('a verdict heard in time leaves no deadline behind', async t => {
+  const { device, updater, until } = await withSettings();
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  updater.saveSettings({ ...FLOWN_SHOWN, callsign: 'F-JXYZ' });
+  await until(asking('set'));
+  device.press();
+  await until(state => state.notice?.key === 'saved');
+  t.mock.timers.tick(VERDICT_WITHIN_MS);
+  assert.deepEqual(updater.state.notice, { key: 'saved', during: 'set' });
 });
 
 test('a refused question marks the connection refused on the device until the link drops', async () => {

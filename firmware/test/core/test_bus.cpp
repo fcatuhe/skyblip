@@ -72,3 +72,69 @@ TEST_CASE("bus: the traffic clock is the edge's second, not the sentence's") {
     state.clock.pps_locked = false;
     CHECK(state.traffic_now_s(12500) == 43200);
 }
+
+namespace {
+
+constexpr uint32_t kLastS = 1785628800;
+constexpr uint64_t kLastEdgeUs = 1'000'000;
+
+// A receiver gone silent with its PPS: L76k::poll withdraws the fix and leaves its UTC as it was.
+bus::State silent_since_last_edge() {
+    bus::State state;
+    state.own.utc_valid = true;
+    state.own.utc_s = kLastS;
+    state.clock.utc_valid = true;
+    state.clock.utc_s = kLastS;
+    state.clock.utc_edge_us = kLastEdgeUs;
+    return state;
+}
+
+uint32_t traffic_s_at(bus::State& state, uint32_t now_ms) {
+    timing::take_edge(state.clock, kLastEdgeUs, uint64_t{now_ms} * 1000);
+    return state.traffic_now_s(now_ms);
+}
+
+model::AircraftObservation heard_at(uint32_t at_s) {
+    model::AircraftObservation observation{};
+    observation.address = 0x424242;
+    observation.address_mapping_table = 6;
+    observation.position_valid = true;
+    observation.latitude_1e7 = 481000000;
+    observation.longitude_1e7 = 81000000;
+    observation.source = model::Source::AdslDirect;
+    observation.received.at_s = at_s;
+    return observation;
+}
+
+}  // namespace
+
+TEST_CASE("bus: past the PPS holdover the traffic clock counts on from the last edge") {
+    bus::State state = silent_since_last_edge();
+    CHECK(traffic_s_at(state, 1000 + 59'500) == kLastS + 59);
+    CHECK(traffic_s_at(state, 1000 + 61'500) == kLastS + 61);
+    CHECK(traffic_s_at(state, 1000 + 3'600'500) == kLastS + 3600);
+}
+
+TEST_CASE("bus: past the PPS holdover the traffic a silent receiver heard is kept, then ages out") {
+    bus::State state = silent_since_last_edge();
+    const uint32_t heard_s = traffic_s_at(state, 1000 + 59'500);
+    REQUIRE(state.traffic.update(heard_at(heard_s), heard_s) >= 0);
+
+    state.traffic.age_out(traffic_s_at(state, 1000 + 61'500));
+    CHECK(state.traffic.find(6, 0x424242) >= 0);
+
+    state.traffic.age_out(traffic_s_at(state, 1000 + 59'500 + 600'000));
+    CHECK(state.traffic.find(6, 0x424242) < 0);
+}
+
+TEST_CASE("bus: past the PPS holdover a receiver that still talks names the second") {
+    bus::State state = silent_since_last_edge();
+    state.own.utc_s = kLastS + 119;
+    CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 119);
+
+    state.own.utc_s = kLastS + 118;
+    CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 120);
+
+    state.own.utc_s = kLastS + 121;
+    CHECK(traffic_s_at(state, 1000 + 120'700) == kLastS + 121);
+}

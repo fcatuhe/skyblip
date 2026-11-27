@@ -1,0 +1,73 @@
+---
+title: "Licence MIT et revue du code écrit avec l'IA"
+nav_title: Licence MIT et revue du code
+slug: blog/licence-mit-et-revue-du-code
+description: "Ce que skyBlip a appris de SoftRF, pourquoi MIT permet de réutiliser son code dans un produit fermé et comment nous vérifions le code écrit avec l'IA."
+published_on: "2026-11-27"
+parent: blog
+updated_on: "2026-11-27"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "blog", label_type: :nav, class: "cta" %> &middot; 27 novembre 2026</p>
+  <h1>Pourquoi skyBlip est sous licence MIT et comment nous vérifions le code écrit avec l&rsquo;IA</h1>
+  <p class="lede">Vous pouvez utiliser le code de skyBlip dans un produit que vous vendez sans publier votre propre code source. Nous avons choisi la licence MIT pour que davantage de pilotes puissent utiliser la visibilité électronique, qui permet aux aéronefs de se rendre visibles les uns aux autres. Les tests et les revues de notre code sont publics, y compris pour le code écrit avec des agents IA.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Ce que nous avons appris de SoftRF</h2>
+  <h3>Nous avons appris des projets sous GPL et écrit notre propre code.</h3>
+  <p><a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">R. van Twisk de GA/TAS Conspicuity</a> a salué un nouveau moyen de rendre les aéronefs visibles. Il a aussi demandé pourquoi notre README remercie des projets sous GNU General Public License (GPL) alors que skyBlip utilise la licence MIT. Il rappelait qu&rsquo;un logiciel qui intègre du code sous GPL ne peut pas être distribué sous la seule licence MIT. La GPL serait-elle un meilleur choix pour un projet écrit avec l&rsquo;IA ?</p>
+  <p>Nous avons écrit le logiciel embarqué à partir de zéro, sur le système d&rsquo;exploitation Zephyr et avec le chargeur d&rsquo;amorçage MCUboot, plutôt que sur le cœur Arduino et avec celui d&rsquo;Adafruit. Nous voulions <%= link_to_page "blog/skyblip-softrf-stratux", label: "gagner en rapidité et en autonomie" %>. Dans le README, nous remercions Paweł Jałocha pour l&rsquo;implémentation de référence du protocole radio ADS-L et le nrf52-ogn-tracker, Linar Yusupov pour SoftRF, Moshe Braner pour sa version dérivée de SoftRF et John McNelly de Pants for Birds pour <a href="https://github.com/PantsForBirds/adsbee">ADSBee</a>, un récepteur ADS-B open source.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Ce que nous distribuons</h2>
+  <h3>La notice liste ce qui provient d&rsquo;autres projets.</h3>
+  <p><a href="https://github.com/fcatuhe/skyblip/blob/main/NOTICE.md"><code>NOTICE.md</code></a> recense les contributions de tiers présentes dans le dépôt, dans le logiciel embarqué compilé et dans le simulateur pour navigateur. Il précise leurs licences. Quand notre code suit de près celui d&rsquo;un autre projet, nous le signalons à la rubrique &ldquo;Followed in our own code&rdquo;. C&rsquo;est le cas de l&rsquo;ordre d&rsquo;initialisation de la radio LR2021 dans RadioLib et de la configuration du DRV2605 dans SensorLib, tous deux sous licence MIT.</p>
+  <p>Le seul code sous GPL présent dans une image du logiciel embarqué vient des bibliothèques d&rsquo;exécution du compilateur GCC, <code>libstdc++</code> et <code>libgcc</code>. La GCC Runtime Library Exception permet de distribuer l&rsquo;image sous les conditions que nous avons choisies. Chaque version est livrée avec <code>NOTICE.md</code> à côté des images du logiciel embarqué. Le code proposé dans une <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/EXTENDING.md">pull request est fourni sous licence MIT</a>.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Pourquoi nous avons choisi la licence MIT</h2>
+  <h3>Utilisez la partie qui vous intéresse, que votre produit soit ouvert ou fermé.</h3>
+  <p>La plupart des pilotes n&rsquo;utilisent pas encore de système de visibilité électronique. Si quelqu&rsquo;un se sert de notre code pour en équiper un plus grand nombre, plus d&rsquo;aéronefs seront visibles. Cela peut rendre les vols plus sûrs, que le produit soit vendu ou partagé. La pile ADS-L, le code qui met en œuvre le protocole, se compile et passe ses tests de conformité indépendamment du reste de skyBlip. Ces tests accompagnent toute copie de la pile. François a proposé à SoftRF le pilote de la radio LR2021 et le décodeur ADS-B pour le MeshTracker X1.</p>
+  <p>La licence ne donne pas le droit d&rsquo;utiliser le nom ni les signes distinctifs de skyBlip. Ce sont des marques de François Catuhe. Un projet dérivé peut se dire compatible avec skyBlip ou issu de skyBlip, mais il ne peut pas utiliser ce nom pour son propre produit. Si vous distribuez une copie, demandez <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/README.md#before-you-ship-a-copy">votre propre plage d&rsquo;adresses ADS-L</a>.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Comment nous vérifions le code</h2>
+  <h3>Lisez le test qui vérifie un comportement et voyez qui relit chaque modification.</h3>
+  <p>François dirige une équipe d&rsquo;ingénierie des solutions. Il aide notamment les ingénieurs à préserver leur savoir-faire à mesure que les agents IA changent leur façon de travailler. Il ne parle plus de &ldquo;vibe coding&rdquo;, car ce terme passe ce travail sous silence. Dans skyBlip, nous utilisons les agents d&rsquo;abord pour améliorer la qualité du code. Le gain de temps vient ensuite.</p>
+  <p>Le logiciel embarqué compte 3477 cas de test qui s&rsquo;exécutent sur un ordinateur plutôt que sur le boîtier. Le nom de chaque test énonce ce qu&rsquo;il vérifie. Leur exécution produit <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/BEHAVIOR.md"><code>docs/BEHAVIOR.md</code></a>, avec un lien vers chaque test. Nos vérifications automatiques signalent les écarts avec le rapport enregistré dans le dépôt.</p>
+  <p>Le <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/ADSL_CONFORMANCE.md">rapport ADS-L de la version 0.8.1</a> reprend les 80 titres de clauses d&rsquo;ADS-L 4 SRD-860 Issue 2 et indique les cas de test associés à chacun. Sur ces cas, 210 réussissent et 20 ne sont pas exécutés. Le rapport en donne les raisons : 8 concernent du texte descriptif, 2 des documents à fournir, 8 des points facultatifs et 2 des points non mesurés. Nous générons le rapport à partir de l&rsquo;exécution des tests. Vous pouvez aussi consulter les vérifications pour <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/ADSB_CONFORMANCE.md">l&rsquo;ADS-B (DO-260B)</a> et pour la <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/behavior/en300220.md">norme radio EN 300 220</a>.</p>
+  <p>Greptile <a href="https://github.com/fcatuhe/skyblip/pull/603">cherche les bugs dans les pull requests</a>. Nous utilisons son offre d&rsquo;essai pour chaque pull request. Le mainteneur relit et fusionne chaque pull request. Une revue de sécurité quotidienne examine les alertes, lance des outils d&rsquo;analyse et utilise deepsec pour vérifier les modifications. Elle comprend chaque jour un contrôle plus poussé, par exemple vérifier comment le logiciel embarqué analyse des données inattendues ou lancer une revue complète avec deepsec.</p>
+  <p>François teste le logiciel sur ses propres appareils, au banc et en vol. Vous pouvez consulter les <a href="https://github.com/fcatuhe/skyblip/tree/main/docs/bench">mesures de consommation au banc</a>.</p>
+  <p>Si skyBlip vous intéresse, <a href="https://github.com/fcatuhe/skyblip">donnez-lui une étoile sur GitHub</a>.</p>
+</section>
+
+<section>
+  <%= render "shared/pager", page: @page %>
+</section>
+
+<section>
+  <h2 class="kicker">Sources</h2>
+  <ul class="sources">
+    <li>
+      <strong>skyBlip</strong> &middot; <a href="https://github.com/fcatuhe/skyblip">code source</a>, <a href="https://github.com/fcatuhe/skyblip/blob/main/README.md">README</a>, <a href="https://github.com/fcatuhe/skyblip/blob/main/NOTICE.md"><code>NOTICE.md</code></a>, <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/BEHAVIOR.md">index des comportements</a> et <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/ADSL_CONFORMANCE.md">rapport de conformité ADS-L</a>.
+      <span class="support">Les remerciements, les licences et les résultats des tests.</span>
+    </li>
+    <li>
+      <strong>SoftRF_community</strong> &middot; <a href="https://groups.google.com/g/softrf_community/c/-YdkcBhyub8">skyBlip: an open ADS-L platform with room for soaring</a>.
+      <span class="support">Les questions de R. van Twisk et la réponse de François.</span>
+    </li>
+    <li>
+      <strong>SoftRF</strong> &middot; <a href="https://github.com/lyusupov/SoftRF">le projet de Linar Yusupov</a> et <a href="https://github.com/moshe-braner/SoftRF">la version dérivée de Moshe Braner</a>.
+      <span class="support">Deux des projets remerciés dans le README.</span>
+    </li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
