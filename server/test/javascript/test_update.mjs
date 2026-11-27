@@ -275,6 +275,40 @@ test('an image other than the one the glass named is not installed', async () =>
   assert.equal((await until(settled)).notice.key, 'not_approved');
 });
 
+test('a window the glass opened for one version is not used to send another', async () => {
+  const { device, updater, until } = await chosen();
+  device.refuseUpload = 10;
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'flash');
+  device.refuseUpload = null;
+  await updater.choose(signedImage({ major: 0, minor: 3, revision: 0, build: 1 }, IMAGE_BYTES), 'skyblip_go-0.3.0+1.signed.bin');
+  updater.install();
+  const asked = await until(state => asking('dfu')(state) || settled(state));
+  assert.equal(asked.phase, 'confirming', `the page went on to ${asked.notice?.key} without asking`);
+  assert.equal(asked.asked.version, '0.3.0+1');
+});
+
+test('a question for another version that expires leaves no window for the first one', async () => {
+  const { device, updater, until } = await chosen();
+  device.refuseUpload = 10;
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'flash');
+  device.refuseUpload = null;
+  await updater.choose(signedImage({ major: 0, minor: 3, revision: 0, build: 1 }, IMAGE_BYTES), 'skyblip_go-0.3.0+1.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.expire();
+  assert.equal((await until(settled)).notice.key, 'expired');
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'skyblip_go-0.2.0+15.signed.bin');
+  updater.install();
+  const asked = await until(state => asking('dfu')(state) || settled(state));
+  assert.equal(asked.phase, 'confirming', `the page went on to ${asked.notice?.key} without asking`);
+});
+
 test('a cancel on the device during the upload reads as cancelled, not as a closed window', async () => {
   const { device, updater, until } = await chosen();
   device.refuseAfterPackets = 3;

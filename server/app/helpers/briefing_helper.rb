@@ -10,6 +10,8 @@ module BriefingHelper
     root_path(locale: (I18n.locale unless I18n.locale == I18n.default_locale))
   end
 
+  def same_page_in_every_locale = I18n.available_locales.index_with { request.path }
+
   def device_name(slug)
     kind, tag = slug.split("-", 2)
     "#{DEVICE_NAMES.fetch(kind)} #{tag.upcase}"

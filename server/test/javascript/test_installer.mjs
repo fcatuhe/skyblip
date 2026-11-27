@@ -96,7 +96,7 @@ test('a T-Echo running Meshtastic is named, restarted into its drive, and given 
 
   await unit.install();
   assert.deepEqual({ phase: unit.state.phase, board: unit.state.board, version: unit.state.version, trusted: unit.state.trusted },
-    { phase: 'installed', board: 'nRF52840-TEcho-v1', version: '0.1.0+1858', trusted: true });
+    { phase: 'written', board: 'nRF52840-TEcho-v1', version: '0.1.0+1858', trusted: true });
   const blocks = written(drive);
   const page = recordPage(blocks, LAYOUTS.go);
   assert.deepEqual(readSpan(blocks, page, RECORD_BYTES), trustRecord(KEY));
@@ -107,7 +107,7 @@ test('an X1 gets the Bravo image, written at its own slot0', async () => {
   await unit.restart();
   await unit.install();
   assert.equal(unit.state.product, 'bravo');
-  assert.equal(unit.state.phase, 'installed');
+  assert.equal(unit.state.phase, 'written');
   assert.ok(readSpan(written(drive), LAYOUTS.bravo.slot0, 4).every((byte, at) => byte === [0x3d, 0xb8, 0xf3, 0x96][at]));
 });
 
@@ -146,7 +146,7 @@ test('an install leaves a trail of steps and facts, with no personal data', asyn
   assert.deepEqual(facts[2][1], { board: 'nRF52840-TEcho-v1', product: 'go' });
   assert.deepEqual({ ...facts[3][1], write_ms: 0 }, { product: 'go', version: '0.1.0+1858', trusted: true, write_ms: 0, detail: null });
   const steps = recorded.filter(([name]) => name === 'installer.stepped').map(([, { phase, previous }]) => `${previous}>${phase}`);
-  assert.deepEqual(steps, ['idle>choosing_port', 'choosing_port>reading', 'reading>drive', 'drive>choosing_drive', 'choosing_drive>downloading', 'downloading>writing', 'writing>installed']);
+  assert.deepEqual(steps, ['idle>choosing_port', 'choosing_port>reading', 'reading>drive', 'drive>choosing_drive', 'choosing_drive>downloading', 'downloading>writing', 'writing>written']);
 });
 
 test('every notice the page shows is recorded with the step it came at', async () => {
@@ -192,11 +192,12 @@ test('a UF2 drive of another board is refused, and named', async () => {
   assert.deepEqual(unit.state.notice, { key: 'other_board', detail: 'nRF52840-Feather-v1' });
 });
 
-test('closing the folder chooser says nothing, and a refused permission says why', async () => {
+test('closing the folder chooser records a retryable drive notice, separate from denied permission', async () => {
   const closed = installer({ drive: namedError('AbortError', 'The user aborted a request.') });
   await closed.unit.restart();
   await closed.unit.install();
-  assert.equal(closed.unit.state.notice, null);
+  assert.deepEqual(closed.unit.state.notice, { key: 'drive_closed' });
+  assert.deepEqual(closed.recorded.at(-1), ['installer.noticed', { key: 'drive_closed', detail: null, phase: 'drive' }]);
 
   const denied = installer({ drive: namedError('NotAllowedError', 'Permission denied.') });
   await denied.unit.restart();
@@ -229,13 +230,13 @@ test('a write the drive refuses before the last block is said', async () => {
 });
 
 // Chrome cut the write itself on a T-Echo, once the bootloader had flashed the image and restarted
-test('a restart that cuts the write or the close once the last block lands is an install', async () => {
+test('a restart that cuts the last write or close still leaves the build ready to verify', async () => {
   for (const restartIn of ['write', 'close']) {
     const { unit, drive, recorded } = installer({ drive: new FakeDrive(T_ECHO_INFO, { restartIn }) });
     await unit.restart();
     await unit.install();
     assert.equal(drive.flashed, true);
-    assert.deepEqual({ phase: unit.state.phase, notice: unit.state.notice }, { phase: 'installed', notice: null }, restartIn);
+    assert.deepEqual({ phase: unit.state.phase, notice: unit.state.notice }, { phase: 'written', notice: null }, restartIn);
     assert.match(recorded.find(([name]) => name === 'installer.wrote')[1].detail, /state had changed/);
   }
 });
