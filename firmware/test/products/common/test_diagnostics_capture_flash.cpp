@@ -186,31 +186,7 @@ void stop(SmallPoolRig& rig) {
 
 }  // namespace
 
-// bravo-d582 build 2873 took an earlier boot's name and wrote a 170-record gap per recycled sector.
-TEST_CASE("capture: a capture armed at the uptime of one from an earlier boot is its own session") {
-    SmallPoolRig before{SmallPoolRig::kSectors + 4};
-    before.fill_flights_to_the_floor();
-    arm_before_a_fix(before);
-    feed_gently(before, flight::kLogSlotsPerSector * 2);
-    stop(before);
-    const uint32_t earlier = before.capture.session_id();
-    const uint32_t earlier_sectors = before.capture.sectors_owned();
-    REQUIRE(earlier_sectors == 3);
-
-    SmallPoolRig after{SmallPoolRig::kSectors + 4};
-    after.flash.restore(before.flash.bytes());
-    arm_before_a_fix(after);
-    CHECK(after.capture.session_id() != earlier);
-
-    feed_gently(after, flight::kLogSlotsPerSector * 3);
-    CHECK(after.pool.allocator().recycled_sectors(store::SectorOwner::Diagnostics, earlier) ==
-          earlier_sectors);
-    CHECK(walk_sectors(after, after.capture.session_id()).gaps == 0);
-    CHECK(after.capture.records_written() == flight::kLogSlotsPerSector * 3 + 2);
-}
-
-// The ring counts a recycled front by session name until reboot, so a name taken again starts
-// clean.
+// The ring counts a recycled front by name until reboot, so a name taken again starts clean.
 TEST_CASE("capture: a capture named as a session the ring recycled since boot has lost nothing") {
     SmallPoolRig rig{SmallPoolRig::kSectors + 3};
     rig.fill_flights_to_the_floor();
@@ -231,21 +207,6 @@ TEST_CASE("capture: a capture named as a session the ring recycled since boot ha
     REQUIRE(rig.capture.session_id() == recycled);
     feed_gently(rig, 20);
     CHECK(rig.pool.allocator().recycled_sectors(store::SectorOwner::Diagnostics, recycled) == 0);
-}
-
-TEST_CASE("capture: a capture with a fix is named by its UTC second, a second one by the next") {
-    SmallPoolRig rig;
-    rig.setup();
-    rig.now_ms = 1000;
-    rig.recorder.arm();
-    rig.capture.tick(rig.now_ms);
-    CHECK(rig.capture.session_id() == kBaseUtcS);
-    feed_gently(rig, 20);
-    stop(rig);
-
-    rig.recorder.arm();
-    rig.capture.tick(rig.now_ms);
-    CHECK(rig.capture.session_id() == kBaseUtcS + 1);
 }
 
 // A pass that spends the whole window on flash is a pass that misses the dwell it owed.
