@@ -5,7 +5,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/spi.h>
+#include <zephyr/drivers/pinctrl.h>
 
 #include "core/util/result.h"
 #include "hardware/platform/zephyr/adsb_receiver.h"
@@ -19,9 +19,12 @@
 #include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/meshtracker_x1_lines.h"
 #include "hardware/platform/zephyr/meshtracker_x1_power.h"
+#include "hardware/platform/zephyr/polled_spim.h"
 #include "hardware/platform/zephyr/random.h"
 #include "ports/capabilities.h"
 #include "ports/null.h"
+
+PINCTRL_DT_DEFINE(DT_ALIAS(radio_spi));
 
 namespace skyblip::platform::zephyr {
 
@@ -45,7 +48,7 @@ class MeshtrackerX1 {
         system_power_.arm_supply_monitor();
         if (lines_.begin() != Status::Ok) return Status::Down;
         (void)wake_on_edges(button_, button_edges_);
-        if (!device_is_ready(radio_spi_device_)) return Status::Down;
+        if (!radio_spi_.ready()) return Status::Down;
         (void)gnss_.begin();
         // TODO: fc 12nov26 P0.09 powers the YSN8900 per SoftRF and Seeed, unverified until #169
         (void)gpio_pin_configure_dt(&rtc_enable_, GPIO_OUTPUT_ACTIVE);
@@ -91,24 +94,22 @@ class MeshtrackerX1 {
     }
 
    private:
-    // TODO: fc 12nov26 the SX1262's 8 MHz mode 0 SPI, unverified for the LR2021 until #169
-    static constexpr struct spi_config kSpiConfig = {
-        .frequency = 8000000U,
-        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_CONTROLLER,
-        .slave = 0,
-        .cs = {},
-    };
+    // TODO: fc 27nov26 build 2873's 8 MHz, until a capture clears the X1's traces at 16 (DS 3.7.2)
+    static constexpr uint32_t kRadioSpiHz = 8000000U;
 
     MeshtrackerX1Power system_power_;
     MeshtrackerX1Lines lines_{};
-    const struct device* radio_spi_device_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
     const struct device* gnss_uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
     struct gpio_dt_spec radio_cs_ = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(radio_spi), cs_gpios, 0);
     struct gpio_dt_spec button_ = GPIO_DT_SPEC_GET(DT_ALIAS(button), gpios);
     struct gpio_callback button_edges_{};
     struct gpio_dt_spec radio_irq_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_irq_gpio), gpios);
     struct gpio_dt_spec rtc_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(rtc_enable), gpios);
-    Spi radio_spi_{radio_spi_device_, kSpiConfig, radio_cs_};
+    PolledSpim radio_spi_{
+        PolledSpimWiring{reinterpret_cast<NRF_SPIM_Type*>(DT_REG_ADDR(DT_ALIAS(radio_spi))),
+                         PINCTRL_DT_DEV_CONFIG_GET(DT_ALIAS(radio_spi)), kRadioSpiHz,
+                         DT_PROP(DT_ALIAS(radio_spi), rx_delay),
+                         BIT_MASK(DT_PROP(DT_ALIAS(radio_spi), easydma_maxcnt_bits)), radio_cs_}};
     Ag3335Wiring gnss_{};
     FlashRegion log_flash_{PARTITION_ID(log_partition)};
     Dfu dfu_{};

@@ -39,9 +39,9 @@ TEST_CASE("sx1262: carrier sense reads the level on the tuned channel" *
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     chip.rssi_dbm = -110;
-    CHECK(radio.instant_rssi_dbm() == -110);
+    CHECK(radio.instant_rssi_dbm().value() == -110);
     chip.rssi_dbm = -48;
-    CHECK(radio.instant_rssi_dbm() == -48);
+    CHECK(radio.instant_rssi_dbm().value() == -48);
 }
 
 TEST_CASE("sx1262: an assessment interval is a run of reads, each answering for its own instant") {
@@ -57,14 +57,14 @@ TEST_CASE("sx1262: an assessment interval is a run of reads, each answering for 
         for (int i = 0; i < 4; i++) {
             CAPTURE(pass);
             CAPTURE(i);
-            CHECK(radio.instant_rssi_dbm() == levels[i]);
+            CHECK(radio.instant_rssi_dbm().value() == levels[i]);
         }
 
     // With no sequence loaded the chip answers one steady level, as before.
     chip.set_rssi_sequence(nullptr, 0);
     chip.rssi_dbm = -97;
-    CHECK(radio.instant_rssi_dbm() == -97);
-    CHECK(radio.instant_rssi_dbm() == -97);
+    CHECK(radio.instant_rssi_dbm().value() == -97);
+    CHECK(radio.instant_rssi_dbm().value() == -97);
 }
 
 TEST_CASE("sx1262: a delivered packet carries the level it arrived with") {

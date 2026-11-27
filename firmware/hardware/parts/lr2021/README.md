@@ -83,7 +83,7 @@ The driver uses the part's Manchester decoding, not SoftRF's raw chips behind a 
 
 ## Re-arm and reset
 
-`service()` re-arms a receiver that has handed up nothing for the silence ceiling it is given, 30 s from the Zephyr adapter. It goes through STDBY_RC, clears the FIFO and restarts receive, because SetRx fails on a part already in Rx (DS 6.3.5). A BUSY that stays high past its ceiling is a fault: the next `service()` resets the part and brings it up again.
+`service()` re-arms a receiver that has handed up nothing for the silence ceiling it is given, 30 s from the Zephyr adapter. It goes through STDBY_RC, clears the FIFO and restarts receive, because SetRx fails on a part already in Rx (DS 6.3.5). A BUSY that stays high past its ceiling is a fault: the next `service()` resets the part and brings it up again. So is an SPI transfer the bus reports failed: the frame holds no status the driver may count, and the part may have taken half a command. The command, read or FIFO read answers `Status::Down`, `poll()` answers `Fault`, and the next `service()` resets the part.
 
 RadioLib waits up to 3 s for BUSY after a reset and 1 s around any command (`LR_common.cpp` `reset()`, `Module.h` `spiConfig.timeout`). The datasheet gives no figure, so both ceilings are RadioLib's.
 

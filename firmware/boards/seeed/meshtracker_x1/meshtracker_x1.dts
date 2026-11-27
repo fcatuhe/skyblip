@@ -347,9 +347,10 @@
 	pinctrl-names = "default", "sleep";
 };
 
+/* INFO: fc 27nov26 disabled so no Zephyr driver claims SPIM3, which the platform's PolledSpim drives through nrfx */
 &spi3 {
 	compatible = "nordic,nrf-spim";
-	status = "okay";
+	status = "disabled";
 	pinctrl-0 = <&spi3_default>;
 	pinctrl-1 = <&spi3_sleep>;
 	pinctrl-names = "default", "sleep";

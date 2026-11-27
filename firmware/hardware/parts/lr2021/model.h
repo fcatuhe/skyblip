@@ -78,12 +78,18 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
         land_arrivals();
     }
 
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+    bool transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+        if (transfers_before_failure == 0) {
+            if (rx) std::fill_n(rx, bytes, uint8_t{0xFF});
+            return false;
+        }
+        if (transfers_before_failure > 0) transfers_before_failure--;
         for (size_t i = 0; i < bytes; i++) {
             const uint8_t out = miso(mosi_.size());
             mosi_.push_back(tx ? tx[i] : 0);
             if (rx) rx[i] = miso_dead ? 0 : out;
         }
+        return true;
     }
 
     // INFO: fc 11nov26 DS 16.3.8: the pattern arrives first bit first, then the sync word, then the
@@ -182,6 +188,8 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     bool busy_stuck{false};
     bool busy_stuck_until_reset{false};
     bool miso_dead{false};
+    // INFO: fc 27nov26 negative never fails, else that many transfers pass and the rest fail
+    int transfers_before_failure{-1};
     uint32_t boot_busy_us{0};
     uint32_t calibrate_busy_us{0};
     uint16_t boot_errors{0};

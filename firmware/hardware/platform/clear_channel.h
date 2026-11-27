@@ -6,6 +6,7 @@
 #include "core/events/rf.h"
 #include "core/model/band.h"
 #include "core/timing/channel.h"
+#include "core/util/result.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
@@ -37,14 +38,17 @@ struct Assessment {
     uint64_t ended_us{0};
 };
 
-// INFO: fc 14nov26 EN 300 220-1 5.21.1: a radio not in RX cannot call the channel clear
+// INFO: fc 14nov26 EN 300 220-1 5.21.1: a radio not in RX cannot call the channel clear | 27nov26
+// nor one whose level read failed
 template <class ReadLevel>
 Assessment assess(bool receiving, ReadLevel read_level, const ports::Clock& clock) {
     Assessment assessment{};
-    assessment.level_valid = receiving;
     if (receiving) {
-        assessment.level_dbm = read_level();
-        assessment.clear = timing::channel_clear(assessment.level_dbm, kCcaThresholdCentiDbm);
+        const Result<int8_t> level = read_level();
+        assessment.level_valid = level.ok();
+        assessment.level_dbm = level.value();
+        assessment.clear =
+            level.ok() && timing::channel_clear(level.value(), kCcaThresholdCentiDbm);
     }
     assessment.ended_us = clock.microseconds();
     return assessment;

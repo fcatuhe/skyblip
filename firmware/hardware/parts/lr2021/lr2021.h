@@ -74,6 +74,7 @@ class Lr2021 {
     Status enter_standby();
     Status command(uint16_t opcode, const uint8_t* arguments, size_t bytes);
     Status read(uint16_t opcode, uint8_t* out, size_t bytes);
+    Status exchange(const uint8_t* tx, uint8_t* rx, size_t bytes);
     Status read(uint16_t opcode, const uint8_t* arguments, size_t argument_bytes, uint8_t* out,
                 size_t bytes);
     Status read_register(uint32_t address, uint32_t& value);

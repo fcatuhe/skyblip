@@ -12,6 +12,10 @@ The command constants are spelled in full. Where the datasheet's command table s
 | `kDisplayUpdateControl2` (0x22) | DisplayUpdateCtrl2 |
 | `kSetRamXRange`, `kSetRamYRange` (0x44, 0x45) | SetRamXAddr, SetRamYAddr |
 
+## A failed transfer
+
+The panel answers nothing over SPI, so the driver learns of a lost byte only from the bus. After a transfer the bus reports failed, the driver sends nothing more until it resets the panel, since the RAM holds part of a frame and the controller may be mid-command. So no MasterActivation follows, and the glass keeps the last frame it showed. The next frame re-initialises the panel from RES# and is a full refresh, because neither RAM bank is known.
+
 ## Panel identity
 
 LilyGO fits more than one panel behind the same footprint and controller pinout, and they do not behave the same. SoftRF fingerprints them by clocking registers 0x2D (11 bytes) and 0x2E (10 bytes) out over a bit-banged half-duplex SPI, and lists the IDs it has seen on real T-Echos (`platform/nRF52.cpp:3775-3900`, table at 3855-3878). `panel.h` transcribes that table byte for byte, the two unnamed entries included.
