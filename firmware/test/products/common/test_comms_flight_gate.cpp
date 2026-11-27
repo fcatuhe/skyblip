@@ -41,7 +41,7 @@ struct Bench {
         config.set_flight_state(state);
     }
 
-    std::string last() { return link_text(link.last().bytes); }
+    std::string last() { return link_text(link.last_to(1)); }
 };
 
 struct FinishedUpload : ports::Dfu {
@@ -201,7 +201,8 @@ TEST_CASE(
     config.tick(100);
     REQUIRE_FALSE(taken(config));
 
-    config.on_link_down(events::LinkDown{1});
+    config.on_link_down(events::LinkDown{1, link.connection(1)});
+    link.drop_link(1);
     config.tick(200);
     CHECK_FALSE(config.upload_allowed());
     CHECK(config.updating());

@@ -39,9 +39,16 @@ void ConfigService::tick(uint32_t now_ms) {
     // INFO: fc 04aug26 nobody asks for a push again, so a transient refusal retries it
     if (status_push_due_ && link_up()) push_status();
     install_held_ = upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished();
+    // INFO: fc 26nov26 the SMP thread can land the last chunk after this close, so tell the page
     if (upload_window_open_ && !install_held_ &&
-        now_ms - upload_window_opened_ms_ >= kUploadWindowMs)
+        now_ms - upload_window_opened_ms_ >= kUploadWindowMs) {
         upload_window_open_ = false;
+        window_closed_owed_ = true;
+    }
+    if (window_closed_owed_ && !channel_.replying()) {
+        window_closed_owed_ = false;
+        refuse(link::Reason::WindowClosed);
+    }
     if (install_held_ && !in_flight() && pending_ == Pending::None) install_received_image();
     if (identity_ != nullptr) identity_->tick(now_ms);
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptCeilingMs) {
@@ -66,7 +73,6 @@ void ConfigService::set_flight_state(flight::FlightState state) {
 
 // INFO: fc 18sep26 A second Up on one session is the MTU exchange landing late, never a second app.
 void ConfigService::on_link_up(const events::LinkUp& event) {
-    channel_.connect(event.session_id);
     if (image_state_ != dfu::ImageState::Confirmed ||
         settings_fallback_ != settings::Fallback::None)
         push_update(events::Peer{event.session_id, event.connection});
@@ -75,16 +81,32 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
 // INFO: fc 18sep26 only the holder's disconnect cancels, so another app leaving answers no prompt
 void ConfigService::on_link_down(const events::LinkDown& event) {
     diagnostics_.link_drop_reason = event.reason;
-    if (identity_ != nullptr) identity_->forget(event.session_id);
-    browsers_.forget(event.session_id);
-    if (pairing_peer_ && pairing_peer_->session_id == event.session_id) pairing_peer_.reset();
-    if (!channel_.disconnect(event.session_id)) return;
+    const events::Peer peer{event.session_id, event.connection};
+    forget_peer(peer);
+    if (channel_.disconnect(peer)) forget_holder();
+}
+
+// INFO: fc 26nov26 a full link_events queue drops a Down, so a gone holder's claim ends here
+void ConfigService::release_departed_holder() {
+    const events::Peer holder = channel_.claim().peer();
+    if (!channel_.release_departed_holder()) return;
+    forget_peer(holder);
+    forget_holder();
+}
+
+void ConfigService::forget_peer(const events::Peer& peer) {
+    if (identity_ != nullptr) identity_->forget(peer);
+    browsers_.forget(peer);
+    if (pairing_peer_ == peer) pairing_peer_.reset();
+}
+
+void ConfigService::forget_holder() {
     refused_on_device_ = false;
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     // INFO: fc 27nov26 a held image is whole and approved, and a resend would start again from 0
     if (!install_held_) upload_window_open_ = false;
-    status_push_due_ = false;
+    window_closed_owed_ = false;
 }
 
 namespace {

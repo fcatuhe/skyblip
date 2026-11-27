@@ -1,0 +1,8 @@
+<figure class="setup-handoff" data-<%= controller %>-target="<%= target %>" hidden>
+  <%= image_tag briefing_setup_handoff_path(installed: "go"), width: 176, height: 176, loading: "lazy",
+        alt: t("briefing.setup.handoff.code"), data: { "#{controller}_target" => code_target } %>
+  <figcaption>
+    <p><%= t("briefing.setup.handoff.activation") %></p>
+    <p class="note"><%= t("briefing.setup.handoff.type") %></p>
+  </figcaption>
+</figure>

@@ -484,7 +484,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     config.confirm();
     REQUIRE(config.upload_allowed());
 
-    events::LinkDown down{1};
+    events::LinkDown down{1, kFirstConnection};
     config.on_link_down(down);
     CHECK_FALSE(config.upload_allowed());
 }
