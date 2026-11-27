@@ -176,7 +176,7 @@ export class Updater {
   #dumpAsked = false;
   #dumpPending = false;
   #identityPending = false;
-  #windowOpen = false;
+  #windowVersion = null;
   #leaving = false;
   #choice = 0;
   #opening = null;
@@ -348,8 +348,10 @@ export class Updater {
     const refusal = this.#refusal();
     if (refusal) return this.#set({ notice: { key: refusal } });
     this.#set({ notice: null });
-    if (this.#windowOpen) return this.#upload();
-    return this.#ask('dfu', { version: versionText(this.#version) });
+    const version = versionText(this.#version);
+    if (this.#windowVersion === version) return this.#upload();
+    this.#windowVersion = null;
+    return this.#ask('dfu', { version });
   }
 
   recover() {
@@ -552,7 +554,7 @@ export class Updater {
     if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
     if (reply.acknowledge && task === 'pair' && reply.reason === 'paired') return this.#paired();
     if (reply.acknowledge && reply.reason === task) return this.#granted(task);
-    if (task === 'install') this.#windowOpen = false;
+    if (task === 'install') this.#windowVersion = null;
     const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
     this.#set({ phase: 'ready', task: null, refusedOnDevice, notice: this.#noticeDuring(task, { key: reply.reason || 'refused' }) });
     if (task === 'install' && LANDING_REFUSALS.has(reply.reason)) return this.#send({ command: 'install_report' });
@@ -573,10 +575,10 @@ export class Updater {
     if (task === 'pair') return this.#pairing();
     if (task === 'dfu') {
       this.#trust.confirmed();
-      this.#windowOpen = true;
+      this.#windowVersion = this.#state.asked.version;
       return this.#upload();
     }
-    this.#windowOpen = false;
+    this.#windowVersion = null;
     return this.#set({ phase: task === 'install' ? 'installing' : 'recovering', task: null });
   }
 
@@ -607,7 +609,7 @@ export class Updater {
       await this.#measureWrites();
       await this.#sendImage(total);
     } catch (error) {
-      if (error instanceof SmpError && error.rc === RC.accessDenied) this.#windowOpen = false;
+      if (error instanceof SmpError && error.rc === RC.accessDenied) this.#windowVersion = null;
       if (this.#state.phase === 'uploading') this.#fail(error);
       return;
     }
@@ -667,7 +669,7 @@ export class Updater {
     const { phase } = this.#state;
     const leaving = this.#leaving;
     this.#device = null;
-    this.#windowOpen = false;
+    this.#windowVersion = null;
     this.#running = null;
     this.#packetBytes = null;
     this.#writeBytes = GATT_WRITE_BYTES;
