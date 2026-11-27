@@ -60,6 +60,9 @@ class SectorAllocator {
     bool quarantined(uint32_t sector) const;
     uint32_t quarantined() const;
 
+    void open_session(SectorOwner owner, uint32_t session_id);
+    void close_session(SectorOwner owner);
+
     Claim claim(SectorOwner owner, uint32_t session_id);
     Claim prepare(SectorOwner owner);
     void note_erased(SectorOwner owner);
@@ -72,7 +75,6 @@ class SectorAllocator {
     uint32_t owned(SectorOwner owner) const;
     SectorOwner owner_of(uint32_t sector) const;
     uint32_t session_of(uint32_t sector) const;
-    bool owns_session(SectorOwner owner, uint32_t session_id) const;
     bool session_start(uint32_t sector) const;
     uint32_t lost_sectors(SectorOwner owner) const;
     uint32_t recycled_sectors(SectorOwner owner, uint32_t session_id) const;
@@ -81,6 +83,7 @@ class SectorAllocator {
     bool session_run(SectorOwner owner, uint32_t above_sequence, SessionRun& run) const;
     bool session_sector(SectorOwner owner, uint32_t session_id, uint32_t index,
                         uint32_t& sector) const;
+    uint32_t unused_session_id(SectorOwner owner, uint32_t wanted) const;
 
    private:
     struct Spare {
@@ -92,6 +95,11 @@ class SectorAllocator {
     struct Recycled {
         uint32_t session_id{0};
         uint32_t sectors{0};
+    };
+
+    struct Writing {
+        uint32_t session_id{0};
+        bool open{false};
     };
 
     struct Match {
@@ -109,6 +117,7 @@ class SectorAllocator {
     void note_taken(uint32_t sector);
     void note_recycled(SectorOwner owner, uint32_t session_id);
     void forget_recycled(SectorOwner owner, uint32_t session_id);
+    bool owns_session(SectorOwner owner, uint32_t session_id) const;
     uint32_t matching_up_to(const Match& match, uint32_t sequence) const;
     bool lowest_above(const Match& match, uint32_t above, uint32_t& sector,
                       uint32_t& sequence) const;
@@ -118,6 +127,7 @@ class SectorAllocator {
     const SectorTable table_;
     uint32_t lost_sectors_[2]{};
     Recycled recycled_[2]{};
+    Writing writing_[2]{};
     Spare spares_[2]{};
     uint32_t sector_count_{0};
     uint32_t floor_sectors_{0};

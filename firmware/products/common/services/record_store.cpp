@@ -130,19 +130,12 @@ Append RecordStore::claim_sector(uint32_t session_id) {
     return Append::Ok;
 }
 
-// INFO: fc 27nov26 before a fix a capture opens at the uptime, which a capture from a past boot
-// holds
-uint32_t RecordStore::unused_session_id(uint32_t opened_s) const {
-    uint32_t session_id = opened_s;
-    while (pool_.allocator().owns_session(owner_, session_id)) session_id++;
-    return session_id;
-}
-
 // INFO: fc 20sep26 the claim waits for the first record: opening a session must not touch flash
 void RecordStore::begin_session(uint32_t session_id) {
     session_id_ = session_id;
     writing_ = true;
     session_records_ = 0;
+    pool_.allocator().open_session(owner_, session_id);
     lost_sectors_seen_ = pool_.allocator().lost_sectors(owner_);
     claimed_ = false;
 }

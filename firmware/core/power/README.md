@@ -87,7 +87,7 @@ A charger plugged into a switched-off device must not wake it. On the T-Echo the
 
 ### Arming the button
 
-The wake pin senses a level, so every road to SYSTEM OFF waits for the button to come up, the cutoff and a refused press included. Nothing bounds the wait, so a bag holding the button down keeps the unit awake. With `power_switch` on `Button` the button always wakes, because, with the cable swallowed by the bootloader, a unit whose button was withheld could be woken only by the reset pin (#113). Cable mode is the one exception, below.
+The wake pin senses a level, so every road to SYSTEM OFF waits for the button to come up, the cutoff and a refused press included. The button must stay up `kReleaseSettleMs` until the rails drop, so a press while the glass, the sign-off or the radio still parks makes the unit wait for a new release. Nothing bounds the wait, so a bag holding the button down keeps the unit awake. With `power_switch` on `Button` the button always wakes, because, with the cable swallowed by the bootloader, a unit whose button was withheld could be woken only by the reset pin (#113). Cable mode is the one exception, below.
 
 ## Cable mode
 
