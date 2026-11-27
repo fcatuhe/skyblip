@@ -66,7 +66,6 @@ void ConfigService::set_flight_state(flight::FlightState state) {
 
 // INFO: fc 18sep26 A second Up on one session is the MTU exchange landing late, never a second app.
 void ConfigService::on_link_up(const events::LinkUp& event) {
-    channel_.connect(event.session_id);
     if (image_state_ != dfu::ImageState::Confirmed ||
         settings_fallback_ != settings::Fallback::None)
         push_update(events::Peer{event.session_id, event.connection});
@@ -75,15 +74,30 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
 // INFO: fc 18sep26 only the holder's disconnect cancels, so another app leaving answers no prompt
 void ConfigService::on_link_down(const events::LinkDown& event) {
     diagnostics_.link_drop_reason = event.reason;
-    if (identity_ != nullptr) identity_->forget(event.session_id);
-    browsers_.forget(event.session_id);
-    if (pairing_peer_ && pairing_peer_->session_id == event.session_id) pairing_peer_.reset();
-    if (!channel_.disconnect(event.session_id)) return;
+    const events::Peer peer{event.session_id, event.connection};
+    forget_peer(peer);
+    if (channel_.disconnect(peer)) forget_holder();
+}
+
+// INFO: fc 26nov26 a full link_events queue drops a Down, so a gone holder's claim ends here
+void ConfigService::release_departed_holder() {
+    const events::Peer holder = channel_.claim().peer();
+    if (!channel_.release_departed_holder()) return;
+    forget_peer(holder);
+    forget_holder();
+}
+
+void ConfigService::forget_peer(const events::Peer& peer) {
+    if (identity_ != nullptr) identity_->forget(peer);
+    browsers_.forget(peer);
+    if (pairing_peer_ == peer) pairing_peer_.reset();
+}
+
+void ConfigService::forget_holder() {
     refused_on_device_ = false;
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     upload_window_open_ = false;
-    status_push_due_ = false;
 }
 
 namespace {
