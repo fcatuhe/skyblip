@@ -34,6 +34,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     void service(uint32_t now_ms) {
         if (!started_ || stopped_) return;
         const uint64_t woke_us = clock_.microseconds();
+        if (radio_.irq_asserted()) drains_++;
         while (radio_.irq_asserted()) {
             events::AdsbFrame frame{};
             const parts::Lr2021Event event = radio_.poll(frame.bytes.data(), frame.bytes.size());
@@ -60,8 +61,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics.device_errors = radio_.device_errors();
         statistics.dropped = radio_.fifo_drops() + out_.dropped();
         statistics.part_resets = radio_.part_resets();
+        statistics.drains = drains_;
         statistics.framing_resyncs = radio_.framing_resyncs();
-        statistics.overflows = radio_.overflows();
         statistics.overflow_drops = radio_.overflow_drops();
         statistics.resync_drops = radio_.resync_drops();
         statistics.queue_drops = out_.dropped();
@@ -88,11 +89,6 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     bool parked() const override { return parked_; }
 
-    void set_detection_threshold(int16_t dbm) override {
-        if (stopped_) return;
-        (void)radio_.set_detection_threshold(dbm);
-    }
-
     bool listening() const override {
         return started_ && !stopped_ && radio_.mode() == parts::Lr2021Mode::Receive;
     }
@@ -110,6 +106,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     ports::AdsbReceiverStatistics statistics_{};
     ports::ReceiverProbe probe_{};
     uint32_t serviced_ms_{0};
+    uint32_t drains_{0};
     uint32_t probed_ms_{0};
     bool started_{false};
     bool stopped_{false};

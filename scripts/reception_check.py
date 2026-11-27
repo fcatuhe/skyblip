@@ -24,15 +24,14 @@ WIDE = 1 << 16
 NARROW = 1 << 8
 WIDE_COUNTERS = ("frames", "part_packets", "crc", "unsupported", "folded", "positions",
                  "capture_refused", "impossible_formats", "overflow_drops", "resync_drops",
-                 "queue_drops", "in_flight", "split_counts")
+                 "queue_drops", "in_flight", "split_counts", "drains", "drain_busy_ms")
 NARROW_COUNTERS = ("frames_dropped", "rearms", "resets", "part_resets", "command_errors",
-                   "missed_edges", "framing_resyncs", "overflows", "stranded_resyncs",
-                   "short_resyncs")
+                   "missed_edges", "framing_resyncs", "stranded_resyncs", "short_resyncs")
 FRAMING_COUNTERS = ("in_flight", "split_counts", "stranded_resyncs", "short_resyncs")
-THRESHOLD_LAG_S = 3
+# the receiver thread is cooperative, so beyond this share of the CPU the loop and the link starve
+DRAIN_BUSY_CEILING_PERMILLE = 300
 MAX_STEP_S = 5
-# firmware/products/skyblip_bravo/detection_threshold.h regulates the threshold inside this range
-THRESHOLD_RANGE_DBM = (-110, -92)
+DETECTION_THRESHOLD_DBM = -110
 NOISE_RISE_DB = 6
 FLOOD_FACTOR = 3
 LOOP_STALL_US = 100_000
@@ -165,10 +164,8 @@ def whole_run(seconds, floor):
                                 total["queue_drops"]))
         lines.append("  framing: " + ", ".join("%s %d" % (field, total[field])
                                                for field in FRAMING_COUNTERS))
-    thresholds = sorted({second.receiver["threshold_dbm"] for second in seconds
-                         if "threshold_dbm" in second.receiver})
-    if thresholds:
-        lines.append("  detection threshold %d to %d dBm" % (thresholds[0], thresholds[-1]))
+        lines.append("  receiver thread: %d drains, %.1f%% of the CPU"
+                     % (total["drains"], total["drain_busy_ms"] / duration(seconds) / 10))
     if floor is not None:
         lines.append("  noise floor median %d dBm" % floor)
     modes = collections.Counter()
@@ -243,7 +240,8 @@ def verdicts(run, floor, usual):
     if modes:
         found.append("the LR2021 left receive behind the driver's back: %s" % ", ".join(modes))
     thresholds = sorted({receiver["threshold_dbm"] for receiver in probed
-                         if "threshold_dbm" in receiver and not regulated(receiver)})
+                         if receiver.get("threshold_dbm", DETECTION_THRESHOLD_DBM)
+                         != DETECTION_THRESHOLD_DBM})
     if thresholds or any(not receiver.get("front_end_kept") for receiver in probed):
         found.append("the LR2021 lost what the driver wrote: threshold %s dBm, 0xF30150 %s"
                      % (",".join(str(value) for value in thresholds) or "kept",
@@ -265,11 +263,6 @@ def verdicts(run, floor, usual):
     if total["framing_resyncs"]:
         found.append("the receive FIFO lost its framing and was emptied %d time%s"
                      % (total["framing_resyncs"], "" if total["framing_resyncs"] == 1 else "s"))
-    thresholds = sorted({receiver["threshold_dbm"] for receiver in probed
-                         if "threshold_dbm" in receiver and regulated(receiver)})
-    if len(thresholds) > 1:
-        found.append("the detection threshold moved from %d to %d dBm"
-                     % (thresholds[0], thresholds[-1]))
     if any(second.framing for second in run):
         lost = [(total[field], where) for field, where in
                 (("overflow_drops", "FIFO overflows"), ("resync_drops", "framing resyncs"),
@@ -277,9 +270,9 @@ def verdicts(run, floor, usual):
         if lost:
             found.append("frames lost to " + ", ".join("%s %d" % (where, count)
                                                        for count, where in lost))
-        lag = untaken(run)
-        if lag:
-            found.append(lag)
+        busy_permille = total["drain_busy_ms"] / duration(run)
+        if busy_permille > DRAIN_BUSY_CEILING_PERMILLE:
+            found.append("the receiver thread held %d%% of the CPU" % (busy_permille / 10))
     elif total["frames_dropped"]:
         found.append("%d frames lost to a full queue" % total["frames_dropped"])
     found += stalls(run)
@@ -297,29 +290,6 @@ def verdicts(run, floor, usual):
     if references:
         found.append("Bravo had no position to place traffic against (reference none)")
     return found
-
-
-def regulated(receiver):
-    return THRESHOLD_RANGE_DBM[0] <= receiver["threshold_dbm"] <= THRESHOLD_RANGE_DBM[1]
-
-
-def untaken(run):
-    longest = 0
-    streak = 0
-    worst = None
-    for second in run:
-        wanted = second.framing.get("threshold_wanted_dbm") if second.framing else None
-        held = second.receiver.get("threshold_dbm")
-        if wanted is None or held is None or wanted == held:
-            streak = 0
-            continue
-        streak += second.elapsed_s
-        if streak > longest:
-            longest, worst = streak, (wanted, held)
-    if longest < THRESHOLD_LAG_S:
-        return None
-    return ("the LR2021 held %d dBm for %d s while the regulator asked %d dBm"
-            % (worst[1], longest, worst[0]))
 
 
 def stalls(run):

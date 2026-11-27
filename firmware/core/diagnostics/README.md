@@ -80,7 +80,7 @@ The device never reads a record back. The C++ decoders the host suite reads reco
 | `Adsb` 21 | the ADS-B altitude questions of #183: which datum each installation's difference is on, how far the two relative altitudes disagree, and which versions and GVA values are heard |
 | `Receiver` 22 | when Bravo hears nothing, whether the LR2021 left receive, reset itself, lost its threshold, stopped raising its IRQ, or sat in noise |
 | `Reception` 23 | where the frames the LR2021 heard went: refused, folded, placed, and whether Bravo had a position to place them against |
-| `Framing` 24 | where Bravo lost frames, whether the LR2021 fills its FIFO as a frame arrives, and whether it took the detection threshold the regulator asked |
+| `Framing` 24 | where Bravo lost frames, whether the LR2021 fills its FIFO as a frame arrives, and what the receiver thread costs the CPU |
 
 ### Bursts that carry a name or a status
 
@@ -129,15 +129,14 @@ Bravo writes one `Receiver`, one `Framing` and one `Reception` each second of a 
 | `part_mode` anything but `receive` while `listening` | the part left receive and the driver did not notice |
 | `part_packets` rising while `frames` does not | the part decodes frames that never reach the driver: a lost IRQ edge or a FIFO read |
 | `framing_resyncs` rising, in `reception` | the FIFO held bytes no frame owns, and the driver emptied it rather than read frames shifted across two |
-| `threshold_dbm` moving between -110 and -92 dBm | the detection threshold regulating the false-alarm rate, not a fault |
 | `missed_edges` rising | frames found on a timed wake, with no IRQ edge to wake the thread |
 | `noise_dbm` well above its usual floor | the band is jammed or the front end desensed |
 | `frames` rising, `crc` rising as fast | frames heard and refused, as #277 measured on the bench |
 | `rearms` or `resets` rising | the driver's own recovery ran, after 30 s of silence or a fault |
 
-`Reception` carries `AdsbService`'s counters: `crc`, `unsupported`, `folded`, `positions` and `capture_refused`, then the aircraft the assembly holds, those the table holds, `reference`, the position the traffic is placed against, and `fix_valid`, flag bit 2. `framing_resyncs` counts the times the LR2021 driver found bytes in its FIFO that no counted frame owns and emptied it (`../../hardware/parts/lr2021/README.md`, Framing). `impossible_formats` counts the frames whose downlink format no transponder sends, the noise the detection threshold is regulated on. Bravo's NMEA sends no traffic without a fix, and its peer link exports none while `reference` is `none`, so an EFB can lose every target while the receiver hears them all.
+`Reception` carries `AdsbService`'s counters: `crc`, `unsupported`, `folded`, `positions` and `capture_refused`, then the aircraft the assembly holds, those the table holds, `reference`, the position the traffic is placed against, and `fix_valid`, flag bit 2. `framing_resyncs` counts the times the LR2021 driver found bytes in its FIFO that no counted frame owns and emptied it (`../../hardware/parts/lr2021/README.md`, Framing). `impossible_formats` counts the frames whose downlink format no transponder sends, junk by definition, and times 32/12 an estimate of every false alarm. Bravo's NMEA sends no traffic without a fix, and its peer link exports none while `reference` is `none`, so an EFB can lose every target while the receiver hears them all.
 
-`Framing` answers what the framing law and the threshold regulator rest on, which the bench has not yet measured (`../../hardware/parts/lr2021/README.md`, Framing):
+`Framing` answers what the framing law and the paced receiver thread rest on, which the bench has not yet measured (`../../hardware/parts/lr2021/README.md`, Framing):
 
 | Fields | What they answer |
 |---|---|
@@ -145,7 +144,7 @@ Bravo writes one `Receiver`, one `Framing` and one `Reception` each second of a 
 | `in_flight`, `stranded_resyncs` | whether bytes past the counted frames were a frame still arriving or the remains of one never counted. `in_flight` rising says the LR2021 writes a frame into its FIFO as it arrives |
 | `split_counts` | snapshots where a frame closed while the level was read, so the bytes went unchecked until the next |
 | `short_resyncs` | a FIFO holding fewer bytes than the frames the part counted |
-| `false_alarm_hz`, `threshold_wanted_dbm` | the regulator's estimate and the threshold it asked. Against `receiver.threshold_dbm`, a difference that lasts is a write the part did not take |
+| `drain_busy_ms`, `drains` | the receiver thread's own time and wakes. It runs ahead of the loop, so `loop.busy_ms` counts this time inside the service it interrupted, and only here does it show apart |
 
 ### The transmitter
 
@@ -207,7 +206,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Adsb` | `products/common/services/adsb_capture.cpp` `AdsbCapture::record` | every ADS-B observation folded, under the two rules above, from Bravo's `AdsbService` and a paired Go's `BravoService` |
 | `Receiver` | `products/skyblip_bravo/services/adsb.cpp` `record_second`, from `ports::AdsbReceiver::statistics()` | once a second, whatever the sky does |
 | `Reception` | the same | the same pass |
-| `Framing` | the same, from `ports::AdsbReceiverStatistics` and `DetectionThreshold` | the same pass |
+| `Framing` | the same, from `ports::AdsbReceiverStatistics` | the same pass |
 | `Write` | `products/common/services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `products/skyblip_go/services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `products/common/services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, the partition refused a sector, or the sector ring recycled one of this session's own |

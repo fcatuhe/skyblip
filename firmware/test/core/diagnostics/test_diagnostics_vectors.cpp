@@ -387,9 +387,8 @@ Framing framing() {
     value.queue_drops = 900;
     value.in_flight = 1234;
     value.split_counts = 56;
-    value.false_alarm_hz = 410;
-    value.threshold_wanted_dbm = -104;
-    value.overflows = 300;
+    value.drain_busy_ms = 70300;
+    value.drains = 2500;
     value.stranded_resyncs = 3;
     value.short_resyncs = 1;
     return value;

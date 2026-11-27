@@ -128,34 +128,6 @@ TEST_CASE("lr2021: whole frames with nothing stray are read with no resync and n
     CHECK(part.elapsed_us - before_us < chip::kInFlightGrowthUs);
 }
 
-TEST_CASE("lr2021: a new threshold is written while receiving, on a FIFO started again empty") {
-    models::Lr2021 part;
-    Lr2021 radio = lr2021_receiving(part);
-    part.strand(3);
-    REQUIRE(radio.set_detection_threshold(-98) == Status::Ok);
-    CHECK(part.fifo.empty());
-    CHECK(part.listening_for_adsb());
-    ports::ReceiverProbe probe{};
-    REQUIRE(radio.sample(probe) == Status::Ok);
-    CHECK(probe.threshold_dbm == -98);
-
-    air(part, kAddress);
-    uint8_t frame[adsb::kFrameBytes]{};
-    REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
-    CHECK(radio.framing_resyncs() == 0);
-}
-
-TEST_CASE("lr2021: a threshold set while parked is the one the next bring-up writes") {
-    models::Lr2021 part;
-    Lr2021 radio = lr2021_for(part);
-    REQUIRE(radio.set_detection_threshold(-100) == Status::Ok);
-    REQUIRE(radio.begin(radio.detection_threshold_dbm()) == Status::Ok);
-    REQUIRE(radio.start_receive() == Status::Ok);
-    ports::ReceiverProbe probe{};
-    REQUIRE(radio.sample(probe) == Status::Ok);
-    CHECK(probe.threshold_dbm == -100);
-}
-
 TEST_CASE("lr2021: a frame's worth of bytes no counted frame owns is neither stranded nor short") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
@@ -169,14 +141,13 @@ TEST_CASE("lr2021: a frame's worth of bytes no counted frame owns is neither str
     CHECK(radio.short_resyncs() == 0);
 }
 
-TEST_CASE("lr2021: an overflow counts once, with every frame the FIFO held") {
+TEST_CASE("lr2021: an overflow counts every frame the FIFO held, apart from resyncs") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     for (int i = 0; i < 19; i++) air(part, kAddress);
     uint8_t frame[adsb::kFrameBytes]{};
 
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
-    CHECK(radio.overflows() == 1);
     CHECK(radio.overflow_drops() == 19);
     CHECK(radio.framing_resyncs() == 0);
     CHECK(part.listening_for_adsb());

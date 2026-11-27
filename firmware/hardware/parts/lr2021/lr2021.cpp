@@ -143,7 +143,6 @@ Status Lr2021::take_snapshot() {
     if ((fifo_flags[0] & lr2021::kFifoOverflow) != 0) {
         const uint32_t lost =
             (be16(level) + lr2021::kFifoFrameBytes - 1u) / lr2021::kFifoFrameBytes;
-        overflows_++;
         overflow_drops_ += lost != 0 ? lost : 1;
         return restart_receive();
     }
@@ -476,18 +475,6 @@ Status Lr2021::read_packets(uint16_t& packets) {
     uint8_t stats[6] = {};
     const Status status = read(lr2021::kGetOokRxStats, stats, sizeof(stats));
     if (status == Status::Ok) packets = be16(stats);
-    return status;
-}
-
-// INFO: fc 26nov26 the FIFO is cleared with it, so the counts that frame it start again together
-Status Lr2021::set_detection_threshold(int16_t dbm) {
-    detection_threshold_dbm_ = dbm;
-    if (mode_ != Lr2021Mode::Receive) return Status::Ok;
-    frames_waiting_ = 0;
-    Status status = enter_standby();
-    if (status == Status::Ok) status = write_threshold();
-    if (status == Status::Ok) status = command(lr2021::kClearRxFifo, nullptr, 0);
-    if (status == Status::Ok) status = start_receive();
     return status;
 }
 

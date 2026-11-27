@@ -476,9 +476,8 @@ enum : uint32_t {
     kQueueDrops = 4,
     kInFlight = 6,
     kSplitCounts = 8,
-    kFalseAlarmHz = 10,
-    kThresholdWantedDbm = 12,
-    kOverflows = 13,
+    kDrainBusyMs = 10,
+    kDrains = 12,
     kStrandedResyncs = 14,
     kShortResyncs = 15,
 };

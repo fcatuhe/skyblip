@@ -323,15 +323,13 @@ struct Framing {
     uint32_t queue_drops{0};
     uint32_t in_flight{0};
     uint32_t split_counts{0};
-    uint32_t false_alarm_hz{0};
-    int8_t threshold_wanted_dbm{0};
-    uint32_t overflows{0};
+    uint32_t drain_busy_ms{0};
+    uint32_t drains{0};
     uint32_t stranded_resyncs{0};
     uint32_t short_resyncs{0};
 };
 
-Framing framing_of(const ports::AdsbReceiverStatistics& statistics, uint32_t false_alarm_hz,
-                   int16_t threshold_wanted_dbm);
+Framing framing_of(const ports::AdsbReceiverStatistics& statistics);
 
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);

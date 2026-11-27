@@ -94,7 +94,13 @@ When the sleep fails, the Zephyr adapter leaves `parked()` false, and the shutdo
 
 The Zephyr adapter's thread is cooperative, so nothing preempts it between an IRQ and the FIFO read that empties nine frames' worth of FIFO in a millisecond. So it must never spin long on BUSY. The driver polls BUSY every 10 us for the first millisecond, since a command frees it in microseconds, and then every 1 ms. A 32768 Hz tick is 31 us, so the 1 ms steps sleep the thread and let the Bluetooth host and the service loop run.
 
-The thread sleeps on the IRQ's rising edge. If the GPIO driver refuses the trigger, at start or when a reset re-arms it, the thread polls the part every 200 us instead (`kFallbackPollUs`), up to 5000 wakes a second, and the diagnostics' `irq_armed` reads false.
+### The receiver thread
+
+The thread sleeps on the IRQ's rising edge, drains the FIFO, then sleeps out the rest of `kDrainPeriodUs`, 5 ms, before it waits for the next edge. Edges that come meanwhile wait in its semaphore, so the next drain takes every frame they announced in one snapshot.
+
+Woken per frame, as it was before #550, a snapshot of 7 to 9 reads cost about 500 us a frame, measured on bravo-d582 as the service loop's busy time against the frame rate. The thread is cooperative, so it yielded only when the FIFO ran empty, and at 1500 frames a second, a flood outdoors, it held the CPU: the loop fell to 7 passes a second and the GNSS UART overran. Paced, it wakes at most 200 times a second whatever the sky does, and the FIFO's 18 frames hold a 5 ms period at up to 3600 frames a second, twice the flood bravo-d582 met (`static_assert`). Past that the FIFO overflows, and the frames are counted lost rather than the CPU. The thread's own busy time and its drains reach a capture's `Framing` record, because the loop's busy time counts it inside whichever service it interrupted.
+
+If the GPIO driver refuses the trigger, at start or when a reset re-arms it, the thread polls the part once each period instead, and the diagnostics' `irq_armed` reads false.
 
 The driver leaves out RadioLib's DC-DC workaround, `setDCDCworkaround()` (`67d7121`, #1864), as SoftRF does: neither selects the DC-DC converter, and SetRegMode's default is SIMO_OFF, the LDOs (DS 6.3.18).
 
@@ -126,7 +132,7 @@ DS 22.1 says a host may override the OOK threshold the part computes from the ba
 
 Write the threshold after SetRfFrequency, as RadioLib's `beginOOK()` and cb-tfc do. Written before SetRxPath, CalibFE and SetRfFrequency, it behaved in #293 like the part's own threshold, so one of those commands most likely resets it. Which one is not known.
 
-`set_detection_threshold()` changes it while the part receives: STDBY_RC, the masked write, ClearRxFifo, and receive started again with a new packet count, so framing starts over with the threshold. The probe reads the register back, so a capture shows the threshold the part holds. Across the overflow restarts of the bravo-d582 floods the register kept -110 dBm, so SetRxPath alone does not reset it. A threshold set while the part is parked is the one the next bring-up writes. Bravo's product decides the value (`../../../products/skyblip_bravo/README.md`, The detection threshold).
+The probe reads the register back, so a capture shows the threshold the part holds. Across the overflow restarts of the bravo-d582 floods the register kept -110 dBm, so SetRxPath alone does not reset it. Why it stays fixed is in `../../../products/skyblip_bravo/README.md`, The detection threshold.
 
 ## Unverified until #169 benches a unit
 

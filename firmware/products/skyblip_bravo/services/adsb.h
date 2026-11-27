@@ -9,7 +9,6 @@
 #include "ports/adsb_receiver.h"
 #include "products/common/services/adsb_capture.h"
 #include "products/common/traffic_settings.h"
-#include "products/skyblip_bravo/detection_threshold.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/own_transponder.h"
 #include "products/skyblip_bravo/transponders.h"
@@ -26,6 +25,9 @@ class AdsbService : public runtime::Service {
     static constexpr uint32_t kRecordPeriodMs = 1000;
     // INFO: fc 26nov26 the radio thread refills the queue mid-drain: a flood held one pass 561 ms
     static constexpr int kFramesPerPassCeiling = events::kAdsbLoadFrames;
+    // INFO: fc 27nov26 no transponder sends these downlink formats, so a frame naming one is noise
+    static constexpr std::array<uint8_t, 12> kImpossibleFormats = {1, 2,  3,  6,  7,  8,
+                                                                   9, 10, 12, 13, 14, 15};
 
     AdsbService(runtime::Context& context, bus::AdsbQueue& frames, ports::AdsbReceiver& receiver,
                 common::TrafficSettings settings, const GateReference& gate)
@@ -49,7 +51,7 @@ class AdsbService : public runtime::Service {
     const common::AdsbCapture& capture() const { return capture_; }
     const OwnTransponder& own_transponder() const { return own_transponder_; }
     const Transponders& transponders() const { return transponders_; }
-    const DetectionThreshold& detection_threshold() const { return threshold_; }
+    uint32_t impossible_formats() const;
 
    private:
     static adsb::Reference reference(const model::Ownship& own);
@@ -57,7 +59,6 @@ class AdsbService : public runtime::Service {
     void refuse(Status status);
     void count_format(uint8_t downlink_format);
     void record_second(const GateChoice& gate, uint32_t now_ms);
-    void regulate_threshold(uint32_t now_ms);
 
     bus::AdsbQueue& frames_;
     ports::AdsbReceiver& receiver_;
@@ -67,7 +68,6 @@ class AdsbService : public runtime::Service {
     adsb::Assembly assembly_{};
     OwnTransponder own_transponder_{};
     Transponders transponders_{};
-    DetectionThreshold threshold_{};
     model::AircraftObservation observation_{};
     uint32_t crc_{0};
     uint32_t unsupported_{0};

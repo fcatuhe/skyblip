@@ -53,9 +53,9 @@ class Sky:
         if self.framing is not None:
             framing = {field: self.totals[field] % check.WIDE for field in
                        ("overflow_drops", "resync_drops", "queue_drops", "in_flight",
-                        "split_counts")}
+                        "split_counts", "drains", "drain_busy_ms")}
             framing.update({field: self.totals[field] % check.NARROW for field in
-                            ("overflows", "stranded_resyncs", "short_resyncs")})
+                            ("stranded_resyncs", "short_resyncs")})
             written.append(dict(envelope, type="framing", **framing, **self.framing))
         written.append(reception)
         for record in written:
@@ -174,30 +174,32 @@ class Outages(unittest.TestCase):
         self.assertIn("the service loop stalled: a pass of 561 ms in adsb, as few as 7 passes",
                       report)
 
-    def test_lost_framing_and_a_regulated_threshold_are_named_and_not_taken_for_a_reset(self):
+    def test_lost_framing_is_named_and_not_taken_for_a_reset(self):
         sky = Sky()
         sky.seconds(20, **HEARING)
-        sky.seconds(1, framing_resyncs=1, frames=60, part_packets=60, unsupported=50)
-        sky.receiver["threshold_dbm"] = -104
-        sky.seconds(14, frames=60, part_packets=60, unsupported=50)
+        sky.seconds(15, framing_resyncs=1, frames=60, part_packets=60, unsupported=50)
         report = sky.report()
-        self.assertIn("the receive FIFO lost its framing and was emptied 1 time\n", report)
-        self.assertIn("the detection threshold moved from -110 to -104 dBm", report)
-        self.assertIn("detection threshold -110 to -104 dBm", report)
+        self.assertIn("the receive FIFO lost its framing and was emptied 15 times", report)
         self.assertNotIn("lost what the driver wrote", report)
 
-    def test_lost_frames_are_split_by_where_and_a_threshold_the_part_ignored_is_named(self):
+    def test_a_threshold_other_than_the_drivers_is_one_the_part_lost(self):
         sky = Sky()
-        sky.framing = {"false_alarm_hz": 40, "threshold_wanted_dbm": -110}
         sky.seconds(20, **HEARING)
-        sky.framing = {"false_alarm_hz": 900, "threshold_wanted_dbm": -104}
+        sky.receiver["threshold_dbm"] = -104
+        sky.seconds(15, frames=60, part_packets=60, unsupported=50)
+        self.assertIn("the LR2021 lost what the driver wrote: threshold -104 dBm", sky.report())
+
+    def test_lost_frames_are_split_by_where_and_a_receiver_thread_hogging_the_cpu_is_named(self):
+        sky = Sky()
+        sky.framing = {}
+        sky.seconds(20, drains=200, drain_busy_ms=40, **HEARING)
         sky.seconds(15, frames=1200, part_packets=1200, unsupported=900, overflow_drops=30,
-                    resync_drops=2, queue_drops=50, overflows=2, in_flight=4)
+                    resync_drops=2, queue_drops=50, in_flight=4, drains=200, drain_busy_ms=600)
         report = sky.report()
         self.assertIn("frames lost to FIFO overflows 450, framing resyncs 30, the full queue 750",
                       report)
-        self.assertIn("the LR2021 held -110 dBm for 15 s while the regulator asked -104 dBm",
-                      report)
+        self.assertIn("the receiver thread held 60% of the CPU", report)
+        self.assertIn("  receiver thread: 6800 drains, 28.7% of the CPU", report)
         self.assertIn("  frames lost: 450 to FIFO overflows, 30 to framing resyncs, 750 to the "
                       "full queue", report)
         self.assertIn("  framing: in_flight 60, split_counts 0, stranded_resyncs 0", report)

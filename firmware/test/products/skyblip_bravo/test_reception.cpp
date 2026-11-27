@@ -3,7 +3,6 @@
 
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_bravo/detection_threshold.h"
 #include "test/support/bravo_rig.h"
 #include "test/support/diagnostics_corpus.h"
 #include "test/support/diagnostics_read.h"
@@ -53,10 +52,11 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
           count_of(records, diagnostics::Type::Receiver));
     diagnostics::Framing framing{};
     REQUIRE(last_of(records, framing));
-    CHECK(framing.threshold_wanted_dbm == bravo::DetectionThreshold::kFloorDbm);
     CHECK(framing.overflow_drops == 0);
     CHECK(framing.resync_drops == 0);
     CHECK(framing.queue_drops == 0);
+    CHECK(framing.drains >= 2);
+    CHECK(framing.drain_busy_ms == 0);
 
     diagnostics::Receiver receiver{};
     REQUIRE(last_of(records, receiver));

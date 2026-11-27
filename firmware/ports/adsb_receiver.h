@@ -51,7 +51,6 @@ struct AdsbReceiverStatistics {
     uint32_t missed_edges{0};
     uint32_t part_resets{0};
     uint32_t framing_resyncs{0};
-    uint32_t overflows{0};
     uint32_t overflow_drops{0};
     uint32_t resync_drops{0};
     uint32_t queue_drops{0};
@@ -59,7 +58,9 @@ struct AdsbReceiverStatistics {
     uint32_t split_counts{0};
     uint32_t stranded_resyncs{0};
     uint32_t short_resyncs{0};
-    // INFO: fc 21nov26 false means the thread polls every 200 us, since the IRQ edge never armed
+    uint32_t drains{0};
+    uint64_t drain_busy_us{0};
+    // INFO: fc 21nov26 false means the thread polls every 5 ms, since the IRQ edge never armed
     bool irq_armed{false};
     ReceiverProbe probe{};
     uint32_t rssi[kRssiBuckets]{};
@@ -97,8 +98,6 @@ class AdsbReceiver {
     virtual AdsbReceiverStatistics statistics() const = 0;
     // INFO: fc 11nov26 armed on 1090 MHz: false before begin(), through a reset, once parked
     virtual bool listening() const = 0;
-    // INFO: fc 26nov26 applied by whoever owns the part's bus, so it may land a pass later
-    virtual void set_detection_threshold(int16_t dbm) = 0;
     // INFO: fc 11nov26 terminal like ports::Rf::sleep(): parked() turns true only once the part
     // confirmed its sleep
     virtual void sleep() = 0;

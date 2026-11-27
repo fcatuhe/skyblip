@@ -14,15 +14,19 @@
 
 namespace skyblip::platform::zephyr {
 
-// INFO: fc 11nov26 the radio's own thread owns the SPI: it wakes on the IRQ edge and pushes each
-// frame
+// INFO: fc 11nov26 the radio's own thread owns the SPI: it wakes on the IRQ edge and pushes the
+// frames
 class AdsbReceiver : public ports::AdsbReceiver {
    public:
     static constexpr int kStackBytes = 1536;
     static constexpr int kHealthTickMs = 250;
-    // INFO: fc 11nov26 without the edge the FIFO's nine frames last 1 ms, so the thread polls well
-    // inside it
-    static constexpr int kFallbackPollUs = 200;
+    // INFO: fc 27nov26 bravo-d582 spent 500 us a frame waking per frame, so a drain waits for more
+    static constexpr uint32_t kDrainPeriodUs = 5000;
+    // INFO: fc 27nov26 the most frames a second bravo-d582 heard outdoors, in session 126
+    static constexpr uint32_t kFloodFramesPerSecond = 1500;
+    static_assert(parts::lr2021::kFifoFrames * 1000000ULL >=
+                      2ULL * kFloodFramesPerSecond * kDrainPeriodUs,
+                  "the FIFO holds twice the frames a flood brings in a drain period");
     static constexpr uint64_t kProbePeriodUs = 1000000;
 
     AdsbReceiver(parts::Lr2021& radio, ports::Clock& clock, const struct gpio_dt_spec& irq,
@@ -32,8 +36,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
           clock_(clock),
           irq_(irq),
           out_(out),
-          detection_threshold_dbm_(detection_threshold_dbm),
-          threshold_wanted_dbm_(detection_threshold_dbm) {
+          detection_threshold_dbm_(detection_threshold_dbm) {
         k_sem_init(&wake_, 0, 1);
     }
 
@@ -87,11 +90,6 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     bool listening() const override { return listening_; }
 
-    void set_detection_threshold(int16_t dbm) override {
-        threshold_wanted_dbm_ = dbm;
-        k_sem_give(&wake_);
-    }
-
     // INFO: fc 11nov26 GPIO only: a thread aborted inside a transfer keeps the SPI lock, so no SPI
     // follows
     void abandon() override {
@@ -114,20 +112,26 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     void run() {
         for (;;) {
-            const k_timeout_t idle = irq_wakes_ ? K_MSEC(kHealthTickMs) : K_USEC(kFallbackPollUs);
+            const k_timeout_t idle = irq_wakes_ ? K_MSEC(kHealthTickMs) : K_NO_WAIT;
             const bool edge = k_sem_take(&wake_, idle) == 0;
             if (sleep_requested_) {
                 park();
                 return;
             }
-            apply_threshold();
+            const uint32_t started = k_cycle_get_32();
             const uint32_t drained = drain();
             // INFO: fc 26nov26 RxDone held the line high with no edge seen, so frames waited a tick
             if (!edge && irq_wakes_ && drained != 0) missed_edges_++;
             health();
             probe();
+            const uint64_t spent_us = k_cyc_to_us_floor64(k_cycle_get_32() - started);
+            drain_busy_us_ += spent_us;
+            drains_++;
             publish();
             listening_ = radio_.mode() == parts::Lr2021Mode::Receive;
+            // INFO: fc 27nov26 a cooperative thread yields only when it waits, so it waits each
+            // period
+            if (spent_us < kDrainPeriodUs) k_sleep(K_USEC(kDrainPeriodUs - spent_us));
         }
     }
 
@@ -159,13 +163,6 @@ class AdsbReceiver : public ports::AdsbReceiver {
             irq_wakes_ = irq_wakes_ && arm_irq();
     }
 
-    // INFO: fc 26nov26 the loop asks and this thread, which owns the SPI, writes it between drains
-    void apply_threshold() {
-        const int16_t wanted = threshold_wanted_dbm_;
-        if (wanted == radio_.detection_threshold_dbm()) return;
-        (void)radio_.set_detection_threshold(wanted);
-    }
-
     void probe() {
         const uint64_t now_us = clock_.microseconds();
         if (now_us - probed_us_ < kProbePeriodUs) return;
@@ -178,7 +175,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics_.missed_edges = missed_edges_;
         statistics_.part_resets = radio_.part_resets();
         statistics_.framing_resyncs = radio_.framing_resyncs();
-        statistics_.overflows = radio_.overflows();
+        statistics_.drains = drains_;
+        statistics_.drain_busy_us = drain_busy_us_;
         statistics_.overflow_drops = radio_.overflow_drops();
         statistics_.resync_drops = radio_.resync_drops();
         statistics_.in_flight = radio_.in_flight();
@@ -213,6 +211,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
     uint64_t health_checked_us_{0};
     uint64_t probed_us_{0};
     uint32_t missed_edges_{0};
+    uint32_t drains_{0};
+    uint64_t drain_busy_us_{0};
     struct k_sem wake_{};
     struct gpio_callback irq_callback_{};
     volatile bool irq_wakes_{false};
@@ -220,7 +220,6 @@ class AdsbReceiver : public ports::AdsbReceiver {
     volatile bool parked_{false};
     volatile bool stopped_{false};
     volatile bool listening_{false};
-    volatile int16_t threshold_wanted_dbm_;
     struct k_thread thread_{};
     k_tid_t thread_id_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackBytes);

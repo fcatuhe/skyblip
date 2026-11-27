@@ -38,7 +38,6 @@ class Lr2021 {
     Lr2021Event poll(uint8_t* frame, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
     Status sample(ports::ReceiverProbe& probe);
-    Status set_detection_threshold(int16_t dbm);
     Status sleep();
     void park();
     void hold_in_reset();
@@ -52,14 +51,12 @@ class Lr2021 {
     uint32_t fifo_drops() const { return overflow_drops_ + resync_drops_; }
     uint32_t part_resets() const { return part_resets_; }
     uint32_t framing_resyncs() const { return framing_resyncs_; }
-    uint32_t overflows() const { return overflows_; }
     uint32_t overflow_drops() const { return overflow_drops_; }
     uint32_t resync_drops() const { return resync_drops_; }
     uint32_t in_flight() const { return in_flight_; }
     uint32_t split_counts() const { return split_counts_; }
     uint32_t stranded_resyncs() const { return stranded_resyncs_; }
     uint32_t short_resyncs() const { return short_resyncs_; }
-    int16_t detection_threshold_dbm() const { return detection_threshold_dbm_; }
 
    private:
     Status wait_busy_low(uint32_t ceiling_us);
@@ -109,7 +106,6 @@ class Lr2021 {
     uint16_t device_errors_{0};
     uint32_t part_resets_{0};
     uint32_t framing_resyncs_{0};
-    uint32_t overflows_{0};
     uint32_t overflow_drops_{0};
     uint32_t resync_drops_{0};
     uint32_t in_flight_{0};
@@ -221,6 +217,9 @@ constexpr uint8_t kFifoFrameBytes = 14;
 // INFO: fc 26nov26 a Manchester bit lasts 1 us, so a frame still arriving grows a byte each 8 us
 constexpr uint32_t kFifoByteUs = 8;
 constexpr uint32_t kInFlightGrowthUs = 3 * kFifoByteUs;
+// INFO: fc 27nov26 DS 5.3: the receive FIFO holds 256 bytes, so 18 whole frames
+constexpr uint32_t kFifoBytes = 256;
+constexpr uint32_t kFifoFrames = kFifoBytes / kFifoFrameBytes;
 // INFO: fc 11nov26 DS 16.3.8 names these for ADS-B: pattern 0x0285, no repeat, falling edge, no SFD
 constexpr uint16_t kAdsbPreamblePattern = 0x0285;
 constexpr uint8_t kAdsbPreambleChips = 16;

@@ -27,19 +27,13 @@ A pass decodes at most `kFramesPerPassCeiling` frames, `events::kAdsbLoadFrames`
 
 ## The detection threshold
 
-1090ES has only a four-pulse preamble, so the LR2021's detector fires on noise as well as on squitters, and every false alarm holds the packet handler for a frame's airtime and costs FIFO and decoder time. A fixed threshold fits one place. #293 picked -110 dBm on an indoor bench, below the -95 to -103 dBm floor bravo-d582 measured indoors, and outdoors with a clear sky the same unit took 1000 to 1500 frames a second of noise and decoded nothing (#550). cb-tfc settled on about -98 dBm after a soak at a window (`c07610c`), and RadioLib's ADS-B example sets the floor measured at boot plus 10 dB. ADSBee 1090 holds its comparator a fixed margin above a tracked noise floor, and chose the margin that decodes the most valid frames (`PantsForBirds/adsbee` #287, #356): a trigger too low lost 19 to 64% of valid frames to noise.
+1090ES has only a four-pulse preamble and no sync word, so the LR2021's detector fires on every pulse train that fits the preamble: Mode A/C replies, aircraft DME, other pulsed signals in the band, and noise. The detection threshold stays at `parts::lr2021::kDetectionThresholdDbm`, -110 dBm, #293's measured best, and Bravo makes each false alarm cheap instead of trying to keep it out.
 
-So `DetectionThreshold` (`detection_threshold.h`) holds the false-alarm rate in a band, as radar CFAR does, and measures it where no aircraft can be. Noise past the preamble names a downlink format at random, and no transponder sends DF1 to DF3, DF6 to DF10 or DF12 to DF15, so frames in those 12 of the 32 codes are noise, and times 32/12 they estimate every false alarm. The estimate needs no RSSI calibration and counts exactly the load that broke the chain.
+The bravo-d582 captures of #550 settle it. Outdoors the quietest noise readings barely moved (-101 against -102 dBm indoors) while the loudest rose from -95 to -77 dBm: the flood was strong pulses, not a raised floor. A regulator that raised the threshold to -92 dBm left 40 to 150 junk frames a second and decoded no position, because the real aircraft there arrived weaker than -92 dBm, while at -109 to -103 dBm the same flood still gave 2 to 9 positions a second. ADSBee 1090 found the same (`PantsForBirds/adsbee` #356): a trigger set high loses valid frames, and the best one sits near the floor.
 
-| Rule | Value | Why |
-|---|---|---|
-| Band ceiling | `kFalseAlarmCeilingHz`, 166 a second | `kOccupancyCeilingPermille`, 2% of the detector given to noise, at `kFrameAirtimeUs`, 120 us a false alarm |
-| Band floor | `kFalseAlarmFloorHz`, 20 a second | an eighth of the ceiling, so one step does not cross the band |
-| Window | `kFalseAlarmWindowMs`, 5 s | |
-| Step | `kStepDb`, 1 dB a window, and `kFloodStepDb`, 3 dB, while the noise is over `kFloodFactor`, four times the ceiling | a flood leaves the band in a few windows, and a quiet band brings the threshold down a dB at a time |
-| Range | `kFloorDbm` -110 to `kCeilingDbm` -92 dBm | #293's indoor pick, and 2 dB under where cb-tfc's soak heard nothing |
+What made the flood harmful was its cost. Woken for each frame, the receiver thread spent about 500 us a frame on SPI snapshots, and as a cooperative thread it never yielded while frames kept coming, so at 1500 frames a second it held the CPU and the loop, the link and the GNSS UART starved. The thread now drains at most every 5 ms (`../../hardware/parts/lr2021/README.md`, The receiver thread). The chip cannot filter the formats instead: an OOK receive takes one sync word and two address bytes (DS 16.3.4, 16.3.5), and the downlink formats transponders send share no prefix, so filtering at the chip would drop every Mode S reply.
 
-Inside the band nothing moves, so a quiet sky keeps -110 dBm and the weakest aircraft #293 found. `AdsbService` measures each window and asks `ports::AdsbReceiver::set_detection_threshold()` for a new value. The probe reads it back, so `receiver.threshold_dbm` in a capture shows the regulation, and `reception.impossible_formats` the noise it acted on. The band is chosen by argument, not measured. A bench run alternating thresholds a second at a time, as ADSBee's learner does, can set it from the valid frames decoded.
+`reception.impossible_formats` still counts the frames in the 12 downlink formats no transponder sends, DF1 to DF3, DF6 to DF10 and DF12 to DF15. They are junk by definition, and times 32/12 they estimate every false alarm.
 
 ## The GNSS rate
 

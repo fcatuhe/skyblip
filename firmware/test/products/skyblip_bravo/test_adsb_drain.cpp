@@ -38,24 +38,3 @@ TEST_CASE("bravo adsb: a pass decodes at most a drain window's design load, the 
     CHECK(decoded(rig.product) - before == events::kAdsbQueueFrames);
     CHECK(rig.product.adsb().due_in_ms(rig.now_ms) > 0);
 }
-
-// What bravo-d582 met outdoors: a flood of noise frames past the preamble detector.
-TEST_CASE("bravo adsb: noise in impossible formats raises the threshold the LR2021 holds") {
-    BravoRig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    rig.seconds_with_fix(1);
-    const uint32_t until_ms = rig.now_ms + bravo::DetectionThreshold::kFalseAlarmWindowMs + 1000;
-    while (rig.now_ms < until_ms) {
-        for (int i = 0; i < 20; i++) {
-            events::AdsbFrame noise{};
-            noise.bytes.fill(static_cast<uint8_t>(i));
-            noise.bytes[0] = static_cast<uint8_t>((6 + i % 4) << 3);
-            (void)rig.product.adsb_frames().push(noise);
-        }
-        rig.run_for(10);
-    }
-    const int16_t raised = rig.product.adsb().detection_threshold().threshold_dbm();
-    CHECK(raised > bravo::DetectionThreshold::kFloorDbm);
-    rig.run_for(1500);
-    CHECK(rig.product.board().receiver().statistics().probe.threshold_dbm == raised);
-}
