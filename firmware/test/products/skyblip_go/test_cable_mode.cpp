@@ -76,6 +76,28 @@ TEST_CASE("product: on the button a pulled cable never switches the Go off") {
     CHECK_FALSE(rig.state().power.cable_off_in_ms);
 }
 
+// A pilot who sets POWER to BUTTON to keep the Go on, then back to CABLE, gets the whole countdown.
+TEST_CASE("product: a POWER row moved back to CABLE restarts the cable-gone hold") {
+    Rig rig;
+    store_power_switch(rig, power::Switch::Cable);
+    rig.platform.battery().external_power = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(5000);
+
+    pull_cable_for(rig, 60000);
+    REQUIRE(rig.state().power.cable_off_in_ms);
+    rig.product.settings().power_switch = power::Switch::Button;
+    pull_cable_for(rig, power::kCableGoneHoldMs);
+    REQUIRE_FALSE(rig.product.shutdown().going_down());
+
+    rig.product.settings().power_switch = power::Switch::Cable;
+    pull_cable_for(rig, power::kCableGoneHoldMs - 2 * power::kBatteryPeriodMs);
+    CHECK_FALSE(rig.product.shutdown().going_down());
+    pull_cable_for(rig, 2 * power::kBatteryPeriodMs + 1000);
+    REQUIRE(rig.product.shutdown().going_down());
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::CableGone);
+}
+
 TEST_CASE("product: in cable mode the cable wakes the Go, and it signs on as a press would" *
           doctest::test_suite("main")) {
     Rig rig;
@@ -117,6 +139,38 @@ TEST_CASE("product: a cable back while the Go parks for its loss restarts it ins
     pressed.run_for(10000);
     REQUIRE(pressed.product.ready_to_power_off());
     CHECK_FALSE(pressed.product.cable_returned());
+}
+
+// A flat cell off the cable parks the Go, and a master switched on meanwhile raises no wake.
+TEST_CASE("product: a cable back while the Go parks for a flat cell restarts it instead") {
+    Rig rig;
+    store_power_switch(rig, power::Switch::Cable);
+    rig.platform.battery().external_power = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(5000);
+
+    rig.platform.battery().divider_mv = 3100;
+    pull_cable_for(rig, 4000);
+    REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
+    REQUIRE_FALSE(rig.product.ready_to_power_off());
+    rig.platform.battery().external_power = true;
+    rig.run_for(10000);
+    REQUIRE(rig.product.ready_to_power_off());
+    CHECK(rig.product.cable_returned());
+
+    // On the button, a charger plugged in during the park wakes nothing, and the button still does.
+    Rig button;
+    button.platform.battery().external_power = true;
+    REQUIRE(button.setup() == Status::Ok);
+    button.run_for(5000);
+    button.platform.battery().divider_mv = 3100;
+    pull_cable_for(button, 4000);
+    REQUIRE(button.product.shutdown().reason() == power::ShutdownReason::LowBattery);
+    REQUIRE_FALSE(button.product.ready_to_power_off());
+    button.platform.battery().external_power = true;
+    button.run_for(10000);
+    REQUIRE(button.product.ready_to_power_off());
+    CHECK_FALSE(button.product.cable_returned());
 }
 
 // A cable pulled while an image uploads must not switch the Go off halfway through the upload.

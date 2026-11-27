@@ -60,6 +60,9 @@ class SectorAllocator {
     bool quarantined(uint32_t sector) const;
     uint32_t quarantined() const;
 
+    void open_session(SectorOwner owner, uint32_t session_id);
+    void close_session(SectorOwner owner);
+
     Claim claim(SectorOwner owner, uint32_t session_id);
     void abandon(uint32_t sector);
     Claim prepare(SectorOwner owner);
@@ -81,6 +84,7 @@ class SectorAllocator {
     bool session_run(SectorOwner owner, uint32_t above_sequence, SessionRun& run) const;
     bool session_sector(SectorOwner owner, uint32_t session_id, uint32_t index,
                         uint32_t& sector) const;
+    uint32_t unused_session_id(SectorOwner owner, uint32_t wanted) const;
 
    private:
     struct Spare {
@@ -92,6 +96,11 @@ class SectorAllocator {
     struct Recycled {
         uint32_t session_id{0};
         uint32_t sectors{0};
+    };
+
+    struct Writing {
+        uint32_t session_id{0};
+        bool open{false};
     };
 
     struct Match {
@@ -118,6 +127,7 @@ class SectorAllocator {
     const SectorTable table_;
     uint32_t lost_sectors_[2]{};
     Recycled recycled_[2]{};
+    Writing writing_[2]{};
     Spare spares_[2]{};
     uint32_t sector_count_{0};
     uint32_t floor_sectors_{0};

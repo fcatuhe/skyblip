@@ -129,6 +129,8 @@ void Transmitter::start(uint32_t utc_s) {
 
 uint32_t Transmitter::give_up(uint32_t utc_s, bool airborne, bool named) {
     start(utc_s);
+    const bool was_airborne = closed_airborne_;
+    closed_airborne_ = airborne;
     if (utc_s == closed_s_) return 0;
     const bool first = closed_s_ == 0;
     closed_s_ = utc_s;
@@ -137,7 +139,7 @@ uint32_t Transmitter::give_up(uint32_t utc_s, bool airborne, bool named) {
     for (const Payload payload : {Payload::Position, Payload::Status, Payload::Callsign}) {
         if (payload == Payload::Callsign && !named) continue;
         if (!turn(payload, utc_s, airborne)) continue;
-        const uint32_t previous = turn_of(payload, utc_s - 1, airborne);
+        const uint32_t previous = turn_of(payload, utc_s - 1, was_airborne);
         if (previous >= first_s_ && !sent_since(payload, previous)) given_up++;
     }
     return given_up;

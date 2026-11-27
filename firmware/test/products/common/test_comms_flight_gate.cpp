@@ -41,7 +41,7 @@ struct Bench {
         config.set_flight_state(state);
     }
 
-    std::string last() { return link_text(link.last().bytes); }
+    std::string last() { return link_text(link.last_to(1)); }
 };
 
 struct FinishedUpload : ports::Dfu {
@@ -183,6 +183,34 @@ TEST_CASE(
     CHECK(taken(config) == common::Action::Install);
     CHECK(link_text(link.last().bytes) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"install\"}");
+}
+
+// Phones lose the unit aloft, and img_mgmt forgets a finished upload, so a resend starts at 0.
+TEST_CASE(
+    "comms flight gate: an upload held in flight installs on the ground after the phone "
+    "disconnects") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    FinishedUpload dfu;
+    ConfigService config(link, store, &dfu);
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.confirm();
+    config.set_flight_state(flight::FlightState::Airborne);
+    config.tick(100);
+    REQUIRE_FALSE(taken(config));
+
+    config.on_link_down(events::LinkDown{1, link.connection(1)});
+    link.drop_link(1);
+    config.tick(200);
+    CHECK_FALSE(config.upload_allowed());
+    CHECK(config.updating());
+
+    config.set_flight_state(flight::FlightState::Ground);
+    config.tick(300);
+    CHECK(taken(config) == common::Action::Install);
+    CHECK_FALSE(config.updating());
 }
 
 // A twin unit nobody sent a set to is what the glass must still show, byte for byte.
