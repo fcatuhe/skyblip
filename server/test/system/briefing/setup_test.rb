@@ -21,12 +21,12 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       screen "12-go-choose-drive"
 
       click_button "Choose the drive"
-      assert_text "Installed. Last step: connect Go 3F2A over Bluetooth. It trusts this browser, so it asks for no button press."
+      assert_text "The USB step is done. Connect to Go 3F2A to verify the firmware."
       assert_text "Choose activate 3F2A skyBlip in the list."
       assert_selector ".setup-steps [aria-current=step]", text: "Connect"
       screen "13-go-installed-connect"
 
-      click_button "Connect"
+      click_button "Connect to verify"
       assert_text "Name your aircraft. Other pilots see its callsign and type."
       assert_selector ".setup-steps [aria-current=step]", text: "Your aircraft"
       assert_no_selector ".glass-prompt:not([hidden])"
@@ -62,7 +62,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
 
       click_button "Choose the drive"
       assert_text "Choose skyBlip Bravo 5C1D in the list."
-      click_button "Connect"
+      click_button "Connect to verify"
       assert_text "In the aircraft, switch the transponder to ALT and open Briefing: it offers the address Bravo hears"
       assert_no_field "Callsign"
       screen "21-bravo-aircraft"
@@ -79,6 +79,37 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       assert_selector ".device-figure--bravo svg[role=img]", text: /Button\s+LED\s+USB-C/
       assert_selector "table .lamp--white"
       screen "23-bravo-first-steps"
+    end
+  end
+
+  test "a Bravo can retry the drive picker and must report the new build before setup finishes" do
+    in_range
+    plugged_in a_meshtastic_bravo(closePicker: true, bootedBuild: "0.1.0+40", cutOnClose: true)
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      click_button "Choose the drive"
+      assert_text "No drive was selected."
+      assert_text "Bravo: unplug it, hold its button"
+      screen "24-bravo-drive-retry"
+
+      click_button "Choose the drive again"
+      assert_text "The USB step is done."
+      screen "25-bravo-written"
+      click_button "Connect to verify"
+      assert_text "Briefing could not confirm the new firmware."
+      assert_no_button "Done"
+      assert_equal 1, page.evaluate_script("fakeUsb.restarts")
+      assert_nil Event.find_by(name: "installer.verified")
+      screen "26-bravo-not-verified"
+
+      page.execute_script("#{unit("skyBlip Bravo 5C1D")}.running = fakeUsb.build")
+      click_button "Connect to verify"
+      assert_text "In the aircraft, switch the transponder to ALT"
+      click_button "Done"
+      assert_text "Bravo 5C1D is ready."
+      assert_equal page.evaluate_script("fakeUsb.build"), journaled("installer.verified").payload["build"]
+      assert_equal false, journaled("installer.finished").payload["saved"]
     end
   end
 
@@ -157,7 +188,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       page.execute_script("fakeUsb.plug(#{a_meshtastic_go(mode: "bootloader").to_json})")
       click_button "Choose the drive"
       assert_text "Choose activate … skyBlip in the list."
-      click_button "Connect"
+      click_button "Connect to verify"
       assert_text "Name your aircraft."
       assert_equal [ [ { "namePrefix" => "activate" }, { "namePrefix" => "skyBlip Go" } ] ], page.evaluate_script("fakeFleet.asked")
     end
@@ -171,7 +202,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       click_button "Choose the drive"
-      click_button "Connect"
+      click_button "Connect to verify"
       assert_text "Name your aircraft."
       assert_equal [ [ { "namePrefix" => "activate" }, { "namePrefix" => "skyBlip Go" } ] ], page.evaluate_script("fakeFleet.asked")
     end
@@ -247,7 +278,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Install"
       assert_text "Not in the window? Open the drive once in your file manager so Linux mounts it"
       click_button "Choose the drive"
-      click_button "Connect"
+      click_button "Connect to verify"
       assert_text "Name your aircraft."
     end
   end
@@ -265,9 +296,9 @@ class Briefing::SetupTest < ApplicationSystemTestCase
 
       click_button "Install"
       click_button "Choose the drive"
-      assert_text "Installed. This computer cannot reach Go 3F2A over Bluetooth, so finish the setup on your phone."
+      assert_text "This computer cannot reach Go 3F2A over Bluetooth. Verify the firmware and finish setup on your phone."
       assert_text "Or turn on Web Bluetooth with the steps on this page. Once Chrome has restarted, open Your devices and connect it from there."
-      assert_no_button "Connect"
+      assert_no_button "Connect to verify"
     end
   end
 
@@ -280,13 +311,13 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       within(".setup-linux") { assert_no_text "Turn on Web Bluetooth" }
       click_button "Install"
       click_button "Choose the drive"
-      assert_text "Or turn on Bluetooth with the steps on this page, and Connect appears here."
-      assert_no_button "Connect"
+      assert_text "Or turn on Bluetooth with the steps on this page, and Connect to verify appears here."
+      assert_no_button "Connect to verify"
       screen "56-linux-installed-without-adapter"
 
       page.execute_script("fakeFleet.plugAdapter(true)")
       assert_text "Choose activate 3F2A skyBlip in the list."
-      click_button "Connect"
+      click_button "Connect to verify"
       assert_text "Name your aircraft."
     end
   end
@@ -328,20 +359,36 @@ class Briefing::SetupTest < ApplicationSystemTestCase
 
       click_button "Install"
       click_button "Choose the drive"
-      assert_text "Installed. This computer cannot reach Go 3F2A over Bluetooth, so finish the setup on your phone."
+      assert_text "This computer cannot reach Go 3F2A over Bluetooth. Verify the firmware and finish setup on your phone."
       assert_text "Briefing opens on this step: choose activate 3F2A skyBlip in the list."
-      assert_selector ".setup-handoff img[src='/briefing/setup/handoff?installed=go&tag=3f2a'][alt='Code that opens this setup on your phone']"
-      assert_text "Or turn on Bluetooth with the steps on this page, and Connect appears here."
-      assert_no_button "Connect"
+      assert_selector ".setup-handoff img[src^='/briefing/setup/handoff?installed=go&tag=3f2a&build='][alt='Code that opens this setup on your phone']"
+      assert_text "Or turn on Bluetooth with the steps on this page, and Connect to verify appears here."
+      assert_no_button "Connect to verify"
       assert_equal({ "product" => "go", "cause" => "adapter" }, journaled("installer.handed_off").payload.slice("product", "cause"))
       screen "61-no-bluetooth-handoff"
 
       visit "/briefing/tools"
       visit "/briefing/setup"
-      assert_selector ".setup-handoff img[src='/briefing/setup/handoff?installed=go&tag=3f2a']"
+      assert_selector ".setup-handoff img[src^='/briefing/setup/handoff?installed=go&tag=3f2a&build=']"
       assert_equal "tab", journaled("installer.resumed").payload["from"]
       click_button "Install another device"
       assert_text "Go 3F2A restarted as a USB drive named TECHOBOOT."
+    end
+  end
+
+  test "a Go that can report its build but cannot send the registration offers a phone after a reconnect" do
+    in_range a_new_go(mtu: 100)
+    with_installers do
+      visit "/briefing/setup?installed=go&tag=3f2a&build=0.1.0%2B1000"
+      click_button "Connect to verify"
+      assert_text "The Bluetooth link cannot carry the data needed to activate."
+      assert_no_button "Continue on an Android phone"
+      click_button "Try again"
+      click_button "Continue on an Android phone"
+      assert_selector "img[src='/briefing/setup/handoff?installed=go&tag=3f2a']"
+      assert_equal false, page.evaluate_script("#{unit("3F2A skyBlip")}.connected")
+      assert_equal "register", journaled("activation.noticed").payload["last_command"]
+      screen "65-setup-activation-phone-handoff"
     end
   end
 
@@ -363,6 +410,45 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
       assert_equal [ [ { "name" => "activate 3F2A skyBlip" }, { "namePrefix" => "skyBlip Go" } ] ], page.evaluate_script("fakeFleet.asked")
       assert_equal({ "product" => "go", "from" => "code" }, journaled("installer.resumed").payload.slice("product", "from"))
+    end
+  end
+
+  test "a Go whose link drops while its glass asks offers Try again, and activates on it" do
+    in_chrome_on "Android", mobile: true
+    in_range a_new_go
+    with_installers do
+      visit "/briefing/setup?installed=go&tag=3f2a"
+      click_button "Connect"
+      assert_text "Press the Go's button to activate it."
+      page.execute_script("#{unit("3F2A skyBlip")}.drop()")
+      assert_text "The connection dropped. Bring the device closer and reconnect. Activate again."
+      screen "69-setup-link-lost"
+
+      click_button "Try again"
+      assert_text "Press the Go's button to activate it."
+      page.execute_script("#{unit("3F2A skyBlip")}.press()")
+      assert_text "Name your aircraft."
+      assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
+    end
+  end
+
+  test "a Go the server refused asks the server again on Try again, and activates with no second press, since the first one trusted the browser" do
+    in_chrome_on "Android", mobile: true
+    in_range a_new_go
+    Activation::Cap.current.update!(new_units_per_day: 1)
+    units(:bound).update!(activated_at: Time.current)
+    with_installers do
+      visit "/briefing/setup?installed=go&tag=3f2a"
+      click_button "Connect"
+      assert_text "Press the Go's button to activate it."
+      page.execute_script("#{unit("3F2A skyBlip")}.press()")
+      assert_text "skyblip.eu reached its daily limit for new device activations. Try again tomorrow."
+      screen "70-setup-server-refused"
+
+      Activation::Cap.current.update!(new_units_per_day: 2)
+      click_button "Try again"
+      assert_text "Name your aircraft."
+      assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
     end
   end
 
@@ -407,6 +493,6 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup" unless page.current_path == "/briefing/setup"
       click_button "Install"
       click_button "Choose the drive"
-      click_button "Connect"
+      click_button "Connect to verify"
     end
 end
