@@ -12,7 +12,7 @@ On the public simulator, the Bravo checkbox starts a fresh Go alone or loads the
 
 The picker lists anything advertising Nordic UART or HM-10, which is skyBlip and SoftRF both, so the same page is how you read one and configure the other.
 
-**The serial endpoint** is the traffic picture: `$PFLAU`, `$PGRMZ`, `$LK8EX1`, a `$PFLAA` per target, `$GPRMC`/`$GPGGA` with a fix. A notification is a slice of a byte stream and not a sentence, so `ble.js` splits on line ends rather than on notifications, the way an EFB does.
+**The serial endpoint** is the traffic picture: `$PFLAU`, `$PGRMZ`, `$LK8EX1`, a `$PFLAA` per target, `$GPRMC`/`$GPGGA` once UTC is known, void until the fix. A notification is a slice of a byte stream and not a sentence, so `ble.js` splits on line ends rather than on notifications, the way an EFB does.
 
 Writing to it reaches skyBlip's `on_stream_write`, which discards everything: that characteristic exists because XCSoar refuses a UART service without one (`firmware/hardware/platform/zephyr/link.cpp`). SoftRF is the opposite and takes its whole configuration there, as `$PSRFC` sentences. `$PSRFC,?` dumps the current settings; echoing that line back with one field edited and field 1 set to the protocol version (`1`) stores it, after which SoftRF drops Bluetooth, writes EEPROM and reboots. A sentence typed without a `*` leaves with its checksum appended, because SoftRF drops what it cannot verify. Send all 19 fields: an empty term still counts as updated and reads back as zero.
 

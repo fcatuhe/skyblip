@@ -77,7 +77,7 @@ uint32_t NmeaService::due_in_ms(uint32_t now_ms) const {
 
 void NmeaService::note_whole_second(uint32_t now_ms) {
     const model::Ownship& second = context_.state.own_second;
-    if (!second.fix_valid || !second.utc_valid || second.utc_s == landed_second_s_) return;
+    if (!second.utc_valid || second.utc_s == landed_second_s_) return;
     landed_second_s_ = second.utc_s;
     landed_at_ms_ = now_ms;
 }
@@ -100,7 +100,7 @@ uint32_t NmeaService::wait_for_pass_ms(uint32_t now_ms) const {
         return runtime::remaining_ms(since_ms, kPassGapFloorMs);
     const uint32_t cadence_ms = runtime::remaining_ms(since_ms, kMovingTargetRedrawPeriodMs);
     const model::Ownship& second = context_.state.own_second;
-    if (!second.fix_valid || !second.utc_valid) return cadence_ms;
+    if (!second.utc_valid) return cadence_ms;
     return std::max(cadence_ms,
                     runtime::remaining_ms(now_ms - landed_at_ms_,
                                           kMovingTargetRedrawPeriodMs + kWholeSecondWaitMs));
@@ -165,11 +165,8 @@ void NmeaService::emit_status(uint32_t now_ms) {
 void NmeaService::emit_ownship() {
     const model::Ownship* solution = unsent_solution();
     if (solution == nullptr) return;
-    const int rmc = protocol::format_gprmc(sentence_, sizeof(sentence_), *solution);
-    if (rmc > 0) write(sentence_, rmc);
-    const int gga = protocol::format_gpgga(sentence_, sizeof(sentence_), *solution);
-    if (gga > 0) write(sentence_, gga);
-    if (rmc <= 0 && gga <= 0) return;
+    write(sentence_, protocol::format_gprmc(sentence_, sizeof(sentence_), *solution));
+    write(sentence_, protocol::format_gpgga(sentence_, sizeof(sentence_), *solution));
     if (solution == &context_.state.own_second) sent_second_s_ = solution->utc_s;
     sent_solution_ = true;
     sent_utc_s_ = solution->utc_s;
@@ -180,10 +177,9 @@ void NmeaService::emit_ownship() {
 // last second again
 const model::Ownship* NmeaService::unsent_solution() const {
     const model::Ownship& second = context_.state.own_second;
-    if (second.fix_valid && second.utc_valid && (!sent_solution_ || second.utc_s != sent_second_s_))
-        return &second;
+    if (second.utc_valid && (!sent_solution_ || second.utc_s != sent_second_s_)) return &second;
     const model::Ownship& newest = context_.state.own;
-    if (newest.fix_valid && newest.utc_valid &&
+    if (newest.utc_valid &&
         (!sent_solution_ || newest.utc_s != sent_utc_s_ || newest.utc_ms != sent_utc_ms_))
         return &newest;
     return nullptr;

@@ -23,7 +23,7 @@ updated_on: "2026-11-25"
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>: el producto, seguido de la dirección de 24 bits que recibió al <%= link_to "activarse", briefing_activation_path %>. No tienes que emparejarlo ni introducir un código. El Go envía el tráfico en formato FLARM NMEA. Usa los dos tipos de conexión serie Bluetooth que buscan las aplicaciones de navegación. Por eso lo encuentra la aplicación con la que ya vuelas.
       </p>
-      <p>El Go también envía cada segundo su posición GPS por la misma conexión Bluetooth. Si tu aplicación de navegación usa el Go como fuente, recibe la posición aunque el iPad no tenga GPS. <%= link_to_page "blog/gps-to-tablet", label: "Cómo envía el Go la posición y el tráfico a tu tableta" %>.</p>
+      <p>El Go también envía cada segundo su posición GPS por la misma conexión Bluetooth. Antes de tener posición GPS, envía solo la hora UTC en cuanto su receptor la conoce, marcada como sin posición. Si tu aplicación de navegación usa el Go como fuente, recibe la posición aunque el iPad no tenga GPS. <%= link_to_page "blog/gps-to-tablet", label: "Cómo envía el Go la posición y el tráfico a tu tableta" %>.</p>
       <p>
         La tableta en los mandos, el móvil en el bolsillo y el iPad de tu acompañante ven el mismo tráfico. Solo una aplicación puede cambiar ajustes a la vez. La primera que guarda ajustes conserva el permiso hasta que se desconecta. La segunda recibe el nombre de la aplicación que tiene el permiso.
       </p>

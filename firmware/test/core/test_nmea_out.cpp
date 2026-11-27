@@ -401,14 +401,9 @@ TEST_CASE("nmea: GPRMC/GPGGA carry own-ship's own absolute position" *
     CHECK(gga == "$GPGGA,010101,4807.4070,N,00807.4070,W,1,08,1.20,950,M,50,M,,*67\r\n");
 }
 
-TEST_CASE("nmea: GPRMC/GPGGA emit nothing without both a fix and a UTC time") {
+TEST_CASE("nmea: GPRMC/GPGGA emit nothing without a UTC time, fix or not") {
     char buffer[128];
     model::Ownship own = own_at(481000000, 81000000, 1000);
-
-    model::Ownship no_fix = own;
-    no_fix.fix_valid = false;
-    CHECK(format_gprmc(buffer, sizeof(buffer), no_fix) == 0);
-    CHECK(format_gpgga(buffer, sizeof(buffer), no_fix) == 0);
 
     model::Ownship no_utc = own;
     no_utc.utc_valid = false;

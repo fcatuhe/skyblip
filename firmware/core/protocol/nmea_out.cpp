@@ -259,55 +259,67 @@ int format_nmea_time(char* out, uint32_t utc_s, uint16_t utc_ms) {
 
 }  // namespace
 
+// INFO: fc 27nov26 without a fix RMC is void and GGA quality 0, so an EFB learns the time and no
+// position
 int format_gprmc(char* out, size_t capacity, const model::Ownship& own) {
-    if (!own.fix_valid || !own.utc_valid) return 0;
+    if (!own.utc_valid) return 0;
     char sentence[kScratchBytes];
     int year, month, day;
     civil_from_epoch(own.utc_s, year, month, day);
     int written = 0;
     written += format_string(sentence + written, "$GPRMC,");
     written += format_nmea_time(sentence + written, own.utc_s, own.utc_ms);
-    written += format_string(sentence + written, ",A,");
-    written += format_nmea_latitude(sentence + written, own.latitude_1e7);
-    sentence[written++] = ',';
-    written += format_nmea_longitude(sentence + written, own.longitude_1e7);
-    sentence[written++] = ',';
-    const uint32_t knots_e1 = static_cast<uint32_t>(
-        wire::divide_rounded<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
-    written += format_unsigned(sentence + written, knots_e1, 1, 1);
-    sentence[written++] = ',';
-    written +=
-        format_unsigned(sentence + written, to_degrees(CentiDegrees(own.track_cdeg)).value, 1);
-    sentence[written++] = ',';
+    if (own.fix_valid) {
+        written += format_string(sentence + written, ",A,");
+        written += format_nmea_latitude(sentence + written, own.latitude_1e7);
+        sentence[written++] = ',';
+        written += format_nmea_longitude(sentence + written, own.longitude_1e7);
+        sentence[written++] = ',';
+        const uint32_t knots_e1 = static_cast<uint32_t>(
+            wire::divide_rounded<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
+        written += format_unsigned(sentence + written, knots_e1, 1, 1);
+        sentence[written++] = ',';
+        written +=
+            format_unsigned(sentence + written, to_degrees(CentiDegrees(own.track_cdeg)).value, 1);
+        sentence[written++] = ',';
+    } else {
+        written += format_string(sentence + written, ",V,,,,,,,");
+    }
     written += format_unsigned(sentence + written, static_cast<uint32_t>(day), 2);
     written += format_unsigned(sentence + written, static_cast<uint32_t>(month), 2);
     written += format_unsigned(sentence + written, static_cast<uint32_t>(year % 100), 2);
-    written += format_string(sentence + written, ",,,A");
+    written += format_string(sentence + written, own.fix_valid ? ",,,A" : ",,,N");
     return deliver(out, capacity, sentence, written);
 }
 
 int format_gpgga(char* out, size_t capacity, const model::Ownship& own) {
-    if (!own.fix_valid || !own.utc_valid) return 0;
+    if (!own.utc_valid) return 0;
     char sentence[kScratchBytes];
     int written = 0;
     written += format_string(sentence + written, "$GPGGA,");
     written += format_nmea_time(sentence + written, own.utc_s, own.utc_ms);
-    sentence[written++] = ',';
-    written += format_nmea_latitude(sentence + written, own.latitude_1e7);
-    sentence[written++] = ',';
-    written += format_nmea_longitude(sentence + written, own.longitude_1e7);
-    written += format_string(sentence + written, ",1,");
-    written += format_unsigned(sentence + written, own.satellites, 2);
-    sentence[written++] = ',';
-    written += format_unsigned(sentence + written, own.hdop_e2, 3, 2);
-    sentence[written++] = ',';
-    written += format_signed(sentence + written, to_metres(Millimetres(own.altitude_msl_mm)).value,
-                             1, 0, false);
-    written += format_string(sentence + written, ",M,");
-    written += format_signed(
-        sentence + written, to_metres(Millimetres(own.altitude_hae_mm - own.altitude_msl_mm)).value,
-        1, 0, false);
-    written += format_string(sentence + written, ",M,,");
+    if (own.fix_valid) {
+        sentence[written++] = ',';
+        written += format_nmea_latitude(sentence + written, own.latitude_1e7);
+        sentence[written++] = ',';
+        written += format_nmea_longitude(sentence + written, own.longitude_1e7);
+        written += format_string(sentence + written, ",1,");
+        written += format_unsigned(sentence + written, own.satellites, 2);
+        sentence[written++] = ',';
+        written += format_unsigned(sentence + written, own.hdop_e2, 3, 2);
+        sentence[written++] = ',';
+        written += format_signed(sentence + written,
+                                 to_metres(Millimetres(own.altitude_msl_mm)).value, 1, 0, false);
+        written += format_string(sentence + written, ",M,");
+        written += format_signed(
+            sentence + written,
+            to_metres(Millimetres(own.altitude_hae_mm - own.altitude_msl_mm)).value, 1, 0, false);
+        written += format_string(sentence + written, ",M,,");
+    } else {
+        written += format_string(sentence + written, ",,,,,0,");
+        written += format_unsigned(sentence + written, own.satellites, 2);
+        written += format_string(sentence + written, ",,,,,,,");
+    }
     return deliver(out, capacity, sentence, written);
 }
 
