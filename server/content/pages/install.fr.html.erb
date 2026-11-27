@@ -52,7 +52,7 @@ updated_on: "2026-11-25"
     <h3 id="no-bluetooth">Votre ordinateur n&rsquo;a pas de Bluetooth</h3>
     <p>Installez d&rsquo;abord par USB. Scannez ensuite le code avec l&rsquo;appareil photo d&rsquo;un téléphone Android et ouvrez le lien dans Chrome. Sans appareil photo, ouvrez skyblip.eu/setup dans Chrome sur ce téléphone et touchez «&nbsp;Le connecter&nbsp;». Vous pouvez aussi brancher un adaptateur Bluetooth USB sur l&rsquo;ordinateur et vous connecter depuis celui-ci. Un iPhone ne peut pas se connecter au boîtier dans le Briefing.</p>
     <h3 id="manual">Installer le logiciel à la main</h3>
-    <p>Téléchargez le fichier <code>.uf2</code> prévu pour votre appareil sur la <%= link_to "page des versions de skyBlip", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
+    <p>Téléchargez le fichier <code>.uf2</code> prévu pour votre appareil depuis la <%= link_to "dernière version de skyBlip", "#{Rails.configuration.x.repository_url}/releases/latest" %>.</p>
     <ul>
       <li><strong>Go ou Go+ :</strong> branchez le boîtier et appuyez deux fois rapidement sur le bouton RESET, en haut sur le côté gauche. Copiez le fichier du Go sur le lecteur <strong>TECHOBOOT</strong>. S&rsquo;il s&rsquo;agit d&rsquo;un Go neuf, <%= link_to "activez-le ensuite en Bluetooth", briefing_activation_path(locale: I18n.locale) %> dans Chrome ou Edge sur ordinateur ou Android. Suivez la demande affichée sur le Go.</li>
       <li><strong>Bravo :</strong> débranchez le boîtier. Maintenez son bouton enfoncé pendant que vous le rebranchez. Relâchez quand le voyant devient blanc. Copiez le fichier skyBlip Bravo sur le lecteur <strong>X1</strong>.</li>
