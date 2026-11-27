@@ -624,6 +624,7 @@ struct Desk {
     identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
     ActivationVectors vectors;
+    uint32_t connection{kFirstConnection};
 
     explicit Desk(std::optional<uint16_t> serial = std::nullopt) : port(serial) {
         link.declare_payload_bytes(kChromePayloadBytes);
@@ -636,7 +637,9 @@ struct Desk {
     }
 
     std::string say(const std::string& json) {
-        config.on_rx(config_frame(json.c_str()));
+        events::RxFrame frame = config_frame(json.c_str());
+        frame.connection = connection;
+        config.on_rx(frame);
         return link.sent.empty() ? std::string() : link_text(link.last().bytes);
     }
 
@@ -718,6 +721,20 @@ TEST_CASE("activation: a cell too low to write settings refuses an unlock and ke
     CHECK(desk.unlock_signed_by_the_test_server(0x0042) == refusal("low_power"));
     CHECK(desk.port.writes == 0);
     desk.config.set_supply_warned(false);
+    CHECK(desk.unlock_signed_by_the_test_server(0x0042) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
+}
+
+// Silicon reuses a session id, so the next phone can ask a challenge before the old Down is read.
+TEST_CASE(
+    "activation: a Down for the last connection on a reused session id keeps the new one's nonce") {
+    Desk desk;
+    desk.link.drop_link(1);
+    desk.link.raise_link(1);
+    desk.connection = desk.link.connection(1);
+    desk.say("{\"command\":\"challenge\"}");
+
+    desk.config.on_link_down(events::LinkDown{1, kFirstConnection});
     CHECK(desk.unlock_signed_by_the_test_server(0x0042) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
 }

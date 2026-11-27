@@ -14,8 +14,8 @@ static_assert(
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 }  // namespace
 
-bool ConfigChannel::disconnect(uint16_t session_id) {
-    if (!claim_.holds(session_id)) return false;
+bool ConfigChannel::disconnect(const events::Peer& peer) {
+    if (!claim_.holds(peer)) return false;
     claim_.release();
     drop_replies();
     return true;

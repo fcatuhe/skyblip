@@ -237,7 +237,7 @@ class ConfigService {
     void refuse(link::Reason reason) { acknowledge(false, reason); }
     void refuse_too_wide() { channel_.refuse_too_wide(); }
     bool prompt_refused();
-    void forget_session(uint16_t session_id);
+    void forget_peer(const events::Peer& peer);
     void forget_holder();
     void stage(Pending pending, link::Reason reason);
     void send_config();

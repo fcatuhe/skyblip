@@ -30,7 +30,7 @@ class ConfigChannel {
     void resume(uint32_t now_ms);
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
-    bool disconnect(uint16_t session_id);
+    bool disconnect(const events::Peer& peer);
     bool release_departed_holder();
     // INFO: fc 27nov26 read from the link, because a full link_events queue drops an Up
     bool link_up() const { return link_.centrals() > 0; }

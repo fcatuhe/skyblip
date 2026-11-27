@@ -185,8 +185,9 @@ TEST_CASE(
                              power::PowerLevel::Critical);  // same step as 56: no push
     CHECK(link.sent.size() == 3);
 
+    const uint32_t connection = link.connection(1);
     link.drop_link(1);
-    config.on_link_down(events::LinkDown{1});
+    config.on_link_down(events::LinkDown{1, connection});
     config.set_battery_state(battery_of(90, false),
                              power::PowerLevel::Normal);  // link is down again
     CHECK(link.sent.size() == 3);

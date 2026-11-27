@@ -30,7 +30,7 @@ Every reply is addressed to an `events::Peer`, the session id and the connection
 
 A paired Go reserves one connection for its Bravo: `reserve_peer(true)` lowers `phone_ceiling()` by one whether or not Bravo is connected, and the platform advertises on `admits()`, so the Go takes two phones and refuses a third. A reservation is refused `Full` while phones hold every connection. The Go's own link to Bravo is not a session, so the NMEA broadcast never reaches Bravo. On Bravo the paired Go is a session: `reserve_peer_for()` keeps its slot by the Go's address, and Bravo keeps advertising while that Go is away.
 
-Events are one ordered queue, because an Up read before the Down that came first leaves a service pushing at a link that is gone. The bus drops an event when that queue is full, so `ConfigChannel::link_up()` asks `ports::Link::centrals()` rather than counting Ups and Downs. A phone whose Up was lost still hears the status pushes and the NMEA stream.
+Events are one ordered queue, because an Up read before the Down that came first leaves a service pushing at a link that is gone. The bus drops an event when that queue is full, so `ConfigChannel::link_up()` asks `ports::Link::centrals()` rather than counting Ups and Downs. A phone whose Up was lost still hears the status pushes and the NMEA stream. A Down carries the connection number too, because a log frame can claim the unit for the next phone in the pass before the old connection's Down is read. `ConfigService::on_link_down()` releases the claim and forgets the browser proof, the activation nonce and the pairing request only when the Down names the connection that holds them.
 
 ## The claim
 

@@ -189,7 +189,8 @@ void ConfigLinkService::drain_link_events(uint32_t now_ms) {
                 events::LinkUp{event.session_id, event.payload_bytes, event.connection});
             record_link(diagnostics::LinkAction::Up, event.session_id, 0, now_ms);
         } else {
-            config_.on_link_down(events::LinkDown{event.session_id, event.reason});
+            config_.on_link_down(
+                events::LinkDown{event.session_id, event.connection, event.reason});
             record_link_down(event, now_ms);
         }
     }

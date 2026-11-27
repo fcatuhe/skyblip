@@ -74,22 +74,23 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
 // INFO: fc 18sep26 only the holder's disconnect cancels, so another app leaving answers no prompt
 void ConfigService::on_link_down(const events::LinkDown& event) {
     diagnostics_.link_drop_reason = event.reason;
-    forget_session(event.session_id);
-    if (channel_.disconnect(event.session_id)) forget_holder();
+    const events::Peer peer{event.session_id, event.connection};
+    forget_peer(peer);
+    if (channel_.disconnect(peer)) forget_holder();
 }
 
 // INFO: fc 26nov26 a full link_events queue drops a Down, so a gone holder's claim ends here
 void ConfigService::release_departed_holder() {
-    const uint16_t holder = channel_.claim().holder();
+    const events::Peer holder = channel_.claim().peer();
     if (!channel_.release_departed_holder()) return;
-    forget_session(holder);
+    forget_peer(holder);
     forget_holder();
 }
 
-void ConfigService::forget_session(uint16_t session_id) {
-    if (identity_ != nullptr) identity_->forget(session_id);
-    browsers_.forget(session_id);
-    if (pairing_peer_ && pairing_peer_->session_id == session_id) pairing_peer_.reset();
+void ConfigService::forget_peer(const events::Peer& peer) {
+    if (identity_ != nullptr) identity_->forget(peer);
+    browsers_.forget(peer);
+    if (pairing_peer_ == peer) pairing_peer_.reset();
 }
 
 void ConfigService::forget_holder() {
