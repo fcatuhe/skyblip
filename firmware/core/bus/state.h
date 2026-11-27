@@ -289,10 +289,21 @@ struct State {
         // INFO: fc 19nov26 a second with no edge yet, locked or held, counts on from the last edge
         if (timing::pps_anchored(clock) && clock.utc_s != 0)
             return clock.utc_s + clock.since_edge_ms / 1000;
-        if (!own.utc_valid) return now_ms / 1000;
+        if (!own.utc_valid) {
+            const std::optional<timing::UtcReference> claimed =
+                timing::claimed_reference(clock, now_ms);
+            return claimed ? timing::carried_utc_s(*claimed, now_ms) : now_ms / 1000;
+        }
         // INFO: fc 27nov26 a silent receiver keeps its last second, so the uptime clock counts on
         const std::optional<timing::UtcReference> reference = timing::utc_reference(clock, now_ms);
         return reference ? timing::carried_utc_s(*reference, now_ms) : own.utc_s;
+    }
+
+    // INFO: fc 27nov26 the UTC traffic_now_s counts in: the unit's own, else its Go's, else none
+    std::optional<comms::UtcSource> utc_source(uint32_t now_ms) const {
+        if ((clock.pps_locked && clock.utc_s != 0) || own.utc_valid) return comms::UtcSource::Own;
+        if (timing::claimed_reference(clock, now_ms)) return comms::UtcSource::Go;
+        return std::nullopt;
     }
 };
 

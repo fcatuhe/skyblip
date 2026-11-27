@@ -101,3 +101,42 @@ TEST_CASE("bravo clock: a Bravo with no utc_source whose receiver is silent is n
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::Live);
 }
+
+// A Bravo in a flight bag hears every transponder, and its Go has the clock to place them.
+TEST_CASE("bravo clock: a Bravo without UTC dates its ADS-B on its Go's second and relays it") {
+    PairedFlight flight;
+    flight.simulator.aboard().set_utc(false);
+    flight.run_until(10000);
+    CHECK_FALSE(flight.bravo().own.utc_valid);
+    CHECK(flight.bravo().utc_source(flight.now_ms) == comms::UtcSource::Go);
+    // Bravo reads a claim after the Go wrote it, so its second may lag the Go's, never lead it.
+    const uint32_t go_s = flight.go().traffic_now_s(flight.now_ms);
+    CHECK(go_s - flight.bravo().traffic_now_s(flight.now_ms) <= 1);
+    CHECK(flight.go().bravo == comms::BravoState::Live);
+    CHECK(flight.relayed() >= 2);
+}
+
+TEST_CASE("bravo clock: a Bravo that finds UTC of its own dates on it again") {
+    PairedFlight flight;
+    flight.simulator.aboard().set_utc(false);
+    flight.run_until(10000);
+    REQUIRE(flight.bravo().utc_source(flight.now_ms) == comms::UtcSource::Go);
+
+    flight.simulator.aboard().set_utc(true);
+    flight.run_until(20000);
+    CHECK(flight.bravo().utc_source(flight.now_ms) == comms::UtcSource::Own);
+    CHECK(flight.go().bravo == comms::BravoState::Live);
+    CHECK(flight.relayed() >= 2);
+}
+
+// A link that drops leaves Bravo counting its Go's last second, and it exports to no one.
+TEST_CASE("bravo clock: a Bravo without UTC keeps its Go's second across a lost link") {
+    PairedFlight flight;
+    flight.simulator.aboard().set_utc(false);
+    flight.run_until(10000);
+    const uint32_t before_s = flight.bravo().traffic_now_s(flight.now_ms);
+    flight.simulator.aboard().set_link(false);
+    flight.run_until(20000);
+    CHECK(flight.bravo().utc_source(flight.now_ms) == comms::UtcSource::Go);
+    CHECK(flight.bravo().traffic_now_s(flight.now_ms) - before_s >= 9);
+}

@@ -94,6 +94,9 @@ struct ClockState {
     // INFO: fc 27nov26 the last solution's second and the uptime it opened at, a silent part's too
     uint32_t solution_utc_s{0};
     uint32_t solution_opened_ms{0};
+    // INFO: fc 27nov26 the second the paired Go's last claim named, for a Bravo with no UTC
+    uint32_t claimed_utc_s{0};
+    uint32_t claimed_opened_ms{0};
 };
 
 // INFO: fc 27nov26 a UTC second and the uptime millisecond it opened at
@@ -106,6 +109,9 @@ struct UtcReference {
 std::optional<UtcReference> utc_reference(const ClockState& clock, uint32_t now_ms);
 
 uint32_t reference_age_ms(const UtcReference& reference, uint32_t now_ms);
+
+// INFO: fc 27nov26 the paired Go's second, none past kUtcReferenceMaxAgeMs
+std::optional<UtcReference> claimed_reference(const ClockState& clock, uint32_t now_ms);
 
 // INFO: fc 27nov26 the UTC second now, counted on the uptime clock from the reference
 uint32_t carried_utc_s(const UtcReference& reference, uint32_t now_ms);

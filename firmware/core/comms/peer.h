@@ -60,7 +60,7 @@ Result<PeerClaim> read_peer_claim(ConstByteSpan frame);
 
 enum class ExportReference : uint8_t { None = 0, Go = 1, Own = 2 };
 
-enum class UtcSource : uint8_t { Own = 0 };
+enum class UtcSource : uint8_t { Own = 0, Go = 1 };
 
 // INFO: fc 12nov26 schemas/link.v1.json, observation: a callsign of at most eight characters
 constexpr int kPeerCallsignBytes = 9;

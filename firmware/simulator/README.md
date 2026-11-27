@@ -19,7 +19,7 @@ The Go's L76K is brought up as on a T-Echo: met at 9600, raised to 115200 and se
 
 `BravoAboard` puts Bravo in the Go's aircraft. Each step, after the Go's world:
 
-- Bravo's AG3335 takes the Go's L76K truth, and keeps its own fix flag, so a scenario can take Bravo's fix alone.
+- Bravo's AG3335 takes the Go's L76K truth, and keeps its own fix flag and its own date, so a scenario can take Bravo's fix or its UTC alone (`BravoAboard::set_fix`, `set_utc`).
 - Its SPA06 reads the same air as the Go's BME280, through `World::feel_air`.
 - The sky squitters to its LR2021, through `World::squitter_to`. A sky has one 1090 MHz receiver.
 - `world/paired_link.h` carries the `peer` frames between Bravo's link and the Go's central. The host suite's `test/support/paired_link.h` re-exports it.
@@ -68,7 +68,7 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - `"phase_ms"` and `"slot"` pin where in the second, and on which M-band channel, an aircraft transmits. Left out, it picks its own instant as a conforming transmitter does.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
 - The event `"pps": 0` stops the pulse and `1` brings it back. The Go stops transmitting 1.2 s after the last edge, on the first second without one, shows `NO TX PPS` 10 s later, and keeps hearing traffic on the held edge through the 60 s holdover (`pps_loss.json`, `../core/timing/README.md`, A burst is timed only from a fresh edge). The pulse is the only fault a scenario forces. The suite forces the others from the part models.
-- In a paired file, an event with `"unit": "bravo"` acts on Bravo, which takes `fix` and `companion`, and `"bravo_link": 0` or `1` loses or restores the link between them. A file that uses either outside a pair, or gives Bravo another event, is refused.
+- In a paired file, an event with `"unit": "bravo"` acts on Bravo, which takes `fix`, `companion` and `utc`, and `"bravo_link": 0` or `1` loses or restores the link between them. `"utc": 0` gives Bravo's receiver the 1980 date of one with no almanac, so it has no UTC and no fix, and stops its pulse. `1` gives the date and the pulse back. A file that uses any of these outside a pair, `utc` without `"unit": "bravo"`, or gives Bravo another event, is refused.
 
 ## The browser
 

@@ -61,20 +61,15 @@ TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar an
                    go::kSelfTestFirstRowY, go::kGlassWidth, go::kGlassHeight));
 }
 
-// The pilot can still fix a Bravo on the taxiway, so that is where the Go starts counting on it.
-TEST_CASE("tango boot: a Bravo still without UTC when the Go taxis is lost, with one tone") {
+// A Bravo with no sky of its own dates its ADS-B on the second its Go's claims carry.
+TEST_CASE("tango boot: a Bravo without UTC of its own is live once its Go has UTC, with no tone") {
     Booted booted;
     booted.tango.run_for(go::BravoService::kBootSettleMs);
     booted.tango.go.seconds(3, 0, 900);
-    REQUIRE(booted.bravo() == comms::BravoState::Waiting);
+    REQUIRE(booted.tango.go.state().own.utc_valid);
     const uint32_t parked_tones = booted.tones_since_boot();
-
     booted.tango.go.seconds(2, 5000, 900);
-    CHECK(booted.bravo() == comms::BravoState::NoUtc);
-    CHECK(booted.tones_since_boot() == parked_tones + 1);
-    CHECK(go::corner_reads(booted.glass(), "MOVE OUT", false));
-
-    booted.tango.go.seconds(3, 0, 900);
-    CHECK(booted.bravo() == comms::BravoState::NoUtc);
-    CHECK(booted.tones_since_boot() == parked_tones + 1);
+    CHECK(booted.bravo() == comms::BravoState::Live);
+    CHECK(booted.tones_since_boot() == parked_tones);
+    CHECK_FALSE(go::corner_reads(booted.glass(), "MOVE OUT"));
 }

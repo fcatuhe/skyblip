@@ -217,6 +217,7 @@ constexpr bool on_the_wire(comms::BravoState value) {
 constexpr bool on_the_wire(comms::UtcSource value) {
     switch (value) {
         case comms::UtcSource::Own:
+        case comms::UtcSource::Go:
             return true;
     }
     return false;
@@ -448,6 +449,7 @@ static_assert(code(comms::BravoState::NoUtc) == 5, "bravo no_utc");
 static_assert(on_the_wire(comms::BravoState::Waiting), "bravo");
 
 static_assert(code(comms::UtcSource::Own) == 0, "utc_source own");
+static_assert(code(comms::UtcSource::Go) == 1, "utc_source go");
 static_assert(on_the_wire(comms::UtcSource::Own), "utc_source");
 
 static_assert(code(gnss::Stage::Silent) == 0, "gnss_stage silent");

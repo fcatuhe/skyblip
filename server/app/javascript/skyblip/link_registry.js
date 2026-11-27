@@ -3627,6 +3627,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "own",
           "code": 0,
           "mirrors": "Own"
+        },
+        {
+          "name": "go",
+          "code": 1,
+          "mirrors": "Go"
         }
       ]
     },

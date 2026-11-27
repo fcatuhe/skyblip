@@ -245,8 +245,9 @@ inline constexpr Enumeration kBravo{kBravoValues, 5};
 
 inline constexpr Value kUtcSourceValues[] = {
     {"own", 0},
+    {"go", 1},
 };
-inline constexpr Enumeration kUtcSource{kUtcSourceValues, 1};
+inline constexpr Enumeration kUtcSource{kUtcSourceValues, 2};
 
 inline constexpr Value kGnssStageValues[] = {
     {"silent", 0},

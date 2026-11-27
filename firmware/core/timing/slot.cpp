@@ -70,6 +70,13 @@ uint32_t reference_age_ms(const UtcReference& reference, uint32_t now_ms) {
     return age_ms > 0 ? static_cast<uint32_t>(age_ms) : 0;
 }
 
+std::optional<UtcReference> claimed_reference(const ClockState& clock, uint32_t now_ms) {
+    if (clock.claimed_utc_s == 0) return std::nullopt;
+    const UtcReference claimed{clock.claimed_utc_s, clock.claimed_opened_ms};
+    if (reference_age_ms(claimed, now_ms) > kUtcReferenceMaxAgeMs) return std::nullopt;
+    return claimed;
+}
+
 uint32_t carried_utc_s(const UtcReference& reference, uint32_t now_ms) {
     return reference.utc_s + reference_age_ms(reference, now_ms) / kSecondMs;
 }

@@ -76,9 +76,9 @@ PEER_FRAMES_AT_THEIR_WIDEST = (
       "own_transponder_category": 17, "firmware": "9.99.99+99999", "battery_percent": 100,
       "charging": True, "power_level": "low", "frame_rate_hz": WIDEST_UNSIGNED,
       "dismissed_announcement": WIDEST_UNSIGNED, "gnss_stage": "fixed", "satellites": 255,
-      "utc_source": "own"},
+      "utc_source": "go"},
      "b500181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f"
-     "11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff16031718ff181800"),
+     "11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff16031718ff181801"),
     ({"command": "peer_claim", "boot_epoch": WIDEST_UNSIGNED, "at_s": WIDEST_UNSIGNED,
       "into_ms": 999, "latitude_1e7": -900000000, "longitude_1e7": -1800000000,
       "position_age_ms": WIDEST_UNSIGNED, "altitude_hae_mm": WIDEST_INTEGER,

@@ -291,7 +291,7 @@ bool read_utc_source(const cbor::Reader& reader, PeerHealth& health) {
     bool sourced = false;
     if (!take(reader.read_unsigned(link::health_key::kUtcSource), source, sourced)) return false;
     if (!sourced) return true;
-    if (!health.utc_valid || source > static_cast<uint32_t>(UtcSource::Own)) return false;
+    if (!health.utc_valid || source > static_cast<uint32_t>(UtcSource::Go)) return false;
     health.utc_source = static_cast<UtcSource>(source);
     return true;
 }

@@ -153,7 +153,7 @@ The Go dates the frame through its UTC second's edge, the PPS edge `timing::Cloc
 | State | When |
 |---|---|
 | `Unpaired` | the Go holds no pin |
-| `Waiting` | paired, not live, its receiver listening, and not yet counted on: no `health` younger than `kHealthMaxAgeMs`, or one that says `utc_valid` false (#193) |
+| `Waiting` | paired, not live, its receiver listening, and not yet counted on: no `health` younger than `kHealthMaxAgeMs`, or one that says `utc_valid` false (#193), which a Bravo says only when neither it nor its Go has UTC |
 | `Live` | a `health` younger than `kHealthMaxAgeMs` whose `listening` and `utc_valid` are both true, unless it carries no `utc_source` and its `gnss_stage` is `silent` |
 | `ReceiverDown` | that `health` says `listening` false |
 | `NoUtc` | that `health` says `utc_valid` false while the Go counts on its Bravo, so Bravo exports nothing (#192), or comes from a Bravo built before `utc_source` whose receiver is silent, whose second stopped with it |

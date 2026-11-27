@@ -52,7 +52,7 @@ const std::map<std::string, std::string> kPeerFramesAtTheirWidest = {
      "02113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"},
     {"health",
      "b500181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f"
-     "11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff16031718ff181800"},
+     "11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff16031718ff181801"},
     {"peer_claim",
      "b100181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
      "081affffffff093a7fffffff0a1affffffff0b1a00ffffff12f513031401151affffffff1601"},

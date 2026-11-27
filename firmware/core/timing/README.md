@@ -90,6 +90,8 @@ At 2 Hz, on 868.2 MHz, the instants between 490 ms and the `.500` arrival, about
 
 The uptime clock runs on the board's 32.768 kHz crystal, which Zephyr budgets at 50 ppm. `kUtcReferenceMaxAgeMs`, 2000 s, is how long a clock five times worse, 250 ppm, takes to drift half a second, the most a second can be off before it names its neighbour. Past it `OwnshipService` withdraws `own.utc_valid` and `clock.utc_valid` and forgets both references, so the traffic clock falls back to uptime, the NMEA stream stops naming a time, and a Bravo tells its Go it has no UTC. The next solution dates the clock again.
 
+A Bravo with no UTC of its own counts its pinned Go's second instead, `ClockState::claimed_utc_s` and `claimed_opened_ms`, set from each `peer_claim` (`../../products/skyblip_bravo/README.md`, The reference). `bus::State::utc_source()` says which second `traffic_now_s()` counts: `Own`, `Go`, or none, and only then does it fall back to uptime. The Go's second holds for `kUtcReferenceMaxAgeMs` after the last claim too.
+
 ## What the channel measurement is for
 
 `ChannelLevel` averages `ChannelLevel::kSamples` reads as power, because one GetRssiInst read (DS 13.5.2) between two bursts calls a loud site quiet. Each executor also reads the tuned channel near every dwell's end, and `NoiseFloor` averages it from OGN's -105 dBm seed into `noise_dbm`. A device that hears nothing at -85 dBm is deaf because the band is full, and at -110 dBm for its own reasons. Only the CCA gates a burst.

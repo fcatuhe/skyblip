@@ -489,7 +489,8 @@ void World<Platform>::apply_events(uint32_t now_ms, const bus::State& state) {
             case EventKind::ExpectTrafficMinimum:
                 if (state.traffic.count() < event.value) fail("traffic count below expectation");
                 break;
-            case EventKind::BravoLink: break;
+            case EventKind::BravoLink:
+            case EventKind::Utc: break;
         }
     }
 }
