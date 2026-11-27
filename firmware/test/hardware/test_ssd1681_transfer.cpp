@@ -45,3 +45,26 @@ TEST_CASE("ssd1681: a bring-up that did not reach the panel is done again before
     CHECK(chip.saw_command(0x12));
     CHECK(chip.last_full);
 }
+
+TEST_CASE(
+    "ssd1681: nothing follows a failed transfer, not even an activation the bus would carry") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    driver.present(canvas, ports::Refresh::Full, 0);
+    refresh_to_ready(driver, 0);
+    const int before = chip.transfers;
+    driver.present(canvas, ports::Refresh::Partial, 5000);
+    REQUIRE(driver.ready(5000 + parts::Ssd1681::kReadyAfterFullMs));
+    const int partial = chip.transfers - before;
+    const int presents = chip.present_count;
+
+    // A partial ends on the update command, its sequence and the activation: only the first fails.
+    chip.transfers_before_failure = partial - 3;
+    chip.failures_before_recovery = 1;
+    driver.present(canvas, ports::Refresh::Partial, 10000);
+    CHECK(chip.present_count == presents);
+    CHECK_FALSE(driver.refreshing());
+}

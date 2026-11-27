@@ -126,13 +126,10 @@ void Ssd1681::ensure_awake() {
     asleep_ = false;
 }
 
-// INFO: fc 27nov26 a frame the bus dropped part of is not shown, and the next starts from reset
 void Ssd1681::activate(uint8_t sequence, bool full, uint32_t now_ms) {
-    if (!transfer_failed_) {
-        command(kDisplayUpdateControl2);
-        data(sequence);
-        command(kMasterActivation);
-    }
+    command(kDisplayUpdateControl2);
+    data(sequence);
+    command(kMasterActivation);
     if (transfer_failed_) {
         glass_known_ = false;
         return;
@@ -245,7 +242,9 @@ void Ssd1681::write_bank(uint8_t opcode) {
     send(shadow_, kGlassBytes);
 }
 
+// INFO: fc 27nov26 a failed transfer leaves the controller unknown, so send nothing until a reset
 void Ssd1681::send(const uint8_t* bytes, size_t count) {
+    if (transfer_failed_) return;
     spi_.select(true);
     if (!spi_.transfer(bytes, nullptr, count)) transfer_failed_ = true;
     spi_.select(false);

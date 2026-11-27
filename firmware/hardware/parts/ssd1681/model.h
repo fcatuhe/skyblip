@@ -53,7 +53,8 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
 
     void select(bool) override {}
     bool transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
-        if (transfers_before_failure == 0) {
+        if (transfers_before_failure == 0 && failures_before_recovery != 0) {
+            if (failures_before_recovery > 0) failures_before_recovery--;
             if (rx) std::fill_n(rx, bytes, uint8_t{0xFF});
             return false;
         }
@@ -139,6 +140,8 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     int transfers{0};
     // INFO: fc 27nov26 negative never fails, else that many transfers pass and the rest fail
     int transfers_before_failure{-1};
+    // INFO: fc 27nov26 negative fails every transfer once failures start, else that many fail
+    int failures_before_recovery{-1};
     int deep_sleeps{0};
     int commands_while_busy{0};
     bool busy_stuck{false};

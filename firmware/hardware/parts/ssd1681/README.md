@@ -14,7 +14,7 @@ The command constants are spelled in full. Where the datasheet's command table s
 
 ## A failed transfer
 
-The panel answers nothing over SPI, so the driver learns of a lost byte only from the bus. A transfer the bus reports failed marks the frame. The driver then sends no MasterActivation, since the RAM holds part of a frame and the controller may be mid-command. The glass keeps the last frame it showed. The next frame re-initialises the panel from RES# and is a full refresh, because neither RAM bank is known.
+The panel answers nothing over SPI, so the driver learns of a lost byte only from the bus. After a transfer the bus reports failed, the driver sends nothing more until it resets the panel, since the RAM holds part of a frame and the controller may be mid-command. So no MasterActivation follows, and the glass keeps the last frame it showed. The next frame re-initialises the panel from RES# and is a full refresh, because neither RAM bank is known.
 
 ## Panel identity
 
