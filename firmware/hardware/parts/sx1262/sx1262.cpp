@@ -5,10 +5,12 @@
 
 namespace skyblip::parts {
 
+// INFO: fc 26nov26 a part stuck outside RX counts no silence, so a BUSY timeout owes it a reset
 Status Sx1262::wait_busy_low(uint32_t max_spins) {
     for (uint32_t i = 0; i < max_spins; i++) {
         if (!gpio_.get(busy_pin_)) return Status::Ok;
     }
+    if (brought_up_) reinitialisation_owed_ = true;
     return Status::Timeout;
 }
 
