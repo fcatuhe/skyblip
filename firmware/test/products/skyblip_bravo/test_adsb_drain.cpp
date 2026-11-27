@@ -1,17 +1,10 @@
 // A 1090 MHz flood costs frames, never the loop: each pass folds a drain window's design load.
-#include <numeric>
-
 #include "doctest/doctest.h"
 #include "test/support/bravo_rig.h"
 
 using namespace skyblip;
 
 namespace {
-
-uint32_t decoded(Bravo& product) {
-    const auto& formats = product.adsb().formats();
-    return std::accumulate(formats.begin(), formats.end(), 0u);
-}
 
 void fill(bus::AdsbQueue& queue, int frames) {
     for (int i = 0; i < frames; i++) {
@@ -27,14 +20,14 @@ TEST_CASE("bravo adsb: a pass decodes at most a drain window's design load, the 
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(1);
-    const uint32_t before = decoded(rig.product);
-    fill(rig.product.adsb_frames(), events::kAdsbQueueFrames);
+    bus::AdsbQueue& queue = rig.product.adsb_frames();
+    fill(queue, events::kAdsbQueueFrames);
 
     rig.product.adsb().tick(rig.now_ms);
-    CHECK(decoded(rig.product) - before == bravo::AdsbService::kFramesPerPassCeiling);
+    CHECK(queue.size() == events::kAdsbQueueFrames - bravo::AdsbService::kFramesPerPassCeiling);
     CHECK(rig.product.adsb().due_in_ms(rig.now_ms) == 0);
 
     rig.product.adsb().tick(rig.now_ms);
-    CHECK(decoded(rig.product) - before == events::kAdsbQueueFrames);
+    CHECK(queue.size() == 0);
     CHECK(rig.product.adsb().due_in_ms(rig.now_ms) > 0);
 }

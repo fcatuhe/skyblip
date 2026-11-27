@@ -1,5 +1,8 @@
 #include "products/skyblip_bravo/services/adsb.h"
 
+#include <algorithm>
+#include <iterator>
+
 #include "core/events/stamp.h"
 #include "core/protocol/adsb_observation.h"
 #include "core/settings/address.h"
@@ -35,13 +38,27 @@ void AdsbService::tick(uint32_t now_ms) {
     record_second(gate, now_ms);
 }
 
-uint32_t AdsbService::impossible_formats() const {
+// INFO: fc 27nov26 the receiver thread screens out what the decoder refuses, so both are counted
+uint32_t AdsbService::crc() const { return crc_ + receiver_.statistics().parity_refused; }
+
+uint32_t AdsbService::unsupported() const {
+    return unsupported_ + receiver_.statistics().format_refused;
+}
+
+std::array<uint32_t, adsb::kDownlinkFormats> AdsbService::formats() const {
+    const ports::AdsbReceiverStatistics statistics = receiver_.statistics();
+    std::array<uint32_t, adsb::kDownlinkFormats> formats{};
+    std::copy(std::begin(statistics.formats), std::end(statistics.formats), formats.begin());
+    return formats;
+}
+
+uint32_t AdsbService::impossible_formats(const ports::AdsbReceiverStatistics& statistics) {
     uint32_t impossible = 0;
-    for (const uint8_t format : kImpossibleFormats) impossible += formats_[format];
+    for (const uint8_t format : kImpossibleFormats) impossible += statistics.formats[format];
     return impossible;
 }
 
-// INFO: fc 26nov26 three records every second whatever the sky does, so silence still records
+// INFO: fc 26nov26 four records every second whatever the sky does, so silence still records
 void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) {
         recorded_ = false;
@@ -54,9 +71,11 @@ void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     const ports::AdsbReceiverStatistics statistics = receiver_.statistics();
     context_.diagnostics.record(diagnostics::receiver_of(statistics, receiver_.listening()), at);
     context_.diagnostics.record(diagnostics::framing_of(statistics), at);
+    context_.diagnostics.record(diagnostics::screening_of(statistics, transponders_.unmatched()),
+                                at);
     diagnostics::Reception reception{};
-    reception.crc = crc_;
-    reception.unsupported = unsupported_;
+    reception.crc = crc_ + statistics.parity_refused;
+    reception.unsupported = unsupported_ + statistics.format_refused;
     reception.folded = folded_;
     reception.positions = positions_;
     reception.capture_refused = capture_.refused();
@@ -65,7 +84,7 @@ void AdsbService::record_second(const GateChoice& gate, uint32_t now_ms) {
     reception.reference = gate.reference;
     reception.fix_valid = context_.state.own.fix_valid;
     reception.framing_resyncs = statistics.framing_resyncs;
-    reception.impossible_formats = impossible_formats();
+    reception.impossible_formats = impossible_formats(statistics);
     context_.diagnostics.record(reception, at);
 }
 
@@ -88,7 +107,6 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     const adsb::Reception reception{frame.at_us, frame.rssi_dbm, frame.rssi_valid};
     const Status status =
         status_of(adsb::receive(frame.bytes.data(), frame.bytes.size(), reception, message));
-    count_format(message.downlink_format);
     if (status != Status::Ok) {
         refuse(status);
         return;
@@ -112,11 +130,6 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     if (!observation_.position_valid) return;
     positions_++;
     context_.state.traffic.update(observation_, now_s);
-}
-
-void AdsbService::count_format(uint8_t downlink_format) {
-    const uint8_t last = adsb::kDownlinkFormats - 1;
-    formats_[downlink_format < last ? downlink_format : last]++;
 }
 
 // INFO: fc 12nov26 a whole 14-byte frame is never Invalid, so any refusal but Unsupported is parity

@@ -46,7 +46,8 @@ constexpr bool lists(Profile profile, Type type) {
         case Type::Adsb:
         case Type::Receiver:
         case Type::Reception:
-        case Type::Framing: return false;
+        case Type::Framing:
+        case Type::Screening: return false;
     }
     return false;
 }

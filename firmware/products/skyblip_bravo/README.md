@@ -29,9 +29,11 @@ A pass decodes at most `kFramesPerPassCeiling` frames, `events::kAdsbLoadFrames`
 
 1090ES has only a four-pulse preamble and no sync word, so the LR2021's detector fires on every pulse train that fits the preamble: Mode A/C replies, aircraft DME, other pulsed signals in the band, and noise. The detection threshold stays at `parts::lr2021::kDetectionThresholdDbm`, -110 dBm, #293's measured best, and Bravo makes each false alarm cheap instead of trying to keep it out.
 
-The bravo-d582 captures of #550 settle it. Outdoors the quietest noise readings barely moved (-101 against -102 dBm indoors) while the loudest rose from -95 to -77 dBm: the flood was strong pulses, not a raised floor. A regulator that raised the threshold to -92 dBm left 40 to 150 junk frames a second and decoded no position, because the real aircraft there arrived weaker than -92 dBm, while at -109 to -103 dBm the same flood still gave 2 to 9 positions a second. ADSBee 1090 found the same (`PantsForBirds/adsbee` #356): a trigger set high loses valid frames, and the best one sits near the floor.
+The bravo-d582 captures of #550 settle it. Outdoors the quietest noise readings barely moved (-101 against -102 dBm indoors) while the loudest rose from -95 to -77 dBm: the flood was strong pulses, not a raised floor. A regulator that raised the threshold to -92 dBm left 40 to 150 junk frames a second and decoded about one position every two seconds, because the real aircraft there arrived weaker than -92 dBm, while at -109 to -103 dBm the same flood still gave 2 to 9 positions a second. ADSBee 1090 found the same (`PantsForBirds/adsbee` #356): a trigger set high loses valid frames, and the best one sits near the floor.
 
-What made the flood harmful was its cost. Woken for each frame, the receiver thread spent about 500 us a frame on SPI snapshots, and as a cooperative thread it never yielded while frames kept coming, so at 1500 frames a second it held the CPU and the loop, the link and the GNSS UART starved. The thread now drains at most every 5 ms (`../../hardware/parts/lr2021/README.md`, The receiver thread). The chip cannot filter the formats instead: an OOK receive takes one sync word and two address bytes (DS 16.3.4, 16.3.5), and the downlink formats transponders send share no prefix, so filtering at the chip would drop every Mode S reply.
+What made the flood harmful was its cost. Woken for each frame, the receiver thread spent about 500 us a frame on SPI snapshots, and as a cooperative thread it never yielded while frames kept coming, so at 1500 frames a second it held the CPU and the loop, the link and the GNSS UART starved. Paced at 5 ms, it still took 63 to 76% of the CPU outdoors, and the queue to the decoder lost up to 260 frames a second. So Bravo receives in two stages. The receiver thread wakes at most every 5 ms, reads every whole frame in one transfer, and screens out what the decoder would refuse: a format no decoder reads, or a DF11 or DF17 whose parity fails. The decoder in the loop does the full work on what passes, Mode S replies included (`../../hardware/parts/lr2021/README.md`, The receiver thread and The screen). The chip cannot screen in the thread's place: an OOK receive takes one sync word and one pair of one-byte address values (DS 16.3.4, 16.3.5), and the downlink formats transponders send share no prefix, so a screen at the chip would drop every Mode S reply.
+
+The LR2021 runs at a fixed gain, step 13, instead of its AGC, as ADSBee 1421 does on the same part (`../../hardware/parts/lr2021/README.md`, The gain).
 
 `reception.impossible_formats` still counts the frames in the 12 downlink formats no transponder sends, DF1 to DF3, DF6 to DF10 and DF12 to DF15. They are junk by definition, and times 32/12 they estimate every false alarm.
 
@@ -201,9 +203,9 @@ The `adsb` group of the status dump follows a frame from the antenna to the tabl
 |---|---|
 | `frames` | the LR2021 heard a preamble, decided the 112 bits behind it, and handed them up |
 | `dropped` | was lost before the decoder |
-| `formats` | each frame decoded, by the downlink format its first five bits name |
-| `crc` | a DF17 or DF11 that failed its parity, which nothing repairs |
-| `unsupported` | a format or a DF17 message the decoder does not read |
+| `formats` | each frame read, by the downlink format its first five bits name, counted by the receiver thread before its screen |
+| `crc` | a DF17 or DF11 that failed its parity, which nothing repairs, most of them refused by the receiver thread |
+| `unsupported` | a format the receiver thread refused, or a DF17 message the decoder does not read |
 | `unmatched` | a Mode S reply from an address not heard in clear first |
 | `folded` | was folded into an aircraft by `adsb::Assembly` |
 | `aircraft` | not a frame: the aircraft the assembly holds now |

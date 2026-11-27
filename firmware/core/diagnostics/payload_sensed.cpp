@@ -212,7 +212,6 @@ Record record_of(const Adsb& value, const Instant& at) {
 Receiver receiver_of(const ports::AdsbReceiverStatistics& statistics, bool listening) {
     Receiver value{};
     value.frames = statistics.frames;
-    value.frames_dropped = statistics.dropped;
     value.rearms = statistics.rearms;
     value.resets = statistics.resets;
     value.part_resets = statistics.part_resets;
@@ -229,6 +228,7 @@ Receiver receiver_of(const ports::AdsbReceiverStatistics& statistics, bool liste
     value.threshold_dbm = probe.threshold_dbm;
     value.part_mode = probe.mode;
     value.part_reset = probe.reset;
+    value.gain_step = probe.gain_step;
     value.interrupt_pending = probe.interrupt_pending;
     value.front_end_kept = probe.front_end_kept;
     return value;
@@ -240,7 +240,7 @@ Record record_of(const Receiver& value, const Instant& at) {
     wire::put_uint16(record.payload + receiver_at::kPartPackets,
                      static_cast<uint16_t>(value.part_packets));
     wire::put_uint16(record.payload + receiver_at::kPartErrors, value.part_errors);
-    record.payload[receiver_at::kFramesDropped] = static_cast<uint8_t>(value.frames_dropped);
+    record.payload[receiver_at::kGainStep] = value.gain_step;
     record.payload[receiver_at::kRearms] = static_cast<uint8_t>(value.rearms);
     record.payload[receiver_at::kResets] = static_cast<uint8_t>(value.resets);
     record.payload[receiver_at::kPartResets] = static_cast<uint8_t>(value.part_resets);

@@ -46,6 +46,10 @@ class Queue {
         return tail_.load(std::memory_order_acquire) == head_.load(std::memory_order_acquire);
     }
     uint32_t dropped() const { return dropped_.load(std::memory_order_relaxed); }
+    uint16_t size() const {
+        return static_cast<uint16_t>(head_.load(std::memory_order_acquire) -
+                                     tail_.load(std::memory_order_acquire));
+    }
 
    private:
     Item slots_[Capacity]{};

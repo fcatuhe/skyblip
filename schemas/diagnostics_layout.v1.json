@@ -259,7 +259,7 @@
       {"name": "frames", "kind": "u16", "at": 0},
       {"name": "part_packets", "kind": "u16", "at": 2, "valid_when": "probed"},
       {"name": "part_errors", "kind": "u16", "at": 4, "valid_when": "probed"},
-      {"name": "frames_dropped", "kind": "u8", "at": 6},
+      {"name": "gain_step", "kind": "u8", "at": 6, "valid_when": "probed"},
       {"name": "rearms", "kind": "u8", "at": 7},
       {"name": "resets", "kind": "u8", "at": 8},
       {"name": "part_resets", "kind": "u8", "at": 9},
@@ -298,6 +298,17 @@
       {"name": "drains", "kind": "u16", "at": 12},
       {"name": "stranded_resyncs", "kind": "u8", "at": 14},
       {"name": "short_resyncs", "kind": "u8", "at": 15}
+    ]},
+    {"name": "screening", "code": 25, "fields": [
+      {"name": "squitters", "kind": "u16", "at": 0},
+      {"name": "all_calls", "kind": "u16", "at": 2},
+      {"name": "replies", "kind": "u16", "at": 4},
+      {"name": "parity_refused", "kind": "u16", "at": 6},
+      {"name": "one_bit_errors", "kind": "u16", "at": 8},
+      {"name": "unmatched", "kind": "u16", "at": 10},
+      {"name": "worst_drain_us", "kind": "u16", "at": 12},
+      {"name": "fifo_peak_frames", "kind": "u8", "at": 14},
+      {"name": "queue_peak_frames", "kind": "u8", "at": 15}
     ]}
   ],
   "enums": {

@@ -346,7 +346,7 @@ Receiver receiver() {
     value.frames = 70000;
     value.part_packets = 4500;
     value.part_errors = 0x0040;
-    value.frames_dropped = 300;
+    value.gain_step = 13;
     value.rearms = 3;
     value.resets = 1;
     value.part_resets = 2;
@@ -394,6 +394,20 @@ Framing framing() {
     return value;
 }
 
+Screening screening() {
+    Screening value{};
+    value.squitters = 70200;
+    value.all_calls = 321;
+    value.replies = 4321;
+    value.parity_refused = 987;
+    value.one_bit_errors = 12;
+    value.unmatched = 3456;
+    value.worst_drain_us = 70000;
+    value.fifo_peak_frames = 18;
+    value.queue_peak_frames = 300;
+    return value;
+}
+
 std::vector<std::vector<uint8_t>> written() {
     const Instant at = vector_instant();
     return {bytes_of(record_of(boot(), at)),      bytes_of(record_of(config(), at)),
@@ -407,7 +421,8 @@ std::vector<std::vector<uint8_t>> written() {
             bytes_of(record_of(end(), at)),       bytes_of(record_of(duty(), at)),
             bytes_of(record_of(hop(), at)),       bytes_of(record_of(loop(), at)),
             bytes_of(record_of(adsb(), at)),      bytes_of(record_of(receiver(), at)),
-            bytes_of(record_of(reception(), at)), bytes_of(record_of(framing(), at))};
+            bytes_of(record_of(reception(), at)), bytes_of(record_of(framing(), at)),
+            bytes_of(record_of(screening(), at))};
 }
 
 }  // namespace

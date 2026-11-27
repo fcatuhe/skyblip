@@ -16,6 +16,7 @@ enum class Lr2021EventType : uint8_t { None, Frame, Fault };
 
 struct Lr2021Event {
     Lr2021EventType type{Lr2021EventType::None};
+    uint8_t frames{0};
     int8_t rssi_dbm{0};
     bool rssi_valid{false};
 };
@@ -35,7 +36,7 @@ class Lr2021 {
     Status probe();
     Status begin(int16_t detection_threshold_dbm);
     Status start_receive();
-    Lr2021Event poll(uint8_t* frame, size_t capacity);
+    Lr2021Event poll(uint8_t* frames, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
     Status sample(ports::ReceiverProbe& probe);
     Status sleep();
@@ -82,7 +83,7 @@ class Lr2021 {
     Status write_mask(uint32_t address, uint32_t mask, uint32_t data);
     void note_status(const uint8_t* status);
     Status read_errors();
-    Status read_frame(uint8_t* frame, Lr2021Event& event);
+    Status read_frames(uint8_t* frames, uint8_t count, Lr2021Event& event);
 
     static constexpr size_t kFrameBytes = 16;
 
@@ -223,7 +224,8 @@ constexpr uint32_t kFifoFrames = kFifoBytes / kFifoFrameBytes;
 // INFO: fc 11nov26 DS 16.3.8 names these for ADS-B: pattern 0x0285, no repeat, falling edge, no SFD
 constexpr uint16_t kAdsbPreamblePattern = 0x0285;
 constexpr uint8_t kAdsbPreambleChips = 16;
-constexpr uint8_t kAgcAutomatic = 0x00;
+// INFO: fc 27nov26 ADSBee 1421 #256: the AGC dipped on strong pulses and took 3 ms to recover
+constexpr uint8_t kGainStep = 13;
 
 // INFO: fc 11nov26 Semtech's lr20xx_workarounds.c, not the DS: register 0xF30E14 holds the
 // threshold in dB plus 74

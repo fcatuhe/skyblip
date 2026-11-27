@@ -1,5 +1,7 @@
 #include "protocols/adsb/message.h"
 
+#include <algorithm>
+#include <array>
 #include <cstring>
 #include <initializer_list>
 
@@ -247,6 +249,23 @@ wire::Status reply(const uint8_t* frame, Message& out, bool altitude) {
     return wire::Status::Ok;
 }
 
+// INFO: fc 27nov26 DO-260B 2.2.4.3.4.7.3.a never corrects the DF field, so it is left out
+constexpr uint8_t kFirstCorrectableBit = 6;
+constexpr size_t kCorrectableBits = kFrameBytes * 8u - (kFirstCorrectableBit - 1u);
+
+constexpr std::array<uint32_t, kCorrectableBits> one_bit_syndromes() {
+    std::array<uint32_t, kCorrectableBits> syndromes{};
+    for (size_t i = 0; i < kCorrectableBits; i++) {
+        uint8_t error[kFrameBytes]{};
+        const size_t index = kFirstCorrectableBit - 1u + i;
+        error[index >> 3] = static_cast<uint8_t>(0x80u >> (index & 7u));
+        syndromes[i] = wire::crc24_check(error, kFrameBytes);
+    }
+    return syndromes;
+}
+
+constexpr std::array<uint32_t, kCorrectableBits> kOneBitSyndromes = one_bit_syndromes();
+
 }
 
 wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception reception, Message& out) {
@@ -266,6 +285,33 @@ wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception recepti
         case kCommBIdentityReply: return reply(frame, out, false);
         default: return wire::Status::Unsupported;
     }
+}
+
+Screened screen(const uint8_t* frame) {
+    switch (bits(frame, 1, 5)) {
+        case kExtendedSquitter:
+            return wire::crc24_check(frame, kFrameBytes) == 0 ? Screened::Squitter
+                                                              : Screened::Parity;
+        case kAllCallReply:
+            return wire::crc24_check(frame, kShortFrameBytes) <= kInterrogatorCodeCeiling
+                       ? Screened::AllCall
+                       : Screened::Parity;
+        case kShortAirAir:
+        case kAltitudeReply:
+        case kIdentityReply:
+        case kLongAirAir:
+        case kCommBAltitudeReply:
+        case kCommBIdentityReply: return Screened::Reply;
+        default: return Screened::Format;
+    }
+}
+
+// INFO: fc 27nov26 parity is linear: one flipped bit in a sound frame leaves that bit's syndrome
+bool one_bit_error(const uint8_t* frame) {
+    if (bits(frame, 1, 5) != kExtendedSquitter) return false;
+    const uint32_t syndrome = wire::crc24_check(frame, kFrameBytes);
+    return syndrome != 0 && std::find(kOneBitSyndromes.begin(), kOneBitSyndromes.end(), syndrome) !=
+                                kOneBitSyndromes.end();
 }
 
 }

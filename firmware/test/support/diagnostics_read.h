@@ -360,7 +360,7 @@ inline bool read(const Record& record, Receiver& out) {
     out.frames = wire::get_uint16(record.payload + receiver_at::kFrames);
     out.part_packets = wire::get_uint16(record.payload + receiver_at::kPartPackets);
     out.part_errors = wire::get_uint16(record.payload + receiver_at::kPartErrors);
-    out.frames_dropped = record.payload[receiver_at::kFramesDropped];
+    out.gain_step = record.payload[receiver_at::kGainStep];
     out.rearms = record.payload[receiver_at::kRearms];
     out.resets = record.payload[receiver_at::kResets];
     out.part_resets = record.payload[receiver_at::kPartResets];
@@ -407,6 +407,21 @@ inline bool read(const Record& record, Framing& out) {
     out.drains = wire::get_uint16(record.payload + framing_at::kDrains);
     out.stranded_resyncs = record.payload[framing_at::kStrandedResyncs];
     out.short_resyncs = record.payload[framing_at::kShortResyncs];
+    return true;
+}
+
+inline bool read(const Record& record, Screening& out) {
+    if (record.type != Type::Screening) return false;
+    out = Screening{};
+    out.squitters = wire::get_uint16(record.payload + screening_at::kSquitters);
+    out.all_calls = wire::get_uint16(record.payload + screening_at::kAllCalls);
+    out.replies = wire::get_uint16(record.payload + screening_at::kReplies);
+    out.parity_refused = wire::get_uint16(record.payload + screening_at::kParityRefused);
+    out.one_bit_errors = wire::get_uint16(record.payload + screening_at::kOneBitErrors);
+    out.unmatched = wire::get_uint16(record.payload + screening_at::kUnmatched);
+    out.worst_drain_us = wire::get_uint16(record.payload + screening_at::kWorstDrainUs);
+    out.fifo_peak_frames = record.payload[screening_at::kFifoPeakFrames];
+    out.queue_peak_frames = record.payload[screening_at::kQueuePeakFrames];
     return true;
 }
 

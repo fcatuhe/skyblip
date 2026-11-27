@@ -4,6 +4,7 @@
 #include "core/bus/bus.h"
 #include "core/events/adsb.h"
 #include "hardware/parts/lr2021/lr2021.h"
+#include "hardware/platform/adsb_batch.h"
 #include "ports/adsb_receiver.h"
 #include "ports/clock.h"
 #include "runtime/tasks.h"
@@ -35,16 +36,14 @@ class AdsbReceiver : public ports::AdsbReceiver {
         if (!started_ || stopped_) return;
         const uint64_t woke_us = clock_.microseconds();
         if (radio_.irq_asserted()) drains_++;
+        uint32_t drained = 0;
         while (radio_.irq_asserted()) {
-            events::AdsbFrame frame{};
-            const parts::Lr2021Event event = radio_.poll(frame.bytes.data(), frame.bytes.size());
+            const parts::Lr2021Event event = radio_.poll(batch_, sizeof(batch_));
             if (event.type != parts::Lr2021EventType::Frame) break;
-            frame.at_us = woke_us;
-            frame.rssi_dbm = event.rssi_dbm;
-            frame.rssi_valid = event.rssi_valid;
-            (void)out_.push(frame);
-            statistics_.heard(event.rssi_dbm, event.rssi_valid, woke_us);
+            hand_over(batch_, event, woke_us, statistics_, out_);
+            drained += event.frames;
         }
+        statistics_.drained(drained, out_.size(), 0, woke_us);
         (void)radio_.service(now_ms - serviced_ms_, runtime::kRadioRxSilenceCeilingMs);
         serviced_ms_ = now_ms;
         if (now_ms - probed_ms_ < kProbePeriodMs) return;
@@ -108,6 +107,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     uint32_t serviced_ms_{0};
     uint32_t drains_{0};
     uint32_t probed_ms_{0};
+    uint8_t batch_[kAdsbBatchBytes]{};
     bool started_{false};
     bool stopped_{false};
     bool parked_{false};

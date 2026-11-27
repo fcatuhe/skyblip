@@ -4,7 +4,7 @@
     ./scripts/blip.py --name "skyBlip Bravo" fetch --log diagnostics --all --out run.ndjson
     python3 scripts/reception_check.py run.ndjson
 
-Bravo writes a receiver and a reception record each second of a Full capture
+Bravo writes a receiver, a framing, a screening and a reception record each second of a Full capture
 (firmware/core/diagnostics/README.md, The receiver and reception records). Their counters cross
 as low bits since boot, so this subtracts each pair of seconds, as power_budget.py does Duty's,
 and never across a gap, a boot, an unreadable or missing record, or a hole longer than
@@ -24,12 +24,18 @@ WIDE = 1 << 16
 NARROW = 1 << 8
 WIDE_COUNTERS = ("frames", "part_packets", "crc", "unsupported", "folded", "positions",
                  "capture_refused", "impossible_formats", "overflow_drops", "resync_drops",
-                 "queue_drops", "in_flight", "split_counts", "drains", "drain_busy_ms")
-NARROW_COUNTERS = ("frames_dropped", "rearms", "resets", "part_resets", "command_errors",
-                   "missed_edges", "framing_resyncs", "stranded_resyncs", "short_resyncs")
+                 "queue_drops", "in_flight", "split_counts", "drains", "drain_busy_ms",
+                 "squitters", "all_calls", "replies", "parity_refused", "one_bit_errors",
+                 "unmatched")
+NARROW_COUNTERS = ("rearms", "resets", "part_resets", "command_errors", "missed_edges",
+                   "framing_resyncs", "stranded_resyncs", "short_resyncs")
 FRAMING_COUNTERS = ("in_flight", "split_counts", "stranded_resyncs", "short_resyncs")
 # the receiver thread is cooperative, so beyond this share of the CPU the loop and the link starve
 DRAIN_BUSY_CEILING_PERMILLE = 300
+# the LR2021's FIFO holds 18 frames and the queue to the decoder 64, so a peak this close is a loss
+FIFO_FRAMES = 18
+QUEUE_FRAMES = 64
+PEAK_MARGIN_FRAMES = 2
 MAX_STEP_S = 5
 DETECTION_THRESHOLD_DBM = -110
 NOISE_RISE_DB = 6
@@ -37,8 +43,8 @@ FLOOD_FACTOR = 3
 LOOP_STALL_US = 100_000
 BREAKS = ("gap", "boot")
 
-Second = collections.namedtuple("Second",
-                                "at_s utc elapsed_s stretch receiver reception counts loop framing")
+Second = collections.namedtuple(
+    "Second", "at_s utc elapsed_s stretch receiver reception counts loop framing screening")
 
 
 def main(argv=None):
@@ -78,11 +84,12 @@ def seconds_of(records):
     receiver = None
     loop = None
     framing = None
+    screening = None
     stretch = 0
     last_index = None
     for record in records:
         if breaks(record, last_index):
-            before = receiver = loop = framing = None
+            before = receiver = loop = framing = screening = None
         last_index = record["index"]
         if record.get("error") or record["type"] in BREAKS:
             continue
@@ -90,18 +97,20 @@ def seconds_of(records):
             loop = record
         elif record["type"] == "framing":
             framing = record
+        elif record["type"] == "screening":
+            screening = record
         elif record["type"] == "receiver":
             receiver = record
         elif record["type"] == "reception" and receiver is not None:
-            pair = {**receiver, **(framing or {}), **record}
+            pair = {**receiver, **(framing or {}), **(screening or {}), **record}
             if before is None or not steps(before, pair):
                 stretch += 1
             else:
                 seconds.append(Second(pair["at_s"], pair.get("utc_dated", False),
                                       pair["at_s"] - before["at_s"], stretch, receiver, record,
-                                      counts(before, pair), loop, framing))
+                                      counts(before, pair), loop, framing, screening))
             before = pair
-            receiver = loop = framing = None
+            receiver = loop = framing = screening = None
     return seconds
 
 
@@ -166,6 +175,7 @@ def whole_run(seconds, floor):
                                                for field in FRAMING_COUNTERS))
         lines.append("  receiver thread: %d drains, %.1f%% of the CPU"
                      % (total["drains"], total["drain_busy_ms"] / duration(seconds) / 10))
+    lines += screened(seconds, total)
     if floor is not None:
         lines.append("  noise floor median %d dBm" % floor)
     modes = collections.Counter()
@@ -173,6 +183,27 @@ def whole_run(seconds, floor):
         modes[second.receiver.get("part_mode", "unprobed")] += second.elapsed_s
     lines.append("  part mode " + ", ".join("%s %d s" % item for item in sorted(modes.items())))
     return lines
+
+
+def screened(seconds, total):
+    screens = [second.screening for second in seconds if second.screening]
+    if not screens:
+        return []
+    kept = total["squitters"] + total["all_calls"] + total["replies"]
+    gains = sorted({second.receiver["gain_step"] for second in seconds
+                    if "gain_step" in second.receiver})
+    return [
+        "  screened: %d of %d frames to the decoder (%d squitters, %d all-calls, %d replies), "
+        "%d refused for parity, %d of them one bit off" % (
+            kept, total["frames"], total["squitters"], total["all_calls"], total["replies"],
+            total["parity_refused"], total["one_bit_errors"]),
+        "  replies with no address heard in clear: %d" % total["unmatched"],
+        "  peaks: a wake held the CPU %d us, found %d of %d frames in the FIFO, left %d of %d "
+        "in the queue" % (max(screen["worst_drain_us"] for screen in screens),
+                          max(screen["fifo_peak_frames"] for screen in screens), FIFO_FRAMES,
+                          max(screen["queue_peak_frames"] for screen in screens), QUEUE_FRAMES),
+        "  gain step %s" % (", ".join(str(gain) for gain in gains) or "unprobed"),
+    ]
 
 
 def silences(seconds, min_seconds):
@@ -273,8 +304,7 @@ def verdicts(run, floor, usual):
         busy_permille = total["drain_busy_ms"] / duration(run)
         if busy_permille > DRAIN_BUSY_CEILING_PERMILLE:
             found.append("the receiver thread held %d%% of the CPU" % (busy_permille / 10))
-    elif total["frames_dropped"]:
-        found.append("%d frames lost to a full queue" % total["frames_dropped"])
+    found += peaks(run)
     found += stalls(run)
     if total["frames"] == 0 and total["part_packets"] == 0 and not found:
         found.append("nothing decoded and the noise as usual: the antenna, the front end or "
@@ -289,6 +319,22 @@ def verdicts(run, floor, usual):
     references = sorted({second.reception.get("reference") for second in run} - {"own", "go"})
     if references:
         found.append("Bravo had no position to place traffic against (reference none)")
+    return found
+
+
+def peaks(run):
+    screens = [second.screening for second in run if second.screening]
+    if not screens:
+        return []
+    found = []
+    fifo = max(screen["fifo_peak_frames"] for screen in screens)
+    if fifo >= FIFO_FRAMES - PEAK_MARGIN_FRAMES:
+        found.append("a wake found %d of the FIFO's %d frames: the drain period is too long"
+                     % (fifo, FIFO_FRAMES))
+    queue = max(screen["queue_peak_frames"] for screen in screens)
+    if queue >= QUEUE_FRAMES - PEAK_MARGIN_FRAMES:
+        found.append("the queue to the decoder held %d of %d frames: the decoder fell behind"
+                     % (queue, QUEUE_FRAMES))
     return found
 
 

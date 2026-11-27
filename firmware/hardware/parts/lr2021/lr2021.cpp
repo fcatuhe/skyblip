@@ -100,23 +100,26 @@ Status Lr2021::start_receive() {
     return Status::Ok;
 }
 
-// INFO: fc 11nov26 RxDone can fire twice before a read, so whole frames are drained by FIFO level
-Lr2021Event Lr2021::poll(uint8_t* frame, size_t capacity) {
+// INFO: fc 27nov26 one snapshot, then the whole frames it counted in one FIFO read, oldest first
+Lr2021Event Lr2021::poll(uint8_t* frames, size_t capacity) {
     Lr2021Event event{};
     if (mode_ != Lr2021Mode::Receive || capacity < lr2021::kFifoFrameBytes) return event;
     if (frames_waiting_ == 0 && take_snapshot() != Status::Ok) {
         event.type = Lr2021EventType::Fault;
         return event;
     }
-    if (frames_waiting_ == 0) return event;
-    if (read_frame(frame, event) != Status::Ok) {
+    const size_t room = capacity / lr2021::kFifoFrameBytes;
+    const uint8_t count = static_cast<uint8_t>(frames_waiting_ < room ? frames_waiting_ : room);
+    if (count == 0) return event;
+    if (read_frames(frames, count, event) != Status::Ok) {
         event.type = Lr2021EventType::Fault;
         return event;
     }
-    frames_waiting_--;
-    frames_since_clear_++;
+    frames_waiting_ = static_cast<uint8_t>(frames_waiting_ - count);
+    frames_since_clear_ = static_cast<uint16_t>(frames_since_clear_ + count);
     since_frame_ms_ = 0;
     event.type = Lr2021EventType::Frame;
+    event.frames = count;
     return event;
 }
 
@@ -235,6 +238,7 @@ Status Lr2021::sample(ports::ReceiverProbe& probe) {
     probe.noise_dbm = rssi_inst_dbm(rssi);
     probe.threshold_dbm = threshold_dbm(threshold);
     probe.mode = mode_of(chip_status[1]);
+    probe.gain_step = lr2021::kGainStep;
     probe.interrupt_pending = (chip_status[0] & lr2021::kInterruptPending) != 0;
     probe.front_end_kept = (front_end & lr2021::kOokQuirkMask) == lr2021::kOokQuirkData;
     probe.valid = true;
@@ -369,7 +373,7 @@ Status Lr2021::configure_ook() {
     uint8_t detector[5] = {};
     put_be16(detector, lr2021::kAdsbPreamblePattern);
     detector[2] = lr2021::kAdsbPreambleChips - 1;
-    const uint8_t gain = lr2021::kAgcAutomatic;
+    const uint8_t gain = lr2021::kGainStep;
 
     Status status = command(lr2021::kSetOokModulationParams, modulation, sizeof(modulation));
     if (status == Status::Ok) status = command(lr2021::kSetOokPacketParams, packet, sizeof(packet));
@@ -516,23 +520,23 @@ Status Lr2021::read_errors() {
     return status;
 }
 
-// INFO: fc 11nov26 DS 5.4.1.3: the FIFO is the one read answered in its own frame
-Status Lr2021::read_frame(uint8_t* frame, Lr2021Event& event) {
+// INFO: fc 27nov26 DS 5.4.1.3 and 5.3.1: the FIFO answers in its own frame, any count of bytes long
+Status Lr2021::read_frames(uint8_t* frames, uint8_t count, Lr2021Event& event) {
     if (wait_busy_low(lr2021::kCommandBusyCeilingUs) != Status::Ok) {
         reset_owed_ = true;
         return Status::Timeout;
     }
-    uint8_t tx[2 + lr2021::kFifoFrameBytes] = {};
-    uint8_t rx[2 + lr2021::kFifoFrameBytes] = {};
-    put_be16(tx, lr2021::kReadRadioRxFifo);
+    uint8_t opcode[2] = {};
+    uint8_t status[2] = {};
+    put_be16(opcode, lr2021::kReadRadioRxFifo);
     spi_.select(true);
-    spi_.transfer(tx, rx, sizeof(tx));
+    spi_.transfer(opcode, status, sizeof(opcode));
+    spi_.transfer(nullptr, frames, static_cast<size_t>(count) * lr2021::kFifoFrameBytes);
     spi_.select(false);
-    note_status(rx);
+    note_status(status);
     last_opcode_ = lr2021::kReadRadioRxFifo;
-    event.rssi_valid = frames_waiting_ == 1 && newest_rssi_valid_;
+    event.rssi_valid = frames_waiting_ == count && newest_rssi_valid_;
     event.rssi_dbm = event.rssi_valid ? newest_rssi_dbm_ : 0;
-    std::memcpy(frame, rx + 2, lr2021::kFifoFrameBytes);
     return Status::Ok;
 }
 

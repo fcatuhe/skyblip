@@ -49,6 +49,12 @@ Every other format is `Unsupported` with no parity checked. `kDownlinkFormats`, 
 
 **Altitude.** The 13-bit AC field is the 12-bit ES field with an M bit after A4, laid out C1 A1 C2 A2 C4 A4 M B1 Q B2 D2 B4 D4. With M = 0, removing M leaves the ES field, read as above. M = 1 is an altitude in metres, which this stack reads as no altitude. All zeros is no altitude.
 
+## The screen
+
+`screen()` gives `receive()`'s verdict on a frame without decoding it, so a radio thread can run it before a queue: `Squitter` for a DF17 whose parity leaves 0, `AllCall` for a DF11 whose parity leaves 0 or an interrogator code, `Reply` for DF0, 4, 5, 16, 20 and 21, `Format` for every other format and `Parity` for a DF11 or DF17 that fails. It keeps every frame `receive()` reads: a test runs both on 20,000 frames of noise, squitters and all-calls and checks it. A `Reply` passes unchecked, because its parity is its address, and only the caller knows the addresses heard in clear. A DF17 with a type code the decoder does not read passes as a `Squitter` and comes back `Unsupported` from `receive()`. The parity costs one pass of the bitwise CRC over 7 or 14 bytes, run only for DF11 and DF17.
+
+`one_bit_error()` says whether a DF17 that fails is one flipped bit away from sound. Mode S parity is linear, so a sound frame with one bit flipped leaves that bit's syndrome, and the stack holds the 107 syndromes of bits 6 to 112. DO-260B 2.2.4.3.4.7.3.a never corrects the DF field, so its five bits are left out. Nothing is repaired: the count tells a bench whether a repair gated on a tracked address is worth building.
+
 ## ADS-B: from messages to an aircraft
 
 `Assembly::fold` is the specification's report assembly. It takes one `Ok` message, the instant it was true, its `Receipt` and where the receiver is, and returns the aircraft's `Track` in ADS-B's units. It decides nothing about which aircraft matter to the pilot. The caller exports a track when `position_valid` is true.

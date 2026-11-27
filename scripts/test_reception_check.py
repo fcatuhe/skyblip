@@ -19,10 +19,11 @@ class Sky:
         self.totals = dict.fromkeys(check.WIDE_COUNTERS + check.NARROW_COUNTERS, 0)
         self.receiver = {"listening": True, "irq_armed": True, "probed": True,
                          "noise_dbm": -118, "threshold_dbm": -110, "part_mode": "receive",
-                         "part_reset": "none", "front_end_kept": True}
+                         "part_reset": "none", "front_end_kept": True, "gain_step": 13}
         self.reception = {"aircraft": 3, "tracked": 3, "reference": "own", "fix_valid": True}
         self.loop = {"passes": 104, "worst_pass_us": 8000, "worst_service": "adsb"}
         self.framing = None
+        self.screening = None
 
     def seconds(self, count, step_s=1, **per_second):
         for _ in range(count):
@@ -39,8 +40,7 @@ class Sky:
         narrow = {field: self.totals[field] % check.NARROW for field in check.NARROW_COUNTERS}
         envelope = {"at_s": self.at_s, "utc_dated": True}
         receiver = dict(envelope, type="receiver", frames=wide["frames"],
-                        part_packets=wide["part_packets"], frames_dropped=narrow["frames_dropped"],
-                        rearms=narrow["rearms"], resets=narrow["resets"],
+                        part_packets=wide["part_packets"], rearms=narrow["rearms"], resets=narrow["resets"],
                         part_resets=narrow["part_resets"],
                         command_errors=narrow["command_errors"],
                         missed_edges=narrow["missed_edges"], **self.receiver)
@@ -57,6 +57,11 @@ class Sky:
             framing.update({field: self.totals[field] % check.NARROW for field in
                             ("stranded_resyncs", "short_resyncs")})
             written.append(dict(envelope, type="framing", **framing, **self.framing))
+        if self.screening is not None:
+            screening = {field: self.totals[field] % check.WIDE for field in
+                         ("squitters", "all_calls", "replies", "parity_refused",
+                          "one_bit_errors", "unmatched")}
+            written.append(dict(envelope, type="screening", **screening, **self.screening))
         written.append(reception)
         for record in written:
             record["index"] = len(self.records)
@@ -164,13 +169,11 @@ class Outages(unittest.TestCase):
         sky.seconds(30, **HEARING)
         sky.receiver["noise_dbm"] = -78
         sky.loop = {"passes": 7, "worst_pass_us": 561000, "worst_service": "adsb"}
-        sky.seconds(20, frames=1200, part_packets=1200, crc=90, unsupported=900,
-                    frames_dropped=10)
+        sky.seconds(20, frames=1200, part_packets=1200, crc=90, unsupported=900)
         report = sky.report()
         self.assertIn("1 reception outages", report)
         self.assertIn("noise +40 dB over the run's median: jammed or desensed", report)
         self.assertIn("1200 frames a second, 20 times the run's median of 60", report)
-        self.assertIn("200 frames lost to a full queue", report)
         self.assertIn("the service loop stalled: a pass of 561 ms in adsb, as few as 7 passes",
                       report)
 
@@ -203,6 +206,29 @@ class Outages(unittest.TestCase):
         self.assertIn("  frames lost: 450 to FIFO overflows, 30 to framing resyncs, 750 to the "
                       "full queue", report)
         self.assertIn("  framing: in_flight 60, split_counts 0, stranded_resyncs 0", report)
+
+
+    def test_the_screen_says_what_reached_the_decoder_and_a_full_fifo_or_queue_is_named(self):
+        sky = Sky()
+        sky.framing = {}
+        sky.screening = {"worst_drain_us": 400, "fifo_peak_frames": 3, "queue_peak_frames": 5}
+        screened = dict(squitters=10, all_calls=2, replies=8, parity_refused=6, one_bit_errors=1,
+                        unmatched=7)
+        sky.seconds(20, **HEARING, **screened)
+        sky.screening = {"worst_drain_us": 2600, "fifo_peak_frames": 17, "queue_peak_frames": 63}
+        sky.seconds(15, frames=1200, part_packets=1200, unsupported=1100, **screened)
+        report = sky.report()
+        # 34 seconds subtracted from 35 records: the first only sets the counters' base.
+        self.assertIn("  screened: 680 of 19140 frames to the decoder (340 squitters, 68 all-calls, "
+                      "272 replies), 204 refused for parity, 34 of them one bit off", report)
+        self.assertIn("  replies with no address heard in clear: 238", report)
+        self.assertIn("  peaks: a wake held the CPU 2600 us, found 17 of 18 frames in the FIFO, "
+                      "left 63 of 64 in the queue", report)
+        self.assertIn("  gain step 13", report)
+        self.assertIn("a wake found 17 of the FIFO's 18 frames: the drain period is too long",
+                      report)
+        self.assertIn("the queue to the decoder held 63 of 64 frames: the decoder fell behind",
+                      report)
 
 
 class Subtraction(unittest.TestCase):

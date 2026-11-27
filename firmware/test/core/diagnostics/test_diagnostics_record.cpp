@@ -41,7 +41,8 @@ TEST_CASE("diagnostics record: the type tag is the corpus, and these numbers nev
     CHECK(static_cast<uint8_t>(diagnostics::Type::Receiver) == 22);
     CHECK(static_cast<uint8_t>(diagnostics::Type::Reception) == 23);
     CHECK(static_cast<uint8_t>(diagnostics::Type::Framing) == 24);
-    CHECK(diagnostics::kHighestType == 24);
+    CHECK(static_cast<uint8_t>(diagnostics::Type::Screening) == 25);
+    CHECK(diagnostics::kHighestType == 25);
 }
 
 TEST_CASE("diagnostics record: the header is written where a host decoder reads it") {

@@ -70,10 +70,10 @@ What a support case reads lives in the diagnostics dump, `reset`, `link_drop_rea
 Only a unit with a 1090 MHz receiver, a skyBlip Bravo, sends the `adsb` group of the diagnostics dump. Its keys follow a frame from the LR2021 to the decoder's aircraft:
 
 - `frames`, `frame_rate_hz`, `dropped`, `rearms`, `resets`, `command_errors`, `errors` and `rssi_dbm` are the receiver's own, `ports::AdsbReceiverStatistics`.
-- `crc` counts the frames `adsb::receive` refused on parity, a DF17 whose CRC failed or a DF11 whose parity is no interrogator code. Nothing repairs them.
-- `unsupported` counts the frames the decoder does not read: a downlink format other than 0, 4, 5, 11, 16, 17, 20 and 21, or a DF17 type code such as 0 and 23 to 30.
+- `crc` counts the frames refused on parity, a DF17 whose CRC failed or a DF11 whose parity is no interrogator code, by the receiver thread's `adsb::screen` or by `adsb::receive`. Nothing repairs them.
+- `unsupported` counts the frames the decoder does not read: a downlink format other than 0, 4, 5, 11, 16, 17, 20 and 21, which the receiver thread refuses, or a DF17 type code such as 0 and 23 to 30.
 - `folded` counts the messages `adsb::Assembly` folded into an aircraft, never one from the aircraft address. `aircraft` is how many it holds now, and `tracked`, in the traffic group, how many reached the table.
-- `formats` counts every frame that reached the decoder by downlink format, DF0 to DF24, so its sum is `crc`, plus `unsupported`, plus the frames read.
+- `formats` counts every frame the receiver thread read by downlink format, DF0 to DF24, before its screen, so its sum is `frames`.
 - `transponders`, `mode_s` and `mode_s_altitude` are the Mode S transponders Bravo holds now, those never heard in DF17, and those with a recent altitude. `unmatched` counts the replies whose address was not heard in clear first (`products/skyblip_bravo/README.md`, Mode S transponders).
 
 ## The capture group

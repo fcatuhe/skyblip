@@ -42,22 +42,21 @@ class AdsbService : public runtime::Service {
     // INFO: fc 19nov26 the receiver wakes nothing, so the queue is drained inside its window
     uint32_t due_in_ms(uint32_t now_ms) const override;
 
-    uint32_t crc() const { return crc_; }
-    uint32_t unsupported() const { return unsupported_; }
+    uint32_t crc() const;
+    uint32_t unsupported() const;
     uint32_t folded() const { return folded_; }
     uint32_t positions() const { return positions_; }
-    const std::array<uint32_t, adsb::kDownlinkFormats>& formats() const { return formats_; }
+    std::array<uint32_t, adsb::kDownlinkFormats> formats() const;
     const adsb::Assembly& assembly() const { return assembly_; }
     const common::AdsbCapture& capture() const { return capture_; }
     const OwnTransponder& own_transponder() const { return own_transponder_; }
     const Transponders& transponders() const { return transponders_; }
-    uint32_t impossible_formats() const;
+    static uint32_t impossible_formats(const ports::AdsbReceiverStatistics& statistics);
 
    private:
     static adsb::Reference reference(const model::Ownship& own);
     void hear(const events::AdsbFrame& frame, const adsb::Reference& here, uint32_t now_ms);
     void refuse(Status status);
-    void count_format(uint8_t downlink_format);
     void record_second(const GateChoice& gate, uint32_t now_ms);
 
     bus::AdsbQueue& frames_;
@@ -75,7 +74,6 @@ class AdsbService : public runtime::Service {
     uint32_t positions_{0};
     uint32_t recorded_ms_{0};
     bool recorded_{false};
-    std::array<uint32_t, adsb::kDownlinkFormats> formats_{};
 };
 
 }  // namespace skyblip::bravo

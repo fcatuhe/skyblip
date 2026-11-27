@@ -1,4 +1,5 @@
 // A full capture on Bravo says each second what the LR2021 heard and what Bravo made of it.
+#include <algorithm>
 #include <vector>
 
 #include "core/diagnostics/payload.h"
@@ -57,6 +58,22 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
     CHECK(framing.queue_drops == 0);
     CHECK(framing.drains >= 2);
     CHECK(framing.drain_busy_ms == 0);
+    CHECK(count_of(records, diagnostics::Type::Screening) ==
+          count_of(records, diagnostics::Type::Receiver));
+    diagnostics::Screening screening{};
+    REQUIRE(last_of(records, screening));
+    CHECK(screening.squitters == 2);
+    CHECK(screening.parity_refused == 1);
+    CHECK(screening.one_bit_errors == 1);
+    CHECK(screening.all_calls == 0);
+    CHECK(screening.replies == 0);
+    uint32_t fifo_peak = 0;
+    for (const diagnostics::Record& record : records) {
+        diagnostics::Screening second{};
+        if (diagnostics::read(record, second))
+            fifo_peak = std::max(fifo_peak, second.fifo_peak_frames);
+    }
+    CHECK(fifo_peak >= 1);
 
     diagnostics::Receiver receiver{};
     REQUIRE(last_of(records, receiver));
@@ -69,6 +86,7 @@ TEST_CASE("bravo reception: a full capture records the receiver and the fold onc
     CHECK(receiver.threshold_dbm == parts::lr2021::kDetectionThresholdDbm);
     CHECK(receiver.front_end_kept);
     CHECK(receiver.noise_dbm == -120);
+    CHECK(receiver.gain_step == parts::lr2021::kGainStep);
 
     diagnostics::Reception reception{};
     REQUIRE(last_of(records, reception));
@@ -119,7 +137,7 @@ TEST_CASE("bravo reception: a brown-out of the LR2021 is recorded, and reception
     CHECK(last.frames == 4);
 }
 
-TEST_CASE("bravo reception: a power run leaves the three records out, as it does every second's") {
+TEST_CASE("bravo reception: a power run leaves the four records out, as it does every second's") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -130,4 +148,5 @@ TEST_CASE("bravo reception: a power run leaves the three records out, as it does
     CHECK(count_of(records, diagnostics::Type::Receiver) == 0);
     CHECK(count_of(records, diagnostics::Type::Reception) == 0);
     CHECK(count_of(records, diagnostics::Type::Framing) == 0);
+    CHECK(count_of(records, diagnostics::Type::Screening) == 0);
 }

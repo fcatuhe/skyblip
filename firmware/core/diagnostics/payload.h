@@ -284,7 +284,7 @@ struct Receiver {
     uint32_t frames{0};
     uint32_t part_packets{0};
     uint16_t part_errors{0};
-    uint32_t frames_dropped{0};
+    uint8_t gain_step{0};
     uint32_t rearms{0};
     uint32_t resets{0};
     uint32_t part_resets{0};
@@ -331,6 +331,20 @@ struct Framing {
 
 Framing framing_of(const ports::AdsbReceiverStatistics& statistics);
 
+struct Screening {
+    uint32_t squitters{0};
+    uint32_t all_calls{0};
+    uint32_t replies{0};
+    uint32_t parity_refused{0};
+    uint32_t one_bit_errors{0};
+    uint32_t unmatched{0};
+    uint32_t worst_drain_us{0};
+    uint32_t fifo_peak_frames{0};
+    uint32_t queue_peak_frames{0};
+};
+
+Screening screening_of(const ports::AdsbReceiverStatistics& statistics, uint32_t unmatched);
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -355,6 +369,7 @@ Record record_of(const Adsb& value, const Instant& at);
 Record record_of(const Receiver& value, const Instant& at);
 Record record_of(const Reception& value, const Instant& at);
 Record record_of(const Framing& value, const Instant& at);
+Record record_of(const Screening& value, const Instant& at);
 
 }  // namespace skyblip::diagnostics
 

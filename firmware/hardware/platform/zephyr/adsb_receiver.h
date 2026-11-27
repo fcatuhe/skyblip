@@ -8,6 +8,7 @@
 #include "core/bus/bus.h"
 #include "core/events/adsb.h"
 #include "hardware/parts/lr2021/lr2021.h"
+#include "hardware/platform/adsb_batch.h"
 #include "ports/adsb_receiver.h"
 #include "ports/clock.h"
 #include "runtime/tasks.h"
@@ -127,6 +128,10 @@ class AdsbReceiver : public ports::AdsbReceiver {
             const uint64_t spent_us = k_cyc_to_us_floor64(k_cycle_get_32() - started);
             drain_busy_us_ += spent_us;
             drains_++;
+            k_sched_lock();
+            statistics_.drained(drained, out_.size(), static_cast<uint32_t>(spent_us),
+                                clock_.microseconds());
+            k_sched_unlock();
             publish();
             listening_ = radio_.mode() == parts::Lr2021Mode::Receive;
             // INFO: fc 27nov26 a cooperative thread yields only when it waits, so it waits each
@@ -135,22 +140,15 @@ class AdsbReceiver : public ports::AdsbReceiver {
         }
     }
 
-    // INFO: fc 11nov26 every frame of one wake is dated when the thread woke, the newest carries
-    // the RSSI
+    // INFO: fc 27nov26 a frame landing during the read waits a period, so a wake costs one snapshot
     uint32_t drain() {
         const uint64_t woke_us = clock_.microseconds();
-        for (uint32_t drained = 0;; drained++) {
-            events::AdsbFrame frame{};
-            const parts::Lr2021Event event = radio_.poll(frame.bytes.data(), frame.bytes.size());
-            if (event.type != parts::Lr2021EventType::Frame) return drained;
-            frame.at_us = woke_us;
-            frame.rssi_dbm = event.rssi_dbm;
-            frame.rssi_valid = event.rssi_valid;
-            (void)out_.push(frame);
-            k_sched_lock();
-            statistics_.heard(event.rssi_dbm, event.rssi_valid, woke_us);
-            k_sched_unlock();
-        }
+        const parts::Lr2021Event event = radio_.poll(batch_, sizeof(batch_));
+        if (event.type != parts::Lr2021EventType::Frame) return 0;
+        k_sched_lock();
+        hand_over(batch_, event, woke_us, statistics_, out_);
+        k_sched_unlock();
+        return event.frames;
     }
 
     // INFO: fc 11nov26 a reset reconfigures the IRQ pin, and nrfx GPIO drops its trigger with it
@@ -213,6 +211,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     uint32_t missed_edges_{0};
     uint32_t drains_{0};
     uint64_t drain_busy_us_{0};
+    uint8_t batch_[kAdsbBatchBytes]{};
     struct k_sem wake_{};
     struct gpio_callback irq_callback_{};
     volatile bool irq_wakes_{false};

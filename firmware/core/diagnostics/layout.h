@@ -32,9 +32,10 @@ enum class Type : uint8_t {
     Receiver = 22,
     Reception = 23,
     Framing = 24,
+    Screening = 25,
 };
 
-constexpr uint8_t kHighestType = 24;
+constexpr uint8_t kHighestType = 25;
 
 enum class Profile : uint8_t {
     Full = 0,
@@ -433,7 +434,7 @@ enum : uint32_t {
     kFrames = 0,
     kPartPackets = 2,
     kPartErrors = 4,
-    kFramesDropped = 6,
+    kGainStep = 6,
     kRearms = 7,
     kResets = 8,
     kPartResets = 9,
@@ -480,6 +481,20 @@ enum : uint32_t {
     kDrains = 12,
     kStrandedResyncs = 14,
     kShortResyncs = 15,
+};
+}
+
+namespace screening_at {
+enum : uint32_t {
+    kSquitters = 0,
+    kAllCalls = 2,
+    kReplies = 4,
+    kParityRefused = 6,
+    kOneBitErrors = 8,
+    kUnmatched = 10,
+    kWorstDrainUs = 12,
+    kFifoPeakFrames = 14,
+    kQueuePeakFrames = 15,
 };
 }
 

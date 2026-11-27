@@ -11,7 +11,7 @@ The Semtech LR2021 on skyBlip Bravo, a Seeed SenseCAP MeshTracker X1, receiving 
 | SoftRF, commit `d091924`, `driver/radio/radiolib.cpp:2232-2359` and `platform/iomap/Seeed_X1.h` (GPL-3.0) | the 1090 MHz modem values, the register write at 0xF30150, the X1's TCXO voltage, its DIO8 IRQ and its pins | read for facts, no code copied |
 | Semtech USP, commit `db5bbb0`, `lr20xx_driver/src/lr20xx_workarounds.c`, `lr20xx_system.c` and `lr20xx_radio_common.c` | the OOK threshold field, the SetSleep and CalibFE layouts | facts, no code copied |
 
-SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and `b087af9` differ, the driver sends the bytes SoftRF put on the wire. It departs from SoftRF in three places, on the evidence of the reception trial of #293 on Bravo D582: the part's Manchester decoding of 14-byte frames, cb-tfc's layout ([perryc/cb-tfc](https://github.com/perryc/cb-tfc)), a threshold of -110 dBm, and the threshold written after the frequency.
+SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and `b087af9` differ, the driver sends the bytes SoftRF put on the wire. It departs from SoftRF in three places, on the evidence of the reception trial of #293 on Bravo D582: the part's Manchester decoding of 14-byte frames, cb-tfc's layout ([perryc/cb-tfc](https://github.com/perryc/cb-tfc)), a threshold of -110 dBm, and the threshold written after the frequency. It departs in a fourth on ADSBee 1421's evidence, which runs the same part for Mode S: a fixed gain instead of the AGC (The gain, below).
 
 ## What the driver sends
 
@@ -35,7 +35,7 @@ SoftRF has received ADS-B on this hardware, so where its RadioLib 7.7.1 copy and
 | SetOokWhiteningParams | polynomial 0, off | SoftRF's `setEncoding(RADIOLIB_ENCODING_NRZ)` at `:2319`, which its RadioLib copy turns into this command (`LR2021_config.cpp:756-760`, `:812-822`). DS 16.3.9 |
 | SetOokSyncword | none, 0 bits, MSB first | cb-tfc's `setSyncWord(NULL, 0)`, DS 16.3.4 |
 | SetOokDetector | pattern 0x0285, 16 chips, no repeat, falling edge, no SFD | SoftRF `:2338`, DS 16.3.8 |
-| SetAgcGainManual | 0, the AGC | SoftRF `:2339`, DS 7.3.9 |
+| SetAgcGainManual | 13, the highest fixed gain | ADSBee 1421 `lr2021_ook_adsb.hh` `kModeSGainStep`, DS 7.3.9 |
 | WriteRegMemMask32 | 0xF30E14, mask 0x07F00000, the threshold | SoftRF `:2350`, `lr20xx_workarounds.c` for the register and field, DS 22.1 for the order |
 | WriteRegMemMask32 | 0xF30150, mask 0x000000FF, data 0x18 | SoftRF `:2359`. #293 measured it against 0x75, the part's own |
 | GetErrors | | DS 6.7.4 |
@@ -49,7 +49,7 @@ Pattern 0x0285 read first bit first is `1010000101000000`, the 8 us preamble at 
 
 Each SPI frame opens on two status bytes whose command status is the result of the command before (DS 6.7.1). The driver counts a CMD_FAIL or CMD_PERR there as a `command_error` and runs on, as SoftRF does. A read is two frames: the command, then zeros that clock the answer out (DS 5.4.1.2). The FIFO read answers in its own frame (DS 5.4.1.3).
 
-On the IRQ the driver takes a snapshot: GetAndClearIrqStatus, GetOokPacketStatus, GetOokRxStats, GetRxFifoLevel, GetAndClearFifoIrqFlags, GetOokRxStats again and GetOokPacketStatus again. It then reads one 14-byte frame per `poll()`, oldest first, as many as the part counted. Frames keep landing meanwhile, so the driver holds four rules:
+On the IRQ the driver takes a snapshot: GetAndClearIrqStatus, GetOokPacketStatus, GetOokRxStats, GetRxFifoLevel, GetAndClearFifoIrqFlags, GetOokRxStats again and GetOokPacketStatus again. `poll()` then reads every whole frame the snapshot vouched for in one ReadRadioRxFifo, oldest first, as many as the caller has room for. The FIFO read answers any number of bytes in sequence (DS 5.3.1), so 18 frames cost one command and 252 bytes on the wire. Frames the caller had no room for wait for the next `poll()`, which reads them without a new snapshot. Frames keep landing meanwhile, so the driver holds four rules:
 
 - **An overflow stops the reading.** Nineteen frames fill the 256-byte FIFO with eighteen and 4 bytes of the nineteenth, so every later read would start 4 bytes off. The overflow flag latches whether or not its IRQ is enabled (DS 6.10.1, 6.10.2, 6.10.4). When it is set, the driver counts every frame the level held in `fifo_drops`, goes to STDBY_RC, clears the FIFO and restarts receive, before reading anything.
 - **An empty FIFO proves nothing.** A frame that lands after GetAndClearIrqStatus is read in the same snapshot, and its own RxDone then finds nothing. That RxDone is neither a frame nor a drop, and the FIFO is not cleared, because a frame may be landing.
@@ -77,7 +77,7 @@ On the SX1262 the Go reads ADS-L and FLARM with, the question never arises: each
 One FIFO frame is 14 bytes, the 112 bits of a Mode S long frame, bit 1 in the high bit of the first byte:
 
 - **Bits.** The part reads each chip pair behind the preamble as one bit, inverted Manchester, so a 1 is the chips `10`, a pulse then a gap. It has decided every bit and hands up no doubtful one.
-- **Formats.** No sync word picks the format, so every downlink format the preamble detector catches lands, DF11 all-call replies and Mode S radar replies included. `read_frame()` hands every frame up, and the decoder tells them apart (`protocols/adsb/README.md`, Mode S: replies with no position). A 56-bit reply fills the first 7 bytes, and the 7 behind it hold whatever the part decided after it.
+- **Formats.** No sync word picks the format, so every downlink format the preamble detector catches lands, DF11 all-call replies and Mode S radar replies included. `poll()` hands every frame up, and the receiver thread screens them before the decoder (The screen, below). A 56-bit reply fills the first 7 bytes, and the 7 behind it hold whatever the part decided after it.
 - **Fields.** Bits 1 to 5 are the DF. In a DF17, bits 6 to 8 are the capability, 9 to 32 the ICAO address, 33 to 88 the message, and 89 to 112 the parity. The 112 bits divided by the generator 0x1FFF409 leave 0 for a sound DF17, and the ICAO for a DF16.
 
 The driver uses the part's Manchester decoding, not SoftRF's raw chips behind a 0x95 sync, because the chip clock slips inside a frame. Replayed offline in #293, 13 to 24% of raw chip frames passed the parity, against 86 to 97% in the Manchester layout.
@@ -96,9 +96,19 @@ The Zephyr adapter's thread is cooperative, so nothing preempts it between an IR
 
 ### The receiver thread
 
-The thread sleeps on the IRQ's rising edge, drains the FIFO, then sleeps out the rest of `kDrainPeriodUs`, 5 ms, before it waits for the next edge. Edges that come meanwhile wait in its semaphore, so the next drain takes every frame they announced in one snapshot.
+The thread sleeps on the IRQ's rising edge, takes one snapshot, reads its frames in one transfer, screens them, then sleeps out the rest of `kDrainPeriodUs`, 5 ms, before it waits for the next edge. A frame that lands during the read waits for the next period, so a wake costs one snapshot whatever the sky does.
 
-Woken per frame, as it was before #550, a snapshot of 7 to 9 reads cost about 500 us a frame, measured on bravo-d582 as the service loop's busy time against the frame rate. The thread is cooperative, so it yielded only when the FIFO ran empty, and at 1500 frames a second, a flood outdoors, it held the CPU: the loop fell to 7 passes a second and the GNSS UART overran. Paced, it wakes at most 200 times a second whatever the sky does, and the FIFO's 18 frames hold a 5 ms period at up to 3600 frames a second, twice the flood bravo-d582 met (`static_assert`). Past that the FIFO overflows, and the frames are counted lost rather than the CPU. The thread's own busy time and its drains reach a capture's `Framing` record, because the loop's busy time counts it inside whichever service it interrupted.
+Woken per frame, as it was before #550, a snapshot of 7 to 9 reads cost about 500 us a frame, measured on bravo-d582 as the service loop's busy time against the frame rate. The thread is cooperative, so it yielded only when the FIFO ran empty, and at 1500 frames a second, a flood outdoors, it held the CPU: the loop fell to 7 passes a second and the GNSS UART overran. Paced at 5 ms but still reading a frame per transfer and taking a new snapshot whenever one landed, it measured 0.8 ms a wake plus 0.47 ms a frame in session 10 (R² 1.00), 63 to 76% of the CPU outdoors, and the queue to the decoder lost up to 260 frames a second. ADSBee 1421 drains the same part the same way, one level read and one FIFO read of the whole frames, and decodes 99.2% of 4000 frames a second with none lost after reception (PantsForBirds/adsbee #313).
+
+The FIFO's 18 frames hold a 5 ms period at up to 3600 frames a second, twice the flood bravo-d582 met (`static_assert`). Past that the FIFO overflows, and the frames are counted lost rather than the CPU. The thread's own busy time, its drains, its longest wake and the most frames one wake found reach a capture's `Framing` and `Screening` records, because the loop's busy time counts it inside whichever service it interrupted.
+
+### The screen
+
+Outdoors about nine frames in ten are noise the preamble detector let through: a third of them name a downlink format no transponder sends, about what uniformly random bits give. The decoder in the main loop refuses them, but each one took a queue slot first, and the 64-frame queue overflowed. So the thread runs `adsb::screen()` on each frame before the queue: the decoder's own refusals, a table of formats and the parity of DF11 and DF17, a few microseconds a frame. It keeps every format the decoder reads, so Mode S replies still reach `Transponders`, and counts every frame by format and by verdict (`../../../protocols/adsb/README.md`, The screen).
+
+The part cannot screen in its place. Its OOK modem takes one sync word and one pair of one-byte address values (DS 16.3.4, 16.3.5), and the formats Bravo reads share no prefix: DF0, 4, 5 and 11 open on 0, DF16 to 21 on 1. A sync on DF17 drops every Mode S reply. Its CRC still writes a failed frame into the FIFO (DS 5.3.1), and its one initial value fits only DF17. ADSBee 1421 tried a DF17 detector pattern on this part and decoded 67% at -80 dBm and 81% at -50 dBm, against 97% and 100% for the full preamble (#266).
+
+The screen cannot win back the air a noise frame takes. The part has no re-trigger: after a detection it reads 112 bits whatever arrives, so each detection blinds it for about 140 us (ADSBee #313). At 1100 detections a second that is about 15% of real frames.
 
 If the GPIO driver refuses the trigger, at start or when a reset re-arms it, the thread polls the part once each period instead, and the diagnostics' `irq_armed` reads false.
 
@@ -123,6 +133,10 @@ A re-arm cannot recover from that reset: SetRx alone restarts receive on the par
 ## Errors
 
 GetErrors is read at the end of the bring-up. HF_XOSC_START_ERR (the TCXO never started) or PLL_LOCK_ERR (the synthesiser never locked) refuses the bring-up, because the part cannot receive. The other bits are kept in `device_errors()` for the bench. 1090 MHz is past the 150-960 MHz the LF path is specified to (DS tables 3-8 and 3-20), so a front-end or image calibration error there does not mean a dead receiver.
+
+## The gain
+
+`SetAgcGainManual(13)` fixes the receive gain at its highest step, and 0xF30150 at 0x18 turns off the part's AGC and its blanking of a saturated ADC. ADSBee 1421 runs this pair for Mode S on the same part and measured 97% of frames decoded at -80 dBm and 100% from -70 to -30 dBm, levels set at a generator whose path loses about 6 dB (#266). With the AGC on, a strong packet stepped the gain down several times and blanked the demodulator, and the AGC took about 3 ms to climb back (#256). Bravo sent 0, the AGC, then 0x18, as SoftRF and cb-tfc do, which leaves whatever gain the AGC held when 0x18 stopped it. Outdoors, among strong pulses, and indoors after a trip outdoors, bravo-d582 heard less than before. A gain stuck low fits both, and a fixed gain rules it out. The probe reports the step in a capture's `Receiver` record, so two builds compare.
 
 ## The detection threshold
 

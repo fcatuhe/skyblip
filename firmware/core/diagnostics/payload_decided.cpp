@@ -220,4 +220,38 @@ Record record_of(const Framing& value, const Instant& at) {
     return record;
 }
 
+Screening screening_of(const ports::AdsbReceiverStatistics& statistics, uint32_t unmatched) {
+    Screening value{};
+    value.squitters = statistics.squitters;
+    value.all_calls = statistics.all_calls;
+    value.replies = statistics.replies;
+    value.parity_refused = statistics.parity_refused;
+    value.one_bit_errors = statistics.one_bit_errors;
+    value.unmatched = unmatched;
+    value.worst_drain_us = statistics.worst_drain_us;
+    value.fifo_peak_frames = statistics.fifo_peak_frames;
+    value.queue_peak_frames = statistics.queue_peak_frames;
+    return value;
+}
+
+Record record_of(const Screening& value, const Instant& at) {
+    Record record = framed(Type::Screening, at);
+    wire::put_uint16(record.payload + screening_at::kSquitters,
+                     static_cast<uint16_t>(value.squitters));
+    wire::put_uint16(record.payload + screening_at::kAllCalls,
+                     static_cast<uint16_t>(value.all_calls));
+    wire::put_uint16(record.payload + screening_at::kReplies, static_cast<uint16_t>(value.replies));
+    wire::put_uint16(record.payload + screening_at::kParityRefused,
+                     static_cast<uint16_t>(value.parity_refused));
+    wire::put_uint16(record.payload + screening_at::kOneBitErrors,
+                     static_cast<uint16_t>(value.one_bit_errors));
+    wire::put_uint16(record.payload + screening_at::kUnmatched,
+                     static_cast<uint16_t>(value.unmatched));
+    wire::put_uint16(record.payload + screening_at::kWorstDrainUs,
+                     clamp_uint16(value.worst_drain_us));
+    record.payload[screening_at::kFifoPeakFrames] = clamped<uint8_t>(value.fifo_peak_frames);
+    record.payload[screening_at::kQueuePeakFrames] = clamped<uint8_t>(value.queue_peak_frames);
+    return record;
+}
+
 }  // namespace skyblip::diagnostics

@@ -115,7 +115,7 @@ TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver, in the part's Ma
     CHECK(part.pattern_length == 16);
     CHECK(part.pattern_repeats == 0);
     CHECK(part.sfd == 0);
-    CHECK(part.agc_gain == 0);
+    CHECK(part.agc_gain == 13);
     CHECK(part.rx_path == 0x00);
     CHECK(part.calib_fe_word == 273);
     CHECK(part.calib_fe_bytes == 6);
@@ -246,6 +246,49 @@ TEST_CASE("lr2021: two frames read in one wake come out oldest first, the RSSI o
     CHECK(newer.rssi_dbm == -50);
     CHECK(address_in(frame) == kOtherAddress);
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
+}
+
+// Session 10 on bravo-d582 cost 0.47 ms a frame with one FIFO read and a snapshot each.
+TEST_CASE("lr2021: a wake reads every frame its snapshot vouched for in one FIFO transfer") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    const uint32_t addresses[] = {kAddress, kOtherAddress, 0x3C6DD0};
+    for (const uint32_t address : addresses) {
+        const AdsbAir air = identification(address);
+        REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -50));
+    }
+    const int snapshots = part.count(chip::kGetAndClearIrqStatus);
+
+    uint8_t frames[chip::kFifoFrames * adsb::kFrameBytes]{};
+    const parts::Lr2021Event event = radio.poll(frames, sizeof(frames));
+    REQUIRE(event.type == Lr2021EventType::Frame);
+    CHECK(event.frames == 3);
+    CHECK(event.rssi_valid);
+    for (int i = 0; i < 3; i++)
+        CHECK(address_in(frames + static_cast<size_t>(i) * adsb::kFrameBytes) == addresses[i]);
+    CHECK(part.count(chip::kReadRadioRxFifo) == 1);
+    CHECK(part.count(chip::kGetAndClearIrqStatus) == snapshots + 1);
+    CHECK(part.fifo.empty());
+}
+
+TEST_CASE("lr2021: frames past the caller's room wait for the next poll, which takes no snapshot") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    for (const uint32_t address : {kAddress, kOtherAddress, 0x3C6DD0u}) {
+        const AdsbAir air = identification(address);
+        REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -50));
+    }
+    uint8_t frames[2 * adsb::kFrameBytes]{};
+    const parts::Lr2021Event first = radio.poll(frames, sizeof(frames));
+    REQUIRE(first.frames == 2);
+    CHECK_FALSE(first.rssi_valid);
+    const int snapshots = part.count(chip::kGetAndClearIrqStatus);
+
+    const parts::Lr2021Event rest = radio.poll(frames, sizeof(frames));
+    REQUIRE(rest.frames == 1);
+    CHECK(rest.rssi_valid);
+    CHECK(address_in(frames) == 0x3C6DD0);
+    CHECK(part.count(chip::kGetAndClearIrqStatus) == snapshots);
 }
 
 TEST_CASE("lr2021: chips with no preamble in them are not a frame" * doctest::test_suite("main")) {
