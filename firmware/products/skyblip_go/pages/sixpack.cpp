@@ -7,6 +7,7 @@
 #include "core/util/format.h"
 #include "core/util/intmath.h"
 #include "products/skyblip_go/pages/frame.h"
+#include "products/skyblip_go/pages/no_tx.h"
 #include "products/skyblip_go/pages/page.h"
 #include "protocols/common/geometry.h"
 #include "ui/widgets/skyship.h"
@@ -80,6 +81,10 @@ int value_y(int row) {
     return row == 0 ? kCentreY[0] - kDialRadius - kValueGap - kCharacterHeight * kValueScale
                     : kCentreY[1] + kDialRadius + kValueGap;
 }
+
+static_assert(kCentreY[0] - kDialRadius - kValueGap - kCharacterHeight * kValueScale >=
+                  kOneLineMarkEndY,
+              "NO TX and the Bravo corner, in one line, end above the top row's figures");
 
 int title_y(int row) {
     return row == 0 ? value_y(0) - kTitleGap - kCharacterHeight

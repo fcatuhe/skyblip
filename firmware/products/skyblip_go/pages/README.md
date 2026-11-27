@@ -107,6 +107,8 @@ The cell shows because a Bravo in a flight bag shows its red lamp to nobody. Its
 
 The corner stands on every page that carries `NO TX` (NO TX), its mirror at the same margin, pad, line pitch and type, through `draw_bravo_corner_over()`. Off the radar it is drawn over the page after everything else and reversed at once when Bravo is lost, as `NO TX` is drawn last. The radar clears its patch under the plot and reverses it after. Three pages leave it out, because each already names the Bravo where the corner would stand: `nearby`, whose unit rows fill the top of the glass and whose `B` row says the same word, `bravo_log`, whose title line ends on the verdict, and `bravo`, whose title spans the glass and whose body reads the link.
 
+On the six-pack the speed and altitude figures stand right under the two corners, so both marks keep to their first line there, `NO TX` and `BRAVO`, with the same polarity and no reason (`MarkLines::WordOnly`). A pilot reads the reason on any other page, and a `static_assert` in `sixpack.cpp` holds the one line above the figures.
+
 ### PLOT ALL: the rim
 
 With `ALL` the ring shrinks from 92 px to 76, and an aircraft past it stands on a rim 87 px out at its bearing, with no distance drawn. 76 px leaves room for a near mark with its caret, eleven pixels either side of its point, between the ring and the glass's edge.

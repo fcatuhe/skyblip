@@ -43,6 +43,12 @@ bool carries_bravo_corner(Page page) {
     return page != Page::Radar && page != Page::Nearby && page != Page::BravoLog &&
            page != Page::Bravo;
 }
+
+// INFO: fc 27nov26 the six-pack's speed and altitude stand under its corners, so the marks keep
+// to one line
+MarkLines marks_lines(Page page) {
+    return page == Page::SixPack ? MarkLines::WordOnly : MarkLines::WordAndReason;
+}
 }  // namespace
 
 void ScreenService::draw_prompt(uint32_t now_ms) {
@@ -368,8 +374,9 @@ void ScreenService::render(uint32_t now_ms) {
             break;
         }
     }
-    if (carries_bravo_corner(page_)) draw_bravo_corner_over(framebuffer_, bravo_corner());
-    draw_no_tx(framebuffer_, context_.state.transmit.shown());
+    const MarkLines marks = marks_lines(page_);
+    if (carries_bravo_corner(page_)) draw_bravo_corner_over(framebuffer_, bravo_corner(), marks);
+    draw_no_tx(framebuffer_, context_.state.transmit.shown(), marks);
 }
 
 // INFO: fc 19nov26 the parts are boot's, each with how it works now and whether it stops the burst

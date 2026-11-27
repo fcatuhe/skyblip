@@ -29,10 +29,12 @@ constexpr int kBravoCornerStackGap = kNoTxStackGap;
 constexpr int kBravoCornerLines = 3;
 
 int format_cell(char* out, std::optional<uint8_t> percent);
-CornerPatch draw_bravo_corner(ui::Canvas& canvas, const BravoCorner& corner);
+CornerPatch draw_bravo_corner(ui::Canvas& canvas, const BravoCorner& corner,
+                              MarkLines marks = MarkLines::WordAndReason);
 void reverse_bravo_corner(ui::Canvas& canvas, const CornerPatch& patch);
 // INFO: fc 27nov26 top right, the mirror of NO TX: drawn over the page, reversed once Bravo is lost
-void draw_bravo_corner_over(ui::Canvas& canvas, const BravoCorner& corner);
+void draw_bravo_corner_over(ui::Canvas& canvas, const BravoCorner& corner,
+                            MarkLines marks = MarkLines::WordAndReason);
 
 }  // namespace skyblip::go
 

@@ -30,10 +30,10 @@ void lose_the_link(Flight& flight) {
 
 TEST_CASE(
     "bravo corner glass: a lost Bravo says BRAVO and why, reversed, on every page NO TX "
-    "marks" *
+    "marks with its reason" *
     doctest::test_suite("main")) {
-    for (const go::Page page : {go::Page::SixPack, go::Page::GMeter, go::Page::Status,
-                                go::Page::Satellites, go::Page::RadioLog, go::Page::SelfTest}) {
+    for (const go::Page page : {go::Page::GMeter, go::Page::Status, go::Page::Satellites,
+                                go::Page::RadioLog, go::Page::SelfTest}) {
         CAPTURE(static_cast<int>(page));
         Flight flight;
         lose_the_link(flight);
@@ -74,4 +74,27 @@ TEST_CASE("bravo corner glass: the corner stands at NO TX's margin, mirrored") {
                            go::kNoTxMargin - go::kNoTxPad));
     CHECK_FALSE(canvas.get_pixel(go::kGlassWidth - go::kNoTxMargin + go::kNoTxPad,
                                  go::kNoTxMargin - go::kNoTxPad));
+}
+
+// The six-pack's speed and altitude figures stand right under its two top corners.
+TEST_CASE("bravo corner glass: on the six-pack the corner keeps to its word, above the figures") {
+    Flight flight;
+    lose_the_link(flight);
+    const ui::Canvas& glass = on(flight, go::Page::SixPack);
+    CHECK(go::corner_reads(glass, "BRAVO", false));
+    CHECK_FALSE(go::corner_reads(glass, "NO LINK", false));
+}
+
+TEST_CASE("bravo corner glass: both marks in one line leave every row from kOneLineMarkEndY") {
+    go::Glass canvas;
+    canvas.clear(true);
+    go::draw_no_tx(canvas, timing::NoTx::Pps, go::MarkLines::WordOnly);
+    go::draw_bravo_corner_over(canvas, {comms::BravoState::LinkDown, true, 9},
+                               go::MarkLines::WordOnly);
+    CHECK(reads_at(canvas, go::kNoTxMargin, go::kNoTxMargin, go::kNoTxWord, 1, false));
+    CHECK(go::corner_reads(canvas, "BRAVO", false));
+    bool untouched = true;
+    for (int y = go::kOneLineMarkEndY; y < go::kGlassHeight; y++)
+        for (int x = 0; x < go::kGlassWidth; x++) untouched = untouched && !canvas.get_pixel(x, y);
+    CHECK(untouched);
 }

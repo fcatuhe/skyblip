@@ -21,7 +21,7 @@ int format_cell(char* out, std::optional<uint8_t> percent) {
 }
 
 // INFO: fc 17nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
-CornerPatch draw_bravo_corner(ui::Canvas& canvas, const BravoCorner& corner) {
+CornerPatch draw_bravo_corner(ui::Canvas& canvas, const BravoCorner& corner, MarkLines marks) {
     if (corner.state == comms::BravoState::Unpaired) return {};
     char cell[12];
     const char* lines[kBravoCornerLines] = {"BRAVO"};
@@ -32,6 +32,7 @@ CornerPatch draw_bravo_corner(ui::Canvas& canvas, const BravoCorner& corner) {
     }
     if (const char* word = bravo_word(corner.state)) lines[count++] = word;
     if (count == 1) return {};
+    if (marks == MarkLines::WordOnly) count = 1;
     int width = 0;
     for (int i = 0; i < count; i++) width = std::max(width, text_width(lines[i], 1));
     const int right = kGlassWidth - kBravoCornerMargin;
@@ -52,8 +53,8 @@ void reverse_bravo_corner(ui::Canvas& canvas, const CornerPatch& patch) {
             canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
 }
 
-void draw_bravo_corner_over(ui::Canvas& canvas, const BravoCorner& corner) {
-    const CornerPatch patch = draw_bravo_corner(canvas, corner);
+void draw_bravo_corner_over(ui::Canvas& canvas, const BravoCorner& corner, MarkLines marks) {
+    const CornerPatch patch = draw_bravo_corner(canvas, corner, marks);
     if (comms::lost(corner.state)) reverse_bravo_corner(canvas, patch);
 }
 
