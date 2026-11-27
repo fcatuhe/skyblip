@@ -135,6 +135,7 @@ void RecordStore::begin_session(uint32_t session_id) {
     session_id_ = session_id;
     writing_ = true;
     session_records_ = 0;
+    pool_.allocator().open_session(owner_, session_id);
     lost_sectors_seen_ = pool_.allocator().lost_sectors(owner_);
     claimed_ = false;
 }

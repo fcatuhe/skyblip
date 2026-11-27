@@ -176,9 +176,10 @@ void BravoService::answer_link(link::Reason verdict) {
 }
 
 // INFO: fc 11nov26 a connected Go says it unpaired, so Bravo drops its pin and frees its connection
+// | 27nov26 also before Bravo's first health on a reconnect, which turns the link Up
 void BravoService::unpair() {
     if (!paired(settings_)) return;
-    const bool farewell = up_ && link_ == BravoLink::Up;
+    const bool farewell = linked() && (link_ == BravoLink::Up || link_ == BravoLink::Down);
     drop_pin();
     if (farewell) {
         leaving_ = true;
@@ -272,7 +273,10 @@ void BravoService::take_frame(const events::RxFrame& frame, uint32_t now_ms) {
     }
 }
 
+// INFO: fc 27nov26 a health queued before its link's Down is read after it, so only the next
+// link's decides
 void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
+    if (!up_) return;
     const Result<comms::PeerHealth> health = comms::read_health(bytes);
     if (health.status() == Status::Unsupported) {
         refuse_protocol();
