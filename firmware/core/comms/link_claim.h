@@ -17,15 +17,10 @@ class LinkClaim {
         return holder_ == peer;
     }
 
-    bool holds(uint16_t session_id) const { return held_ && holder_.session_id == session_id; }
     bool holds(const events::Peer& peer) const { return held_ && holder_ == peer; }
     bool held() const { return held_; }
     uint16_t holder() const { return holder_.session_id; }
     const events::Peer& peer() const { return holder_; }
-
-    void release(uint16_t session_id) {
-        if (holds(session_id)) release();
-    }
 
     void release() {
         held_ = false;

@@ -62,9 +62,23 @@ class ReleaseTest < ActiveSupport::TestCase
 
     installers = Release.installers([ main, branch, stable ])
 
-    assert_equal [ "v0.1.0", "skyblip-go-0.1.0.uf2" ], installers.fetch("go").then { |release, file| [ release.tag, file ] }
-    assert_equal [ "dev-1005", "skyblip-bravo-dev-1005.uf2" ], installers.fetch("bravo").then { |release, file| [ release.tag, file ] }
+    assert_equal [ [ "v0.1.0", "skyblip-go-0.1.0.uf2" ] ], installers.fetch("go").map { |release, file| [ release.tag, file ] }
+    assert_equal [ [ "dev-1005", "skyblip-bravo-dev-1005.uf2" ] ], installers.fetch("bravo").map { |release, file| [ release.tag, file ] }
     assert_empty Release.installers([ branch ])
+  end
+
+  test "a USB install for development builds offers the usual choice first, then every development build newest first" do
+    older_stable = release("v0.0.9", committed_at: "2026-09-01T00:00:00Z", assets: %w[skyblip-go-0.0.9.uf2])
+    stable = release("v0.1.0", committed_at: "2026-10-01T00:00:00Z", assets: %w[skyblip-go-0.1.0.uf2])
+    candidate = release("v0.2.0-rc1", prerelease: true, committed_at: "2026-10-12T00:00:00Z", assets: %w[skyblip-go-0.2.0-rc1.uf2])
+    main = release("dev-1005", prerelease: true, committed_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1005.uf2 skyblip-bravo-dev-1005.uf2])
+    branch = release("dev-1010-feat-x", prerelease: true, committed_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1010-feat-x.uf2])
+
+    installers = Release.installers([ older_stable, stable, candidate, main, branch ], development: true)
+
+    assert_equal %w[v0.1.0 dev-1010-feat-x dev-1005], installers.fetch("go").map { |release, _file| release.tag }
+    assert_equal %w[dev-1005], installers.fetch("bravo").map { |release, _file| release.tag }
+    assert_equal [ "dev-1010-feat-x" ], Release.installers([ branch ], development: true).fetch("go").map { |release, _file| release.tag }
   end
 
   # On Nov 19 two merges a few minutes apart could publish their builds in the other order, and the older one looked newest.
@@ -73,7 +87,7 @@ class ReleaseTest < ActiveSupport::TestCase
     older = release("dev-2030", prerelease: true, committed_at: "2026-11-19T07:23:13Z", published_at: "2026-11-19T07:36:10Z", assets: %w[skyblip-go-dev-2030.uf2 skyblip-go-dev-2030.signed.bin] + Release::SIMULATOR_RUNTIME)
 
     assert_equal %w[dev-2032 dev-2030], Release.shelf([ older, newer ]).map(&:tag)
-    assert_equal "dev-2032", Release.installers([ older, newer ]).fetch("go").first.tag
+    assert_equal "dev-2032", Release.installers([ older, newer ]).fetch("go").first.first.tag
     assert_equal "dev-2032", Release.simulator([ older, newer ]).tag
     assert_equal "skyblip-go-dev-2032.signed.bin", Release.firmware_shelf([ older, newer ]).first.last
   end

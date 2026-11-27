@@ -30,6 +30,21 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     assert_not Event.exists?(name: "browser.opened")
   end
 
+  # A phone's clock running behind placed a new failure before the resolution, so the admin never saw the error come back.
+  test "a failure from a browser whose clock runs behind reopens the error resolved before it" do
+    fail_in_browser clock: Time.current
+    error = Event::Error.since(1.day.ago).sole
+    error.resolve(by: users(:francois))
+
+    travel 1.minute do
+      fail_in_browser clock: 1.hour.ago
+
+      assert_response :no_content
+      assert Event::Error.find_by(fingerprint: error.fingerprint).reopened?
+      assert_equal Time.current.to_i, Event.order(:id).last.occurred_at.to_i
+    end
+  end
+
   test "a journal from no browser is refused, and so is a post with no entries" do
     post events_path, params: { browser: "", entries: [ { id: SecureRandom.uuid, name: "device.read" } ] }, as: :json
     assert_response :unprocessable_content
@@ -78,4 +93,12 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
     assert_equal [ {}, { "dump" => { "radio" => {}, "gnss" => { "valid" => true } } } ], Event.where(name: "device.diagnosed").order(:id).map(&:payload)
   end
+
+  private
+    def fail_in_browser(clock:)
+      post events_path, params: { browser: "01AZ018Z", sent_at: clock.iso8601(3), entries: [
+        { id: SecureRandom.uuid, name: "browser.failed", at: clock.iso8601(3), seq: 1, page: SecureRandom.uuid,
+          properties: { kind: "error", error: "TypeError", message: "x is undefined" } }
+      ] }, headers: { "User-Agent" => CHROME }, as: :json
+    end
 end

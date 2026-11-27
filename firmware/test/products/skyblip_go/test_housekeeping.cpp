@@ -108,6 +108,30 @@ TEST_CASE("product: a radio that parks before the ceiling ends the wait without 
     CHECK(rig.product.board().rf().abandons() == 0);
 }
 
+// The wake pin senses a level, so a press while the radio parks would wake the unit at once.
+TEST_CASE("product: a press while the radio parks holds the rails until the button is up again") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 1000);
+    rig.now_ms = 1000;
+    rig.product.board().rf().defer_park = true;
+
+    rig.hold_button(power::kLongPressHoldMs + 200);
+    rig.hold_button(power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(power::kReleaseSettleMs + 200, /*down=*/false);
+    REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Off);
+
+    rig.hold_button(100);
+    rig.product.board().rf().finish_park();
+    rig.hold_button(50);
+    CHECK_FALSE(rig.product.ready_to_power_off());
+
+    rig.hold_button(power::kReleaseSettleMs / 2, /*down=*/false);
+    CHECK_FALSE(rig.product.ready_to_power_off());
+    rig.hold_button(power::kReleaseSettleMs, /*down=*/false);
+    CHECK(rig.product.ready_to_power_off());
+}
+
 // The board probed in its constructor, and the product is a global built before the watchdog arms.
 TEST_CASE("product: building the product touches no part, and setup probes the parts") {
     HousekeepingRig rig;
