@@ -25,11 +25,13 @@ TEST_CASE("lr2021: a failed FIFO read is a fault, not fourteen bytes of a dead b
     Lr2021 radio = lr2021_receiving(part);
     const AdsbAir air = adsb_air(adsb::squitter(kAddress, 5, 4));
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
-    // The snapshot is five reads of two frames each, and the FIFO read is the eleventh transfer.
-    part.transfers_before_failure = 10;
+    // The snapshot is five reads of two transfers and a ClearIrq, so the FIFO read is the twelfth.
+    part.transfers_before_failure = 11;
+    const int clears = part.count(chip::kClearIrq);
 
     uint8_t frame[adsb::kFrameBytes]{};
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Fault);
+    CHECK(part.count(chip::kClearIrq) == clears + 1);
     CHECK(radio.service(250, 30000));
     CHECK(radio.resets() == 1);
 }
@@ -57,7 +59,7 @@ TEST_CASE("lr2021: a bring-up whose commands do not reach the part is refused") 
     // The version read passes, as two transfers, and SetStandby is the first to fail.
     part.transfers_before_failure = 2;
     Lr2021 radio = lr2021_for(part);
-    CHECK(radio.begin(chip::kDetectionThresholdDbm) == Status::Down);
+    CHECK(radio.begin() == Status::Down);
     CHECK(radio.mode() == Lr2021Mode::Reset);
     CHECK(radio.start_receive() == Status::Invalid);
 }

@@ -79,15 +79,15 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
     out.up_m = up_m;
     out.valid = true;
 
+    const int32_t range_m = static_cast<int32_t>(wire::hypotenuse(north_m, east_m));
+    if (range_m > kRangeM || std::abs(up_m) > kVerticalM) {
+        drop(reported.address_mapping_table, reported.address);
+        return out;
+    }
+
     Slot* slot = slot_for(target, now_ms);
     if (slot == nullptr) return out;
     slot->seen_ms = now_ms;
-
-    const int32_t range_m = static_cast<int32_t>(wire::hypotenuse(north_m, east_m));
-    if (range_m > kRangeM || std::abs(up_m) > kVerticalM) {
-        *slot = Slot{};
-        return out;
-    }
 
     const uint32_t key = reception_key(reported);
     if (slot->anchored && key == slot->reception_key) {

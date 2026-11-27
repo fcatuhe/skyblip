@@ -4,20 +4,23 @@
 #include "core/bus/bus.h"
 #include "core/events/adsb.h"
 #include "hardware/parts/lr2021/lr2021.h"
+#include "hardware/platform/adsb_batch.h"
 #include "ports/adsb_receiver.h"
 #include "ports/clock.h"
 #include "runtime/tasks.h"
 
 namespace skyblip::platform::host {
 
-// INFO: fc 12nov26 the silicon thread's drain, run from the board's poll: the host has no IRQ edge
+// INFO: fc 27nov26 the silicon thread's sweep, run from the board's poll: the host has no IRQ edge
 class AdsbReceiver : public ports::AdsbReceiver {
    public:
+    static constexpr uint32_t kProbePeriodMs = 1000;
+
     AdsbReceiver(parts::Lr2021& radio, ports::Clock& clock, int, bus::AdsbQueue& out)
         : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
-        Status status = radio_.begin(parts::lr2021::kDetectionThresholdDbm);
+        Status status = radio_.begin();
         if (status == Status::Ok) status = radio_.start_receive();
         if (status != Status::Ok) {
             radio_.park();
@@ -25,24 +28,26 @@ class AdsbReceiver : public ports::AdsbReceiver {
         }
         started_ = true;
         serviced_ms_ = clock_.milliseconds();
+        probed_ms_ = serviced_ms_;
         return Status::Ok;
     }
 
     void service(uint32_t now_ms) {
         if (!started_ || stopped_) return;
         const uint64_t woke_us = clock_.microseconds();
-        while (radio_.irq_asserted()) {
-            events::AdsbFrame frame{};
-            const parts::Lr2021Event event = radio_.poll(frame.bytes.data(), frame.bytes.size());
-            if (event.type != parts::Lr2021EventType::Frame) break;
-            frame.at_us = woke_us;
-            frame.rssi_dbm = event.rssi_dbm;
-            frame.rssi_valid = event.rssi_valid;
-            (void)out_.push(frame);
-            statistics_.heard(event.rssi_dbm, event.rssi_valid, woke_us);
+        drains_++;
+        const parts::Lr2021Event event = radio_.poll(batch_, sizeof(batch_));
+        if (event.type == parts::Lr2021EventType::Frame) {
+            hand_over(batch_, event, woke_us, statistics_, out_);
+        } else {
+            empty_wakes_++;
         }
+        statistics_.drained(event.frames, out_.size(), 0, woke_us);
         (void)radio_.service(now_ms - serviced_ms_, runtime::kRadioRxSilenceCeilingMs);
         serviced_ms_ = now_ms;
+        if (now_ms - probed_ms_ < kProbePeriodMs) return;
+        probed_ms_ = now_ms;
+        if (radio_.sample(probe_) != Status::Ok) probe_.valid = false;
     }
 
     ports::AdsbReceiverStatistics statistics() const override {
@@ -53,6 +58,20 @@ class AdsbReceiver : public ports::AdsbReceiver {
         statistics.command_errors = radio_.command_errors();
         statistics.device_errors = radio_.device_errors();
         statistics.dropped = radio_.fifo_drops() + out_.dropped();
+        statistics.part_resets = radio_.part_resets();
+        statistics.drains = drains_;
+        statistics.empty_wakes = empty_wakes_;
+        statistics.busy_wait_us = radio_.busy_wait_us();
+        statistics.transactions = radio_.transactions();
+        statistics.framing_resyncs = radio_.framing_resyncs();
+        statistics.overflow_drops = radio_.overflow_drops();
+        statistics.resync_drops = radio_.resync_drops();
+        statistics.queue_drops = out_.dropped();
+        statistics.in_flight = radio_.in_flight();
+        statistics.split_counts = radio_.split_counts();
+        statistics.stranded_resyncs = radio_.stranded_resyncs();
+        statistics.short_resyncs = radio_.short_resyncs();
+        statistics.probe = probe_;
         return statistics;
     }
 
@@ -86,7 +105,12 @@ class AdsbReceiver : public ports::AdsbReceiver {
     ports::Clock& clock_;
     bus::AdsbQueue& out_;
     ports::AdsbReceiverStatistics statistics_{};
+    ports::ReceiverProbe probe_{};
     uint32_t serviced_ms_{0};
+    uint32_t drains_{0};
+    uint32_t empty_wakes_{0};
+    uint32_t probed_ms_{0};
+    uint8_t batch_[kAdsbBatchBytes]{};
     bool started_{false};
     bool stopped_{false};
     bool parked_{false};

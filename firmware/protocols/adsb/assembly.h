@@ -95,6 +95,7 @@ class Assembly {
 
     void age_out(uint32_t now_ms);
     int count() const;
+    bool holds(uint32_t address) const;
     uint32_t evictions() const { return evictions_; }
     uint32_t refusals() const { return refusals_; }
     uint32_t implausible() const { return implausible_; }

@@ -341,6 +341,86 @@ Adsb adsb() {
     return value;
 }
 
+Receiver receiver() {
+    Receiver value{};
+    value.frames = 70000;
+    value.part_packets = 4500;
+    value.part_errors = 0x0040;
+    value.gain_step = 13;
+    value.rearms = 3;
+    value.resets = 1;
+    value.part_resets = 2;
+    value.command_errors = 5;
+    value.missed_edges = 7;
+    value.noise_dbm = -101;
+    value.threshold_dbm = -106;
+    value.part_mode = ports::ReceiverMode::StandbyRc;
+    value.part_reset = ports::ReceiverReset::PowerOn;
+    value.listening = true;
+    value.irq_armed = true;
+    value.probed = true;
+    value.interrupt_pending = true;
+    value.front_end_kept = false;
+    return value;
+}
+
+Reception reception() {
+    Reception value{};
+    value.crc = 1234;
+    value.unsupported = 56;
+    value.folded = 789;
+    value.positions = 321;
+    value.capture_refused = 4;
+    value.aircraft = 12;
+    value.tracked = 9;
+    value.reference = comms::ExportReference::Own;
+    value.framing_resyncs = 2;
+    value.impossible_formats = 345;
+    value.fix_valid = true;
+    return value;
+}
+
+Framing framing() {
+    Framing value{};
+    value.overflow_drops = 70100;
+    value.resync_drops = 42;
+    value.queue_drops = 900;
+    value.in_flight = 1234;
+    value.split_counts = 56;
+    value.drain_busy_ms = 70300;
+    value.drains = 2500;
+    value.stranded_resyncs = 3;
+    value.short_resyncs = 1;
+    return value;
+}
+
+Screening screening() {
+    Screening value{};
+    value.squitters = 70200;
+    value.all_calls = 321;
+    value.replies = 4321;
+    value.parity_refused = 987;
+    value.one_bit_errors = 12;
+    value.unmatched = 3456;
+    value.two_bit_errors = 77;
+    value.fifo_peak_frames = 18;
+    value.queue_peak_frames = 300;
+    return value;
+}
+
+Drain drain() {
+    Drain value{};
+    value.irq_wakes = 200;
+    value.empty_wakes = 300;
+    value.poll_ms = 1000;
+    value.worst_drain_us = 70000;
+    value.busy_wait_ms = 7;
+    value.transactions = 68174;
+    value.repaired = 9;
+    value.repairs_refused = 3;
+    return value;
+}
+
 std::vector<std::vector<uint8_t>> written() {
     const Instant at = vector_instant();
     return {bytes_of(record_of(boot(), at)),      bytes_of(record_of(config(), at)),
@@ -353,7 +433,9 @@ std::vector<std::vector<uint8_t>> written() {
             bytes_of(record_of(screen(), at)),    bytes_of(record_of(gap(), at)),
             bytes_of(record_of(end(), at)),       bytes_of(record_of(duty(), at)),
             bytes_of(record_of(hop(), at)),       bytes_of(record_of(loop(), at)),
-            bytes_of(record_of(adsb(), at))};
+            bytes_of(record_of(adsb(), at)),      bytes_of(record_of(receiver(), at)),
+            bytes_of(record_of(reception(), at)), bytes_of(record_of(framing(), at)),
+            bytes_of(record_of(screening(), at)), bytes_of(record_of(drain(), at))};
 }
 
 }  // namespace

@@ -84,7 +84,7 @@ At 2 Hz, on 868.2 MHz, the instants between 490 ms and the `.500` arrival, about
 
 ## The second a burst is dated by
 
-`ClockState::utc_s` is the UTC second that opened at `utc_edge_us`, carried forward on every latched edge by `carry_utc_to_edge()`. The receiver names a second hundreds of milliseconds into it, so `own.utc_s` lags the edge until then. Whatever dates a burst against the edge, such as `radio::stamp_of` and the decoders, reads `bus::State::traffic_now_s()` instead.
+`ClockState::utc_s` is the UTC second that opened at `utc_edge_us`, carried forward on every latched edge by `carry_utc_to_edge()`. The receiver names a second hundreds of milliseconds into it, so `own.utc_s` lags the edge until then. Whatever dates a burst against the edge, such as `radio::stamp_of` and the decoders, reads `bus::State::traffic_now_s()` instead. Past the holdover it takes `own.utc_s` while that second keeps up with the one counted from the held edge. A silent receiver keeps its last second as valid, so the held edge counts on and the traffic table still ages what it heard.
 
 ## What the channel measurement is for
 

@@ -21,7 +21,7 @@ The code is pure, host-tested and never touches flash. `SectorAllocator` decides
 
 The session-start bit tells a whole session from what is left once the ring recycles its first sector, which otherwise reads like a session that began later. The allocator sets it, as `Claim::session_start`, on a session's first claim only, under the CRC, so a session whose lowest-sequence sector lacks it is reported truncated in the `list` reply (`../../products/common/services/record_store.cpp`).
 
-`lost_sectors(owner)` counts every sector recycled from under the session that owner is writing, by either ring, at the moment the decision is made. The capture turns each loss into a `diagnostics::Gap` followed by a fresh `Boot` and `Config` (`../diagnostics/README.md`).
+`lost_sectors(owner)` counts every sector recycled from under the session that owner is writing, by either ring, at the moment the decision is made. The owner names that session with `open_session()` before its first claim and ends it with `close_session()`. Until that first claim the ring's frontier still belongs to the last session, so a sector of the last session never counts against the new one. The capture turns each loss into a `diagnostics::Gap` followed by a fresh `Boot` and `Config` (`../diagnostics/README.md`).
 
 `quarantine(sector)` removes a sector from the free list, from `owned()` and from an erase-all, because reclaiming a sector this build cannot read would erase evidence. The boot scan quarantines a read the part refused (counted apart, as a flash fault), a header with an unknown version or owner, and a header whose record size is not the one both rings write. Version 1 had no owner byte, and a v1 partition reads as free space.
 
@@ -36,7 +36,7 @@ The session-start bit tells a whole session from what is left once the ring recy
 
 One counter per ring would lose the order in which the two rings claimed.
 
-The allocator keeps every sector's owner, sequence and session id in RAM, in a `SectorSlots` table the product sizes to its board's partition: `kLogSectors` in the board's `log_flash.h`, which a `static_assert` holds to the devicetree. A sector costs 9 bytes, because the session-start flag rides in the top bit of the owner's byte. `session_run()` walks a ring in write order, one run of a session's back-to-back sectors at a time. `session_sector()` gives the nth sector of a session, counted from the oldest it still holds. The other ring claims in between, so neither may be arithmetic on a first sector. `recycled_sectors()` counts the sectors each ring has recycled since boot from the front of the session it last took one from (`../comms/README.md`, A record keeps its index while the ring rotates).
+The allocator keeps every sector's owner, sequence and session id in RAM, in a `SectorSlots` table the product sizes to its board's partition: `kLogSectors` in the board's `log_flash.h`, which a `static_assert` holds to the devicetree. A sector costs 9 bytes, because the session-start flag rides in the top bit of the owner's byte. `session_run()` walks a ring in write order, one run of a session's back-to-back sectors at a time. `session_sector()` gives the nth sector of a session, counted from the oldest it still holds. The other ring claims in between, so neither may be arithmetic on a first sector. `unused_session_id()` names a new session: the first name from the one asked for up that the ring does not hold, since a claim under a name the ring holds continues that session. It costs one scan per name it skips. `recycled_sectors()` counts the sectors each ring has recycled since boot from the front of the session it last took one from (`../comms/README.md`, A record keeps its index while the ring rotates).
 
 Both run on the service loop that arms the radio, so neither may scan the pool once per sector. A scan visits all 298 sectors on the T-Echo, at about 1.4 us a sector. A run costs three scans. `session_sector()` bisects on sequence: the nth sector is at least n above the session's lowest, and at least as far below its highest as the session has sectors after it.
 
@@ -56,6 +56,8 @@ Both run on the service loop that arms the radio, so neither may scan the pool o
 Flights evicts Diagnostics first, because a flight is what the device exists to record. Diagnostics takes from Flights down to the floor before it recycles itself, so one capture fills the partition above the protected hours. On a 298-sector pool that leaves 170 sectors of diagnostics: 28,900 slots, about 32 minutes of a full capture at fifteen records a second (`Recorder::kPeriodicRecordsPerSecond`), or 120 hours of a power run.
 
 A ring's frontier is never handed out, because it is being written. Taking free sectors forward of the newest keeps a lone ring contiguous.
+
+The claim labels the sector before the service erases it and writes its header. If the part refuses either, the service calls `abandon(sector)`, which frees the label. Otherwise the session would count a sector with no header of its own, and a read would serve whatever that sector still holds. The next claim looks for a free sector forward of the abandoned one.
 
 ## The floor
 

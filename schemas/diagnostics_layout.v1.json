@@ -254,6 +254,72 @@
       {"name": "height_difference_valid", "kind": "flag", "bit": 5},
       {"name": "gnss_relative_altitude_valid", "kind": "flag", "bit": 6},
       {"name": "pressure_relative_altitude_valid", "kind": "flag", "bit": 7}
+    ]},
+    {"name": "receiver", "code": 22, "fields": [
+      {"name": "frames", "kind": "u16", "at": 0},
+      {"name": "part_packets", "kind": "u16", "at": 2, "valid_when": "probed"},
+      {"name": "part_errors", "kind": "u16", "at": 4, "valid_when": "probed"},
+      {"name": "gain_step", "kind": "u8", "at": 6, "valid_when": "probed"},
+      {"name": "rearms", "kind": "u8", "at": 7},
+      {"name": "resets", "kind": "u8", "at": 8},
+      {"name": "part_resets", "kind": "u8", "at": 9},
+      {"name": "command_errors", "kind": "u8", "at": 10},
+      {"name": "missed_edges", "kind": "u8", "at": 11},
+      {"name": "noise_dbm", "kind": "i8", "at": 12, "valid_when": "probed"},
+      {"name": "threshold_dbm", "kind": "i8", "at": 13, "valid_when": "probed"},
+      {"name": "part_mode", "kind": "enum8", "at": 14, "enum": "receiver_mode", "valid_when": "probed"},
+      {"name": "part_reset", "kind": "enum8", "at": 15, "enum": "receiver_reset", "valid_when": "probed"},
+      {"name": "listening", "kind": "flag", "bit": 2},
+      {"name": "irq_armed", "kind": "flag", "bit": 3},
+      {"name": "probed", "kind": "flag", "bit": 4},
+      {"name": "interrupt_pending", "kind": "flag", "bit": 5},
+      {"name": "front_end_kept", "kind": "flag", "bit": 6},
+      {"name": "boosted", "kind": "flag", "bit": 7}
+    ]},
+    {"name": "reception", "code": 23, "fields": [
+      {"name": "crc", "kind": "u16", "at": 0},
+      {"name": "unsupported", "kind": "u16", "at": 2},
+      {"name": "folded", "kind": "u16", "at": 4},
+      {"name": "positions", "kind": "u16", "at": 6},
+      {"name": "capture_refused", "kind": "u16", "at": 8},
+      {"name": "aircraft", "kind": "u8", "at": 10},
+      {"name": "tracked", "kind": "u8", "at": 11},
+      {"name": "reference", "kind": "enum8", "at": 12, "enum": "export_reference"},
+      {"name": "framing_resyncs", "kind": "u8", "at": 13},
+      {"name": "impossible_formats", "kind": "u16", "at": 14},
+      {"name": "fix_valid", "kind": "flag", "bit": 2}
+    ]},
+    {"name": "framing", "code": 24, "fields": [
+      {"name": "overflow_drops", "kind": "u16", "at": 0},
+      {"name": "resync_drops", "kind": "u16", "at": 2},
+      {"name": "queue_drops", "kind": "u16", "at": 4},
+      {"name": "in_flight", "kind": "u16", "at": 6},
+      {"name": "split_counts", "kind": "u16", "at": 8},
+      {"name": "drain_busy_ms", "kind": "u16", "at": 10},
+      {"name": "drains", "kind": "u16", "at": 12},
+      {"name": "stranded_resyncs", "kind": "u8", "at": 14},
+      {"name": "short_resyncs", "kind": "u8", "at": 15}
+    ]},
+    {"name": "screening", "code": 25, "fields": [
+      {"name": "squitters", "kind": "u16", "at": 0},
+      {"name": "all_calls", "kind": "u16", "at": 2},
+      {"name": "replies", "kind": "u16", "at": 4},
+      {"name": "parity_refused", "kind": "u16", "at": 6},
+      {"name": "one_bit_errors", "kind": "u16", "at": 8},
+      {"name": "unmatched", "kind": "u16", "at": 10},
+      {"name": "two_bit_errors", "kind": "u16", "at": 12},
+      {"name": "fifo_peak_frames", "kind": "u8", "at": 14},
+      {"name": "queue_peak_frames", "kind": "u8", "at": 15}
+    ]},
+    {"name": "drain", "code": 26, "fields": [
+      {"name": "irq_wakes", "kind": "u16", "at": 0},
+      {"name": "empty_wakes", "kind": "u16", "at": 2},
+      {"name": "poll_ms", "kind": "u16", "at": 4},
+      {"name": "worst_drain_us", "kind": "u16", "at": 6},
+      {"name": "busy_wait_ms", "kind": "u16", "at": 8},
+      {"name": "transactions", "kind": "u16", "at": 10},
+      {"name": "repaired", "kind": "u16", "at": 12},
+      {"name": "repairs_refused", "kind": "u16", "at": 14}
     ]}
   ],
   "enums": {
@@ -449,6 +515,29 @@
       "values": [
         {"name": "none", "code": 0, "mirrors": "None"},
         {"name": "advisory", "code": 1, "mirrors": "Advisory"}
+      ]},
+    "receiver_mode": {"mirrors": {"type": "ports::ReceiverMode", "header": "ports/adsb_receiver.h"},
+      "values": [
+        {"name": "sleep", "code": 0, "mirrors": "Sleep"},
+        {"name": "standby_rc", "code": 1, "mirrors": "StandbyRc"},
+        {"name": "standby_xosc", "code": 2, "mirrors": "StandbyXosc"},
+        {"name": "synthesis", "code": 3, "mirrors": "Synthesis"},
+        {"name": "receive", "code": 4, "mirrors": "Receive"},
+        {"name": "transmit", "code": 5, "mirrors": "Transmit"},
+        {"name": "unknown", "code": 6, "mirrors": "Unknown"}
+      ]},
+    "receiver_reset": {"mirrors": {"type": "ports::ReceiverReset", "header": "ports/adsb_receiver.h"},
+      "values": [
+        {"name": "none", "code": 0, "mirrors": "None"},
+        {"name": "power_on", "code": 1, "mirrors": "PowerOn"},
+        {"name": "pin", "code": 2, "mirrors": "Pin"},
+        {"name": "unknown", "code": 3, "mirrors": "Unknown"}
+      ]},
+    "export_reference": {"mirrors": {"type": "comms::ExportReference", "header": "core/comms/peer.h"},
+      "values": [
+        {"name": "none", "code": 0, "mirrors": "None"},
+        {"name": "go", "code": 1, "mirrors": "Go"},
+        {"name": "own", "code": 2, "mirrors": "Own"}
       ]}
   }
 }

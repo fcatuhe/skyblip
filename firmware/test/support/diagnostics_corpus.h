@@ -12,7 +12,8 @@
 namespace skyblip {
 
 // Every slot of every sector the diagnostics ring owns, in the order the sectors sit on the part.
-inline std::vector<diagnostics::Record> captured(Rig& rig) {
+template <class AnyRig>
+inline std::vector<diagnostics::Record> captured(AnyRig& rig) {
     std::vector<diagnostics::Record> out;
     platform::host::FlashRegion& flash = rig.platform.log_flash();
     std::vector<uint8_t> raw(flash.sector_bytes());

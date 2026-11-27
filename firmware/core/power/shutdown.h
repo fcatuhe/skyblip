@@ -179,7 +179,8 @@ class ShutdownSequencer {
     ShutdownPhase phase() const { return phase_; }
     ShutdownReason reason() const { return reason_; }
     bool going_down() const { return phase_ != ShutdownPhase::Running; }
-    bool ready_to_power_off() const { return phase_ == ShutdownPhase::Off; }
+    // INFO: fc 27nov26 the last parts park after Off, so a press in that wait holds the rails too
+    bool ready_to_power_off() const { return phase_ == ShutdownPhase::Off && released_; }
 
     uint32_t held_ms(uint32_t now_ms) const;
 
@@ -191,6 +192,7 @@ class ShutdownSequencer {
     uint32_t phase_since_ms_{0};
     uint32_t hold_since_ms_{0};
     ButtonRelease release_{};
+    bool released_{false};
     bool holding_{false};
     bool stowing_{false};
     // INFO: fc 20nov26 the press that woke the device is still down at boot, and counting it as a

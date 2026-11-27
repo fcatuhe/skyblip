@@ -5,20 +5,24 @@
 
 namespace skyblip::dfu {
 
+// INFO: fc 27nov26 img_mgmt keeps the upload before a first chunk it refuses, to resume it, so the
+// check keeps it too
 bool ProductCheck::begin(const uint8_t* chunk, size_t bytes, size_t upload_bytes,
                          const std::optional<ImageClass>& running) {
-    *this = ProductCheck{};
+    ProductCheck upload;
     ImageHeader header;
     if (running && read_header(chunk, bytes, header) && header.protected_tlv_bytes > 0 &&
         header.protected_tlv_bytes <= kProtectedAreaBytes &&
         size_t{header.unprotected_tlv_offset()} + kTlvInfoBytes <= upload_bytes) {
-        expected_ = running;
-        header_ = header;
-        upload_bytes_ = upload_bytes;
-        area_offset_ = header.tlv_offset();
-        area_bytes_ = header.protected_tlv_bytes + kTlvInfoBytes;
+        upload.expected_ = running;
+        upload.header_ = header;
+        upload.upload_bytes_ = upload_bytes;
+        upload.area_offset_ = header.tlv_offset();
+        upload.area_bytes_ = header.protected_tlv_bytes + kTlvInfoBytes;
     }
-    return admits(0, chunk, bytes);
+    if (!upload.admits(0, chunk, bytes)) return false;
+    *this = upload;
+    return true;
 }
 
 bool ProductCheck::admits(size_t offset, const uint8_t* chunk, size_t bytes) {

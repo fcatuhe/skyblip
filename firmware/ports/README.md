@@ -8,7 +8,7 @@ Ports wrap no chip, so they are not a hardware abstraction layer. `Rf::arm()` ta
 
 A port is something the core calls: arm this dwell, send these bytes, paint this frame, read the die. What happens to the device, such as a received frame or a button press, reaches a service as an event on a queue declared in `core/events/`, so it needs no port. `hardware/README.md` lists what a platform owes the board for that half.
 
-`AdsbReceiver` listens full time, so its frames arrive on a `bus::AdsbQueue` and the port keeps its counters and its sleep on the way to SYSTEM OFF. `Gnss` is a port because the core asks the receiver for a restart and reads its health.
+`AdsbReceiver` listens full time, so its frames arrive on a `bus::AdsbQueue` and the port keeps its counters and its sleep on the way to SYSTEM OFF. Its statistics carry a `ReceiverProbe`, what the receiving part said about itself at its last probe, in the part's own mode and reset codes. `AdsbReceiverStatistics::admit()` counts each frame read by format and by `adsb::screen()`'s verdict, and says whether the decoder can read it, so the adapter queues only those. `Gnss` is a port because the core asks the receiver for a restart and reads its health.
 
 `Link::send()` puts one frame on every subscribed central, because the traffic picture is everyone's, and answers `Unsubscribed` when the connected centrals all left the endpoint unsubscribed. So `payload_bytes()` with no session is the smallest of the connected centrals: a broadcast frame is formatted once and must fit the narrowest. `core/comms/README.md` has the rest.
 

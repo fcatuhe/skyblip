@@ -25,7 +25,7 @@ using simulator::mode_s_air;
 
 inline parts::Lr2021 lr2021_receiving(models::Lr2021& chip) {
     parts::Lr2021 radio = lr2021_for(chip);
-    (void)radio.begin(parts::lr2021::kDetectionThresholdDbm);
+    (void)radio.begin();
     (void)radio.start_receive();
     return radio;
 }
