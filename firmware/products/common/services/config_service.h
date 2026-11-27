@@ -322,6 +322,8 @@ class ConfigService {
     bool refused_on_device_{false};
     bool settings_dirty_{false};
     bool upload_window_open_{false};
+    // INFO: fc 26nov26 the channel holds one reply, so the deadline's answer waits until it is free
+    bool window_closed_owed_{false};
     // INFO: fc 13nov26 an image that lands in flight installs on the ground, since a swap goes dark
     bool install_held_{false};
     uint32_t upload_window_opened_ms_{0};
