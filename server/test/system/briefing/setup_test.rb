@@ -58,6 +58,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Bravo 5C1D restarted as a USB drive named X1."
+      assert_no_select "Version"
       screen "20-bravo-choose-drive"
 
       click_button "Choose the drive"
@@ -110,6 +111,28 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       assert_text "Bravo 5C1D is ready."
       assert_equal page.evaluate_script("fakeUsb.build"), journaled("installer.verified").payload["build"]
       assert_equal false, journaled("installer.finished").payload["saved"]
+    end
+  end
+
+  # The cassette holds v0.8.1 and the development builds GitHub listed on Nov 27, with only dev-2763's Bravo .uf2 downloaded.
+  test "a pilot who asked for development builds installs the one chosen, the latest release chosen until then" do
+    in_range
+    plugged_in a_meshtastic_bravo
+    with_installers "github/development_installers" do
+      visit "/briefing/preferences"
+      check "Offer development builds"
+      assert_link "See every build on GitHub."
+
+      visit "/briefing/setup"
+      click_button "Install"
+      assert_select "Version", selected: "v0.8.1", with_options: [ "skyBlip dev 0.8.1+2763", "skyBlip dev 0.8.1+2786 (feat-bravo-receiver-health)" ]
+      select "skyBlip dev 0.8.1+2763", from: "Version"
+      screen "27-bravo-choose-build"
+
+      click_button "Choose the drive"
+      assert_text "Choose skyBlip Bravo 5C1D in the list."
+      assert_equal "0.8.1+2763", page.evaluate_script("fakeUsb.build")
+      assert_equal "0.8.1+2763", journaled("installer.wrote").payload["version"]
     end
   end
 

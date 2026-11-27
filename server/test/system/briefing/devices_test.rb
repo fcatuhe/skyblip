@@ -543,8 +543,12 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       find("summary", text: "Menu").click
       click_link "Settings"
       screen "15-settings"
-      choose "Français"
+      within(".locale-switcher") do
+        find("summary").click
+        click_link "Français"
+      end
       assert_selector "h1", text: "Paramètres"
+      assert_current_path "/briefing/preferences"
 
       click_link "Retour à vos appareils"
       assert_selector "h1", text: "Votre skyBlip"
