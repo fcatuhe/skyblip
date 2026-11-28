@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_CORE_UTIL_FORMAT_H
 #define SKYBLIP_CORE_UTIL_FORMAT_H
 
+#include <cstddef>
 #include <cstdint>
 
 namespace skyblip {
@@ -13,6 +14,8 @@ inline char hex_digit(uint8_t nibble) {
 int format_string(char* out, const char* text);
 
 int format_hex(char* out, uint32_t value, uint8_t digits);
+
+constexpr size_t kUint32Digits = 10;
 
 int format_unsigned(char* out, uint32_t value, uint8_t minimum_digits = 1,
                     uint8_t fraction_digits = 0);

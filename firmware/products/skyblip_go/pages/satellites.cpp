@@ -29,6 +29,8 @@ constexpr int kDopY = 158;
 constexpr int kPortY = 170;
 constexpr int kNoteY = 184;
 
+constexpr size_t kLongestConfigStageName = sizeof("DEGRADED") - 1;
+
 constexpr gnss::System kSystemOrder[] = {gnss::System::Gps, gnss::System::Beidou,
                                          gnss::System::Glonass, gnss::System::Qzss,
                                          gnss::System::Unknown};
@@ -122,7 +124,7 @@ void draw_solution_phase(ui::Canvas& canvas, const SatellitesSnapshot& snapshot)
 
 void draw_port(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (snapshot.health.baud == 0) return;
-    char text[32];
+    char text[sizeof("BAUD     OVR ") + kLongestConfigStageName + 2 * kUint32Digits];
     int written = format_string(text, "BAUD ");
     written += format_unsigned(text + written, snapshot.health.baud);
     written += format_string(text + written, "  ");
@@ -142,7 +144,7 @@ void draw_stage(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
 
 void draw_used_by_system(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (snapshot.sky == nullptr) return;
-    char text[32];
+    char text[gnss::kSystemCount * sizeof("  SAT 24")];
     int written = 0;
     for (gnss::System system : kSystemOrder) {
         const int used = snapshot.sky->in_use_of(system);

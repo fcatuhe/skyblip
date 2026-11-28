@@ -425,6 +425,18 @@ TEST_CASE("radio log page: the bursts the band's own noise framed are counted, n
     CHECK(reads_at(canvas, 196 - 18 * 6, 2, "RX 0 TX 0 NOISE 42"));
 }
 
+// A unit left on for days at a busy field counts its bursts into the millions.
+TEST_CASE("radio log page: the largest counters print whole") {
+    radio::Log log;
+    RadioLogSnapshot snapshot = with(log);
+    snapshot.rx_ok = UINT32_MAX;
+    snapshot.tx_ok = UINT32_MAX;
+    snapshot.rx_noise = UINT32_MAX;
+    Glass canvas;
+    draw_radio_log(canvas, snapshot);
+    CHECK(reads_at(canvas, 196 - 16 * 6, 2, "NOISE 4294967295"));
+}
+
 TEST_CASE("radio log page: a silent band says so rather than showing an empty grid") {
     radio::Log log;
     Glass canvas;
