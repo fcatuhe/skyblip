@@ -451,6 +451,19 @@ TEST_CASE("formation: a joiner closing on us is traffic after two fixes of it" *
           State::None);
 }
 
+// A closure re-anchored the station, so a steady overtake held the new one for 6 s and rejoined.
+TEST_CASE("formation: an aircraft overtaking at 5 m/s never joins, however long it closes") {
+    Tracker tracker;
+    for (uint32_t i = 0; i <= 60; i++) {
+        const uint32_t now_ms = 1000 + i * 1000;
+        const model::Ownship own = flying(40, 90, now_ms);
+        const int east_m = -400 + 5 * static_cast<int>(i);
+        CHECK(tracker.observe(own, target_at(own, -60, east_m, 10, 45, 90, now_ms), {}, now_ms)
+                  .state == State::None);
+    }
+    CHECK(tracker.members() == 0);
+}
+
 // A far aircraft took a slot before its range was checked, and evicted a parting member to get one.
 TEST_CASE("formation: an aircraft outside the band takes no place from a parting member") {
     Tracker tracker;

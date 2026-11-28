@@ -130,7 +130,7 @@ bool Tracker::lifting(const flight::Liftoff& target_liftoff, uint32_t now_ms) co
 }
 
 bool Tracker::closure_confirmed(Slot& slot, int32_t closing_mm_s) {
-    if (slot.state == State::None || closing_mm_s < kClosingMps * kMillimetresPerMetre) {
+    if (closing_mm_s < kClosingMps * kMillimetresPerMetre) {
         slot.closing_fixes = 0;
         return false;
     }
