@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { channelOfImage, fitting } from '../../app/javascript/controllers/briefing/shelf.js';
+import { channelOfImage, fitting, offerNewest, pick, picked } from '../../app/javascript/controllers/briefing/shelf.js';
 
 const DEVELOPMENT = '212602F2';
 const RELEASE = '88A4BEF5';
@@ -54,4 +54,19 @@ test('the changelog follows the channel of the image offered, and the unit\'s ow
   assert.equal(channelOfImage({ channel: 'development' }, release), 'development');
   assert.equal(channelOfImage({ channel: null }, development), 'development');
   assert.equal(channelOfImage(null, release), 'release');
+});
+
+// The firmware page hides Install for an image of the running version the pilot did not pick, so a pick outlives the page that made it.
+test('an image the pilot picked stays picked on every page, and the newest one the page offers is not', async () => {
+  const updater = { state: { device: 'skyBlip Go 00012A', settings: {}, running: '0.2.0+1900', identity: { product: 'go' }, image: { key: DEVELOPMENT } }, clearImage() {}, choose() {} };
+  const go = { updater, get state() { return updater.state; } };
+  const newest = option('0.2.0+1950', DEVELOPMENT);
+  Object.assign(newest.dataset, { kind: 'base', channel: 'release' });
+  const read = async () => new Uint8Array();
+
+  assert.equal(picked(go), false);
+  await pick(go, option('0.2.0+1950', DEVELOPMENT), read);
+  assert.equal(picked(go), true);
+  await offerNewest(go, shelf(newest));
+  assert.equal(picked(go), false);
 });
