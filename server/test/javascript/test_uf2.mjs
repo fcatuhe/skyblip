@@ -112,12 +112,19 @@ test('the image inside a UF2 names its product', () => {
   assert.equal(imageOf(parseUf2(releaseUf2('bravo').bytes).blocks, LAYOUTS.bravo).product, 'bravo');
 });
 
-test('the drive says which board it is in INFO_UF2.TXT', () => {
+test('the drive says which board it is in INFO_UF2.TXT, and the factory SoftDevice fits its image', () => {
   const factory = path => readFileSync(new URL(`../../../firmware/boards/${path}/INFO_UF2.TXT`, import.meta.url), 'utf8');
-  assert.deepEqual(boardOf(factory('lilygo/t_echo_plus/factory')), { id: 'nRF52840-TEcho-v1', product: 'go' });
-  assert.deepEqual(boardOf(factory('lilygo/t_echo_plus/factory/t_echo')), { id: 'nRF52840-TEcho-v1', product: 'go' });
-  assert.deepEqual(boardOf(factory('seeed/meshtracker_x1/factory')), { id: 'nRF52840-MeshTracker-X1-v1', product: 'bravo' });
-  assert.deepEqual(boardOf('Board-ID: nRF52840-MeshTracker-X1\n'), { id: 'nRF52840-MeshTracker-X1', product: 'bravo' });
-  assert.deepEqual(boardOf('Board-ID: nRF52840-Feather\n'), { id: 'nRF52840-Feather', product: null });
-  assert.deepEqual(boardOf(null), { id: null, product: null });
+  const tEcho = { id: 'nRF52840-TEcho-v1', product: 'go', softdevice: 'S140 version 6.1.1', fits: true };
+  assert.deepEqual(boardOf(factory('lilygo/t_echo_plus/factory')), tEcho);
+  assert.deepEqual(boardOf(factory('lilygo/t_echo_plus/factory/t_echo')), tEcho);
+  assert.deepEqual(boardOf(factory('seeed/meshtracker_x1/factory')), { id: 'nRF52840-MeshTracker-X1-v1', product: 'bravo', softdevice: 'S140 7.3.0', fits: true });
+  assert.deepEqual(boardOf('Board-ID: nRF52840-MeshTracker-X1\n'), { id: 'nRF52840-MeshTracker-X1', product: 'bravo', softdevice: null, fits: true });
+  assert.deepEqual(boardOf('Board-ID: nRF52840-Feather\n'), { id: 'nRF52840-Feather', product: null, softdevice: null, fits: true });
+  assert.deepEqual(boardOf(null), { id: null, product: null, softdevice: null, fits: true });
+});
+
+test('a SoftDevice other than the one the image is linked above does not fit', () => {
+  assert.equal(boardOf('Board-ID: nRF52840-MeshTracker-X1-v1\nSoftDevice: S140 6.1.1\n').fits, false);
+  assert.equal(boardOf('Board-ID: nRF52840-TEcho-v1\nSoftDevice: S140 version 7.3.0\n').fits, false);
+  assert.equal(boardOf('Board-ID: nRF52840-MeshTracker-X1-v1\nSoftDevice: not found\n').fits, false);
 });

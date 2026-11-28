@@ -240,6 +240,7 @@ es:
       port_busy_linux: "Otro programa está usando el dispositivo, o Linux no deja que este navegador lo abra. Cierra cualquier programa que lo use. Si ninguno lo usa, ejecuta sudo usermod -aG dialout $USER en una terminal (en Arch Linux el grupo es uucp), cierra la sesión y vuelve a entrar, y pulsa Instalar de nuevo."
       other_board: "Esta placa no admite skyBlip. Usa un LilyGO T-Echo o T-Echo Plus, o un Seeed MeshTracker X1."
       not_drive: "Esa no es la unidad. Elige la que se llama TECHOBOOT o X1."
+      other_softdevice: "skyBlip no arranca con este bootloader. No es el de fábrica, como en un X1 que tuvo SoftRF. Vuelve a poner el bootloader de fábrica como indica la guía del fabricante y elige de nuevo la unidad. La unidad indica SoftDevice"
       drive_closed: "No se ha seleccionado ninguna unidad. Si no aparece, sigue las instrucciones de abajo para volver al modo de instalación por USB."
       drive_denied: "Briefing necesita permiso para guardar en la unidad. Elígela otra vez y pulsa Permitir o Guardar cambios."
       drive_failed: "No se ha podido abrir la unidad:"

@@ -240,6 +240,7 @@ de:
       port_busy_linux: "Ein anderes Programm nutzt das Gerät, oder Linux lässt diesen Browser es nicht öffnen. Schließen Sie jedes Programm, das es nutzt. Nutzt es keines, führen Sie sudo usermod -aG dialout $USER in einem Terminal aus (unter Arch Linux heißt die Gruppe uucp), melden Sie sich ab und wieder an und klicken Sie erneut auf Installieren."
       other_board: "Auf dieser Platine läuft skyBlip nicht. skyBlip läuft auf LilyGO T-Echo, T-Echo Plus und Seeed MeshTracker X1."
       not_drive: "Das ist nicht das richtige Laufwerk. Wählen Sie TECHOBOOT oder X1."
+      other_softdevice: "skyBlip startet mit diesem Bootloader nicht. Es ist nicht der ab Werk, wie auf einem X1, auf dem SoftRF lief. Spielen Sie den Werks-Bootloader wieder auf, wie es die Anleitung des Herstellers zeigt, und wählen Sie dann das Laufwerk erneut. Das Laufwerk meldet SoftDevice"
       drive_closed: "Kein Laufwerk ausgewählt. Wenn es fehlt, folgen Sie der Anleitung unten, um das Gerät wieder in den USB-Installationsmodus zu versetzen."
       drive_denied: "Briefing braucht Schreibzugriff auf das Laufwerk. Wählen Sie es erneut und klicken Sie auf Zulassen oder Änderungen speichern."
       drive_failed: "Das Laufwerk ließ sich nicht öffnen:"

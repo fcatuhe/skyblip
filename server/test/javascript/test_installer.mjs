@@ -143,7 +143,7 @@ test('an install leaves a trail of steps and facts, with no personal data', asyn
   const facts = recorded.filter(([name]) => name !== 'installer.stepped');
   assert.deepEqual(facts.map(([name]) => name), ['installer.port_chosen', 'installer.identified', 'installer.drive_chosen', 'installer.wrote']);
   assert.deepEqual(facts[1][1], { product: 'go', hw_model: 7, version: '2.7.15.567b8ea' });
-  assert.deepEqual(facts[2][1], { board: 'nRF52840-TEcho-v1', product: 'go' });
+  assert.deepEqual(facts[2][1], { board: 'nRF52840-TEcho-v1', product: 'go', softdevice: 'S140 version 6.1.1' });
   assert.deepEqual({ ...facts[3][1], write_ms: 0 }, { product: 'go', version: '0.1.0+1858', trusted: true, write_ms: 0, detail: null });
   const steps = recorded.filter(([name]) => name === 'installer.stepped').map(([, { phase, previous }]) => `${previous}>${phase}`);
   assert.deepEqual(steps, ['idle>choosing_port', 'choosing_port>reading', 'reading>drive', 'drive>choosing_drive', 'choosing_drive>downloading', 'downloading>writing', 'writing>written']);
@@ -190,6 +190,22 @@ test('a UF2 drive of another board is refused, and named', async () => {
   await unit.restart();
   await unit.install();
   assert.deepEqual(unit.state.notice, { key: 'other_board', detail: 'nRF52840-Feather-v1' });
+});
+
+// A pilot's X1 stayed on its drive after the install, its bootloader swapped for SoftRF's, which runs S140 6.1.1
+test('a bootloader on another SoftDevice than the image needs is refused before anything is written, and named', async () => {
+  const cases = [
+    [X1_INFO.replace('SoftDevice: S140 7.3.0', 'SoftDevice: S140 6.1.1'), 'S140 6.1.1'],
+    [T_ECHO_INFO.replace('S140 version 6.1.1', 'S140 version 7.3.0'), 'S140 version 7.3.0'],
+  ];
+  for (const [info, softdevice] of cases) {
+    const { unit, drive, recorded } = installer({ drive: new FakeDrive(info) });
+    await unit.restart();
+    await unit.install();
+    assert.deepEqual({ phase: unit.state.phase, notice: unit.state.notice }, { phase: 'drive', notice: { key: 'other_softdevice', detail: softdevice } });
+    assert.equal(drive.files.has(DRIVE_FILE), false);
+    assert.equal(recorded.find(([name]) => name === 'installer.drive_chosen')[1].softdevice, softdevice);
+  }
 });
 
 test('closing the folder chooser records a retryable drive notice, separate from denied permission', async () => {
