@@ -21,7 +21,6 @@ class Ag3335Wiring {
     Status begin() {
         if (!lines_ready()) return Status::Down;
         if (gpio_pin_configure_dt(&enable_, GPIO_OUTPUT_ACTIVE) != 0) return Status::Down;
-        if (gpio_pin_configure_dt(&rtc_enable_, GPIO_OUTPUT_ACTIVE) != 0) return Status::Down;
         if (gpio_pin_configure_dt(&reset_, GPIO_OUTPUT_INACTIVE) != 0) return Status::Down;
         if (gpio_pin_configure_dt(&sleep_, GPIO_OUTPUT_ACTIVE) != 0) return Status::Down;
         if (gpio_pin_configure_dt(&rtc_wake_, GPIO_OUTPUT_INACTIVE) != 0) return Status::Down;
@@ -36,14 +35,12 @@ class Ag3335Wiring {
 
    private:
     bool lines_ready() const {
-        return gpio_is_ready_dt(&enable_) && gpio_is_ready_dt(&rtc_enable_) &&
-               gpio_is_ready_dt(&reset_) && gpio_is_ready_dt(&sleep_) &&
-               gpio_is_ready_dt(&rtc_wake_);
+        return gpio_is_ready_dt(&enable_) && gpio_is_ready_dt(&reset_) &&
+               gpio_is_ready_dt(&sleep_) && gpio_is_ready_dt(&rtc_wake_);
     }
 
     const struct device* uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
     struct gpio_dt_spec enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_enable), gpios);
-    struct gpio_dt_spec rtc_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_rtc_enable), gpios);
     struct gpio_dt_spec reset_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_reset), gpios);
     struct gpio_dt_spec sleep_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_sleep), gpios);
     struct gpio_dt_spec rtc_wake_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_rtc_wake), gpios);
