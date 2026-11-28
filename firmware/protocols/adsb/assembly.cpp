@@ -274,7 +274,9 @@ bool Assembly::confirm(Aircraft& aircraft, const Cpr& cpr, const CprHalf& newest
     if (!independent ||
         !cpr_global(newest.format, cpr, cpr_of(other, !cpr.odd), aircraft.position, global))
         return true;
-    aircraft.confirmed = agrees(global, local, newest.format);
+    aircraft.confirmed = agrees(global, local, newest.format) &&
+                         distance_m(aircraft.position, local) <=
+                             jump_ceiling_m(aircraft.position_format, newest.format);
     return aircraft.confirmed;
 }
 

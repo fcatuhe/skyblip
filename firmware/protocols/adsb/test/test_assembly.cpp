@@ -332,6 +332,25 @@ TEST_CASE("adsb assembly: a track founded on a bad pair is dropped when an hones
     CHECK(metres_from(bravo.heard, kLatitude, kLongitude) < 5.1);
 }
 
+// confirm() marked the ghost confirmed before the jump check refused the honest frame, for 30 s.
+TEST_CASE("adsb assembly: a surface track founded 2 km off is dropped when an honest pair lands") {
+    Bravo bravo;
+    bravo.reference = reference_at(kLatitude, kLongitude);
+    REQUIRE(bravo.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false), 0));
+    REQUIRE(bravo.hear(
+        surface_position(kAddress, kNoCapability, kLatitude - 0.012, kLongitude - 0.02, true),
+        1000));
+    REQUIRE(bravo.heard.position_valid);
+    REQUIRE(metres_from(bravo.heard, kLatitude, kLongitude) > 1900);
+
+    bravo.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false), 2000);
+    bravo.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, true), 3000);
+    CHECK_FALSE(bravo.heard.position_valid);
+    bravo.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false), 4000);
+    REQUIRE(bravo.heard.position_valid);
+    CHECK(metres_from(bravo.heard, kLatitude, kLongitude) < 1.3);
+}
+
 TEST_CASE("adsb assembly: an honest track is confirmed by its next pair and stays") {
     Bravo bravo;
     for (uint32_t at_ms = 0; at_ms <= 5000; at_ms += 500)
