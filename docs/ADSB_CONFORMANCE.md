@@ -1,6 +1,6 @@
 # ADS-B conformance
 
-The host test suite reads skyBlip's ADS-B implementation 0.8.0 against RTCA DO-260B draft 4.2 (1090-WP30-18). This report covers the 282 receive-side clauses listed in [`firmware/test/adsb/clauses.txt`](../firmware/test/adsb/clauses.txt). The suite passed 199 cases and makes no claim on 88 (58 not implemented, 7 prose, 19 optional, 4 unmeasured): 5 cases it skipped and 83 clauses `clauses.txt` marks.
+The host test suite reads skyBlip's ADS-B implementation 0.8.2 against RTCA DO-260B draft 4.2 (1090-WP30-18). This report covers the 282 receive-side clauses listed in [`firmware/test/adsb/clauses.txt`](../firmware/test/adsb/clauses.txt). The suite passed 199 cases and makes no claim on 88 (58 not implemented, 7 prose, 19 optional, 4 unmeasured): 5 cases it skipped and 83 clauses `clauses.txt` marks.
 
 Each case names its file under `firmware/`. The cases under `protocols/adsb/test/conformance/` exercise the standalone decoder and report assembly. The device cases under `test/adsb/` test Bravo's driver against an LR2021 radio model, not physical radio hardware. A skipped case and a clause marked in `test/adsb/clauses.txt` give the reason they carry no claim. See [`firmware/test/adsb/README.md`](../firmware/test/adsb/README.md) for the receiver's scope and known gaps. Quoted prose comes from the test case's comment.
 
