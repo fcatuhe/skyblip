@@ -113,13 +113,13 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
     def with_geolite_database(place:)
       path = Pathname.new(Dir.mktmpdir).join("GeoLite2-City.mmdb")
       MaxmindDatabaseFile.write(path, build_epoch: 0, place:)
-      configured = Geocoder.config[:geoip2][:file]
-      Geocoder.configure(geoip2: { file: path.to_s })
-      Geocoder::Lookup.instance_variable_set(:@services, {})
+      configured = Rails.configuration.x.geolite_city_database
+      Rails.configuration.x.geolite_city_database = path
+      Maxmind::GeoliteCityDatabase.instance_variable_set(:@reader, nil)
       yield
     ensure
-      Geocoder.configure(geoip2: { file: configured })
-      Geocoder::Lookup.instance_variable_set(:@services, {})
+      Rails.configuration.x.geolite_city_database = configured
+      Maxmind::GeoliteCityDatabase.instance_variable_set(:@reader, nil)
       FileUtils.remove_entry(path.dirname)
     end
 end
