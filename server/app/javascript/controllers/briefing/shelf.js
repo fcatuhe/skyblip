@@ -3,6 +3,7 @@ import { productOf, trustedKeys } from "#skyblip/update"
 
 const offered = new WeakMap()
 const taking = new WeakMap()
+const picks = new WeakMap()
 
 export function shelfIn(element) {
   return element.querySelector("select[data-shelf]")
@@ -40,11 +41,21 @@ export function offerNewest(unit, shelf) {
   const newest = fitting(shelf, unit).find(option => option.dataset.kind === "base" && option.dataset.channel === channelOf(unit))
   if (!newest) return null
   offered.set(unit, device)
+  picks.set(unit, false)
   return take(unit, newest)
 }
 
 export function taken(unit) {
   return taking.get(unit) ?? null
+}
+
+export function pick(unit, option, read) {
+  picks.set(unit, true)
+  return take(unit, option, read)
+}
+
+export function picked(unit) {
+  return picks.get(unit) ?? false
 }
 
 export async function take(unit, option, read = fetchImage) {

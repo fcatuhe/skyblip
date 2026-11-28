@@ -37,6 +37,28 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
+  # The full image of the version just installed is the hardest case: the running version alone cannot tell the next install from the last.
+  test "a device that just installed one image installs another without a reload" do
+    in_range a_go(mtu: 498, uploadDelayMs: 4, probationMs: 1500)
+    on_the_shelf do
+      connect_device
+      click_link "Firmware"
+      click_button "Install 0.1.0+1765"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1765.", wait: 40
+
+      find(".firmware-other summary").click
+      select "0.1.0+1765, with the motion sensor firmware", from: "firmware-shelf"
+      screen "25a-firmware-another-image"
+      assert_no_selector ".firmware-status.is-good"
+      assert_no_link "Back to settings"
+      click_button "Install 0.1.0+1765"
+      assert_selector ".firmware-status", text: "Sending 0.1.0+1765"
+      assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1765.", wait: 40
+      assert_link "Back to settings"
+    end
+  end
+
   test "a device on a release is named by the release's tag alone, not by its build or its track" do
     in_range a_go(running: "0.1.0+1765", key: "88A4BEF5", downgrade: false)
     on_the_shelf do
@@ -118,6 +140,24 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       reported = journaled("device.install_reported")
       assert_equal [ "no_record", "0.1.0+1000", "0.1.0+1765", false ], reported.payload.values_at("cause", "running", "tried", "report")
       assert_equal "go-00012a", reported.device
+    end
+  end
+
+  test "an install that comes back on the old firmware says so to a pilot who left the page during the restart" do
+    in_range a_go(mtu: 498, uploadDelayMs: 4, failure: { image: "confirmed" })
+    on_the_shelf do
+      connect_device
+      click_link "Firmware"
+      click_button "Install 0.1.0+1765"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector ".firmware-status", text: "Sending 0.1.0+1765"
+      click_link "Back to skyBlip Go 00012A"
+      assert_selector ".unit-facts", text: "Restarting", wait: 30
+      assert_selector ".unit-facts", text: "Connected", wait: 10
+
+      click_link "Firmware"
+      assert_selector ".unit-message", text: "The device restarted on 0.1.0+1000 instead of 0.1.0+1765. It kept no record of the installation."
+      screen "28a-firmware-no-record-after-leaving"
     end
   end
 

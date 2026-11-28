@@ -209,6 +209,7 @@ export class Updater {
     defaults: null,
     refusedOnDevice: false,
     file: null,
+    attempt: null,
     advice: null,
     upgrade: null,
     settling: false,
@@ -327,7 +328,7 @@ export class Updater {
   clearImage() {
     this.#choice++;
     this.#image = null;
-    this.#set({ file: null, notice: null });
+    this.#set({ file: null, attempt: null, notice: null });
   }
 
   async choose(bytes, name, { channel = null } = {}) {
@@ -335,7 +336,7 @@ export class Updater {
     const choice = ++this.#choice;
     if (!image) {
       this.#image = null;
-      return this.#set({ file: null, notice: { key: 'not_image' } });
+      return this.#set({ file: null, attempt: null, notice: { key: 'not_image' } });
     }
     const sha = await sha256(bytes);
     if (choice !== this.#choice) return;
@@ -345,7 +346,7 @@ export class Updater {
     const file = { name, version: versionText(image.version), channel, bytes: bytes.length, key: image.key, sha: hex(sha.subarray(0, 8)), ...image.imu };
     this.#key = image.key;
     this.#product = image.product;
-    this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
+    this.#set({ file, attempt: null, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
   }
 
   async install() {
@@ -353,8 +354,8 @@ export class Updater {
     if (this.inFlight) return this.#set({ notice: { key: 'in_flight' } });
     const refusal = this.#refusal();
     if (refusal) return this.#set({ notice: { key: refusal } });
-    this.#set({ notice: null });
     const version = versionText(this.#version);
+    this.#set({ notice: null, attempt: { version, restarted: false } });
     if (this.#windowVersion === version) return this.#upload();
     this.#windowVersion = null;
     return this.#ask('dfu', { version });
@@ -693,7 +694,8 @@ export class Updater {
     const awaitingVerdict = phase === 'asking' && task === 'install';
     if (EXPECTED_DROP.has(phase) || awaitingVerdict) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, task: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
+      const { attempt } = this.#state;
+      this.#set({ phase: next, task: null, attempt: attempt && next === 'rebooting' ? { ...attempt, restarted: true } : attempt, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }

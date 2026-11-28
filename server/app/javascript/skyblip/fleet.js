@@ -77,7 +77,6 @@ function recordOf(slug, state, before = {}) {
 }
 
 export class Unit {
-  attempted = null;
   witness = new DeviceWitness();
   #fleet;
   #updater = null;
@@ -301,7 +300,7 @@ export class Fleet {
 
   #heard(unit, state) {
     if (unit.slug.startsWith('activate-') && state.address) this.#rename(unit, `go-${state.address.toLowerCase()}`);
-    this.#record(unit, unit.witness.witness(state, { attempted: unit.attempted }));
+    this.#record(unit, unit.witness.witness(state, { attempted: state.attempt?.version ?? null }));
     if (unit.remembered && LINKED_PHASES.has(state.phase)) {
       const record = recordOf(unit.slug, state, unit.record);
       const changed = JSON.stringify(record) !== JSON.stringify(unit.record);

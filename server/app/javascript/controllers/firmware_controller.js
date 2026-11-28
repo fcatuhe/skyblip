@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { joinFleet } from "#skyblip/fleet"
-import { channelOfImage, fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
+import { channelOfImage, fitting, offerNewest, pick, picked, shelfIn, take, taken } from "controllers/briefing/shelf"
 import { changesSince } from "controllers/briefing/changelog"
 import { imageName, productWord, runningName, trackOf } from "controllers/briefing/facts"
 import { installCause, reportShown } from "#skyblip/install_report"
@@ -55,26 +55,24 @@ export default class extends Controller {
   }
 
   async take() {
-    this.picked = true
     const option = this.shelf.selectedOptions[0]
     this.fileTarget.value = ""
     if (!option?.value) return this.unit.updater.clearImage()
-    await this.#taking(take(this.unit, option))
+    await this.#taking(pick(this.unit, option))
   }
 
   async choose() {
     const [file] = this.fileTarget.files
     if (!file) return
-    this.picked = true
     if (this.shelf) this.shelf.value = ""
-    await this.#taking(take(this.unit, { value: file.name }, async () => new Uint8Array(await file.arrayBuffer())))
+    await this.#taking(pick(this.unit, { value: file.name }, async () => new Uint8Array(await file.arrayBuffer())))
   }
 
+  // INFO: fc 28nov26 a file input fires no change for the name it holds, and a rebuild keeps the name, so Install empties it
   install() {
     if (taken(this.unit)) return
     this.estimate = null
-    this.unit.attempted = this.unit.state.file?.version
-    this.unit.restarted = false
+    this.fileTarget.value = ""
     this.unit.updater.install()
   }
 
@@ -92,11 +90,10 @@ export default class extends Controller {
   #render() {
     const unit = this.unit
     const state = unit?.state
-    const shown = Boolean(state) && (unit.linked || WORKING.has(state.phase) || Boolean(unit.attempted && state.phase !== "offline"))
+    const shown = Boolean(state) && (unit.linked || WORKING.has(state.phase) || Boolean(state.attempt && state.phase !== "offline"))
     this.panelTarget.hidden = !shown
     clearTimeout(this.recheck)
     if (!shown) return this.glass?.hide()
-    if (state.phase === "rebooting") unit.restarted = true
     const idle = state.phase === "ready" && state.status?.flight !== "airborne"
     const asks = idle && !state.refusedOnDevice
     if (unit.linked) offerNewest(unit, this.shelf)?.then(() => this.#render())
@@ -155,7 +152,7 @@ export default class extends Controller {
     const settling = state.image?.state === "probation" || state.image?.imu === "writing"
     const restoresMotionSensor = state.motionSensorWithoutFirmware && Boolean(file?.full) && file.version === state.running
     this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) ||
-      (state.upgrade === false && !this.picked && !restoresMotionSensor)
+      (state.upgrade === false && !picked(unit) && !restoresMotionSensor)
     if (airborne) this.installTarget.textContent = say("words.locked")
     else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: imageName(file) })
     else this.installTarget.textContent = this.installTarget.dataset.label
@@ -166,8 +163,8 @@ export default class extends Controller {
     return Boolean(this.changelogLanded || this.element.querySelector("template[data-changes]"))
   }
 
-  #done({ running, image, motionSensorWithoutFirmware }) {
-    return Boolean(this.unit.attempted) && running === this.unit.attempted && image?.state === "confirmed" && image.imu !== "writing" && !motionSensorWithoutFirmware
+  #done({ attempt, running, image, motionSensorWithoutFirmware }) {
+    return Boolean(attempt?.restarted) && running === attempt.version && image?.state === "confirmed" && image.imu !== "writing" && !motionSensorWithoutFirmware
   }
 
   #status(state, unit) {
@@ -217,7 +214,7 @@ export default class extends Controller {
     const refusedHere = state.refusedOnDevice && REFUSALS.has(notice?.key)
     if (notice && !notice.during && notice.key !== "needs_full" && !refusedHere) lines.push(sayNotice(notice, "notices"))
     if (this.shelfFailed) lines.push(say("notices.shelf_failed"))
-    const attempted = this.unit.restarted ? this.unit.attempted : null
+    const attempted = state.attempt?.restarted ? state.attempt.version : null
     const cause = installCause({ image, report: state.installReport, running: state.running, attempted })
     if (cause) lines.push(say(`notices.install_report.${cause}`, { running: state.running, attempted }))
     else if (IMAGE_NOTES[image?.state] && image.state !== "probation") lines.push(`${say(`notices.${IMAGE_NOTES[image.state]}`)} ${image.to ?? ""}`.trim())
