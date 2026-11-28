@@ -9,28 +9,42 @@ class MaxmindDatabaseFile
   MAP = 7
   ARRAY = 11
 
-  def self.write(path, build_epoch:)
-    File.binwrite(path, bytes(build_epoch:))
+  def self.write(path, build_epoch:, place: nil)
+    File.binwrite(path, bytes(build_epoch:, place:))
   end
 
-  def self.bytes(build_epoch:)
-    new(build_epoch).bytes
+  def self.bytes(build_epoch:, place: nil)
+    new(build_epoch, place).bytes
   end
 
-  def initialize(build_epoch)
-    @build_epoch = build_epoch
+  def initialize(build_epoch, place = nil)
+    @build_epoch, @place = build_epoch, place
   end
 
   def bytes
-    SEARCH_TREE_SEPARATOR + METADATA_MARKER + encode(metadata)
+    search_tree + SEARCH_TREE_SEPARATOR + data_section + METADATA_MARKER + encode(metadata)
   end
 
   private
+    def search_tree
+      if @place
+        record(node_count) + record(node_count + SEARCH_TREE_SEPARATOR.bytesize)
+      else
+        "".b
+      end
+    end
+
+    def data_section = @place ? encode(@place) : "".b
+
+    def node_count = @place ? 1 : 0
+
+    def record(value) = [ value ].pack("N")[1..]
+
     def metadata
       {
-        "node_count" => 0,
+        "node_count" => node_count,
         "record_size" => 24,
-        "ip_version" => 6,
+        "ip_version" => @place ? 4 : 6,
         "database_type" => "GeoLite2-City",
         "languages" => [ "en" ],
         "binary_format_major_version" => 2,
