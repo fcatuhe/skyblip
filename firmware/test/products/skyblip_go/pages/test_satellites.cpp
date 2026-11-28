@@ -93,3 +93,36 @@ TEST_CASE(
     // No PPS edge to measure the solution against is no figure, never a zero.
     CHECK(ink_in(canvas, 130, 150, 200, 168) == 0);
 }
+
+// A receiver link that stays unhealthy for hours counts its overruns without end.
+TEST_CASE(
+    "satellites page: the port line holds the largest baud and overrun count at every stage") {
+    using skyblip::ports::GnssConfigStage;
+    for (int stage = 0; skyblip::ports::to_string(static_cast<GnssConfigStage>(stage))[0] != '?';
+         stage++) {
+        CAPTURE(stage);
+        SatellitesSnapshot snapshot;
+        snapshot.health.baud = UINT32_MAX;
+        snapshot.health.overruns = UINT32_MAX;
+        snapshot.health.config_stage = static_cast<GnssConfigStage>(stage);
+        Glass canvas;
+        draw_satellites(canvas, snapshot);
+        CHECK(reads_in(canvas, "BAUD 4294967295", 0, 168, 200, 180));
+    }
+}
+
+TEST_CASE("satellites page: every system in the solution fits the line that counts them") {
+    using namespace skyblip::gnss;
+    SkyView sky;
+    for (int i = 0; i < 10; i++) sky.solving(System::Gps, static_cast<uint8_t>(1 + i));
+    for (int i = 0; i < 10; i++) sky.solving(System::Beidou, static_cast<uint8_t>(1 + i));
+    sky.solving(System::Glonass, 65);
+    sky.solving(System::Glonass, 66);
+    sky.solving(System::Qzss, kQzssFirstId);
+    sky.solving(System::Unknown, 99);
+    SatellitesSnapshot snapshot;
+    snapshot.sky = &sky;
+    Glass canvas;
+    draw_satellites(canvas, snapshot);
+    CHECK(reads_in(canvas, "GPS 10  BDS 10  GLO 2  QZS 1", 0, 18, 200, 32));
+}

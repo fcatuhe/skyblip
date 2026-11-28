@@ -85,7 +85,7 @@ int format_dwell(char* out, const radio::Entry& entry) {
 void draw_title(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     canvas.draw_text(kLeft, kTitleY, "RADIO LOG", true, 1);
 
-    char text[32];
+    char text[sizeof("RX  TX  NOISE ") + 3 * kUint32Digits];
     int written = format_string(text, "RX ");
     written += format_unsigned(text + written, snapshot.rx_ok);
     written += format_string(text + written, " TX ");
