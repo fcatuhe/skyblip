@@ -15,3 +15,7 @@ firmware/build-*/
 compile_commands.json
 __pycache__/
 
+
+# TLC writes its states and error traces beside the spec it checks
+server/test/tla/states/
+server/test/tla/*_TTrace_*.tla
