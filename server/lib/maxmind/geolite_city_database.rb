@@ -2,8 +2,18 @@ module Maxmind
   class GeoliteCityDatabase
     BASE_URL = "https://download.maxmind.com/geoip/databases/GeoLite2-City/download".freeze
 
-    def self.update_now
-      new.update
+    class << self
+      def update_now = new.update
+
+      def lookup(ip) = reader&.lookup(ip)
+
+      private
+        # INFO: fc 28nov26 each process reads the database into memory once, so a download reaches the visits at the next restart
+        def reader
+          @reader ||= (MaxMindDB.new(database_path.to_s) if database_path.exist?)
+        end
+
+        def database_path = Rails.configuration.x.geolite_city_database
     end
 
     def update
@@ -13,9 +23,6 @@ module Maxmind
       else
         Rails.logger.info "[MaxMind] Database is up to date (#{build_date})"
       end
-
-      # INFO: fc 17oct26 always run: the geocoder caches its lookup in memory, and may serve a stale database
-      Geocoder::Geoip2DatabaseManager.new.ensure_current(disk_build_epoch)
     end
 
     private
@@ -68,9 +75,7 @@ module Maxmind
         end
       end
 
-      def database_path
-        Pathname.new(Geocoder.config[:geoip2][:file])
-      end
+      def database_path = Rails.configuration.x.geolite_city_database
 
       def account_id = Rails.application.credentials.dig(:maxmind, :account_id)
 

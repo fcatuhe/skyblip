@@ -1,10 +1,14 @@
 require "test_helper"
 require_relative "../test_helpers/analytics_test_helper"
+require_relative "../test_helpers/maxmind_database_file"
 
 class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
   include AnalyticsTestHelper
 
   SAFARI = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+  BORDEAUX = { "country" => { "iso_code" => "FR", "names" => { "en" => "France", "fr" => "France" } },
+               "subdivisions" => [ { "iso_code" => "NAQ", "names" => { "en" => "Nouvelle-Aquitaine" } } ],
+               "city" => { "names" => { "en" => "Bordeaux" } } }.freeze
 
   # Development and test turn tracking off, so this is the one place the production path runs.
   setup do
@@ -37,6 +41,25 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
     assert_equal SAFARI, visit.user_agent
     assert_not visit.has_attribute?(:ip)
     assert_not visit.has_attribute?(:latitude)
+  end
+
+  # The stand-in database places the addresses from 128.0.0.0 up in Bordeaux, and knows none below.
+  test "a visit keeps the place the GeoLite database gives its address" do
+    with_geolite_database(place: BORDEAUX) do
+      get page_path(slug: "go"), headers: { "User-Agent" => SAFARI, "REMOTE_ADDR" => "203.0.113.8" }
+    end
+
+    visit = Ahoy::Visit.sole
+    assert_equal [ "France", "FR", "Nouvelle-Aquitaine", "Bordeaux" ], [ visit.country, visit.country_code, visit.region, visit.city ]
+  end
+
+  test "a visit from an address the GeoLite database does not know keeps no place" do
+    with_geolite_database(place: BORDEAUX) do
+      get page_path(slug: "go"), headers: { "User-Agent" => SAFARI, "REMOTE_ADDR" => "10.0.0.8" }
+    end
+
+    visit = Ahoy::Visit.sole
+    assert_equal [ nil, nil, nil, nil ], [ visit.country, visit.country_code, visit.region, visit.city ]
   end
 
   test "the tracking script loads only where tracking is on" do
@@ -85,4 +108,18 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
       assert_match(/ahoy_visitor=#{visitor};.*expires=#{13.months.from_now.utc.strftime("%a, %d %b %Y")}/i, response.headers["Set-Cookie"].to_s)
     end
   end
+
+  private
+    def with_geolite_database(place:)
+      path = Pathname.new(Dir.mktmpdir).join("GeoLite2-City.mmdb")
+      MaxmindDatabaseFile.write(path, build_epoch: 0, place:)
+      configured = Rails.configuration.x.geolite_city_database
+      Rails.configuration.x.geolite_city_database = path
+      Maxmind::GeoliteCityDatabase.instance_variable_set(:@reader, nil)
+      yield
+    ensure
+      Rails.configuration.x.geolite_city_database = configured
+      Maxmind::GeoliteCityDatabase.instance_variable_set(:@reader, nil)
+      FileUtils.remove_entry(path.dirname)
+    end
 end
