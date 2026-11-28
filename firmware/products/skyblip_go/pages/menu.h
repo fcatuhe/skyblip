@@ -30,6 +30,9 @@ enum class MenuRow : uint8_t {
     Detected,
     BravoLog,
     Power,
+    Flarm,
+    FlarmHeard,
+    FlarmId,
     kCount
 };
 
@@ -41,6 +44,12 @@ struct Menu {
 Menu menu_for(Page page);
 // INFO: fc 13nov26 the rows AIRCRAFT opens: what Bravo heard, then the three it sets
 Menu aircraft_menu();
+// INFO: fc 27nov26 the rows FLARM opens: what the Go hears aboard, then the ID it sets
+Menu flarm_menu();
+
+constexpr bool hex_field(MenuRow row) {
+    return row == MenuRow::AircraftAddress || row == MenuRow::FlarmId;
+}
 
 struct MenuValues {
     go::Settings settings{};
@@ -50,6 +59,9 @@ struct MenuValues {
     std::optional<uint32_t> own_transponder{};
     // INFO: fc 15nov26 the Go has a buzzer or a haptic, so its alarm can be soft or loud
     bool sounds{true};
+    FlarmDetected flarm{};
+    // INFO: fc 27nov26 the FLARM ID the Go hears aboard, the one a FLARM ID typed must match
+    std::optional<uint32_t> own_flarm{};
 };
 
 struct MenuSnapshot {
@@ -57,6 +69,7 @@ struct MenuSnapshot {
     MenuValues values{};
     MenuRow focus{MenuRow::Light};
     bool aircraft{false};
+    bool flarm{false};
 };
 
 constexpr int kCallsignCharacters = static_cast<int>(kCallsignBytes) - 1;
@@ -71,7 +84,7 @@ static_assert(kAircraftAddressCharacters <= kCallsignCharacters,
 char next_hex_character(char character);
 // INFO: fc 11nov26 kAircraftAddressUnset for six digits that are not all typed, or that spell
 // 000000
-uint32_t aircraft_address_typed(const char* edited);
+uint32_t hex_typed(const char* edited);
 
 struct AircraftType {
     uint8_t code;
@@ -128,7 +141,9 @@ struct CallsignSnapshot {
     const char* text{""};
     int cursor{0};
     bool clears{false};
-    std::optional<uint32_t> own_transponder{};
+    // INFO: fc 27nov26 what a unit hears aboard, the one value the field accepts
+    std::optional<uint32_t> heard{};
+    const char* heard_text{""};
     bool refused{false};
 };
 
@@ -145,6 +160,7 @@ constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
 constexpr int kCallsignCursorHeight = 3;
 constexpr int kOwnTransponderY = kCallsignCursorY + kCallsignCursorHeight + 8;
 constexpr const char* kOwnTransponderText = "BRAVO HEARS";
+constexpr const char* kOwnFlarmText = "GO HEARS";
 constexpr const char* kOwnTransponderRefusedText = "NOT ACCEPTED";
 
 constexpr const char* kFieldChangeVerb = "CHANGE";
@@ -158,10 +174,12 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
 
 constexpr const char* kAircraftAddressClearLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC"};
 constexpr int kAircraftAddressClearLineCount = 3;
+constexpr const char* kFlarmClearOwner = "YOUR FLARM";
 
 struct ClearSnapshot {
     const char* title{""};
     const char* text{""};
+    const char* owner{kAircraftAddressClearLines[0]};
     uint32_t seconds_left{0};
 };
 
@@ -177,7 +195,8 @@ class MenuEditor {
 
     bool active() const { return active_; }
     Page page() const { return page_; }
-    bool aircraft() const { return aircraft_; }
+    bool aircraft() const { return submenu_ == Submenu::Aircraft; }
+    bool flarm() const { return submenu_ == Submenu::Flarm; }
     Menu menu() const;
     MenuRow focus() const;
     Page opening() const { return opening_; }
@@ -199,6 +218,7 @@ class MenuEditor {
     MenuAction act(const MenuValues& current, MenuValues& next);
     MenuAction advance();
     MenuAction use_detected(const MenuValues& current, MenuValues& next);
+    MenuAction use_flarm(const MenuValues& current, MenuValues& next);
     void back_to_settings();
     void edit(MenuRow field, const MenuValues& current);
     int characters() const;
@@ -211,6 +231,7 @@ class MenuEditor {
     void close_field();
 
     enum class Pending : uint8_t { None, Act, Advance };
+    enum class Submenu : uint8_t { None, Aircraft, Flarm };
 
     Page page_{Page::Radar};
     Page opening_{Page::Radar};
@@ -218,7 +239,7 @@ class MenuEditor {
     uint32_t idle_since_ms_{0};
     Pending pending_{Pending::None};
     bool active_{false};
-    bool aircraft_{false};
+    Submenu submenu_{Submenu::None};
     bool editing_{false};
     bool clearing_{false};
     bool refused_{false};

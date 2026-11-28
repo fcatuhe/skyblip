@@ -184,6 +184,23 @@ TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells
     CHECK(alptas == 1);
 }
 
+// The FLARM in our own glider is the loudest by far, so the Go proposes it on the grid.
+TEST_CASE("scenario: the Go names the FLARM aboard and proposes it, not the one across the grid") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/own_flarm.json"));
+    const simulator::ScenarioAircraft& aboard = simulator.scenario().aircraft.front();
+    simulator.run(simulator.scenario().duration_ms);
+    CHECK(simulator.world().failures() == 0);
+    const bus::State& state = simulator.product().state();
+    REQUIRE(state.flight.confirmed_state == flight::FlightState::Ground);
+    REQUIRE(state.aboard.has_value());
+    CHECK(state.aboard->address == aboard.address);
+    CHECK(state.aboard->address_mapping_table == adsl::kAddressTableFlarm);
+    CHECK(simulator.product().screen().noticing());
+    CHECK(simulator.product().screen().notice() == go::ScreenService::Notice::NewFlarm);
+}
+
 // The ALP-TAS target the scenario flies must come back with the position and
 // identity it was sent with, not merely as a blip: a decrypt that lands on
 // plausible-looking garbage is worse than a dropped frame.

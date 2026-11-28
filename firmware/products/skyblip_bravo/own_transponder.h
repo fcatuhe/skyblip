@@ -1,11 +1,11 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_OWN_TRANSPONDER_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_OWN_TRANSPONDER_H
 
-#include <array>
 #include <cstdint>
 #include <optional>
 
 #include "core/comms/peer.h"
+#include "core/traffic/aboard.h"
 #include "protocols/adsb/message.h"
 
 namespace skyblip::bravo {
@@ -22,29 +22,18 @@ class OwnTransponder {
     static constexpr int kTrackedEmitters = 8;
 
     void hear(const adsb::Message& message, uint32_t now_ms);
-    void tick(uint32_t now_ms);
+    void tick(uint32_t now_ms) { aboard_.tick(now_ms); }
 
     std::optional<comms::OwnTransponderHeard> heard() const;
 
    private:
-    struct Emitter {
-        bool used{false};
-        uint32_t address{0};
-        int32_t level_sixteenths_dbm{0};
-        uint32_t heard_ms{0};
+    struct Identified {
         char callsign[comms::kPeerCallsignBytes]{};
         uint8_t category{0};
     };
 
-    Emitter* emitter_for(uint32_t address, uint32_t now_ms);
-    static bool live(const Emitter& emitter, uint32_t now_ms);
-    const Emitter* leader(uint32_t now_ms) const;
-
-    std::array<Emitter, kTrackedEmitters> emitters_{};
-    uint32_t leader_address_{0};
-    uint32_t leading_since_ms_{0};
-    bool leading_{false};
-    bool held_{false};
+    traffic::Aboard<Identified, kTrackedEmitters> aboard_{
+        {kLoudFloorDbm, kLeadDb, kLeadHoldMs, kEmitterMaxAgeMs}};
 };
 
 }  // namespace skyblip::bravo

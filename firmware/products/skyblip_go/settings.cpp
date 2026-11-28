@@ -15,7 +15,15 @@ namespace skyblip::go {
 namespace {
 
 constexpr size_t kPayload = sizeof(Settings);
-static_assert(kPayload == 36, "a version 14 blob is read with this payload size");
+static_assert(kPayload == 40, "a version 16 blob is read with this payload size");
+static_assert(offsetof(Settings, flarm_id) == kPayloadBeforeFlarmId, "version 16 appends flarm_id");
+
+size_t payload_of(uint8_t version) {
+    if (version == kBlobVersion) return kPayload;
+    if (version == kBlobVersionBeforeFlarmId || version == kBlobVersionBeforePowerSwitch)
+        return kPayloadBeforeFlarmId;
+    return 0;
+}
 
 bool callsign_is_typeable(const char* callsign) {
     for (size_t i = 0; i < kCallsignBytes; i++) {
@@ -55,6 +63,7 @@ Status validate(const Settings& settings) {
         return Status::OutOfRange;
     if (settings.bravo.type > kBluetoothAddressTypeCeiling) return Status::OutOfRange;
     if (settings.power_switch > power::Switch::Cable) return Status::OutOfRange;
+    if (settings.flarm_id > settings::kAddressMask) return Status::OutOfRange;
     return Status::Ok;
 }
 
@@ -67,12 +76,14 @@ void to_blob(const Settings& settings, uint8_t* out, size_t capacity) {
 Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     if (length < settings::kBlobOverhead) return Status::Crc;
     const uint8_t version = settings::blob_version(in);
-    if (version != kBlobVersion && version != kBlobVersionBeforePowerSwitch)
-        return Status::Unsupported;
-    const Status status = settings::open(in, length, kPayload, &out);
+    const size_t payload = payload_of(version);
+    if (payload == 0) return Status::Unsupported;
+    Settings loaded = defaults();
+    const Status status = settings::open(in, length, payload, &loaded);
     if (status != Status::Ok) return status;
-    if (version == kBlobVersionBeforePowerSwitch) out.power_switch = power::Switch::Button;
-    if (validate(out) != Status::Ok) return Status::Invalid;
+    if (version == kBlobVersionBeforePowerSwitch) loaded.power_switch = power::Switch::Button;
+    if (validate(loaded) != Status::Ok) return Status::Invalid;
+    out = loaded;
     return Status::Ok;
 }
 
@@ -93,8 +104,7 @@ void write_settings_fields(cbor::Writer& writer, const Settings& settings) {
     writer.add_code(link::config_key::kAlarm, settings.alarm);
 }
 
-Status apply_settings(Settings& settings, const cbor::Reader& frame,
-                      std::optional<uint32_t> own_transponder) {
+Status apply_settings(Settings& settings, const cbor::Reader& frame, const Heard& heard) {
     Settings next = settings;
     Status status =
         apply_key(frame.read_unsigned(link::set_key::kAircraftType), [&](uint32_t value) {
@@ -135,10 +145,17 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame,
             apply_key(frame.read_unsigned(link::set_key::kAircraftAddress), [&](uint32_t value) {
                 if (value != kAircraftAddressUnset && !settings::icao_assignable(value))
                     return Status::OutOfRange;
-                if (contradicts(value, own_transponder)) return Status::Conflict;
+                if (contradicts(value, heard.own_transponder)) return Status::Conflict;
                 next.aircraft_address = value;
                 return Status::Ok;
             });
+    if (status == Status::Ok)
+        status = apply_key(frame.read_unsigned(link::set_key::kFlarmId), [&](uint32_t value) {
+            if (value > settings::kAddressMask) return Status::OutOfRange;
+            if (contradicts_flarm(value, heard.own_flarm)) return Status::Mismatch;
+            next.flarm_id = value;
+            return Status::Ok;
+        });
     if (status == Status::Ok) {
         char callsign[kCallsignBytes] = {0};
         const Status read = frame.read_text(link::set_key::kCallsign, callsign, sizeof(callsign));
@@ -156,6 +173,10 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame,
 bool contradicts(uint32_t aircraft_address, std::optional<uint32_t> own_transponder) {
     return aircraft_address != kAircraftAddressUnset && own_transponder &&
            aircraft_address != *own_transponder;
+}
+
+bool contradicts_flarm(uint32_t flarm_id, std::optional<uint32_t> own_flarm) {
+    return flarm_id != kFlarmIdUnset && own_flarm && flarm_id != *own_flarm;
 }
 
 }  // namespace skyblip::go

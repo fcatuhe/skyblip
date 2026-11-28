@@ -85,6 +85,7 @@ de:
       heard_setting: Einstellung
       heard_now: Jetzt
       heard_from: Von Bravo
+      use_flarm: Diese ID übernehmen
     capture:
       title: Diagnoseaufzeichnung
       profile: Profil
@@ -361,6 +362,8 @@ de:
       use_heard:
         one: Diesen Wert übernehmen
         other: Diese Werte übernehmen
+      flarm_heard: "Ihr Go empfängt FLARM %{id} an Bord."
+      flarm_heard_same: "Ihr Go empfängt wie eingestellt FLARM %{id} an Bord."
       "on": "ein"
       "off": "aus"
       none: keine
@@ -449,6 +452,7 @@ de:
       unknown_command: Diese Firmware ist zu alt, um Einstellungen zu ändern. Aktualisieren Sie sie zuerst.
       out_of_range: Das Gerät hat einen Wert abgelehnt, den es nicht speichern kann. FFFFFF ist keine ICAO-Adresse für ein Luftfahrzeug. Nichts wurde geändert.
       not_own_transponder: Ihr Bravo erkennt einen anderen Transponder als den eigenen. Prüfen Sie die Adresse oder übernehmen Sie die von Bravo empfangene. Nichts wurde geändert.
+      not_own_flarm: Ihr Go empfängt einen anderen FLARM an Bord. Prüfen Sie die ID oder übernehmen Sie die vom Go empfangene. Nichts wurde geändert.
       set_on_go: Dieser Bravo ist mit einem Go gekoppelt. Die Einstellung ALARM am Go gilt für beide. Nichts wurde geändert.
     capture_notices:
       capture_armed: Bereit. Die LED blinkt alle 3 s zweimal, bis die Aufzeichnung endet. Sie läuft auch im Flug weiter.

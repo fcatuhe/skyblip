@@ -121,21 +121,21 @@ TEST_CASE("radar menu: a paired Go that cannot sound reads BRAVO LOUD whole on i
     CHECK(row_value_reads(drawn, MenuRow::Alarm, "BRAVO LOUD", true));
 }
 
-// Eight rows on seven lines: POWER, set once per aircraft, is the one the menu slides up to.
-TEST_CASE("radar menu: seven rows fit the glass, and the focus on POWER slides the menu up one") {
+// Nine rows on seven lines: BRAVO and POWER, each set once, are the two the menu slides up to.
+TEST_CASE("radar menu: seven rows fit the glass, and the focus on POWER slides the menu up two") {
     MenuValues values = default_menu_values();
     values.settings.alarm = go::Alarm::Visual;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.row_count == kMenuLines + 1);
+    REQUIRE(menu.row_count == kMenuLines + 2);
 
     const Drawn bravo = page_of(Page::Radar, values, MenuRow::Bravo);
-    CHECK(line_of(bravo, MenuRow::Light) == 0);
+    CHECK(line_of(bravo, MenuRow::Aircraft) == 0);
     CHECK(line_of(bravo, MenuRow::Bravo) == kMenuLines - 1);
     CHECK(row_value_reads(bravo, MenuRow::Alarm, "VISUAL", false));
     CHECK(reads_pad_key(bravo.canvas, "NEXT"));
 
     const Drawn last = page_of(Page::Radar, values, MenuRow::Power);
-    CHECK(line_of(last, MenuRow::Aircraft) == 0);
+    CHECK(line_of(last, MenuRow::Flarm) == 0);
     CHECK(line_of(last, MenuRow::Power) == kMenuLines - 1);
     CHECK(row_label_reads(last, MenuRow::Power, true));
     CHECK(row_value_reads(last, MenuRow::Power, "BUTTON", true));
@@ -371,12 +371,12 @@ TEST_CASE("menu page: the aircraft address ring is blank, 0 to 9, A to F, and ba
 
 // 000000 is no address, and 0 is what the setting holds while it is unset.
 TEST_CASE("menu page: six typed hex digits are an address, and a blank or 000000 is none") {
-    CHECK(aircraft_address_typed("3C6586") == 0x3C6586u);
-    CHECK(aircraft_address_typed("FFFFFF") == 0xFFFFFFu);
-    CHECK(aircraft_address_typed("00A0F1") == 0x00A0F1u);
-    CHECK(aircraft_address_typed("3C65 6") == kAircraftAddressUnset);
-    CHECK(aircraft_address_typed("      ") == kAircraftAddressUnset);
-    CHECK(aircraft_address_typed("000000") == kAircraftAddressUnset);
+    CHECK(hex_typed("3C6586") == 0x3C6586u);
+    CHECK(hex_typed("FFFFFF") == 0xFFFFFFu);
+    CHECK(hex_typed("00A0F1") == 0x00A0F1u);
+    CHECK(hex_typed("3C65 6") == kAircraftAddressUnset);
+    CHECK(hex_typed("      ") == kAircraftAddressUnset);
+    CHECK(hex_typed("000000") == kAircraftAddressUnset);
 }
 
 // The ring a pad rolls: blank, dash, letters, digits, and round again.

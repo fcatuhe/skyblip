@@ -18,7 +18,7 @@
   const MAX_READ_CHUNKS = 8;
   const BROWSER_COMMANDS = ['browser_challenge', 'trust_browser', 'browsers', 'forget_browser'];
   const TRUSTED_TASKS = ['set', 'dfu', 'register', 'pair'];
-  const DEFAULTS = { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud' };
+  const DEFAULTS = { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud', flarm_id: 0 };
   const encoder = new TextEncoder();
   const modules = () => Promise.all([import('#skyblip/link'), import('#skyblip/cbor'), import('#skyblip/image')]);
   const later = (fn, ms = 0) => setTimeout(fn, ms);
@@ -67,7 +67,7 @@
         flight: 'ground',
         battery: 82,
         charging: false,
-        stored: { aircraft_type: 3, units: 'nautical', callsign: 'F-JXYZ', aircraft_address: 0, alarm: 'soft' },
+        stored: { aircraft_type: 3, units: 'nautical', callsign: 'F-JXYZ', aircraft_address: 0, alarm: 'soft', flarm_id: 0 },
         mtu: 247,
         pressAfterMs: null,
         uploadDelayMs: 0,

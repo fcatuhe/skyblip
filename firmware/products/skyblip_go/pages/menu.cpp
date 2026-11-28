@@ -7,11 +7,12 @@ namespace skyblip::go {
 
 namespace {
 
-constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light, MenuRow::Aircraft, MenuRow::Units,
-                                      MenuRow::Range, MenuRow::Plot,     MenuRow::Alarm,
-                                      MenuRow::Bravo, MenuRow::Power};
+constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light, MenuRow::Aircraft, MenuRow::Flarm,
+                                      MenuRow::Units, MenuRow::Range,    MenuRow::Plot,
+                                      MenuRow::Alarm, MenuRow::Bravo,    MenuRow::Power};
 constexpr MenuRow kAircraftMenuRows[] = {MenuRow::Detected, MenuRow::AircraftType,
                                          MenuRow::Callsign, MenuRow::AircraftAddress};
+constexpr MenuRow kFlarmMenuRows[] = {MenuRow::FlarmHeard, MenuRow::FlarmId};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
                                        MenuRow::BravoLog, MenuRow::SelfTest};
 
@@ -60,15 +61,26 @@ const char* detected_verb(const Detected& detected, const Settings& settings) {
 
 const char* row_verb(MenuRow row, const MenuValues& values) {
     if (row == MenuRow::Detected) return detected_verb(values.detected, values.settings);
-    return opens_a_page(row) || row == MenuRow::Aircraft ? "OPEN" : "CHANGE";
+    if (row == MenuRow::FlarmHeard)
+        return values.flarm.state == FlarmDetection::Heard &&
+                       !flarm_matches(values.flarm, values.settings)
+                   ? "SET"
+                   : "";
+    return opens_a_page(row) || row == MenuRow::Aircraft || row == MenuRow::Flarm ? "OPEN"
+                                                                                  : "CHANGE";
+}
+
+int hex_value(char* out, uint32_t value) {
+    return value == kAircraftAddressUnset ? format_string(out, "NONE")
+                                          : format_hex(out, value, kAircraftAddressCharacters);
 }
 
 // INFO: fc 14nov26 under the digits, at the size the field is read at, the refusal first
-void draw_own_transponder(ui::Canvas& canvas, uint32_t address, bool refused) {
+void draw_heard(ui::Canvas& canvas, uint32_t address, const char* heard_text, bool refused) {
     char digits[kAircraftAddressCharacters + 1];
     digits[format_hex(digits, address, kAircraftAddressCharacters)] = 0;
     int y = kOwnTransponderY;
-    for (const char* line : {refused ? kOwnTransponderRefusedText : "", kOwnTransponderText,
+    for (const char* line : {refused ? kOwnTransponderRefusedText : "", heard_text,
                              static_cast<const char*>(digits)}) {
         if (line[0] == 0) continue;
         canvas.draw_text(centred_x(line, kMenuScale), y, line, true, kMenuScale);
@@ -87,6 +99,8 @@ Menu menu_for(Page page) {
 }
 
 Menu aircraft_menu() { return menu_of(kAircraftMenuRows); }
+
+Menu flarm_menu() { return menu_of(kFlarmMenuRows); }
 
 int menu_row_index(const Menu& menu, MenuRow row) {
     for (int i = 0; i < menu.row_count; i++)
@@ -118,6 +132,8 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Bravo: return "BRAVO";
         case MenuRow::Aircraft: return "AIRCRAFT";
         case MenuRow::Power: return "POWER";
+        case MenuRow::Flarm: return "FLARM";
+        case MenuRow::FlarmId: return kFlarmIdLabel;
         default: return "";
     }
 }
@@ -169,7 +185,7 @@ char next_hex_character(char character) {
     return kCallsignBlank;
 }
 
-uint32_t aircraft_address_typed(const char* edited) {
+uint32_t hex_typed(const char* edited) {
     uint32_t address = 0;
     for (int i = 0; i < kAircraftAddressCharacters; i++) {
         const char digit = edited[i];
@@ -212,11 +228,10 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
         case MenuRow::Aircraft:
         case MenuRow::Callsign: written = callsign_value(out, values.settings.callsign); break;
         case MenuRow::AircraftAddress:
-            written =
-                values.settings.aircraft_address == kAircraftAddressUnset
-                    ? format_string(out, "NONE")
-                    : format_hex(out, values.settings.aircraft_address, kAircraftAddressCharacters);
+            written = hex_value(out, values.settings.aircraft_address);
             break;
+        case MenuRow::Flarm:
+        case MenuRow::FlarmId: written = hex_value(out, values.settings.flarm_id); break;
         case MenuRow::Units:
             written = format_string(
                 out, values.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
@@ -263,19 +278,38 @@ void draw_aircraft_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
     }
 }
 
+// INFO: fc 27nov26 what the Go hears aboard takes four lines, and the ID it sets fits under it
+void draw_flarm_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
+    draw_flarm_detected(canvas, snapshot.values.flarm, snapshot.values.settings,
+                        snapshot.focus == MenuRow::FlarmHeard);
+    char value[kMenuValueBytes];
+    menu_row_value(value, MenuRow::FlarmId, snapshot.values);
+    row_text(canvas, kDetectedLines, menu_row_label(MenuRow::FlarmId), value,
+             snapshot.focus == MenuRow::FlarmId);
+}
+
+Menu snapshot_menu(const MenuSnapshot& snapshot) {
+    if (snapshot.aircraft) return aircraft_menu();
+    if (snapshot.flarm) return flarm_menu();
+    return menu_for(snapshot.page);
+}
+
 Keys menu_keys(const MenuSnapshot& snapshot) {
-    const Menu menu = snapshot.aircraft ? aircraft_menu() : menu_for(snapshot.page);
+    const Menu menu = snapshot_menu(snapshot);
     const bool last = menu_row_index(menu, snapshot.focus) == menu.row_count - 1;
     return {row_verb(snapshot.focus, snapshot.values), last ? "BACK" : "NEXT"};
 }
 
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
-    const char* title =
-        snapshot.aircraft ? menu_row_label(MenuRow::Aircraft) : menu_title(snapshot.page);
+    const char* title = snapshot.aircraft ? menu_row_label(MenuRow::Aircraft)
+                        : snapshot.flarm  ? menu_row_label(MenuRow::Flarm)
+                                          : menu_title(snapshot.page);
     draw_heading(canvas, title, Heading::Opened);
 
     if (snapshot.aircraft) {
         draw_aircraft_menu(canvas, snapshot);
+    } else if (snapshot.flarm) {
+        draw_flarm_menu(canvas, snapshot);
     } else {
         const Menu menu = menu_for(snapshot.page);
         const int first = menu_first_row(menu, snapshot.focus);
@@ -304,8 +338,7 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
     canvas.rectangle(at, kCallsignCursorY, 5 * kCallsignScale, kCallsignCursorHeight, true,
                      /*fill=*/true);
 
-    if (snapshot.own_transponder)
-        draw_own_transponder(canvas, *snapshot.own_transponder, snapshot.refused);
+    if (snapshot.heard) draw_heard(canvas, *snapshot.heard, snapshot.heard_text, snapshot.refused);
     draw_keys(canvas, {field_button_verb(snapshot), kFieldChangeVerb});
 }
 
@@ -313,7 +346,7 @@ void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
     draw_heading(canvas, snapshot.title, Heading::Opened);
     const BodyLine body[] = {{snapshot.text, kCallsignScale},
                              {""},
-                             {kAircraftAddressClearLines[0]},
+                             {snapshot.owner},
                              {kAircraftAddressClearLines[1]},
                              {kAircraftAddressClearLines[2]}};
     draw_question_body(canvas, Heading::Opened, snapshot.seconds_left, body, 5);

@@ -104,8 +104,9 @@ inline constexpr Value kReasonValues[] = {
     {"link_lost", 61},
     {"unknown_protocol", 62},
     {"window_closed", 63},
+    {"not_own_flarm", 64},
 };
-inline constexpr Enumeration kReason{kReasonValues, 63};
+inline constexpr Enumeration kReason{kReasonValues, 64};
 
 inline constexpr Value kAlarmValues[] = {
     {"off", 0},
@@ -398,6 +399,7 @@ inline constexpr Key kConfigKeys[] = {
     {"alarm_from_go", 13, Type::Boolean, nullptr, 0, false},
     {"annunciator_fitted", 14, Type::Boolean, nullptr, 0, false},
     {"paired_tag", 15, Type::Unsigned, nullptr, 0, false},
+    {"flarm_id", 16, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kStatusKeys[] = {
@@ -413,6 +415,7 @@ inline constexpr Key kStatusKeys[] = {
     {"own_transponder_callsign", 10, Type::Text, nullptr, 0, false},
     {"own_transponder_category", 11, Type::Unsigned, nullptr, 0, false},
     {"no_tx", 12, Type::Enum, &kNoTx, 0, false},
+    {"own_flarm", 13, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kTimingKeys[] = {
@@ -824,10 +827,10 @@ inline constexpr Key kPairKeys[] = {
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
-    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 14},
-    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 14},
-    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 14},
-    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
+    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 15},
+    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 15},
+    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 15},
+    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 13},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
     {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 96},

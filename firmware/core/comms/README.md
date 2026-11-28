@@ -106,7 +106,7 @@ On a 182-byte link each diagnostics group answers in one frame, except the recei
 
 A log chunk's envelope is 18 bytes at its widest, its records' byte string adds a head of two bytes up to ten records and three past it, and a diagnostics chunk names its store in two more. That leaves room for six records at 182 bytes, nine at 244 and nineteen at 495, so `kMaxLogRecordsPerChunk` is 19.
 
-The widest host writes are `trust_browser`, 133 bytes, `register`, 88, and `unlock`, 74. Every other command, `set` at 34 bytes the widest, fits the two 18-byte prepare segments a link that never exchanged its MTU reassembles under `CONFIG_BT_ATT_PREPARE_COUNT=2` (`products/common/prj.conf`).
+The widest host writes are `trust_browser`, 133 bytes, `register`, 88, and `unlock`, 74. Every other command, `set` at 38 bytes the widest, fits the three 18-byte prepare segments a link that never exchanged its MTU reassembles under `CONFIG_BT_ATT_PREPARE_COUNT=3` (`products/common/prj.conf`). The third segment came with `flarm_id`, which took the widest `set` past two.
 
 ## The peer endpoint
 

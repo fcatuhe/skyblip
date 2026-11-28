@@ -292,14 +292,15 @@ class Product {
     // INFO: fc 20nov26 declared before the config service, which asks it whether a write is safe
     common::PowerService power_{context_, settings_.battery_offset_mv};
     SettingsStore settings_store_{settings_, state_.activation, state_.own_transponder,
-                                  roles_.capabilities};
+                                  state_.aboard, roles_.capabilities};
     common::ConfigLinkService config_link_{
         context_,     settings_store_,          power_.cutoff_monitor(),
         "skyBlip Go", identity::bluetooth_name, dfu::Product::Go};
     common::OwnshipService ownship_{context_, settings_.aircraft_type, &bus_.accelerometer};
     traffic::VersionTable versions_{};
     RadioService radio_{context_, settings_, versions_};
-    TrafficService traffic_{context_, bus_.rf, settings_.aircraft_address, versions_};
+    TrafficService traffic_{context_, bus_.rf, settings_.aircraft_address, settings_.flarm_id,
+                            versions_};
     common::AlarmService alarm_{context_, common::AlarmSettings{settings_.alarm}};
     common::NmeaService nmea_{context_, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,

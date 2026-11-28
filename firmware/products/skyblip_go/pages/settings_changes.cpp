@@ -10,6 +10,7 @@ namespace skyblip::go {
 
 namespace {
 
+// INFO: fc 27nov26 one row for each setting a set can carry
 constexpr int kMaxChanges = 8;
 
 // INFO: fc 14nov26 a row may run to two lines on the glass, which join() counts
@@ -83,6 +84,7 @@ int describe_settings_changes(const Settings& from, const Settings& to, char* ou
     if (to.aircraft_type != from.aircraft_type) menu_row(rows, MenuRow::AircraftType, to);
     if (std::strncmp(to.callsign, from.callsign, kCallsignBytes) != 0) callsign_row(rows, to);
     if (to.aircraft_address != from.aircraft_address) menu_row(rows, MenuRow::AircraftAddress, to);
+    if (to.flarm_id != from.flarm_id) menu_row(rows, MenuRow::FlarmId, to);
     if (to.units != from.units) menu_row(rows, MenuRow::Units, to);
     if (to.alarm != from.alarm) menu_row(rows, MenuRow::Alarm, to, sounds);
     if (to.battery_offset_mv != from.battery_offset_mv)

@@ -249,7 +249,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dfu.allows_downgrade = true;
     dfu.bootloader.count = 2;
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     common::ConfigService config(link, store, &dfu);
     link.raise_link(1);
     link.declare_payload_bytes(495);
@@ -273,6 +273,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     config.set_bravo_state(comms::BravoState::NoUtc);
     comms::OwnTransponderHeard heard{0x3A4B5C, "FJABC", 1};
     config.set_own_transponder(heard);
+    config.set_own_flarm(0xDD1234);
     dfu::InstallReport report{};
     report.request = {ports::StagedCheck::Matched, -5, ports::SwapType::Test};
     report.booted(/*on_probation=*/true, power::ResetReason::Watchdog);
@@ -404,6 +405,7 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"set.alarm_from_go", "true"},
         {"set.annunciator_fitted", "true"},
         {"set.paired_tag", "16170"},
+        {"set.flarm_id", "14488116"},
         {"dfu.version", "\"0.4.0+1\""},
         {"register.server_nonce",
          "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},

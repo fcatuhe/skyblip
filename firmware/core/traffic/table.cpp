@@ -42,6 +42,19 @@ void TrafficTable::set_aircraft_address(uint32_t address) {
     if (index >= 0) release(slots_[index]);
 }
 
+bool TrafficTable::own_flarm(const model::AircraftObservation& observation) const {
+    return flarm_id_ != 0 && observation.address_mapping_table == adsl::kAddressTableFlarm &&
+           (observation.address & settings::kAddressMask) == flarm_id_;
+}
+
+void TrafficTable::set_flarm_id(uint32_t flarm_id) {
+    const uint32_t masked = flarm_id & settings::kAddressMask;
+    if (masked == flarm_id_) return;
+    flarm_id_ = masked;
+    const int index = flarm_id_ == 0 ? -1 : find(adsl::kAddressTableFlarm, flarm_id_);
+    if (index >= 0) release(slots_[index]);
+}
+
 int TrafficTable::find(uint8_t address_mapping_table, uint32_t address) const {
     for (int i = 0; i < kMaxTargets; i++) {
         if (slots_[i].used && slots_[i].observation.address == address &&
@@ -126,7 +139,7 @@ int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint
 }
 
 int TrafficTable::update(const model::AircraftObservation& observation, uint32_t now_s) {
-    if (own_aircraft(observation)) return -1;
+    if (own_aircraft(observation) || own_flarm(observation)) return -1;
     if (observation.source == model::Source::Adsb && !observation.position_valid) {
         adsb_without_position_++;
         return -1;

@@ -85,6 +85,7 @@ es:
       heard_setting: "Ajuste"
       heard_now: "Ahora"
       heard_from: "De Bravo"
+      use_flarm: "Usar este ID"
     capture:
       title: "Captura de diagnóstico"
       profile: "Perfil"
@@ -361,6 +362,8 @@ es:
       use_heard:
         one: "Usar este valor"
         other: "Usar estos valores"
+      flarm_heard: "Tu Go recibe el FLARM %{id} a bordo."
+      flarm_heard_same: "Tu Go recibe el FLARM %{id} a bordo, que ya está configurado."
       "on": "activado"
       "off": "desactivado"
       none: "ninguno"
@@ -449,6 +452,7 @@ es:
       unknown_command: "Este firmware es demasiado antiguo para cambiar los ajustes. Actualízalo primero."
       out_of_range: "El dispositivo ha rechazado un valor que no puede guardar. FFFFFF no es una dirección OACI de aeronave. Nada ha cambiado."
       not_own_transponder: "Tu Bravo recibe otro transpondedor como si fuera el de tu aeronave. Comprueba la dirección o usa la que recibe Bravo. Nada ha cambiado."
+      not_own_flarm: "Tu Go recibe otro FLARM a bordo. Comprueba el ID o usa el que recibe el Go. Nada ha cambiado."
       set_on_go: "Este Bravo está emparejado con un Go. La fila ALARM del Go ajusta la alerta de los dos. Nada ha cambiado."
     capture_notices:
       capture_armed: "Captura preparada. El LED parpadea dos veces cada 3 s hasta que se detenga. La captura sigue en vuelo."

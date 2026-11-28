@@ -10,10 +10,12 @@ namespace skyblip::common {
 
 namespace {
 // INFO: fc 14nov26 Conflict is F.2.3's address check | 17nov26 Unsupported, a paired Bravo's alarm
+// | 27nov26 Mismatch, the FLARM the Go hears aboard
 link::Reason settings_refusal(Status status) {
     switch (status) {
         case Status::OutOfRange: return link::Reason::OutOfRange;
         case Status::Conflict: return link::Reason::NotOwnTransponder;
+        case Status::Mismatch: return link::Reason::NotOwnFlarm;
         case Status::Unsupported: return link::Reason::SetOnGo;
         default: return link::Reason::Invalid;
     }
@@ -142,6 +144,12 @@ void ConfigService::set_no_tx(timing::NoTx reason) {
 void ConfigService::set_own_transponder(const std::optional<comms::OwnTransponderHeard>& heard) {
     const bool changed = heard != own_transponder_;
     own_transponder_ = heard;
+    if (changed && link_up()) push_status();
+}
+
+void ConfigService::set_own_flarm(std::optional<uint32_t> flarm_id) {
+    const bool changed = flarm_id != own_flarm_;
+    own_flarm_ = flarm_id;
     if (changed && link_up()) push_status();
 }
 
@@ -320,8 +328,7 @@ void ConfigService::send_config() {
     uint8_t frame[comms::kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Config);
-    store_.write_fields(writer);
-    if (paired_tag_) writer.add_unsigned(link::config_key::kPairedTag, *paired_tag_);
+    store_.write_fields(writer, paired_tag_);
     const int bytes = writer.finish();
     if (bytes == 0) {
         diagnostics_.link_drops++;

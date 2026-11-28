@@ -13,6 +13,7 @@
 #include "core/traffic/callsigns.h"
 #include "core/traffic/versions.h"
 #include "products/common/traffic_settings.h"
+#include "products/skyblip_go/own_flarm.h"
 #include "runtime/service.h"
 
 namespace skyblip::go {
@@ -21,8 +22,12 @@ namespace skyblip::go {
 class TrafficService : public runtime::Service {
    public:
     TrafficService(runtime::Context& context, bus::RfQueue& rf, common::TrafficSettings settings,
-                   traffic::VersionTable& versions)
-        : runtime::Service(context), rf_(rf), settings_(settings), versions_(versions) {}
+                   const uint32_t& flarm_id, traffic::VersionTable& versions)
+        : runtime::Service(context),
+          rf_(rf),
+          settings_(settings),
+          flarm_id_(flarm_id),
+          versions_(versions) {}
 
     void tick(uint32_t now_ms) override;
     // INFO: fc 19nov26 every frame wakes the loop, and the table ages by the second
@@ -51,7 +56,9 @@ class TrafficService : public runtime::Service {
     protocol::AlptasReceiver alptas_receiver_{};
     bus::RfQueue& rf_;
     common::TrafficSettings settings_;
+    const uint32_t& flarm_id_;
     traffic::VersionTable& versions_;
+    OwnFlarm own_flarm_{};
 };
 
 }  // namespace skyblip::go

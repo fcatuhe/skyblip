@@ -68,7 +68,8 @@ TEST_CASE("menu: an aircraft address typed against the transponder Bravo names s
     go::CallsignSnapshot field;
     field.title = "ADS-B";
     field.text = "3A0001";
-    field.own_transponder = kHeardAddress;
+    field.heard = kHeardAddress;
+    field.heard_text = go::kOwnTransponderText;
     field.refused = true;
     go::Glass expected;
     go::draw_callsign(expected, field);

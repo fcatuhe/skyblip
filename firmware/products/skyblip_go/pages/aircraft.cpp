@@ -53,6 +53,30 @@ void heard_label(char* out, const Detected& detected) {
     out[written] = 0;
 }
 
+const char* flarm_state_text(FlarmDetection state) {
+    switch (state) {
+        case FlarmDetection::Airborne: return "IN FLIGHT";
+        case FlarmDetection::NoFix: return "NO FIX";
+        case FlarmDetection::Listening: return "NOT HEARD";
+        case FlarmDetection::Icao: return "ICAO ADDRESS";
+        case FlarmDetection::Other: return "NO FLARM ID";
+        case FlarmDetection::Heard: break;
+    }
+    return "";
+}
+
+const char* flarm_detail_text(FlarmDetection state) {
+    switch (state) {
+        case FlarmDetection::Airborne:
+        case FlarmDetection::NoFix: return "THE GO FINDS IT ON THE GROUND";
+        case FlarmDetection::Listening: return "START THE FLARM";
+        case FlarmDetection::Icao: return "USE THE ADS-B ROW";
+        case FlarmDetection::Other: return "THE GO CANNOT HIDE IT";
+        case FlarmDetection::Heard: break;
+    }
+    return "";
+}
+
 void wrapped(ui::Canvas& canvas, int y, const char* text, bool ink) {
     char line[kFrameColumns + 1];
     int at = 0;
@@ -131,6 +155,52 @@ void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected, uint32_t
     body[count++] = {name_of(detected, address), kCallsignScale};
     body[count++] = {label};
     draw_question_body(canvas, Heading::Interrupt, seconds_left, body, count);
+    draw_keys(canvas, {"SET", "CLOSE"});
+}
+
+bool adopt_flarm(const FlarmDetected& detected, Settings& settings) {
+    if (detected.state != FlarmDetection::Heard || detected.id == settings.flarm_id) return false;
+    Settings next = settings;
+    next.flarm_id = detected.id;
+    if (validate(next) != Status::Ok) return false;
+    settings = next;
+    return true;
+}
+
+bool flarm_matches(const FlarmDetected& detected, const Settings& settings) {
+    return detected.state == FlarmDetection::Heard && detected.id == settings.flarm_id;
+}
+
+bool same_flarm(const FlarmDetected& a, const FlarmDetected& b) {
+    return a.state == b.state && a.id == b.id;
+}
+
+void draw_flarm_detected(ui::Canvas& canvas, const FlarmDetected& detected,
+                         const Settings& settings, bool focused) {
+    const int top = menu_line_top(0);
+    if (focused)
+        canvas.rounded_rectangle(2, top, kGlassWidth - 4, kDetectedLines * kMenuRowHeight - 1,
+                                 kMenuBarRadius, true, /*fill=*/true);
+    const bool ink = !focused;
+    if (detected.state != FlarmDetection::Heard) {
+        canvas.draw_text(kMenuLeftX, top + kStateInset, flarm_state_text(detected.state), ink,
+                         kMenuScale);
+        wrapped(canvas, top + kDetailInset, flarm_detail_text(detected.state), ink);
+        return;
+    }
+    canvas.draw_text(kMenuLeftX, top + kDetectedTypeInset,
+                     flarm_matches(detected, settings) ? "SAME" : kFlarmIdLabel, ink, kMenuScale);
+    char id[kAircraftAddressCharacters + 1];
+    id[format_hex(id, detected.id, kAircraftAddressCharacters)] = 0;
+    canvas.draw_text(kMenuLeftX, top + kDetectedNameInset, id, ink, kCallsignScale);
+}
+
+void draw_flarm_notice(ui::Canvas& canvas, const FlarmDetected& detected, uint32_t seconds_left) {
+    draw_heading(canvas, kFlarmNoticeTitle, Heading::Interrupt);
+    char id[kAircraftAddressCharacters + 1];
+    id[format_hex(id, detected.id, kAircraftAddressCharacters)] = 0;
+    const BodyLine body[] = {{kFlarmIdLabel}, {id, kCallsignScale}};
+    draw_question_body(canvas, Heading::Interrupt, seconds_left, body, 2);
     draw_keys(canvas, {"SET", "CLOSE"});
 }
 

@@ -65,13 +65,18 @@ inline void walk_to(Rig& rig, go::MenuRow row) {
     REQUIRE(rig.product.screen().editor().focus() == row);
 }
 
-// A row of the AIRCRAFT menu is reached through the settings row that opens it.
+// A row of the AIRCRAFT or FLARM menu is reached through the settings row that opens it.
 inline void focus_on(Rig& rig, go::MenuRow row) {
     if (!rig.product.screen().editor().aircraft() &&
         go::menu_row_index(go::aircraft_menu(), row) >= 0) {
         walk_to(rig, go::MenuRow::Aircraft);
         change(rig);
         REQUIRE(rig.product.screen().editor().aircraft());
+    }
+    if (!rig.product.screen().editor().flarm() && go::menu_row_index(go::flarm_menu(), row) >= 0) {
+        walk_to(rig, go::MenuRow::Flarm);
+        change(rig);
+        REQUIRE(rig.product.screen().editor().flarm());
     }
     walk_to(rig, row);
 }

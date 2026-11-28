@@ -263,3 +263,25 @@ TEST_CASE("aircraft detection: an A7 transponder proposes a light rotorcraft, ne
     tango.run_for(500);
     CHECK(tango.go.settings().aircraft_type == 3);
 }
+
+// Two quick presses, OPEN then SET, once stored a block the glass had not drawn yet.
+TEST_CASE("aircraft detection: a press on a block not yet on the glass stores nothing") {
+    Tango tango;
+    paired_on_the_radar(tango);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
+    tango.run_for(2500);
+    tango.go.tap();
+    REQUIRE_FALSE(tango.go.product.screen().noticing());
+
+    open_menu(tango.go);
+    tango.go.tap();
+    REQUIRE(tango.go.product.screen().editor().focus() == go::MenuRow::Aircraft);
+    tango.go.press();
+    REQUIRE(tango.go.product.screen().editor().aircraft());
+    tango.go.press();
+    CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
+
+    tango.run_for(3000);
+    change(tango.go);
+    CHECK(tango.go.settings().aircraft_address == kHeardAddress);
+}

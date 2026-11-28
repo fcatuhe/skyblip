@@ -51,14 +51,29 @@ struct Bench {
 
     int rows() const { return editor.menu().row_count; }
 
-    // A row of the AIRCRAFT menu is reached through the settings row that opens it.
+    // A row of the AIRCRAFT or FLARM menu is reached through the settings row that opens it.
     void focus_on(MenuRow row) {
         if (!editor.aircraft() && menu_row_index(aircraft_menu(), row) >= 0) {
             walk_to(MenuRow::Aircraft);
             REQUIRE(change() == MenuAction::Moved);
             REQUIRE(editor.aircraft());
         }
+        if (!editor.flarm() && menu_row_index(flarm_menu(), row) >= 0) {
+            walk_to(MenuRow::Flarm);
+            REQUIRE(change() == MenuAction::Moved);
+            REQUIRE(editor.flarm());
+        }
         walk_to(row);
+    }
+
+    // Six hex digits rolled in on the pad, each taken with the button, the last one storing.
+    MenuAction type(const char* digits) {
+        MenuAction last = MenuAction::None;
+        for (int i = 0; digits[i] != 0; i++) {
+            while (editor.text()[editor.cursor()] != digits[i]) move();
+            last = change();
+        }
+        return last;
     }
 
     void walk_to(MenuRow row) {

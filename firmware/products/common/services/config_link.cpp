@@ -35,6 +35,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     config_.set_hub_image(context_.state.imu.image);
     config_.set_bravo_state(context_.state.bravo);
     config_.set_own_transponder(context_.state.own_transponder);
+    config_.set_own_flarm(traffic::flarm_id_of(context_.state.aboard));
     config_.set_no_tx(context_.state.transmit.shown());
     // INFO: fc 26nov26 a stopped capture drains until its End is written, so a new one waits
     config_.set_capture(context_.state.capture.available,

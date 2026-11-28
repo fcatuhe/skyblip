@@ -50,7 +50,7 @@ struct SmallPoolRig {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::SettingsStore store{settings, state.activation, state.own_transponder};
+    go::SettingsStore store{settings, state.activation, state.own_transponder, state.aboard};
     common::ConfigService config{link, store};
     store::SectorSlots<boards::t_echo_plus::kLogSectors> log_sectors{};
     common::RecordPool pool{context, go::book_flash_in_dwell, log_sectors.table()};

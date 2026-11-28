@@ -1,12 +1,15 @@
-export const SETTING_KEYS = ['aircraft_type', 'units', 'callsign', 'aircraft_address', 'alarm'];
+export const SETTING_KEYS = ['aircraft_type', 'units', 'callsign', 'aircraft_address', 'alarm', 'flarm_id'];
+
+// INFO: fc 27nov26 the 24-bit settings a form shows as six hex digits, and a unit holds as a number
+const HEX_KEYS = new Set(['aircraft_address', 'flarm_id']);
 
 const NUMBERS = new Set(['aircraft_type']);
-const AIRCRAFT_ADDRESS = /^[0-9A-F]{6}$/;
+const HEX_DIGITS = /^[0-9A-F]{6}$/;
 
 // INFO: fc 17nov26 a paired Bravo's alarm is its Go's, so the form shows it and never sends it
 export function settingsOf(reply, keys = SETTING_KEYS) {
   const held = keys.filter(key => key in reply && !(key === 'alarm' && reply.alarm_from_go === true));
-  return Object.fromEntries(held.map(key => [key, key === 'aircraft_address' ? aircraftAddressText(reply[key]) : reply[key]]));
+  return Object.fromEntries(held.map(key => [key, HEX_KEYS.has(key) ? hexText(reply[key]) : reply[key]]));
 }
 
 export function soundsOf(reply) {
@@ -18,13 +21,15 @@ export function goAlarmOf(reply) {
 }
 
 export function settingsFrame(settings) {
-  if (!('aircraft_address' in settings)) return settings;
-  const text = settings.aircraft_address;
-  return { ...settings, aircraft_address: text === '' ? 0 : AIRCRAFT_ADDRESS.test(text) ? Number.parseInt(text, 16) : text };
+  return Object.fromEntries(Object.entries(settings).map(([key, value]) => [key, HEX_KEYS.has(key) ? hexNumber(value) : value]));
 }
 
-function aircraftAddressText(address) {
-  return address === 0 ? '' : address.toString(16).toUpperCase().padStart(6, '0');
+function hexNumber(text) {
+  return text === '' ? 0 : HEX_DIGITS.test(text) ? Number.parseInt(text, 16) : text;
+}
+
+function hexText(value) {
+  return value === 0 ? '' : value.toString(16).toUpperCase().padStart(6, '0');
 }
 
 export function changedSettings(stored, values, keys = SETTING_KEYS) {
@@ -41,6 +46,7 @@ export function statusOf(reply) {
     wentDarkFlat: reply.went_dark_flat === true,
     bravo: reply.bravo ?? null,
     ownTransponder: ownTransponderOf(reply),
+    ownFlarm: reply.own_flarm === undefined ? null : hexText(reply.own_flarm),
     noTx: reply.no_tx ?? null,
   };
 }
@@ -53,7 +59,7 @@ export function noTxMark(status) {
 
 function ownTransponderOf({ own_transponder: address, own_transponder_callsign: callsign, own_transponder_category: type }) {
   if (address === undefined) return null;
-  return { aircraft_address: aircraftAddressText(address), callsign: callsign ?? '', aircraft_type: type ?? 0 };
+  return { aircraft_address: hexText(address), callsign: callsign ?? '', aircraft_type: type ?? 0 };
 }
 
 // INFO: fc 15nov26 as go::adopt writes it, so another aircraft's callsign never stays beside this one's address

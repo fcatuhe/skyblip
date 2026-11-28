@@ -4,10 +4,16 @@
 
 namespace skyblip::go {
 
+namespace {
+uint32_t stored_hex(MenuRow field, const Settings& settings) {
+    return field == MenuRow::FlarmId ? settings.flarm_id : settings.aircraft_address;
+}
+}  // namespace
+
 void MenuEditor::enter(Page page, uint32_t now_ms) {
     page_ = page;
     focus_ = 0;
-    aircraft_ = false;
+    submenu_ = Submenu::None;
     idle_since_ms_ = now_ms;
     active_ = menu_for(page).row_count > 0;
     pending_ = Pending::None;
@@ -16,7 +22,7 @@ void MenuEditor::enter(Page page, uint32_t now_ms) {
 
 void MenuEditor::leave() {
     focus_ = 0;
-    aircraft_ = false;
+    submenu_ = Submenu::None;
     active_ = false;
     pending_ = Pending::None;
     close_field();
@@ -29,7 +35,14 @@ void MenuEditor::close_field() {
     cursor_ = 0;
 }
 
-Menu MenuEditor::menu() const { return aircraft_ ? aircraft_menu() : menu_for(page_); }
+Menu MenuEditor::menu() const {
+    switch (submenu_) {
+        case Submenu::Aircraft: return aircraft_menu();
+        case Submenu::Flarm: return flarm_menu();
+        case Submenu::None: break;
+    }
+    return menu_for(page_);
+}
 
 MenuRow MenuEditor::focus() const {
     const Menu menu = this->menu();
@@ -79,7 +92,7 @@ MenuAction MenuEditor::advance() {
         focus_++;
         return MenuAction::Moved;
     }
-    if (aircraft_) {
+    if (submenu_ != Submenu::None) {
         back_to_settings();
         return MenuAction::Moved;
     }
@@ -89,8 +102,9 @@ MenuAction MenuEditor::advance() {
 
 // INFO: fc 13nov26 the thumb comes back to the row it left from, which now reads what was stored
 void MenuEditor::back_to_settings() {
-    aircraft_ = false;
-    focus_ = menu_row_index(menu_for(page_), MenuRow::Aircraft);
+    const MenuRow opener = submenu_ == Submenu::Flarm ? MenuRow::Flarm : MenuRow::Aircraft;
+    submenu_ = Submenu::None;
+    focus_ = menu_row_index(menu_for(page_), opener);
 }
 
 MenuAction MenuEditor::use_detected(const MenuValues& current, MenuValues& next) {
@@ -104,6 +118,12 @@ MenuAction MenuEditor::use_detected(const MenuValues& current, MenuValues& next)
     return MenuAction::Changed;
 }
 
+MenuAction MenuEditor::use_flarm(const MenuValues& current, MenuValues& next) {
+    if (!adopt_flarm(current.flarm, next.settings)) return MenuAction::None;
+    back_to_settings();
+    return MenuAction::Changed;
+}
+
 // INFO: fc 20nov26 full width whatever is stored, so every position can be rolled
 void MenuEditor::edit(MenuRow field, const MenuValues& current) {
     field_ = field;
@@ -112,10 +132,10 @@ void MenuEditor::edit(MenuRow field, const MenuValues& current) {
     refused_ = false;
     cursor_ = 0;
     int written = 0;
-    if (field == MenuRow::AircraftAddress) {
-        if (current.settings.aircraft_address != kAircraftAddressUnset)
-            written =
-                format_hex(text_, current.settings.aircraft_address, kAircraftAddressCharacters);
+    if (hex_field(field)) {
+        const uint32_t stored = stored_hex(field, current.settings);
+        if (stored != kAircraftAddressUnset)
+            written = format_hex(text_, stored, kAircraftAddressCharacters);
     } else {
         while (written < kCallsignCharacters && current.settings.callsign[written] != 0) {
             text_[written] = current.settings.callsign[written];
@@ -127,13 +147,13 @@ void MenuEditor::edit(MenuRow field, const MenuValues& current) {
 }
 
 int MenuEditor::characters() const {
-    return field_ == MenuRow::AircraftAddress ? kAircraftAddressCharacters : kCallsignCharacters;
+    return hex_field(field_) ? kAircraftAddressCharacters : kCallsignCharacters;
 }
 
 MenuAction MenuEditor::roll() {
     refused_ = false;
-    text_[cursor_] = field_ == MenuRow::AircraftAddress ? next_hex_character(text_[cursor_])
-                                                        : next_callsign_character(text_[cursor_]);
+    text_[cursor_] = hex_field(field_) ? next_hex_character(text_[cursor_])
+                                       : next_callsign_character(text_[cursor_]);
     return MenuAction::Moved;
 }
 
@@ -150,10 +170,19 @@ MenuAction MenuEditor::store(const MenuValues& current, MenuValues& next) {
     next = current;
     bool typed = true;
     if (field_ == MenuRow::AircraftAddress) {
-        next.settings.aircraft_address = aircraft_address_typed(text_);
+        next.settings.aircraft_address = hex_typed(text_);
         typed = next.settings.aircraft_address != kAircraftAddressUnset;
         // INFO: fc 14nov26 ADS-L F.2.3: refused in the open field, under what Bravo names instead
         if (contradicts(next.settings.aircraft_address, current.own_transponder)) {
+            next = current;
+            refused_ = true;
+            cursor_ = 0;
+            return MenuAction::Moved;
+        }
+    } else if (field_ == MenuRow::FlarmId) {
+        next.settings.flarm_id = hex_typed(text_);
+        typed = next.settings.flarm_id != kFlarmIdUnset;
+        if (contradicts_flarm(next.settings.flarm_id, current.own_flarm)) {
             next = current;
             refused_ = true;
             cursor_ = 0;
@@ -169,12 +198,13 @@ MenuAction MenuEditor::store(const MenuValues& current, MenuValues& next) {
 }
 
 MenuAction MenuEditor::clear(const MenuValues& current, MenuValues& next) {
-    if (field_ == MenuRow::AircraftAddress) {
-        if (current.settings.aircraft_address == kAircraftAddressUnset) {
+    if (hex_field(field_)) {
+        const uint32_t stored = stored_hex(field_, current.settings);
+        if (stored == kAircraftAddressUnset) {
             close_field();
             return MenuAction::Moved;
         }
-        format_hex(text_, current.settings.aircraft_address, kAircraftAddressCharacters);
+        format_hex(text_, stored, kAircraftAddressCharacters);
         text_[kAircraftAddressCharacters] = 0;
         clearing_ = true;
         return MenuAction::Moved;
@@ -187,9 +217,13 @@ MenuAction MenuEditor::clear(const MenuValues& current, MenuValues& next) {
 }
 
 MenuAction MenuEditor::confirm_clear(const MenuValues& current, MenuValues& next) {
+    const MenuRow field = field_;
     close_field();
     next = current;
-    next.settings.aircraft_address = kAircraftAddressUnset;
+    if (field == MenuRow::FlarmId)
+        next.settings.flarm_id = kFlarmIdUnset;
+    else
+        next.settings.aircraft_address = kAircraftAddressUnset;
     return MenuAction::Changed;
 }
 
@@ -213,12 +247,18 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
             leave();
             return MenuAction::Light;
         case MenuRow::Aircraft:
-            aircraft_ = true;
+            submenu_ = Submenu::Aircraft;
+            focus_ = 0;
+            return MenuAction::Moved;
+        case MenuRow::Flarm:
+            submenu_ = Submenu::Flarm;
             focus_ = 0;
             return MenuAction::Moved;
         case MenuRow::Detected: return use_detected(current, next);
+        case MenuRow::FlarmHeard: return use_flarm(current, next);
         case MenuRow::Callsign:
-        case MenuRow::AircraftAddress: edit(row, current); return MenuAction::Moved;
+        case MenuRow::AircraftAddress:
+        case MenuRow::FlarmId: edit(row, current); return MenuAction::Moved;
         case MenuRow::AircraftType:
             next.settings.aircraft_type = next_aircraft_type(current.settings.aircraft_type);
             break;

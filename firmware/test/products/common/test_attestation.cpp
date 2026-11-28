@@ -33,7 +33,7 @@ struct Desk {
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
+    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder, kNothingAboard};
     common::ConfigService config{link, store, &dfu};
     Identity port;
     platform::host::Random random;
@@ -193,7 +193,7 @@ TEST_CASE(
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
+    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder, kNothingAboard};
     common::ConfigService config{link, store, &dfu};
     link.declare_payload_bytes(kChromePayloadBytes);
     link.raise_link(1);

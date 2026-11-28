@@ -15,11 +15,12 @@
 namespace skyblip {
 
 inline Status apply_patch(go::Settings& settings, const char* patch,
-                          std::optional<uint32_t> own_transponder = std::nullopt) {
+                          std::optional<uint32_t> own_transponder = std::nullopt,
+                          std::optional<uint32_t> own_flarm = std::nullopt) {
     const std::string set = std::string("{\"command\":\"set\",") + (patch + 1);
     const events::RxFrame frame = config_frame(set.c_str());
     return go::apply_settings(settings, cbor::Reader(ConstByteSpan(frame.data.data(), frame.bytes)),
-                              own_transponder);
+                              go::Heard{own_transponder, own_flarm});
 }
 
 inline std::string config_fields(const go::Settings& settings, settings::AirAddress address) {

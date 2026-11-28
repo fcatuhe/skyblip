@@ -4,7 +4,7 @@
 
 `settings.h` lists what a pilot can change, the defaults and what it refuses. A setting with no reader leaves the struct, the link registry and the schema together. `kBlobVersion` moves whenever the struct's bytes move, and `from_blob` reads that version alone, so an older layout reads as defaults, since only dev units stored one. The settings live in the product, not on core's `bus::State`, and the product hands a reference to the services that read them.
 
-`settings_store.h` is the Go's `common::SettingsStore` (`../common/README.md`), the only coupling between the companion link and the struct. It reports `address` once `state.activation` has a serial and `address_mapping_table` always, and nothing can set either. It refuses a `set` of `aircraft_address` against `state.own_transponder` (Aircraft address).
+`settings_store.h` is the Go's `common::SettingsStore` (`../common/README.md`), the only coupling between the companion link and the struct. It reports `address` once `state.activation` has a serial and `address_mapping_table` always, and nothing can set either. It refuses a `set` of `aircraft_address` against `state.own_transponder` (Aircraft address), and of `flarm_id` against `state.aboard` (FLARM ID). It writes every key of `config` in ascending order, `paired_tag` and then `flarm_id` last.
 
 A layout cannot be read backwards, yet the image the bootloader reverts to meets a blob its successor wrote. `ConfigLinkService::load()` tells a newer layout from a torn sector by the CRC over the stored length (`settings::sealed`) and leaves the newer one untouched, using `settings.prior` instead, which `install()` fills on the way into a swap. So a revert comes up on the pilot's settings, and a reinstall finds its blob. A fallback is said as `"settings":"prior"` or `"defaults"` on the `update` frame, and as `DEFAULTS` on the self test's `STORAGE` row.
 
@@ -21,6 +21,16 @@ F.2.3 also asks to refuse an inconsistent configuration. `validate()` refuses 0x
 `aircraft_address_warning.h` flags a paired Go and Bravo that both lack an address, since the Go may then alarm on its own transponder (`../../core/traffic/README.md`, Accepted for v1). Only the self-test page shows it, as `ADS-B` and `UNSET`, because most transponders sit in `STBY` on the ground and a notice every boot gave nothing to act on.
 
 `BravoService::own_transponder()` keeps the last transponder a fresh `health` named (`../skyblip_bravo/README.md`, Own transponder), and `ScreenService::detected()` turns it into the `AIRCRAFT` block, with the callsign's dash restored by `adsb::registration`. `go::adopt` is the one write behind the menu and the `Notice::NewAircraft` notice, and each stores only what it drew while Bravo still hears it (`ScreenService::detected_to_store`, `ScreenService::notice_read`). The next `peer_claim` carries the new address, and Bravo stores it too.
+
+## FLARM ID
+
+`flarm_id` is the 24-bit ID of a FLARM fitted in the aircraft, 0 while unset. The Go never transmits it: it keeps transmitting under its serial, or under `aircraft_address` while that is set, because table 6 IDs are FLARM's to assign. `TrafficService` hands it to the traffic table every pass, which refuses it under table 6, the table ALP-TAS's own IDs map to (`core/protocol/alptas.cpp`), so the FLARM aboard is never traffic, whether heard on ALP-TAS, on ADS-L or through a ground station (`../../core/traffic/README.md`, Our own aircraft). It covers the aircraft whose FLARM sends its own ID. A FLARM set to the aircraft's ICAO address is already covered by `aircraft_address`.
+
+`OwnFlarm` (`own_flarm.h`) names the emitter the Go takes for one aboard, with the rule Bravo uses for its transponder, `traffic::Aboard` (`../../core/traffic/README.md`, Aboard): the loudest direct reception on 868 MHz, ADS-L or ALP-TAS, relays left out, at or above `kLoudFloorDbm`, -50 dBm, `kLeadDb`, 10 dB, ahead of every other heard in the last `kEmitterMaxAgeMs`, 25 s, and named once it has led for `kLeadHoldMs`, 30 s. An ADS-L unit on the ground sends a position every 9 to 11 s, so the age spans two missed and the hold three positions. It hears every emitter, ours under an ICAO address included, so a FLARM aboard that sends the aircraft's ICAO address still leads and no neighbour is named in its place. The three figures are unmeasured, as Bravo's are, and a cockpit capture beside another glider sets them.
+
+`TrafficService` publishes the emitter as `bus::State::aboard` while the Go is on the ground, whatever its table, and `traffic::flarm_id_of` reads a FLARM ID from it only in table 6. `status` carries that ID to a Briefing page as `own_flarm` (`../../core/comms/README.md`). A `set` of another `flarm_id` is refused `not_own_flarm`, at the prompt and again at the press, and a clear never is. The settings blob appends the field in version 16, and versions 14 and 15 load with no FLARM ID.
+
+The glass proposes it as it proposes the transponder: the `FLARM` menu, a `GO HEARS` notice once a boot, and the `FLARM ID` field (`pages/README.md`, flarm).
 
 ## Bravo
 

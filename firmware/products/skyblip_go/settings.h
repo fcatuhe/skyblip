@@ -8,6 +8,7 @@
 #include "core/events/central.h"
 #include "core/power/cable.h"
 #include "core/settings/address.h"
+#include "core/traffic/aboard.h"
 #include "core/util/cbor.h"
 #include "core/util/result.h"
 #include "products/common/alarm.h"
@@ -33,6 +34,7 @@ constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
 constexpr uint8_t kAircraftTypeLight = 1;
 
 constexpr uint32_t kAircraftAddressUnset = 0;
+constexpr uint32_t kFlarmIdUnset = 0;
 
 // INFO: fc 11nov26 BT_ADDR_LE_RANDOM_ID, the last LE address type (zephyr/bluetooth/addr.h)
 constexpr uint8_t kBluetoothAddressTypeCeiling = 3;
@@ -58,13 +60,19 @@ struct Settings {
     events::BluetoothAddress bravo{};
     // INFO: fc 26nov26 in the padding byte after bravo, so a version 14 blob keeps its size
     power::Switch power_switch{power::Switch::Button};
+    // INFO: fc 27nov26 the FLARM aboard, never transmitted: the traffic table refuses it in table 6
+    uint32_t flarm_id{kFlarmIdUnset};
 
     // INFO: fc 20nov26 the link contract of schemas/link.v1.json: it moves when a key changes
     // meaning, not when the flash layout does
     static constexpr uint8_t kCurrentVersion = 1;
 };
 
-constexpr uint8_t kBlobVersion = 15;
+constexpr uint8_t kBlobVersion = 16;
+// INFO: fc 27nov26 its blob is four bytes shorter, and loads with flarm_id unset
+constexpr uint8_t kBlobVersionBeforeFlarmId = 15;
+// INFO: fc 27nov26 versions 14 and 15 end before flarm_id, the field version 16 appends
+constexpr size_t kPayloadBeforeFlarmId = 36;
 // INFO: fc 26nov26 v0.8.0 shipped it, so its blob loads with power_switch on Button
 constexpr uint8_t kBlobVersionBeforePowerSwitch = 14;
 
@@ -86,6 +94,15 @@ Status validate(const Settings& settings);
 // names
 bool contradicts(uint32_t aircraft_address, std::optional<uint32_t> own_transponder);
 
+// INFO: fc 27nov26 a FLARM ID other than the FLARM the Go hears aboard would hide a neighbour
+bool contradicts_flarm(uint32_t flarm_id, std::optional<uint32_t> own_flarm);
+
+// INFO: fc 27nov26 what a set is held to: the transponder Bravo names, the FLARM the Go hears
+struct Heard {
+    std::optional<uint32_t> own_transponder{};
+    std::optional<uint32_t> own_flarm{};
+};
+
 size_t blob_size();
 void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
 Status from_blob(const uint8_t* in, size_t length, Settings& out);
@@ -97,8 +114,7 @@ void write_config_fields(cbor::Writer& writer, const Settings& settings,
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
 void write_settings_fields(cbor::Writer& writer, const Settings& settings);
 
-Status apply_settings(Settings& settings, const cbor::Reader& frame,
-                      std::optional<uint32_t> own_transponder = std::nullopt);
+Status apply_settings(Settings& settings, const cbor::Reader& frame, const Heard& heard = {});
 
 }  // namespace skyblip::go
 

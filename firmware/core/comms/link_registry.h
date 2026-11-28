@@ -117,6 +117,7 @@ enum class Reason : uint8_t {
     LinkLost = 61,
     UnknownProtocol = 62,
     WindowClosed = 63,
+    NotOwnFlarm = 64,
 };
 
 namespace acknowledgement_key {
@@ -143,6 +144,7 @@ enum : uint32_t {
     kAlarmFromGo = 13,
     kAnnunciatorFitted = 14,
     kPairedTag = 15,
+    kFlarmId = 16,
 };
 }
 
@@ -159,6 +161,7 @@ enum : uint32_t {
     kOwnTransponderCallsign = 10,
     kOwnTransponderCategory = 11,
     kNoTx = 12,
+    kOwnFlarm = 13,
 };
 }
 
@@ -687,7 +690,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Identity:
             return 0x1;
         case Command::Set:
-            return 0xFF9F;
+            return 0x1FF9F;
         case Command::Dfu:
         case Command::Erase:
         case Command::Capture:

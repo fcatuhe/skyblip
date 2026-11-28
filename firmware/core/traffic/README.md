@@ -12,6 +12,7 @@ What the sky around this aircraft contains, how dangerous it is, and who in it i
 | `formation` | which targets are flying with us, on geometry alone |
 | `range` | how far a target is and how far above, and the order the nearby page lists them in |
 | `callsigns` | what each address is called, for as long as anybody should believe it |
+| `aboard` | which emitter is aboard our own aircraft: the loudest by a clear lead, held |
 
 ## The model
 
@@ -83,12 +84,17 @@ The table merges two reports only when both the address mapping table and the ad
 
 ### Our own aircraft
 
-The table refuses two addresses before any other check:
+The table refuses three addresses before any other check:
 
 - our ADS-L address under table 58 (`set_own_address`), even while we transmit an aircraft address, because a ground station relays us back and the alarm would grade a head-on with ourselves;
-- our aircraft's ICAO address under table 5 (`set_aircraft_address`): our own transponder, which a Bravo in the cockpit hears loudest and a ground station relays.
+- our aircraft's ICAO address under table 5 (`set_aircraft_address`): our own transponder, which a Bravo in the cockpit hears loudest and a ground station relays;
+- the FLARM ID of the FLARM aboard under table 6 (`set_flarm_id`), which the Go hears loudest and never transmits under.
 
-Zero filters nothing. `go::TrafficService` sets both on every pass. A new aircraft address releases the slot it names even under an alarm, because that alarm is on our own transponder. The setting is `aircraft_address` (`products/skyblip_go/README.md`, Aircraft address).
+Zero filters nothing. `go::TrafficService` sets all three on every pass. A new aircraft address or FLARM ID releases the slot it names even under an alarm, because that alarm is on our own aircraft. The settings are `aircraft_address` and `flarm_id` (`products/skyblip_go/README.md`, Aircraft address and FLARM ID). `own_aircraft()` names only the first two, the addresses we transmit under, so the version table (`versions`) still hears the FLARM aboard as the client it is.
+
+### Aboard
+
+`Aboard` names the emitter aboard our own aircraft, for the pilot to confirm: Bravo's transponder on 1090 MHz (`products/skyblip_bravo/README.md`, Own transponder) and the Go's FLARM on 868 MHz (`products/skyblip_go/README.md`, FLARM ID). Each product gives it its own figures in an `AboardTuning`. An emitter qualifies at a tick when it is the loudest heard within the maximum age, at or above the floor, and the lead ahead of every other, and it is named once it has qualified at every tick for the hold. A level moves a quarter of the way per frame, `kLevelDampingSamples`, so one fade decides nothing. A full table gives up an emitter gone quiet first, then the faintest. `firmware/test/tla/Aboard.tla` holds the loop to that rule and the name to the hold, under TLC.
 
 ### A report with no position
 

@@ -45,7 +45,7 @@ struct AnyLengthStore : ports::KeyValueStore {
 struct WideSettings : common::SettingsStore {
     explicit WideSettings(size_t reported) : reported_bytes(reported) {}
 
-    void write_fields(cbor::Writer&) const override {}
+    void write_fields(cbor::Writer&, std::optional<uint16_t>) const override {}
     void write_default_fields(cbor::Writer&) const override {}
     Status apply(const cbor::Reader&) override { return Status::Ok; }
     Status describe_changes(const cbor::Reader&, char*, int) const override { return Status::Ok; }
@@ -123,7 +123,8 @@ TEST_CASE("config link: an update records itself but no revert copy wider than t
 
 TEST_CASE("config link: the Go's store writes no blob into a buffer narrower than the blob") {
     go::Settings settings = go::defaults();
-    const go::SettingsStore store{settings, identity::Activation{}, kNoOwnTransponder};
+    const go::SettingsStore store{settings, identity::Activation{}, kNoOwnTransponder,
+                                  kNothingAboard};
     uint8_t blob[64]{};
 
     CHECK(store.to_blob(blob, go::blob_size() - 1) == 0);

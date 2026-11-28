@@ -415,7 +415,7 @@ struct ServiceRig {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::SettingsStore store{settings, state.activation, state.own_transponder};
+    go::SettingsStore store{settings, state.activation, state.own_transponder, state.aboard};
     common::ConfigService config{link, store};
     common::NmeaService nmea;
 

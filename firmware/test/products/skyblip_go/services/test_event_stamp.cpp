@@ -48,8 +48,9 @@ struct StampRig {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     uint32_t aircraft_address{};
+    uint32_t flarm_id{};
     traffic::VersionTable versions{};
-    go::TrafficService traffic{context, bus.rf, aircraft_address, versions};
+    go::TrafficService traffic{context, bus.rf, aircraft_address, flarm_id, versions};
 
     StampRig() {
         roles.capabilities = ports::Capability::Rf;

@@ -46,6 +46,8 @@ class TrafficTable {
 
     // INFO: fc 11nov26 a new address releases its slot even under an alarm: that alarm was on us
     void set_aircraft_address(uint32_t address);
+    // INFO: fc 27nov26 a FLARM aboard is no address we transmit under, so it is refused apart
+    void set_flarm_id(uint32_t flarm_id);
 
     void set_own_reference(const model::Ownship& own) { own_ = own; }
 
@@ -64,6 +66,7 @@ class TrafficTable {
     int find(uint8_t address_mapping_table, uint32_t address) const;
     // INFO: fc 22nov26 an address we transmit under: our serial's, or our aircraft's ICAO address
     bool own_aircraft(const model::AircraftObservation& observation) const;
+    bool own_flarm(const model::AircraftObservation& observation) const;
 
    private:
     std::array<Target, kMaxTargets> slots_{};
@@ -71,6 +74,7 @@ class TrafficTable {
     uint32_t own_address_{0};
     uint8_t own_address_mapping_table_{0};
     uint32_t aircraft_address_{0};
+    uint32_t flarm_id_{0};
     uint32_t implausible_{0};
     uint32_t adsb_without_position_{0};
     uint32_t revisions_{0};

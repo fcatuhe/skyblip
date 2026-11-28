@@ -21,12 +21,12 @@ const PROMPTS = { set: "SETTINGS", capture: "CAPTURE", pair: "PAIR BRAVO" }
 const LINK_NOTICES = new Set(["link_lost", "not_back", "timeout", "claimed", "small_mtu", "no_bluetooth", "not_skyblip", "failed", "no_params"])
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 const WORKING = new Set(["asking", "confirming", "uploading", "installing", "rebooting"])
-const LAST_READ = ["aircraft_type", "callsign", "aircraft_address", "units", "alarm"]
+const LAST_READ = ["aircraft_type", "callsign", "aircraft_address", "flarm_id", "units", "alarm"]
 const CAPTURE_TICK_MS = 30_000
 
 export default class extends Controller {
   static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
-                    "settings", "fields", "default", "setOnGo", "heard", "heardText", "heardChanges", "heardRows", "heardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
+                    "settings", "fields", "default", "setOnGo", "heard", "heardText", "heardChanges", "heardRows", "heardUse", "flarmHeard", "flarmHeardText", "flarmHeardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureState", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "captureSendSection", "captureSend", "captureProgress", "captureProgressBar", "captureProgressText", "captureSendMessage",
                     "report", "reportSend", "reportMessage",
@@ -182,6 +182,14 @@ export default class extends Controller {
     const { elements } = this.settingsTarget
     const proposed = proposedIn(this.settingsTarget, this.unit.state.status.ownTransponder, this.#edited())
     for (const [key, value] of Object.entries(proposed)) showSetting(elements[key], value)
+    this.#settings(this.unit.state)
+  }
+
+  useFlarm() {
+    const field = this.settingsTarget.elements.flarm_id
+    const heard = this.unit.state.status?.ownFlarm
+    if (!field || field.disabled || !heard) return
+    showSetting(field, heard)
     this.#settings(this.unit.state)
   }
 
@@ -368,6 +376,17 @@ export default class extends Controller {
     this.resetTarget.textContent = say("words.reset_count", { count: differs.length })
     for (const note of this.defaultTargets) this.#default(note, edited, defaults)
     this.#heard(state.status?.ownTransponder, edited)
+    this.#flarmHeard(state.status?.ownFlarm ?? null, edited)
+  }
+
+  // INFO: fc 27nov26 the FLARM the Go hears aboard, proposed as the Go's FLARM menu proposes it
+  #flarmHeard(heard, edited) {
+    const shown = Boolean(heard) && "flarm_id" in edited
+    this.flarmHeardTarget.hidden = !shown
+    if (!shown) return
+    const same = edited.flarm_id === heard
+    this.flarmHeardTextTarget.textContent = say(same ? "words.flarm_heard_same" : "words.flarm_heard", { id: heard })
+    this.flarmHeardUseTarget.hidden = same
   }
 
   #heard(heard, edited) {

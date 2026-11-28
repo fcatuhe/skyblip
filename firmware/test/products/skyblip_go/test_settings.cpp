@@ -426,13 +426,63 @@ TEST_CASE("settings: a v0.8.0 blob keeps its settings and comes up switched by t
     shipped.battery_offset_mv = 40;
     shipped.power_switch = static_cast<power::Switch>(0xa5);
     uint8_t blob[128];
-    settings::seal(kBlobVersionBeforePowerSwitch, &shipped, sizeof(Settings), blob, sizeof(blob));
+    settings::seal(kBlobVersionBeforePowerSwitch, &shipped, kPayloadBeforeFlarmId, blob,
+                   sizeof(blob));
 
     Settings out;
-    REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
+    REQUIRE(from_blob(blob, settings::blob_bytes(kPayloadBeforeFlarmId), out) == Status::Ok);
     CHECK(std::string(out.callsign) == "DEABC");
     CHECK(out.battery_offset_mv == 40);
     CHECK(out.power_switch == power::Switch::Button);
+    CHECK(out.flarm_id == kFlarmIdUnset);
+}
+
+// Version 15 ends where flarm_id begins, so its four bytes are never read off the flash.
+TEST_CASE("settings: a version 15 blob keeps its settings and comes up with no FLARM ID" *
+          doctest::test_suite("main")) {
+    Settings shipped = defaults();
+    std::memcpy(shipped.callsign, "DEABC", 6);
+    shipped.power_switch = power::Switch::Cable;
+    shipped.flarm_id = 0xDD1234;
+    uint8_t blob[128];
+    settings::seal(kBlobVersionBeforeFlarmId, &shipped, kPayloadBeforeFlarmId, blob, sizeof(blob));
+
+    Settings out = defaults();
+    out.flarm_id = 0xABCDEF;
+    REQUIRE(from_blob(blob, settings::blob_bytes(kPayloadBeforeFlarmId), out) == Status::Ok);
+    CHECK(std::string(out.callsign) == "DEABC");
+    CHECK(out.power_switch == power::Switch::Cable);
+    CHECK(out.flarm_id == kFlarmIdUnset);
+}
+
+TEST_CASE("settings: the FLARM ID is stored, and a new unit ships with none" *
+          doctest::test_suite("main")) {
+    Settings settings = defaults();
+    CHECK(settings.flarm_id == kFlarmIdUnset);
+    CHECK(apply_patch(settings, "{\"flarm_id\":14488116}") == Status::Ok);
+    CHECK(settings.flarm_id == 0xDD1234u);
+
+    uint8_t blob[64];
+    to_blob(settings, blob, sizeof(blob));
+    Settings loaded;
+    REQUIRE(from_blob(blob, blob_size(), loaded) == Status::Ok);
+    CHECK(loaded.flarm_id == 0xDD1234u);
+
+    CHECK(apply_patch(settings, "{\"flarm_id\":16777216}") == Status::OutOfRange);
+    CHECK(settings.flarm_id == 0xDD1234u);
+    CHECK(apply_patch(settings, "{\"flarm_id\":0}") == Status::Ok);
+    CHECK(settings.flarm_id == kFlarmIdUnset);
+}
+
+// A neighbour's FLARM stored by mistake would vanish from the radar, so only the one aboard is.
+TEST_CASE("settings: a FLARM ID other than the one the Go hears aboard is refused, a clear never") {
+    Settings settings = defaults();
+    CHECK(apply_patch(settings, "{\"flarm_id\":14488117}", std::nullopt, 0xDD1234u) ==
+          Status::Mismatch);
+    CHECK(settings.flarm_id == kFlarmIdUnset);
+    CHECK(apply_patch(settings, "{\"flarm_id\":14488116}", std::nullopt, 0xDD1234u) == Status::Ok);
+    CHECK(apply_patch(settings, "{\"flarm_id\":0}", std::nullopt, 0xDD1235u) == Status::Ok);
+    CHECK(settings.flarm_id == kFlarmIdUnset);
 }
 
 TEST_CASE("settings: the power switch is stored, and a new unit ships on the button" *

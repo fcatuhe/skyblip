@@ -1,0 +1,16 @@
+{
+  "name": "Go parked beside the FLARM fitted in its own glider, another FLARM across the grid",
+  "callsign": "D-KXYZ",
+  "mode": "device",
+  "latitude_1e7": 485000000,
+  "longitude_1e7": 85000000,
+  "altitude_m": 400,
+  "speed_kt": 0,
+  "track_deg": 90,
+  "duration_ms": 50000,
+  "aircraft": [
+    {"system": "alptas", "address": 14488116, "north_m": 0, "east_m": 0, "up_m": 0, "speed_mps": 0, "track_deg": 90},
+    {"system": "alptas", "address": 14505592, "north_m": 40, "east_m": 25, "up_m": 0, "speed_mps": 0, "track_deg": 270}
+  ],
+  "events": []
+}

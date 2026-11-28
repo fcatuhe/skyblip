@@ -150,10 +150,13 @@ void ScreenService::press(uint32_t now_ms) {
     if (receiving_) return;
     // INFO: fc 18oct26 the activation page has no menu behind it; the power-off hold is the shell's
     if (!context_.state.activation.activated()) return;
-    if (notice_ && notice_kind_ == Notice::NewAircraft) {
+    if (notice_ && (notice_kind_ == Notice::NewAircraft || notice_kind_ == Notice::NewFlarm)) {
         // INFO: fc 13nov26 this press stores an address, so only once read with the thumb quiet
         if (!notice_read(now_ms)) return;
-        use_noticed_aircraft();
+        if (notice_kind_ == Notice::NewAircraft)
+            use_noticed_aircraft();
+        else
+            use_noticed_flarm();
     }
     if (close_notice()) return;
     if (on_bravo_page()) {
@@ -161,6 +164,8 @@ void ScreenService::press(uint32_t now_ms) {
         return;
     }
     if (editor_.active()) {
+        // INFO: fc 27nov26 ERASE takes an address off, so only once the question is read
+        if (editor_.clearing() && !clear_read(now_ms)) return;
         editor_.button(now_ms);
         return;
     }
@@ -240,6 +245,8 @@ MenuValues ScreenService::menu_values() const {
     values.detected = detected();
     values.own_transponder = comms::address_of(context_.state.own_transponder);
     values.sounds = common::can_sound(context_.roles.capabilities);
+    values.flarm = flarm_detected();
+    values.own_flarm = traffic::flarm_id_of(context_.state.aboard);
     return values;
 }
 
@@ -247,7 +254,8 @@ void ScreenService::step_editor(uint32_t now_ms) {
     if (!editor_.active()) return;
 
     MenuValues current = menu_values();
-    current.detected = detected_to_store(detected_on_glass_);
+    current.detected = detected_to_store(on_glass_.detected);
+    current.flarm = flarm_to_store(on_glass_.flarm);
     MenuValues next;
 
     switch (editor_.tick(now_ms, current, next)) {
@@ -379,6 +387,11 @@ bool ScreenService::notice_read(uint32_t now_ms) const {
            common::PromptAnswer::settled_since(now_ms, notice_on_glass_since_ms_);
 }
 
+bool ScreenService::clear_read(uint32_t now_ms) const {
+    return on_glass_.clearing &&
+           common::PromptAnswer::settled_since(now_ms, clear_on_glass_since_ms_);
+}
+
 bool ScreenService::refresh_allowed() const {
     return thermal() == Thermal::Refresh &&
            power::may_refresh(context_.state.power.level, context_.state.power.supply_warned,
@@ -397,6 +410,7 @@ void ScreenService::wipe_glass(uint32_t now_ms) {
     note_presented(now_ms);
     prompt_on_glass_ = false;
     notice_on_glass_ = false;
+    on_glass_ = Drawn{};
     last_render_ms_ = now_ms;
     dirty_ = true;
     change_ = Change::Wiped;
@@ -416,8 +430,10 @@ void ScreenService::note_presented(uint32_t now_ms) {
     presented_once_ = true;
     context_.state.panel_presented = true;
     prompt_on_glass_ = answering();
-    if (notice_ && !notice_on_glass_) notice_on_glass_since_ms_ = now_ms;
-    notice_on_glass_ = notice_;
+    if (drawn_.notice && !notice_on_glass_) notice_on_glass_since_ms_ = now_ms;
+    notice_on_glass_ = drawn_.notice;
+    if (drawn_.clearing && !on_glass_.clearing) clear_on_glass_since_ms_ = now_ms;
+    on_glass_ = drawn_;
     last_present_ms_ = now_ms;
 }
 
