@@ -22,7 +22,7 @@ class DevReleaseTest < Minitest::Test
   BRAVO_NOTES = <<~NOTES.chomp
     ## skyBlip Bravo
 
-    Radio protocols: ADS-B 0.8.1.
+    Radio protocols: ADS-B 0.8.2.
 
     - `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/fcatuhe/skyblip/tree/main/firmware/keys)), older builds included.
     - `.uf2` installs on any unit by drag-and-drop, and moves it to the development key.
