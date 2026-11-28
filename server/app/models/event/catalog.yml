@@ -138,8 +138,8 @@ installer.identified:
 installer.drive_chosen:
   group: Installer
   from: browser
-  keys: [board, product]
-  says: The pilot chose the unit's drive, with the Board-ID its INFO_UF2.TXT names and the product it gives.
+  keys: [board, product, softdevice]
+  says: The pilot chose the unit's drive, with the Board-ID and the SoftDevice its INFO_UF2.TXT names and the product it gives. A SoftDevice other than the one the product's image is linked above is refused before the write.
   answers: Which bootloaders the units ship with, the first thing to check when a write fails.
 installer.wrote:
   group: Installer

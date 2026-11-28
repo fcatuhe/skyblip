@@ -38,7 +38,7 @@
   class Drive {
     constructor(device) {
       this.device = device;
-      this.files = new Map([['INFO_UF2.TXT', `UF2 Bootloader 0.6.1\nModel: ${device.product === 'go' ? 'LilyGo T-Echo' : 'Seeed MeshTracker X1'}\nBoard-ID: ${BOARDS[device.product]}\n`]]);
+      this.files = new Map([['INFO_UF2.TXT', `UF2 Bootloader 0.6.1\nModel: ${device.product === 'go' ? 'LilyGo T-Echo' : 'Seeed MeshTracker X1'}\nBoard-ID: ${BOARDS[device.product]}\n${device.softdevice ? `SoftDevice: ${device.softdevice}\n` : ''}`]]);
       this.name = device.product === 'go' ? 'TECHOBOOT' : 'X1';
     }
 

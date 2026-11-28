@@ -13,7 +13,7 @@ class Event::Journal
 
   WORDS = %w[navigation control kind error controller filter phase product running track image imu settings trust flight power_level
              key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language
-             sha reason staged_key unit_key bootloader_keys device_id variant firmware board kind profile build last_command].freeze
+             sha reason staged_key unit_key bootloader_keys device_id variant firmware board softdevice kind profile build last_command].freeze
   COUNTS = %w[load_ms line column connect_ms linked_ms battery_percent lasted_ms sent_bytes total_bytes request_error boots
               probation_boots browser_major bluetooth_tag usb_vendor usb_product hw_model write_ms code].freeze
   FLAGS = %w[bluetooth standalone online storage mobile returned expected swap_powered activated charging full upgrade confirmed report release trusted saved].freeze

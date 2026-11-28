@@ -101,7 +101,8 @@ export class Installer {
     const board = boardOf(await textOf(drive, INFO_FILE));
     if (!board.product) return this.#set({ phase: 'drive', notice: { key: board.id ? 'other_board' : 'not_drive', detail: board.id } });
     const product = board.product;
-    this.#record('installer.drive_chosen', { board: board.id, product });
+    this.#record('installer.drive_chosen', { board: board.id, product, softdevice: board.softdevice });
+    if (!board.fits) return this.#set({ phase: 'drive', notice: { key: 'other_softdevice', detail: board.softdevice } });
     this.#set({ phase: 'downloading', product, board: board.id, tag: product === this.#state.product ? this.#state.tag : null });
     let image;
     try {
