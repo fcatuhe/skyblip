@@ -23,6 +23,9 @@ const BOARDS = [
   [/^nRF52840-MeshTracker-X1/i, 'bravo'],
 ];
 
+// INFO: fc 28nov26 the SoftDevice each image is linked above, factory INFO_UF2.TXT and the mcuboot partition of t_echo_plus.dts and meshtracker_x1.dts
+const SOFTDEVICES = { go: '6.1.1', bravo: '7.3.0' };
+
 export const RECORD_MAGIC = 'skyblip:trust:v1';
 const KEY_BYTES = 32;
 const LABEL_BYTES = 24;
@@ -30,7 +33,13 @@ export const RECORD_BYTES = RECORD_MAGIC.length + KEY_BYTES + 1 + LABEL_BYTES + 
 
 export function boardOf(info) {
   const id = /^Board-ID:\s*(\S+)/m.exec(info ?? '')?.[1] ?? null;
-  return { id, product: BOARDS.find(([pattern]) => pattern.test(id ?? ''))?.[1] ?? null };
+  const product = BOARDS.find(([pattern]) => pattern.test(id ?? ''))?.[1] ?? null;
+  const softdevice = /^SoftDevice:\s*(.*?)\s*$/m.exec(info ?? '')?.[1] ?? null;
+  return { id, product, softdevice, fits: softdevice === null || softdeviceVersion(softdevice) === SOFTDEVICES[product] };
+}
+
+function softdeviceVersion(text) {
+  return /^S140\s+(?:version\s+)?(\S+)$/i.exec(text)?.[1] ?? null;
 }
 
 export function parseUf2(bytes) {
