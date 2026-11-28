@@ -5,7 +5,7 @@
 
 namespace skyblip::adsb {
 
-inline constexpr char kVersion[] = "0.8.0";
+inline constexpr char kVersion[] = "0.8.1";
 inline constexpr char kSpecification[] =
     "1090 MHz extended squitter DF17, read only, after RTCA DO-260B (draft 4.2, 1090-WP30-18)";
 
