@@ -56,6 +56,7 @@ int ConfigService::format_status(uint8_t* out, int capacity) {
     if (heard.aircraft_category != 0)
         writer.add_unsigned(link::status_key::kOwnTransponderCategory, heard.aircraft_category);
     if (no_tx_ != timing::NoTx::None) writer.add_code(link::status_key::kNoTx, no_tx_);
+    if (own_flarm_) writer.add_unsigned(link::status_key::kOwnFlarm, *own_flarm_);
     return writer.finish();
 }
 

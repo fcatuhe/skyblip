@@ -320,8 +320,9 @@ The button opens the menu of the page a pilot stands on, so a pilot with no phon
 
 | Menu | Rows |
 |---|---|
-| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `BRAVO`, `POWER` |
+| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `FLARM`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `BRAVO`, `POWER` |
 | `AIRCRAFT` row | `AIRCRAFT`: what Bravo heard, `TYPE`, `CALLSIGN`, `ADS-B` |
+| `FLARM` row | `FLARM`: what the Go hears aboard, `FLARM ID` |
 | `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `BRAVO LOG`, `SELF TEST` |
 
 The headings say what the rows are, not the page behind them, which the pilot knows.
@@ -332,11 +333,12 @@ The radar's menu holds every setting changed on the glass, and the front light, 
 
 - `LIGHT` comes first, reached for in the dark: two presses from the radar light it, and the press also gives the page back. `ScreenService` holds it and never stores it, so every boot starts dark and a light left on in daylight costs no next flight (`scripts/power_budget.py` models it at 20 mA, not yet metered).
 - `AIRCRAFT` is second, because a new device needs it before its first flight. It shows six characters of the callsign, or `NONE`, and opens the `aircraft` menu.
+- `FLARM` follows, for the same reason. It shows the stored FLARM ID, or `NONE`, and opens the `flarm` menu.
 - `UNITS`, `RANGE` and `PLOT` follow, the three the radar is made of.
 - `RANGE` steps 1, 2, 4 and 8 NM, or 2, 4, 8 and 16 KM, and round. Each table doubles in whole units of its own rather than converting the other, and the step survives a change of unit.
 - `ALARM` steps `LOUD`, `SOFT`, `VISUAL`, `OFF` and round, so one stray press from the default still sounds. A Go with no buzzer and no haptic toggles `VISUAL` and `OFF`, and while paired steps `BRAVO LOUD`, `BRAVO SOFT`, `VISUAL` and `OFF`, the `BRAVO` steps sounding on Bravo alone. Pairing sets `BRAVO LOUD`, and unpairing turns a `BRAVO` step into `VISUAL`. While paired the row sets the alarm for both units (`../../../core/comms/README.md`, The alarm).
 - `BRAVO` follows, since a Bravo is paired once, on the ground. It shows the tag or `NONE` and opens the `bravo` page.
-- `POWER` is last, the one row the menu slides up to, because it is set once per aircraft. `BUTTON`, the default, keeps the button as the switch. `CABLE` hands it to USB power, so a Go wired to the aircraft's socket follows the master switch (`../../../core/power/README.md`, Cable mode).
+- `POWER` is last, one of the two rows the menu slides up to with `BRAVO`, because it is set once per aircraft. `BUTTON`, the default, keeps the button as the switch. `CABLE` hands it to USB power, so a Go wired to the aircraft's socket follows the master switch (`../../../core/power/README.md`, Cable mode).
 
 `TYPE` holds ADS-L G.1.3's codes 0 to 10 and 15 to 17, the categories a person flies in. The longest name, `HANG GLIDER`, fits the row with its label, and a code with no name prints as `CODE 12`.
 
@@ -352,13 +354,23 @@ The `AIRCRAFT` menu holds the settings that belong to the aircraft rather than t
 
 Bravo names the transponder it hears loudest by a clear lead (`../../skyblip_bravo/README.md`, Own transponder), and its identification gives the callsign and the type. ADS-B has no dash, so `adsb::registration` (`../../../protocols/adsb/registration.h`) restores it where the address block ends the nationality mark: `FJABC` from France's block is `F-JABC`. The block reads the type, or `SAME` when the rows already match, the callsign at triple height, or the address when no flight ID came, and `ADS-B 3A4B5C`, the order of the rows, the notice and the Briefing page. The button's key reads `SET`, or nothing when a press would change nothing.
 
-A press stores the address as `aircraft_address`, the callsign when one was heard and the type when it has a name, and returns to `AIRCRAFT` in the settings menu. A new address with no callsign clears the stored callsign, so another aircraft's name never goes on air beside it. The press stores what the glass showed, and only while Bravo still hears exactly that, so a proposal that changed since the last redraw stores nothing. The block is its own confirmation, at the size a registration is checked against.
+A press stores the address as `aircraft_address`, the callsign when one was heard and the type when it has a name, and returns to `AIRCRAFT` in the settings menu. A new address with no callsign clears the stored callsign, so another aircraft's name never goes on air beside it. The press stores what the glass showed, and only while Bravo still hears exactly that, so a proposal that changed since the last redraw stores nothing. Only a block the panel was handed counts: `ScreenService` notes what `render()` drew, puts it on the glass in `note_presented()` and takes it off at a wipe, so a second press that lands before the block is drawn, `OPEN` then `SET`, stores nothing. The block is its own confirmation, at the size a registration is checked against.
 
 Bravo proposes on the ground only, `flight.confirmed_state` reading ground, because in the air a wingman 10 m off is as loud as our own transponder. In flight the block reads `IN FLIGHT` and `BRAVO FINDS IT ON THE GROUND`, and a Go with no fix reads `NO FIX`, since after a brownout in the air it knows no better. The other states say what to do: `NOT PAIRED` with `PAIR A BRAVO FIRST`, where the press opens the `bravo` page, `NOT CONNECTED`, and `NOT HEARD` with `SET THE TRANSPONDER TO ALT`, because a transponder in `STBY` sends nothing and a pilot's guide asks for `ALT` on the ground. Bravo decodes extended squitters only, so a transponder without ADS-B Out is never heard.
 
 The pad walks the block and the rows, and past `ADS-B` returns to `AIRCRAFT`. The rows open the fields below, so a unit with no Bravo still types. `ADS-B` shows the stored address or `NONE` (`../README.md`, Aircraft address).
 
-A Bravo that hears a transponder the Go does not hold says so once a boot over whatever page stands: `BRAVO HEARS` under the large mark, the callsign at triple height, the address and the type, with `SET` and `CLOSE`. It catches a Go moved to another aircraft with the old address, which would hide that aircraft from the radar. The button stores what the notice shows, but only once the notice is on the glass and the thumb has been up for `PromptAnswer::kAnswerSettleMs`, the prompt rule. Every other way out stores nothing: the pad, the countdown from `CANCELS IN 30 S`, or Bravo no longer hearing it, a takeoff included. It never opens over a menu. No other aircraft-address notice exists, so a unit with no address stays quiet until Bravo hears a transponder, at the holding point at the latest.
+A Bravo that hears a transponder the Go does not hold says so once a boot over whatever page stands: `BRAVO HEARS` under the large mark, the callsign at triple height, the address and the type, with `SET` and `CLOSE`. It catches a Go moved to another aircraft with the old address, which would hide that aircraft from the radar. The button stores what the notice shows, but only once the notice is on the glass and the thumb has been up for `PromptAnswer::kAnswerSettleMs`, the prompt rule. The notice counts as on the glass only from the frame that drew it: opening or closing a notice takes the last one off, so a notice that follows another, or a prompt drawn over it, is never answered on the strength of the frame before. Every other way out stores nothing: the pad, the countdown from `CANCELS IN 30 S`, or Bravo no longer hearing it, a takeoff included. It never opens over a menu. No other aircraft-address notice exists, so a unit with no address stays quiet until Bravo hears a transponder, at the holding point at the latest.
+
+## flarm
+
+The `FLARM` menu holds the FLARM ID under a four-line block of what the Go hears aboard, so a glider whose FLARM sends its own ID is not traffic to the Go beside it (`../README.md`, FLARM ID). It works as the `aircraft` menu does, with the Go's own receiver in place of Bravo.
+
+The block reads `FLARM ID`, or `SAME` when the row already holds it, and the ID at triple height, the size it is checked against on the FLARM's label. The button's key reads `SET`, or nothing when a press would change nothing. A press stores the ID as `flarm_id` and returns to `FLARM` in the settings menu, under the same rules as the `aircraft` block: what the glass showed, while the Go still hears exactly that.
+
+The Go proposes on the ground only, because in the air a wingman's FLARM is as loud as our own. The other states say what to do: `IN FLIGHT` and `NO FIX` with `THE GO FINDS IT ON THE GROUND`, `NOT HEARD` with `START THE FLARM`, `ICAO ADDRESS` with `USE THE ADS-B ROW` for a device aboard that sends the aircraft's ICAO address, and `NO FLARM ID` with `THE GO CANNOT HIDE IT` for one that sends a random or another manufacturer's address.
+
+The pad walks the block and the row, and past `FLARM ID` returns to `FLARM`. A Go that hears a FLARM ID aboard it does not hold says so once a boot over whatever page stands: `GO HEARS` under the large mark, `FLARM ID` and the ID at triple height, with `SET` and `CLOSE`, under the `BRAVO HEARS` notice's rules. The two notices never stand together, and the transponder's comes first.
 
 ## bravo
 
@@ -382,7 +394,9 @@ The stored name drops trailing blanks and keeps one in the middle. A press on a 
 
 `ADS-B` opens the same field six wide, for a hex address, rolling blank, `0` to `9`, `A` to `F` and blank. The last press stores only six typed digits that are not `000000`, the unset value, or `FFFFFF`, which ICAO assigns to no aircraft. While a paired Bravo names the aircraft's transponder, the field shows `BRAVO HEARS` over that address, and any other is refused: the field stays open, the bar returns to the first digit, and `NOT ACCEPTED` stands until the pad rolls a character. ADS-L F.2.3 asks for an inconsistent configuration to be disallowed (`../../../core/settings/README.md`, The ICAO address). A clear is never refused.
 
-Clearing the address takes one more press, because without it our own transponder can show as traffic and alarm: a second screen shows the address, `YOUR TRANSPONDER SHOWS AS TRAFFIC`, `ERASE` and `KEEP`, and only the button clears. The pad, the long touch and the `kAskCeilingMs` countdown keep it.
+Clearing the address takes one more press, because without it our own transponder can show as traffic and alarm: a second screen shows the address, `YOUR TRANSPONDER SHOWS AS TRAFFIC`, `ERASE` and `KEEP`, and only the button clears, once the question is on the glass and the thumb has been up for `PromptAnswer::kAnswerSettleMs`. A press before that does nothing. The pad, the long touch and the `kAskCeilingMs` countdown keep it.
+
+`FLARM ID` opens the same field six wide, for the ID of the FLARM aboard. While the Go hears a FLARM aboard, the field shows `GO HEARS` over that ID, and any other is refused as the `ADS-B` field refuses one. Its clear asks `YOUR FLARM SHOWS AS TRAFFIC`.
 
 The field is at triple height, the largest type on any page, because it is checked character by character against a fuselage. Leaving it unfinished, by the long touch or `kIdleReturnHoldMs` untouched, stores nothing.
 

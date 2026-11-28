@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { goAlarmOf, heardSettings, noTxMark, settingsOf, soundsOf, statusOf } from '#skyblip/settings';
+import { goAlarmOf, heardSettings, noTxMark, settingsFrame, settingsOf, soundsOf, statusOf } from '#skyblip/settings';
 
 const GO = { aircraft_type: 1, callsign: 'F-JXYZ', aircraft_address: '', units: 'nautical' };
 const BRAVO = { alarm_enabled: true, alarm_volume: 'loud', aircraft_address: '' };
@@ -59,4 +59,16 @@ test('config says whether a Go can sound itself, and a unit that does not say le
   assert.equal(soundsOf({ command: 'config', annunciator_fitted: false }), false);
   assert.equal(soundsOf({ command: 'config', annunciator_fitted: true }), true);
   assert.equal(soundsOf({ command: 'config', alarm: 'loud', alarm_from_go: false }), null);
+});
+
+test('status reads the FLARM the Go hears aboard as the six hex digits the form shows', () => {
+  assert.equal(statusOf({ command: 'status', flight: 'ground', own_flarm: 0xdd1234 }).ownFlarm, 'DD1234');
+  assert.equal(statusOf({ command: 'status', flight: 'airborne' }).ownFlarm, null);
+});
+
+test('the FLARM ID travels as a number and shows as six hex digits, 0 as an empty field', () => {
+  assert.deepEqual(settingsOf({ command: 'config', flarm_id: 0xdd1234, aircraft_address: 0 }), { aircraft_address: '', flarm_id: 'DD1234' });
+  assert.deepEqual(settingsOf({ command: 'config', flarm_id: 0 }), { flarm_id: '' });
+  assert.deepEqual(settingsFrame({ flarm_id: 'DD1234', callsign: 'F-JABC' }), { flarm_id: 0xdd1234, callsign: 'F-JABC' });
+  assert.deepEqual(settingsFrame({ flarm_id: '' }), { flarm_id: 0 });
 });

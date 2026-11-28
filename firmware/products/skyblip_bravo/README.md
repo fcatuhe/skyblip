@@ -149,7 +149,7 @@ The aircraft address is the pinned Go's when its last claim carried one, else Br
 
 `OwnTransponder` names the transponder Bravo takes for the aircraft's own, and `health` carries it to the Go as `own_transponder`, with the callsign and category its identification gave. The Go proposes it on the ground only and stores it on the pilot's press (`../skyblip_go/pages/README.md`, aircraft). `AdsbService` also publishes it as `bus::State::own_transponder` while Bravo is on the ground, and the config link carries it to a phone in `status`.
 
-It hears every decoded DF17 before the assembly drops the aircraft address, and every DF11 and reply `Transponders` believes. An emitter qualifies when it is the loudest heard in the last `kEmitterMaxAgeMs`, 5 s, at or above `kLoudFloorDbm`, -30 dBm, and `kLeadDb`, 10 dB, ahead of every other, and is named once it has qualified for `kLeadHoldMs`, 10 s.
+It hears every decoded DF17 before the assembly drops the aircraft address, and every DF11 and reply `Transponders` believes. The rule is `traffic::Aboard`'s, which the Go runs for its FLARM too (`../../core/traffic/README.md`, Aboard). An emitter qualifies when it is the loudest heard in the last `kEmitterMaxAgeMs`, 5 s, at or above `kLoudFloorDbm`, -30 dBm, and `kLeadDb`, 10 dB, ahead of every other, and is named once it has qualified for `kLeadHoldMs`, 10 s.
 
 The three figures are unmeasured. Free space puts a 250 W transponder at about -19 dBm at 100 m, but the fuselage sits between a belly antenna and the cockpit, and a neighbour 20 m off may be as loud as our own transponder. That is why the lead must hold and the pilot confirms. A capture in a cockpit beside another aircraft sets all three.
 

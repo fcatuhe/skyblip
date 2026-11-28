@@ -129,6 +129,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "paired_tag",
           "number": 15,
           "type": "unsigned"
+        },
+        {
+          "name": "flarm_id",
+          "number": 16,
+          "type": "unsigned"
         }
       ]
     },
@@ -209,6 +214,11 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "paired_tag",
           "number": 15,
+          "type": "unsigned"
+        },
+        {
+          "name": "flarm_id",
+          "number": 16,
           "type": "unsigned"
         }
       ],
@@ -292,6 +302,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "paired_tag",
           "number": 15,
           "type": "unsigned"
+        },
+        {
+          "name": "flarm_id",
+          "number": 16,
+          "type": "unsigned"
         }
       ],
       "keys_of": "config"
@@ -371,6 +386,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 12,
           "type": "enum",
           "enum": "no_tx"
+        },
+        {
+          "name": "own_flarm",
+          "number": 13,
+          "type": "unsigned"
         }
       ]
     },
@@ -3105,6 +3125,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "window_closed",
           "code": 63
+        },
+        {
+          "name": "not_own_flarm",
+          "code": 64
         }
       ]
     },

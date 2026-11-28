@@ -9,12 +9,14 @@
 #include "core/comms/peer.h"
 #include "core/events/link.h"
 #include "core/identity/activation.h"
+#include "core/traffic/aboard.h"
 #include "simulator/world/link_text.h"
 
 namespace skyblip {
 
 inline const identity::Activation kTestActivation{0x1234, 0x3F2A};
 inline const std::optional<comms::OwnTransponderHeard> kNoOwnTransponder{};
+inline const std::optional<traffic::AboardHeard> kNothingAboard{};
 
 inline constexpr const char* kSmallMtuRefusal =
     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"small_mtu\"}";

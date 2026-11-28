@@ -20,7 +20,7 @@ TEST_CASE(
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
     link.clear();

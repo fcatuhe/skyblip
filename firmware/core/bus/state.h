@@ -24,6 +24,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/slot_timing_statistics.h"
 #include "core/timing/transmit_gate.h"
+#include "core/traffic/aboard.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -244,6 +245,8 @@ struct State {
     std::optional<comms::OwnTransponderHeard> own_transponder{};
     // INFO: fc 19nov26 written by a Go's Bravo service alone, kept until the address changes
     AircraftTransponder aircraft_transponder{};
+    // INFO: fc 27nov26 the emitter a Go hears aboard on 868 MHz, on the ground, whatever its table
+    std::optional<traffic::AboardHeard> aboard{};
     // INFO: fc 17nov26 what this unit announces, which a paired Go sends its Bravo to play
     annunciation::Call alarm_call{};
     // INFO: fc 17nov26 written by Bravo's peer service alone: its Go's call while it plays it

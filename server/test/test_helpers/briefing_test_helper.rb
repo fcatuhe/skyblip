@@ -1,6 +1,6 @@
 module BriefingTestHelper
   SCREENS = { phone: [ 412, 915 ], laptop: [ 1280, 820 ] }.freeze
-  NEW_SETTINGS = { aircraft_type: 1, units: "nautical", callsign: "", aircraft_address: 0, alarm: "loud" }.freeze
+  NEW_SETTINGS = { aircraft_type: 1, units: "nautical", callsign: "", aircraft_address: 0, alarm: "loud", flarm_id: 0 }.freeze
 
   private
     def in_range(*units, adapter: true)

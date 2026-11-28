@@ -32,7 +32,7 @@ TEST_CASE("settings: a Go that cannot sound ships on visual, reads loud as visua
           doctest::test_suite("main")) {
     const ports::Capabilities silent = ports::Capability::Display;
     Settings settings = defaults();
-    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard, silent);
 
     store.restore_defaults();
     CHECK(settings.alarm == Alarm::Visual);
@@ -57,7 +57,7 @@ TEST_CASE("settings: a Go that cannot sound takes soft and loud only while paire
           doctest::test_suite("main")) {
     const ports::Capabilities silent = ports::Capability::Display;
     Settings settings = defaults();
-    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard, silent);
     store.restore_defaults();
     settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
     CHECK(apply_json(store, "{\"command\":\"set\",\"alarm\":\"soft\"}") == Status::Ok);
@@ -68,7 +68,7 @@ TEST_CASE("settings: a Go that cannot sound takes soft and loud only while paire
     const size_t bytes = store.to_blob(blob, sizeof(blob));
     REQUIRE(bytes > 0);
     Settings read = defaults();
-    SettingsStore reread(read, kTestActivation, kNoOwnTransponder, silent);
+    SettingsStore reread(read, kTestActivation, kNoOwnTransponder, kNothingAboard, silent);
     REQUIRE(reread.adopt(blob, bytes) == Status::Ok);
     CHECK(read.alarm == Alarm::Loud);
 
@@ -76,7 +76,7 @@ TEST_CASE("settings: a Go that cannot sound takes soft and loud only while paire
     uint8_t frame[64];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Config);
-    store.write_fields(writer);
+    store.write_fields(writer, std::nullopt);
     const int written = writer.finish();
     CHECK(link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(written)))
               .find("\"alarm\":\"visual\"") != std::string::npos);
@@ -86,7 +86,7 @@ TEST_CASE("settings: a Go that cannot sound takes soft and loud only while paire
 TEST_CASE("settings: a phone's soft on a paired Go that cannot sound is confirmed as BRAVO SOFT") {
     const ports::Capabilities silent = ports::Capability::Display;
     Settings settings = defaults();
-    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard, silent);
     store.restore_defaults();
     settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
     const events::RxFrame frame = config_frame("{\"command\":\"set\",\"alarm\":\"soft\"}");
@@ -102,7 +102,7 @@ std::string config_fields(const SettingsStore& store) {
     uint8_t frame[64];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Config);
-    store.write_fields(writer);
+    store.write_fields(writer, std::nullopt);
     const int bytes = writer.finish();
     return link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes)));
 }
@@ -114,7 +114,7 @@ TEST_CASE(
     "settings: a Go that cannot sound defaults to BRAVO LOUD while paired, VISUAL otherwise") {
     const ports::Capabilities silent = ports::Capability::Display;
     Settings settings = defaults();
-    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard, silent);
     store.restore_defaults();
     CHECK(default_fields(store).find("\"alarm\":\"visual\"") != std::string::npos);
     settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
@@ -125,20 +125,22 @@ TEST_CASE(
 TEST_CASE("settings: config says whether the Go can sound an alarm itself") {
     Settings plain_settings = defaults();
     const ports::Capabilities silent = ports::Capability::Display;
-    const SettingsStore plain(plain_settings, kTestActivation, kNoOwnTransponder, silent);
+    const SettingsStore plain(plain_settings, kTestActivation, kNoOwnTransponder, kNothingAboard,
+                              silent);
     CHECK(config_fields(plain).find("\"annunciator_fitted\":false") != std::string::npos);
     CHECK(default_fields(plain).find("annunciator_fitted") == std::string::npos);
 
     Settings plus_settings = defaults();
     const ports::Capabilities sounding = ports::Capability::Buzzer | ports::Capability::Haptic;
-    const SettingsStore plus(plus_settings, kTestActivation, kNoOwnTransponder, sounding);
+    const SettingsStore plus(plus_settings, kTestActivation, kNoOwnTransponder, kNothingAboard,
+                             sounding);
     CHECK(config_fields(plus).find("\"annunciator_fitted\":true") != std::string::npos);
 }
 
 TEST_CASE("settings: a Go+ ships on loud and takes every step" * doctest::test_suite("main")) {
     const ports::Capabilities sounding = ports::Capability::Buzzer | ports::Capability::Haptic;
     Settings settings = defaults();
-    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, sounding);
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard, sounding);
     store.restore_defaults();
     CHECK(settings.alarm == Alarm::Loud);
     for (const char* step : {"off", "visual", "soft", "loud"}) {

@@ -131,6 +131,8 @@ fr:
     aircraft_address_hints:
       go: "L\u2019adresse de votre transpondeur, comme 3C6586. Le Go émet sous cette adresse. Laissez vide sans transpondeur."
       bravo: "L\u2019adresse de votre transpondeur, comme 3C6586. Bravo l\u2019exclut du trafic. Laissez vide sans transpondeur."
+    flarm_id: "ID FLARM"
+    flarm_id_hint: "L\u2019ID du FLARM installé dans l\u2019aéronef, par exemple DD1234. Le Go l\u2019écarte du trafic et ne l\u2019émet jamais. Laissez vide sans FLARM."
   footer:
     label: "Pied de page"
     description: "Visibilité électronique pour l'aviation de loisir et les sports aériens. skyBlip Go annonce votre position en ADS-L, reçoit le trafic ADS-L et FLARM et vous dit où regarder."

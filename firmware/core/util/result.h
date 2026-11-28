@@ -21,6 +21,7 @@ enum class [[nodiscard]] Status : uint8_t {
     NotFound,
     Conflict,
     Unsubscribed,
+    Mismatch,
 };
 
 constexpr bool is_ok(Status status) { return status == Status::Ok; }

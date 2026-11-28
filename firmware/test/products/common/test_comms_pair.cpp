@@ -39,7 +39,7 @@ struct Desk {
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
+    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder, kNothingAboard};
     common::ConfigService config{link, store, &dfu};
     platform::host::Identity port{std::nullopt};
     platform::host::Random random;
@@ -160,7 +160,7 @@ TEST_CASE("pair: a unit already paired with that tag answers paired, and its con
     desk.config.set_paired_tag(kBravoTag);
     CHECK(desk.pair(kBravoTag) == acknowledgement(true, "paired"));
     CHECK(desk.config.pending() == common::Pending::None);
-    CHECK(desk.say("{\"command\":\"get\"}").find("\"paired_tag\":16170}") != std::string::npos);
+    CHECK(desk.say("{\"command\":\"get\"}").find("\"paired_tag\":16170,") != std::string::npos);
 
     desk.config.set_paired_tag(std::nullopt);
     CHECK(desk.say("{\"command\":\"get\"}").find("paired_tag") == std::string::npos);

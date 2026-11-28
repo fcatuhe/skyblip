@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #include "core/util/cbor.h"
 #include "core/util/result.h"
@@ -12,7 +13,8 @@ namespace skyblip::common {
 class SettingsStore {
    public:
     virtual ~SettingsStore() = default;
-    virtual void write_fields(cbor::Writer& writer) const = 0;
+    // INFO: fc 27nov26 the store writes the paired tag too, so every key goes in ascending order
+    virtual void write_fields(cbor::Writer& writer, std::optional<uint16_t> paired_tag) const = 0;
     virtual void write_default_fields(cbor::Writer& writer) const = 0;
     virtual Status apply(const cbor::Reader& frame) = 0;
     // INFO: fc 03oct26 what apply() would change, rows split by '\n' | 20oct26 or its refusal

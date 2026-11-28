@@ -199,6 +199,8 @@ class ConfigService {
     void set_bravo_state(comms::BravoState state);
     // INFO: fc 15nov26 a page proposes the transponder Bravo hears, as the Go's AIRCRAFT menu does
     void set_own_transponder(const std::optional<comms::OwnTransponderHeard>& heard);
+    // INFO: fc 27nov26 the FLARM a Go hears aboard, proposed as a page proposes the transponder
+    void set_own_flarm(std::optional<uint32_t> flarm_id);
     // INFO: fc 19nov26 the reason the glass shows beside NO TX, pushed when it changes
     void set_no_tx(timing::NoTx reason);
 
@@ -306,6 +308,7 @@ class ConfigService {
     bool went_dark_flat_{false};
     comms::BravoState bravo_{comms::BravoState::Unpaired};
     std::optional<comms::OwnTransponderHeard> own_transponder_{};
+    std::optional<uint32_t> own_flarm_{};
     timing::NoTx no_tx_{timing::NoTx::None};
     bool status_push_due_{false};
     std::optional<Action> confirmed_{};

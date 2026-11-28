@@ -9,9 +9,9 @@ import { VERDICT_WITHIN_MS, noticeOf } from '#skyblip/update';
 
 import { NEWER, IMAGE_BYTES, session, asking, settled, connected, chosen } from './update_session.mjs';
 
-const FLOWN = { aircraft_type: 7, units: 'metric', callsign: 'F-JABC', aircraft_address: 0x3C6586, alarm: 'soft' };
-const FLOWN_SHOWN = { ...FLOWN, aircraft_address: '3C6586' };
-const DEFAULTS_SHOWN = { ...DEFAULTS, aircraft_address: '' };
+const FLOWN = { aircraft_type: 7, units: 'metric', callsign: 'F-JABC', aircraft_address: 0x3C6586, alarm: 'soft', flarm_id: 0xDD1234 };
+const FLOWN_SHOWN = { ...FLOWN, aircraft_address: '3C6586', flarm_id: 'DD1234' };
+const DEFAULTS_SHOWN = { ...DEFAULTS, aircraft_address: '', flarm_id: '' };
 
 async function withSettings(options = {}) {
   const link = await connected({ stored: FLOWN, ...options });
@@ -45,7 +45,7 @@ test('back to defaults sends the defaults the device named, and lands it on them
   const { device, updater, until } = await withSettings();
   updater.resetSettings();
   await until(asking('set'));
-  assert.deepEqual(device.staged, { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud' });
+  assert.deepEqual(device.staged, { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud', flarm_id: 0 });
   device.press();
   const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 'nautical');
   assert.deepEqual(settings, DEFAULTS_SHOWN);

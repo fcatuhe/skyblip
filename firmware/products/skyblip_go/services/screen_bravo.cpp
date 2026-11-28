@@ -70,27 +70,48 @@ uint32_t ScreenService::bravo_seconds_left(const BravoView& view, uint32_t now_m
 
 // INFO: fc 11nov26 once a boot, never over an alarm, and gone after the menu's idle hold
 void ScreenService::sync_notice(uint32_t now_ms) {
-    const Detected heard = detected();
-    // INFO: fc 13nov26 an aircraft no longer heard on the ground, takeoff included, is no proposal
-    const bool proposal_gone =
-        notice_kind_ == Notice::NewAircraft && !same_aircraft(heard, noticed_aircraft_);
     const bool answered = notice_kind_ == Notice::BravoAsks && !bravo_.asking_again();
-    if (notice_ && (alarm_takes_glass() || proposal_gone || answered ||
+    if (notice_ && (alarm_takes_glass() || proposal_gone() || answered ||
                     now_ms - notice_since_ms_ >= notice_ceiling_ms()))
         close_notice();
     if (alarm_takes_glass()) return;
     if (bravo_.take_forgotten_notice()) {
-        notice_kind_ = Notice::BravoForgot;
-    } else if (bravo_.take_asking_notice()) {
-        notice_kind_ = Notice::BravoAsks;
-    } else if (!notice_ && !aircraft_noticed_ && mode_ == Mode::Page && new_aircraft(heard)) {
-        notice_kind_ = Notice::NewAircraft;
-        noticed_aircraft_ = heard;
-        aircraft_noticed_ = true;
-    } else {
+        open_notice(Notice::BravoForgot, now_ms);
         return;
     }
+    if (bravo_.take_asking_notice()) {
+        open_notice(Notice::BravoAsks, now_ms);
+        return;
+    }
+    if (notice_ || mode_ != Mode::Page) return;
+    const Detected heard = detected();
+    if (!aircraft_noticed_ && new_aircraft(heard)) {
+        noticed_aircraft_ = heard;
+        aircraft_noticed_ = true;
+        open_notice(Notice::NewAircraft, now_ms);
+        return;
+    }
+    const FlarmDetected flarm = flarm_detected();
+    if (!flarm_noticed_ && new_flarm(flarm)) {
+        noticed_flarm_ = flarm;
+        flarm_noticed_ = true;
+        open_notice(Notice::NewFlarm, now_ms);
+    }
+}
+
+// INFO: fc 13nov26 a proposal no longer heard on the ground, takeoff included, closes its notice
+bool ScreenService::proposal_gone() const {
+    if (!notice_) return false;
+    if (notice_kind_ == Notice::NewAircraft) return !same_aircraft(detected(), noticed_aircraft_);
+    if (notice_kind_ == Notice::NewFlarm) return !same_flarm(flarm_detected(), noticed_flarm_);
+    return false;
+}
+
+// INFO: fc 27nov26 a notice is read only once it is itself on the glass, never its predecessor
+void ScreenService::open_notice(Notice kind, uint32_t now_ms) {
+    notice_kind_ = kind;
     notice_ = true;
+    notice_on_glass_ = false;
     notice_since_ms_ = now_ms;
     change_screen();
 }
@@ -139,6 +160,7 @@ void ScreenService::use_noticed_aircraft() {
 bool ScreenService::close_notice() {
     if (!notice_) return false;
     notice_ = false;
+    notice_on_glass_ = false;
     change_screen();
     return true;
 }

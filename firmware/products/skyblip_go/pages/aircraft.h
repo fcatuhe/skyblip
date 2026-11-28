@@ -33,6 +33,26 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
                    bool focused);
 void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected, uint32_t seconds_left);
 
+// INFO: fc 27nov26 what the Go hears aboard on 868 MHz: a FLARM ID it can store, or why not
+enum class FlarmDetection : uint8_t { Airborne, NoFix, Listening, Heard, Icao, Other };
+
+struct FlarmDetected {
+    FlarmDetection state{FlarmDetection::Listening};
+    uint32_t id{kFlarmIdUnset};
+};
+
+// INFO: fc 27nov26 false when the ID is already stored, so a press on a match stores nothing
+bool adopt_flarm(const FlarmDetected& detected, Settings& settings);
+bool flarm_matches(const FlarmDetected& detected, const Settings& settings);
+bool same_flarm(const FlarmDetected& a, const FlarmDetected& b);
+
+constexpr const char* kFlarmNoticeTitle = "GO HEARS";
+constexpr const char* kFlarmIdLabel = "FLARM ID";
+
+void draw_flarm_detected(ui::Canvas& canvas, const FlarmDetected& detected,
+                         const Settings& settings, bool focused);
+void draw_flarm_notice(ui::Canvas& canvas, const FlarmDetected& detected, uint32_t seconds_left);
+
 }  // namespace skyblip::go
 
 #endif

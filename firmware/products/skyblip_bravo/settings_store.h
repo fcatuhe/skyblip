@@ -1,6 +1,10 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_SETTINGS_STORE_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_SETTINGS_STORE_H
 
+#include <cstdint>
+#include <optional>
+
+#include "core/comms/link_registry.h"
 #include "products/common/settings_store.h"
 #include "products/skyblip_bravo/settings.h"
 
@@ -10,8 +14,9 @@ class SettingsStore : public common::SettingsStore {
    public:
     explicit SettingsStore(Settings& settings) : settings_(settings) {}
 
-    void write_fields(cbor::Writer& writer) const override {
+    void write_fields(cbor::Writer& writer, std::optional<uint16_t> paired_tag) const override {
         write_config_fields(writer, settings_);
+        if (paired_tag) writer.add_unsigned(link::config_key::kPairedTag, *paired_tag);
     }
 
     void write_default_fields(cbor::Writer& writer) const override {

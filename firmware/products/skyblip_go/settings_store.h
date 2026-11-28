@@ -20,19 +20,25 @@ class SettingsStore : public common::SettingsStore {
    public:
     SettingsStore(Settings& settings, const identity::Activation& activation,
                   const std::optional<comms::OwnTransponderHeard>& own_transponder,
+                  const std::optional<traffic::AboardHeard>& aboard,
                   const ports::Capabilities& fitted = kSounding)
         : settings_(settings),
           activation_(activation),
           own_transponder_(own_transponder),
+          aboard_(aboard),
           fitted_(fitted) {}
 
-    void write_fields(cbor::Writer& writer) const override {
+    void write_fields(cbor::Writer& writer, std::optional<uint16_t> paired_tag) const override {
         write_config_fields(writer, fitted(settings_), activation_.address());
         writer.add_boolean(link::config_key::kAnnunciatorFitted, common::can_sound(fitted_));
+        if (paired_tag) writer.add_unsigned(link::config_key::kPairedTag, *paired_tag);
+        writer.add_unsigned(link::config_key::kFlarmId, settings_.flarm_id);
     }
 
     void write_default_fields(cbor::Writer& writer) const override {
-        write_settings_fields(writer, fitted_defaults());
+        const Settings shipped = fitted_defaults();
+        write_settings_fields(writer, shipped);
+        writer.add_unsigned(link::config_key::kFlarmId, shipped.flarm_id);
     }
 
     Status apply(const cbor::Reader& frame) override {
@@ -89,7 +95,8 @@ class SettingsStore : public common::SettingsStore {
     }
 
     Status apply_fitted(Settings& next, const cbor::Reader& frame) const {
-        const Status applied = apply_settings(next, frame, comms::address_of(own_transponder_));
+        const Status applied = apply_settings(
+            next, frame, Heard{comms::address_of(own_transponder_), traffic::flarm_id_of(aboard_)});
         if (applied != Status::Ok) return applied;
         return common::audible(next.alarm) && !alarm_sounds(next, common::can_sound(fitted_))
                    ? Status::OutOfRange
@@ -99,6 +106,7 @@ class SettingsStore : public common::SettingsStore {
     Settings& settings_;
     const identity::Activation& activation_;
     const std::optional<comms::OwnTransponderHeard>& own_transponder_;
+    const std::optional<traffic::AboardHeard>& aboard_;
     const ports::Capabilities& fitted_;
 };
 

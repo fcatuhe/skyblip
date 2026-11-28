@@ -31,6 +31,7 @@ void TrafficService::tick(uint32_t now_ms) {
     context_.state.traffic.set_own_address(settings::kSkyblipAddressMappingTable,
                                            context_.state.activation.address().value_or(0));
     context_.state.traffic.set_aircraft_address(settings_.aircraft_address);
+    context_.state.traffic.set_flarm_id(flarm_id_);
     events::RfEvent event{};
     while (rf_.pop(event)) {
         switch (event.type) {
@@ -60,6 +61,11 @@ void TrafficService::tick(uint32_t now_ms) {
     context_.state.traffic.age_out(now_s);
     versions_.age_out(now_s);
     context_.state.callsigns.age_out(now_s);
+    own_flarm_.tick(now_ms);
+    // INFO: fc 27nov26 on the ground only, because aloft a wingman is as loud as our own FLARM
+    context_.state.aboard = context_.state.flight.confirmed_state == flight::FlightState::Ground
+                                ? own_flarm_.heard()
+                                : std::nullopt;
 }
 
 uint32_t TrafficService::due_in_ms(uint32_t /*now_ms*/) const {
@@ -167,6 +173,8 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     observation.received.phase_valid = stamp.phase_valid;
     observation.at_ms = now_ms - static_cast<uint32_t>(observation.fix_age_ms);
     observation.rssi_dbm = event.rssi_dbm;
+    observation.rssi_valid = event.rssi_valid;
+    if (!relayed) own_flarm_.hear(observation, now_ms);
     context_.state.traffic.update(observation, utc_s);
     if (!alptas && !relayed && !context_.state.traffic.own_aircraft(observation))
         versions_.hear_traffic(observation, utc_s);

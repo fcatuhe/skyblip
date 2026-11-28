@@ -98,7 +98,7 @@ class ScreenService : public runtime::Service {
     bool parking() const { return park_ != ParkStep::None; }
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return framebuffer_; }
-    enum class Notice : uint8_t { BravoForgot, BravoAsks, NewAircraft };
+    enum class Notice : uint8_t { BravoForgot, BravoAsks, NewAircraft, NewFlarm };
 
     bool noticing() const { return notice_; }
     Notice notice() const { return notice_kind_; }
@@ -113,7 +113,8 @@ class ScreenService : public runtime::Service {
     // INFO: fc 14nov26 a notice that asks stands as long as any question, one that only tells, a
     // menu's
     uint32_t notice_ceiling_ms() const {
-        if (notice_kind_ == Notice::NewAircraft) return kAskCeilingMs;
+        if (notice_kind_ == Notice::NewAircraft || notice_kind_ == Notice::NewFlarm)
+            return kAskCeilingMs;
         if (notice_kind_ == Notice::BravoAsks) return BravoService::kAnswerCeilingMs;
         return MenuEditor::kIdleReturnHoldMs;
     }
@@ -121,12 +122,19 @@ class ScreenService : public runtime::Service {
     void step_bravo(uint32_t now_ms);
     void show_link_pairing(uint32_t now_ms);
     void sync_notice(uint32_t now_ms);
+    bool proposal_gone() const;
+    void open_notice(Notice kind, uint32_t now_ms);
     bool close_notice();
     Detected detected() const;
     Detected detected_to_store(const Detected& shown) const;
     bool new_aircraft(const Detected& detected) const;
     bool notice_read(uint32_t now_ms) const;
     void use_noticed_aircraft();
+    FlarmDetected flarm_detected() const;
+    FlarmDetected flarm_to_store(const FlarmDetected& shown) const;
+    bool new_flarm(const FlarmDetected& detected) const;
+    void use_noticed_flarm();
+    bool clear_read(uint32_t now_ms) const;
     void change_screen();
     void draw_prompt(uint32_t now_ms);
     void draw_menu_page(uint32_t now_ms);
@@ -231,10 +239,22 @@ class ScreenService : public runtime::Service {
     Notice notice_kind_{Notice::BravoForgot};
     bool notice_{false};
     Detected noticed_aircraft_{};
-    Detected detected_on_glass_{};
     bool aircraft_noticed_{false};
+    FlarmDetected noticed_flarm_{};
+    bool flarm_noticed_{false};
     bool notice_on_glass_{false};
     uint32_t notice_on_glass_since_ms_{0};
+
+    // INFO: fc 27nov26 what render drew, put on the glass by note_presented and off by a wipe
+    struct Drawn {
+        bool notice{false};
+        Detected detected{};
+        FlarmDetected flarm{};
+        bool clearing{false};
+    };
+    Drawn drawn_{};
+    Drawn on_glass_{};
+    uint32_t clear_on_glass_since_ms_{0};
     common::Pending prompt_{common::Pending::None};
     uint32_t prompts_staged_{0};
     Controls controls_{};

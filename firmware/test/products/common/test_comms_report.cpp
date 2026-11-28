@@ -46,7 +46,7 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     link.raise_link(1);
     go::Settings settings = go::defaults();
     std::memcpy(settings.callsign, "D-KXYZ", 7);
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.set_reset_reason(power::ResetReason::Watchdog);
@@ -83,7 +83,7 @@ TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
     statistics.record_missed();
     statistics.record_refused();
     statistics.record_refused();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store, nullptr, &statistics);
 
     config.on_rx(config_frame("{\"command\":\"timing\"}"));
@@ -106,7 +106,7 @@ TEST_CASE("comms: timing without an accumulator wired up says so, not zeros") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(link.sent.size() == 1);
@@ -118,7 +118,7 @@ TEST_CASE("comms: status carries state of charge, the charging flag and the leve
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.set_battery_state(battery_of(61, false), power::PowerLevel::Normal);
@@ -136,7 +136,7 @@ TEST_CASE("comms: a battery nobody has read has no percentage, never a false zer
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     // No set_battery_state call at all: no sample has ever arrived.
@@ -152,7 +152,7 @@ TEST_CASE(
     "inside a step") {
     platform::host::Link link;
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -197,7 +197,7 @@ TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat i
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
 
@@ -219,7 +219,7 @@ TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 
     link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
     std::memcpy(settings.callsign, "ABCDEFGHI", 10);
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Airborne);
     config.set_reset_reason(power::ResetReason::Lockup);
@@ -231,24 +231,25 @@ TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 
     config.set_bravo_state(BravoState::NoUtc);
     config.set_own_transponder(OwnTransponderHeard{0xFFFFFF, "ABCDEFGH", 17});
     config.set_no_tx(timing::NoTx::Pps);
+    config.set_own_flarm(0xFFFFFF);
 
     link.clear();
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
-    // Twelve entries; airborne and critical are 2, each bravo and no_tx code is a byte, and
+    // Thirteen entries; airborne and critical are 2, each bravo and no_tx code is a byte, and
     // FFFFFF is in no nationality block, so its callsign stays.
-    const uint8_t golden[] = {0xAC, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64,
-                              0x04, 0xF4, 0x05, 0x02, 0x06, 0xF4, 0x08, 0x05, 0x09, 0x1A,
-                              0x00, 0xFF, 0xFF, 0xFF, 0x0A, 0x68, 0x41, 0x42, 0x43, 0x44,
-                              0x45, 0x46, 0x47, 0x48, 0x0B, 0x11, 0x0C, 0x06};
+    const uint8_t golden[] = {0xAD, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64, 0x04,
+                              0xF4, 0x05, 0x02, 0x06, 0xF4, 0x08, 0x05, 0x09, 0x1A, 0x00, 0xFF,
+                              0xFF, 0xFF, 0x0A, 0x68, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+                              0x48, 0x0B, 0x11, 0x0C, 0x06, 0x0D, 0x1A, 0x00, 0xFF, 0xFF, 0xFF};
     CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
     CHECK(link_text(frame) ==
           "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,"
           "\"battery_percent\":100,\"charging\":false,\"power_level\":\"critical\","
           "\"went_dark_flat\":false,\"bravo\":\"no_utc\","
           "\"own_transponder\":16777215,\"own_transponder_callsign\":\"ABCDEFGH\","
-          "\"own_transponder_category\":17,\"no_tx\":\"pps\"}");
+          "\"own_transponder_category\":17,\"no_tx\":\"pps\",\"own_flarm\":16777215}");
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);
 }
@@ -259,7 +260,7 @@ TEST_CASE("comms: status without the transponder is 20 bytes at its widest, byte
     link.raise_link(1);
     link.declare_payload_bytes(20);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Airborne);
     power::BatteryState battery{};
@@ -285,7 +286,7 @@ TEST_CASE("comms: a paired Go pushes status when its Bravo is lost and when it i
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
     link.clear();
@@ -310,7 +311,7 @@ TEST_CASE("comms: status pushes the transponder Bravo hears when it changes, as 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
     link.clear();
@@ -333,11 +334,33 @@ TEST_CASE("comms: status pushes the transponder Bravo hears when it changes, as 
     CHECK(link_text(link.last().bytes).find("own_transponder") == std::string::npos);
 }
 
+// A page proposes the FLARM the Go hears aboard as it proposes the transponder.
+TEST_CASE("comms: status pushes the FLARM the Go hears aboard when it changes") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
+    ConfigService config(link, store);
+    config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
+    link.clear();
+
+    config.set_own_flarm(std::nullopt);
+    CHECK(link.sent.empty());
+    config.set_own_flarm(0xDD1234);
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link_text(link.last().bytes).find("\"own_flarm\":14488116}") != std::string::npos);
+    config.set_own_flarm(0xDD1234);
+    CHECK(link.sent.size() == 1);
+    config.set_own_flarm(std::nullopt);
+    REQUIRE(link.sent.size() == 2);
+    CHECK(link_text(link.last().bytes).find("own_flarm") == std::string::npos);
+}
+
 TEST_CASE("comms: status says whether the unit last went dark on a flat cell") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
@@ -354,7 +377,7 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     go::Settings settings = go::defaults();
     timing::SlotTimingStatistics statistics;
     statistics.record_refused();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store, nullptr, &statistics);
 
     config.on_rx(config_frame("{\"command\":\"timing\"}"));
@@ -377,7 +400,7 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
 
     // What the product tells this service, through the doors it already had.
@@ -441,7 +464,7 @@ TEST_CASE("comms: a dump nobody has collected says so, not zeros") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
     REQUIRE(link.sent.size() == 1);
@@ -465,7 +488,7 @@ TEST_CASE("comms: asking for the dump twice answers the same numbers twice") {
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store);
     config.diagnostics().refreshes = 1;
     config.diagnostics().rx_ok = 99;
@@ -489,7 +512,7 @@ TEST_CASE("comms: the timing report's counts are unsigned on every platform") {
     statistics.record_edge(0, true);
     statistics.record_edge(1000000, true);
     statistics.record_missed();
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store, nullptr, &statistics);
     config.on_rx(config_frame("{\"command\":\"timing\"}"));
     const std::string body = joined(link);
@@ -510,7 +533,7 @@ TEST_CASE("comms: the timing report says what each dwell change cost the executo
     go::Settings settings = go::defaults();
     timing::SlotTimingStatistics statistics;
     statistics.record_switching(95, 310, 285, 2);
-    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder, kNothingAboard);
     ConfigService config(link, store, nullptr, &statistics);
     config.on_rx(config_frame("{\"command\":\"timing\"}"));
     const std::string body = joined(link);

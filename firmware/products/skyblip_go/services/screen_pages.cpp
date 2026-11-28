@@ -52,6 +52,8 @@ void ScreenService::draw_menu_page(uint32_t now_ms) {
         ClearSnapshot clear;
         clear.title = menu_row_label(editor_.field());
         clear.text = editor_.text();
+        if (editor_.field() == MenuRow::FlarmId) clear.owner = kFlarmClearOwner;
+        drawn_.clearing = true;
         clear.seconds_left = editor_.clear_seconds_left(now_ms);
         draw_clear(framebuffer_, clear);
         return;
@@ -63,7 +65,12 @@ void ScreenService::draw_menu_page(uint32_t now_ms) {
         field.cursor = editor_.cursor();
         field.clears = callsign_press_clears(field.text, field.cursor);
         if (editor_.field() == MenuRow::AircraftAddress) {
-            field.own_transponder = comms::address_of(context_.state.own_transponder);
+            field.heard = comms::address_of(context_.state.own_transponder);
+            field.heard_text = kOwnTransponderText;
+            field.refused = editor_.refused();
+        } else if (editor_.field() == MenuRow::FlarmId) {
+            field.heard = traffic::flarm_id_of(context_.state.aboard);
+            field.heard_text = kOwnFlarmText;
             field.refused = editor_.refused();
         }
         draw_callsign(framebuffer_, field);
@@ -74,7 +81,10 @@ void ScreenService::draw_menu_page(uint32_t now_ms) {
     snapshot.values = menu_values();
     snapshot.focus = editor_.focus();
     snapshot.aircraft = editor_.aircraft();
-    detected_on_glass_ = snapshot.values.detected;
+    snapshot.flarm = editor_.flarm();
+    // INFO: fc 27nov26 only a block on the glass is one a press may store
+    if (snapshot.aircraft) drawn_.detected = snapshot.values.detected;
+    if (snapshot.flarm) drawn_.flarm = snapshot.values.flarm;
     draw_menu(framebuffer_, snapshot);
 }
 
@@ -92,6 +102,7 @@ void ScreenService::present_self_test() {
 }
 
 void ScreenService::render(uint32_t now_ms) {
+    drawn_ = Drawn{};
     if (answering()) {
         draw_prompt(now_ms);
         return;
@@ -105,6 +116,7 @@ void ScreenService::render(uint32_t now_ms) {
         return;
     }
     if (notice_) {
+        drawn_.notice = true;
         switch (notice_kind_) {
             case Notice::BravoForgot: draw_bravo_forgot_notice(framebuffer_); break;
             case Notice::BravoAsks:
@@ -114,6 +126,10 @@ void ScreenService::render(uint32_t now_ms) {
             case Notice::NewAircraft:
                 draw_aircraft_notice(framebuffer_, noticed_aircraft_,
                                      seconds_left(notice_since_ms_, now_ms, notice_ceiling_ms()));
+                break;
+            case Notice::NewFlarm:
+                draw_flarm_notice(framebuffer_, noticed_flarm_,
+                                  seconds_left(notice_since_ms_, now_ms, notice_ceiling_ms()));
                 break;
         }
         return;

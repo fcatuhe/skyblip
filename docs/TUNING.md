@@ -220,6 +220,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kLevelDampingSamples` | 4 | samples | Damping | a frame moves the level a quarter of the way, so one fade decides nothing |
 | `kAdvisoryAltitudeM` | 300 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kAdvisoryDistanceM` | 3000 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kUnknownTargetSpeedMps` | 30 | metres per second | - | a relayed target arrives with no velocity, and zero would make it the safest dot |
@@ -288,7 +289,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFlashPassCeilingMs` | `events::kAdsbQueueDrainWindowMs / 2` = 50 | milliseconds | Ceiling | the ADS-B queue holds the design load for its drain window, so flash takes half |
 | `kClaimMaxAgeMs` | 4000 (4 s) | milliseconds | MaxAge | a fix period, a second of unknown phase and two claim periods, one lost |
 | `kTargetUpdateFloorMs` | 500 | milliseconds | Floor | schemas/link.v1.json observation: two frames a second for a target at most |
-| `kLevelDampingSamples` | 4 | samples | Damping | a frame moves the level a quarter of the way, so one fade decides nothing |
 | `kLeadHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/products/skyblip_bravo/README.md) argues it |
 | `kEmitterMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | a transponder squitters about six times a second, so 5 s quiet is gone |
 | `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s | 14nov26 the Go's kAnswerCeilingMs waits as long |
@@ -310,6 +310,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kLeadHoldMs` | 30000 (30 s) | milliseconds | Hold | three ADS-L ground positions, which come one every 9 to 11 s |
+| `kEmitterMaxAgeMs` | 25000 (25 s) | milliseconds | MaxAge | an ADS-L ground position comes every 9 to 11 s, so 25 s quiet is two missed |
 | `kRefusalParkCeilingMs` | 6000 (6 s) | milliseconds | Ceiling | a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two |
 | `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | the request wakes every executor wait, so only a radio that hangs takes 2 s |
 
@@ -438,4 +440,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | five hundred passes without progress: nothing healthy is that slow |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
 
-293 constants over 26 folders.
+295 constants over 26 folders.

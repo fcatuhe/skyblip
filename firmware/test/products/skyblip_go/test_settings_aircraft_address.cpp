@@ -27,7 +27,7 @@ std::string answer_to_set(Settings& settings,
                           const char* json) {
     platform::host::Link link;
     link.raise_link(1);
-    SettingsStore store(settings, kTestActivation, own_transponder);
+    SettingsStore store(settings, kTestActivation, own_transponder, kNothingAboard);
     common::ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame(json));
@@ -102,7 +102,7 @@ TEST_CASE(
     std::optional<comms::OwnTransponderHeard> heard{};
     platform::host::Link link;
     link.raise_link(1);
-    SettingsStore store(settings, kTestActivation, heard);
+    SettingsStore store(settings, kTestActivation, heard, kNothingAboard);
     common::ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_address\":3934737}"));

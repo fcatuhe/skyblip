@@ -26,6 +26,8 @@ Three things stay the unit's own under an ICAO address:
 - The schedule. `timing::Transmitter` keys the cycle start, the slot instants and the deferral draws on the serial (`core/timing/README.md`), so setting or clearing the address mid-flight moves no burst in time or channel.
 - The traffic filter. The table refuses the unit's own address under table 58 and `aircraft_address` under table 5, so a ground station relaying us is refused under either (`core/traffic/README.md`, Our own aircraft).
 
+The FLARM ID, `flarm_id`, is no address on air. It names a FLARM fitted in the aircraft for the traffic table to refuse (`products/skyblip_go/README.md`, FLARM ID), and the unit never transmits under it, because table 6 IDs are FLARM's to assign and F.2.3 names only the ICAO address as one a user may enter.
+
 The setting changes in flight like any other (`core/comms/README.md`, The flight gate). F.2.4 forbids toggling privacy mode in flight, but F.2.3 has no such rule, and a pilot who finds the address wrong in flight should be able to correct it.
 
 The Go refuses the configurations it can know to be inconsistent, on the link and on the glass alike:

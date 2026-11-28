@@ -41,6 +41,18 @@
                autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="unit-aircraft-address-hint">
         <p class="field-hint" id="unit-aircraft-address-hint"><%= aircraft_address_hint(slug) %></p>
       </div>
+
+      <div class="unit-heard" data-unit-target="flarmHeard" hidden>
+        <p class="unit-heard-title" role="status" data-unit-target="flarmHeardText"></p>
+        <button type="button" class="button-app button-app--small" data-unit-target="flarmHeardUse" data-action="unit#useFlarm"><%= t("briefing.settings.use_flarm") %></button>
+      </div>
+
+      <div class="field" hidden>
+        <label for="unit-flarm-id"><%= t("settings.flarm_id") %></label>
+        <input type="text" id="unit-flarm-id" name="flarm_id" maxlength="6" pattern="[0-9A-Fa-f]{6}"
+               autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="unit-flarm-id-hint">
+        <p class="field-hint" id="unit-flarm-id-hint"><%= t("settings.flarm_id_hint") %></p>
+      </div>
     </section>
 
     <section class="unit-section" aria-labelledby="unit-device-title">

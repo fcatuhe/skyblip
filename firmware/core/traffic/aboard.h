@@ -5,10 +5,28 @@
 #include <cstdint>
 #include <optional>
 
+#include "protocols/adsl/packet.h"
+
 namespace skyblip::traffic {
 
 // INFO: fc 13nov26 a frame moves the level a quarter of the way, so one fade decides nothing
 constexpr int32_t kLevelDampingSamples = 4;
+
+struct AboardHeard {
+    uint32_t address{0};
+    uint8_t address_mapping_table{0};
+};
+
+constexpr bool operator==(const AboardHeard& a, const AboardHeard& b) {
+    return a.address == b.address && a.address_mapping_table == b.address_mapping_table;
+}
+
+// INFO: fc 27nov26 an emitter aboard names a FLARM ID only in table 6, where ALP-TAS IDs map
+inline std::optional<uint32_t> flarm_id_of(const std::optional<AboardHeard>& aboard) {
+    return aboard && aboard->address_mapping_table == adsl::kAddressTableFlarm
+               ? std::optional<uint32_t>(aboard->address)
+               : std::nullopt;
+}
 
 struct AboardTuning {
     int8_t loud_floor_dbm;

@@ -51,7 +51,8 @@ struct Pass {
     go::Settings settings{};
     traffic::VersionTable versions{};
     go::RadioService radio_service{context, settings, versions};
-    go::TrafficService traffic_service{context, bus.rf, settings.aircraft_address, versions};
+    go::TrafficService traffic_service{context, bus.rf, settings.aircraft_address,
+                                       settings.flarm_id, versions};
 
     Status begin() {
         const Status status = rf.begin();

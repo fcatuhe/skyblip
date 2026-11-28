@@ -424,6 +424,26 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Go proposes the FLARM it hears aboard as its FLARM ID, as its FLARM menu does, and nothing in flight" do
+    in_range a_go(heard: { own_flarm: 0xDD1234 })
+    on_the_shelf do
+      connect_device
+      assert_selector ".unit-heard-title", text: "Your Go hears FLARM DD1234 aboard."
+      assert_field "FLARM ID", with: ""
+      screen "11d-go-hears-flarm"
+
+      click_button "Use this ID"
+      assert_field "FLARM ID", with: "DD1234"
+      assert_selector ".unit-heard-title", text: "Your Go hears FLARM DD1234 aboard, as set."
+      assert_no_button "Use this ID"
+      assert_button "Save 1 change"
+
+      page.execute_script("#{unit("00012A")}.takeOff()")
+      assert_selector ".unit-facts", text: "Airborne"
+      assert_no_selector ".unit-heard-title", text: "FLARM"
+    end
+  end
+
   test "a Go with no buzzer and no haptic offers its alarm as off or visual only" do
     in_range a_go(sounds: false, stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "visual" })
     on_the_shelf do

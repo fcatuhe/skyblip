@@ -40,6 +40,8 @@ TEST_CASE("menu editor: the pad moves down a row, the button changes the row it 
     CHECK(bench.move() == MenuAction::Moved);
     CHECK(bench.editor.focus() == MenuRow::Aircraft);
     CHECK(bench.move() == MenuAction::Moved);
+    CHECK(bench.editor.focus() == MenuRow::Flarm);
+    CHECK(bench.move() == MenuAction::Moved);
     CHECK(bench.editor.focus() == MenuRow::Units);
     CHECK(bench.move() == MenuAction::Moved);
     CHECK(bench.editor.focus() == MenuRow::Range);
