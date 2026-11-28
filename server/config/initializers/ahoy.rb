@@ -21,10 +21,10 @@ class Ahoy::Store < Ahoy::DatabaseStore
 
   private
     def place_of(ip)
-      location = Geocoder.search(ip).first if ip && File.exist?(Geocoder.config.geoip2[:file])
-      if location&.country.present?
-        { country: location.country, country_code: location.country_code.presence, region: location.state.presence,
-          city: location.city.presence }
+      location = Maxmind::GeoliteCityDatabase.lookup(ip) if ip
+      if location&.country&.name.present?
+        { country: location.country.name, country_code: location.country.iso_code.presence,
+          region: location.subdivisions.first&.name.presence, city: location.city.name.presence }
       else
         {}
       end

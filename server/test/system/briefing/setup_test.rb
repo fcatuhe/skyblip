@@ -114,6 +114,21 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Bravo on the bootloader SoftRF installs is refused before the write, and told to put the factory one back" do
+    in_range
+    plugged_in a_meshtastic_bravo(softdevice: "S140 6.1.1")
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      click_button "Choose the drive"
+      assert_selector ".unit-message", text: "skyBlip does not start on this bootloader. It is not the factory one, as on an X1 that ran SoftRF. " \
+        "Put the factory bootloader back as the maker's guide shows, then choose the drive again. The drive reports SoftDevice S140 6.1.1"
+      assert_button "Choose the drive"
+      assert_equal false, page.evaluate_script("fakeUsb.drive.files.has('SKYBLIP.UF2')")
+      screen "28-bravo-other-softdevice"
+    end
+  end
+
   # The cassette holds v0.8.1 and the development builds GitHub listed on Nov 27, with only dev-2763's Bravo .uf2 downloaded.
   test "a pilot who asked for development builds installs the one chosen, the latest release chosen until then" do
     in_range

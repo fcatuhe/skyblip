@@ -171,7 +171,9 @@ bool joins_formation(const model::AircraftObservation& heard) {
         model::AircraftObservation fix = heard;
         fix.at_ms = now_ms;
         fix.received.at_s = now_ms / 1000;
-        tracker.observe(own_at(now_ms), fix, {}, now_ms);
+        model::Ownship hovering = own_at(now_ms);
+        hovering.speed_mm_s = 0;
+        tracker.observe(hovering, fix, {}, now_ms);
     }
     return tracker.members() == 1;
 }

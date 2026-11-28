@@ -253,6 +253,22 @@ TEST_CASE("formation: a second aircraft catching up after the takeoff is announc
     CHECK_FALSE(flight.target()->in_formation);
 }
 
+// Each closure handed the overtaker a fresh station to hold, so it rejoined and beeped every 8 s.
+TEST_CASE("formation: an aircraft overtaking us slowly is announced once") {
+    Flight flight;
+    uint32_t now_ms = 1000;
+    flight.hear(-60, -400, 10, 45, 90, now_ms);
+    REQUIRE(flight.rig.state.alarm_level == traffic::Level::Advisory);
+    const uint32_t first = flight.rig.state.alarm_call.announcement;
+
+    for (int east = -395; east <= -100; east += 5) {
+        now_ms += 1000;
+        flight.hear(-60, east, 10, 45, 90, now_ms);
+        CHECK_FALSE(flight.target()->in_formation);
+    }
+    CHECK(flight.rig.state.alarm_call.announcement == first);
+}
+
 // The square around own ship is the member's depiction, and a count of it too reads as company.
 TEST_CASE("formation: a member is not traffic on the radar's count, and is still listed nearby") {
     Flight flight;
